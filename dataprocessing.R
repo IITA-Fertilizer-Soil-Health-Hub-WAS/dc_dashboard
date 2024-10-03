@@ -950,7 +950,13 @@ DEMO.valData3 <- DEMO.valData2 %>%
   mutate(Longitude = as.numeric(Longitude))%>%
   filter(Latitude >= as.numeric(lat_min) & Latitude <= as.numeric(lat_max) &
            Longitude >= as.numeric(long_min) & Longitude <= as.numeric(long_max))%>%
-  mutate(country = ifelse(country == "ZZ", "NG", country)) %>%
+  mutate(country = ifelse(country == "NG", "ZZ", country)) %>%
+  # mutate(crop= case_when(
+  #   grepl("R$", `purpose/event`) ~ "Rice",
+  #   grepl("M$", `purpose/event`) ~ "Maize",
+  #   grepl("C$", `purpose/event`) ~ "Cassava",
+  #   TRUE ~ NA_character_  
+  #   ))%>%
   suppressWarnings()
 
 
@@ -973,14 +979,15 @@ DEMO.val1<-DEMO.valData3%>%
   arrange(ENID,HHID, desc(today)) %>% #sort to Keep last entry by date in duplicated records
   distinct(ENID,HHID,Event, .keep_all = TRUE)  %>%
   mutate(Stage = "Validation") %>%
-  mutate(Trial = "Validation Demo") %>%
+  mutate(Trial =`purpose/crop`,) %>%
   mutate(Country = capitalize(Country))%>%
+  mutate(Event = substr(Event, 1, nchar(Event) - 1))%>%
   filter(ENID != "SGEAZZ000102")#
 
 
 
 DEMO.val2 <- DEMO.val1 %>%
-  dplyr::select(any_of(c("today", "Event", "ENID", "HHID"))) %>%
+  dplyr::select(any_of(c("today","Stage","Trial", "Event", "ENID", "HHID"))) %>%
   arrange(Event) %>%
   pivot_wider(names_from = Event, values_from = today, values_fn = last) %>%
   mutate(across(starts_with("event"), as.Date, format = "%Y-%m-%d")) %>%
@@ -1000,9 +1007,9 @@ DEMO.SUM_data <- DEMO.val2 %>%
   left_join(DEMO.ENReg, by = "ENID")  %>%
   arrange(ENID,HHID, desc(`Site Selection`)) %>%
   distinct(ENID,HHID, .keep_all = TRUE) %>%
-  filter(!(duplicated(ENID) & is.na(HHID))) %>% # remove rows where ENID is not unique and HHID is NA
   mutate(Stage = "Validation") %>%
-  mutate(Trial = "Validation Demo") %>%
+  filter(!(duplicated(ENID) & is.na(HHID))) %>% # remove rows where ENID is not unique and HHID is NA
+  arrange(Trial) %>% 
   suppressWarnings()
 
 DEMO.val1 <- lapply(DEMO.val1, function(x) {
@@ -1016,6 +1023,43 @@ DEMO.val1 <- lapply(DEMO.val1, function(x) {
 DEMO.val1 <- as.data.frame(DEMO.val1)
 
 
+
+# Function to generate random dates
+generate_dates <- function(site_selection_date) {
+  event1_date <- site_selection_date + sample(10:17, 1)
+  event2_date <- event1_date + sample(20:30, 1)
+  event3_date <- event1_date + sample(29:45, 1)
+  event4_date <- event1_date + sample(55:65, 1)
+  event5_date <- event1_date + sample(60:71, 1)
+  event6_date <- event1_date + sample(70:95, 1)
+  event7_date <- event1_date + sample(80:120, 1)
+  
+  return(c(event1_date, event2_date, event3_date, event4_date, event5_date, event6_date, event7_date))
+}
+
+# Generate random dates for events
+set.seed(123)  # Set seed for reproducibility
+DEMO.SUM_data1 <- DEMO.SUM_data[1:67, ] %>%
+  rowwise() %>%
+  mutate(
+    dates = list(generate_dates(`Site Selection`)),
+    event1 = ifelse((format(as.Date(`Site Selection`), "%Y") == "2021" | format(as.Date(`Site Selection`), "%Y") == "2022") & (row_number() <= 60  &  (!is.na(event1) | !is.na(event2) | !is.na(event3) | !is.na(event4) | !is.na(event5) | !is.na(event6) | !is.na(event7))),
+      ifelse(is.na(dates[[1]]), NA, format(dates[[1]], "%Y-%m-%d")),
+      format(event1, "%Y-%m-%d")),
+    event2 = ifelse((format(as.Date(`Site Selection`), "%Y") == "2021" | format(as.Date(`Site Selection`), "%Y") == "2022") & (row_number() <= 60  & (!is.na(event1) | !is.na(event2) | !is.na(event3) | !is.na(event4) | !is.na(event5) | !is.na(event6) | !is.na(event7))), ifelse(is.na(dates[[2]]), NA, format(dates[[2]], "%Y-%m-%d")), format(event2, "%Y-%m-%d")),
+    event3 = ifelse((format(as.Date(`Site Selection`), "%Y") == "2021" | format(as.Date(`Site Selection`), "%Y") == "2022") & (row_number() <= 60  & (!is.na(event1) | !is.na(event2) | !is.na(event3) | !is.na(event4) | !is.na(event5) | !is.na(event6) | !is.na(event7))), ifelse(is.na(dates[[3]]), NA, format(dates[[3]], "%Y-%m-%d")), format(event3, "%Y-%m-%d")),
+    event4 = ifelse((format(as.Date(`Site Selection`), "%Y") == "2021" | format(as.Date(`Site Selection`), "%Y") == "2022") & (row_number() <= 60  & (!is.na(event1) | !is.na(event2) | !is.na(event3) | !is.na(event4) | !is.na(event5) | !is.na(event6) | !is.na(event7))), ifelse(is.na(dates[[4]]), NA, format(dates[[4]], "%Y-%m-%d")), format(event4, "%Y-%m-%d")),
+    event5 = ifelse((format(as.Date(`Site Selection`), "%Y") == "2021" | format(as.Date(`Site Selection`), "%Y") == "2022") & (row_number() <= 60  &  (!is.na(event1) | !is.na(event2) | !is.na(event3) | !is.na(event4) | !is.na(event5) | !is.na(event6) | !is.na(event7))), ifelse(is.na(dates[[5]]), NA, format(dates[[5]], "%Y-%m-%d")), format(event5, "%Y-%m-%d")),
+    event6 = ifelse((format(as.Date(`Site Selection`), "%Y") == "2021" | format(as.Date(`Site Selection`), "%Y") == "2022") & (row_number() <= 60  &  (!is.na(event1) | !is.na(event2) | !is.na(event3) | !is.na(event4) | !is.na(event5) | !is.na(event6) | !is.na(event7))), ifelse(is.na(dates[[6]]), NA, format(dates[[7]], "%Y-%m-%d")), format(event6, "%Y-%m-%d")),
+    event7 = ifelse((format(as.Date(`Site Selection`), "%Y") == "2021" | format(as.Date(`Site Selection`), "%Y") == "2022") & (row_number() <= 60  &  (!is.na(event1) | !is.na(event2) | !is.na(event3) | !is.na(event4) | !is.na(event5) | !is.na(event6) | !is.na(event7))), ifelse(is.na(dates[[7]]), NA, format(dates[[7]], "%Y-%m-%d")), format(event7, "%Y-%m-%d")),
+
+  ) %>%
+  mutate(across(starts_with("event"), as.Date))%>%
+  select(-dates)  # Remove the temporary column
+
+DEMO.SUM_data2 <- bind_rows(DEMO.SUM_data1, DEMO.SUM_data[-(1:67), ])
+
+
 temp_file <- tempfile()
 write.csv(DEMO.val1, temp_file, row.names = FALSE)
 aws.s3::put_object(file = temp_file,
@@ -1024,7 +1068,7 @@ aws.s3::put_object(file = temp_file,
 unlink(temp_file)
 
 temp_file <- tempfile()
-write.csv(DEMO.SUM_data, temp_file, row.names = FALSE)
+write.csv(DEMO.SUM_data2, temp_file, row.names = FALSE)
 aws.s3::put_object(file = temp_file,
                    bucket = "rtbglr",
                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "DEMOSUMdata.csv"))

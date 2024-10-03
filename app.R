@@ -133,7 +133,9 @@ server <- function(input, output, session) {
   }
   #auth0 RMV DPL
   if ("ex-Wcover-Ghana" %in% user_use_case_data) {
-    user_use_case_data[user_use_case_data == "ex-Wcover-Ghana"] <- "GH-CerLeg-Esoko"
+    if (!("GH-CerLeg-Esoko" %in% user_use_case_data)) {
+      user_use_case_data[user_use_case_data == "ex-Wcover-Ghana"] <- "GH-CerLeg-Esoko"
+    }
   }
 
   # IF USER NOT ASSOCIATED WITH ANY USECASE DATA... Show demo or warning?
@@ -364,9 +366,11 @@ server <- function(input, output, session) {
         patternissues<-""
         patternissuesE<-""
         columns_to_append <- c("ENID", "HHID", "Trial",#"treat",
-                               "Site Selection","event1R", "event2R", "event3R", "event4R", "event5R", "event6R", "event7R",
-                               "event1C", "event2C", "event3C", "event4C", "event5C", "event6C", "event7C","event8C",
-                               "event1M", "event2M", "event3M", "event4M", "event5M")
+                               "Site Selection","event1", "event2", "event3", "event4", "event5", "event6", "event7")
+        # columns_to_append <- c("ENID", "HHID", "Trial",#"treat",
+        #                        "Site Selection","event1R", "event2R", "event3R", "event4R", "event5R", "event6R", "event7R",
+        #                        "event1C", "event2C", "event3C", "event4C", "event5C", "event6C", "event7C","event8C",
+        #                        "event1M", "event2M", "event3M", "event4M", "event5M")
         
       }else{
         datacrop <- data.frame()
@@ -628,11 +632,14 @@ server <- function(input, output, session) {
               rawdata <- DEMO.O_data
               patternissues<-""
               patternissuesE<-""
-              columns_to_append <- c("ENID", "HHID", "Trial",#"treat",
-                                     "Site Selection","event1R", "event2R", "event3R", "event4R", "event5R", "event6R", "event7R",
-                                     "event1C", "event2C", "event3C", "event4C", "event5C", "event6C", "event7C","event8C",
-                                     "event1M", "event2M", "event3M", "event4M", "event5M")
-              
+              if ("rice" %in% experimentUsecase ){
+                columns_to_append <- c("ENID", "HHID", "Trial","Site Selection","event1", "event2", "event3", "event4", "event5", "event6", "event7")
+              } else if ("cassava" %in% experimentUsecase ){
+                columns_to_append <- c("ENID", "HHID", "Trial","Site Selection","event1", "event2", "event3", "event4", "event5", "event6", "event7","event8")
+              } else if ("cassava" %in% experimentUsecase ){
+                columns_to_append <- c("ENID", "HHID", "Trial","Site Selection","event1", "event2", "event3", "event4", "event5")
+              }
+             
             }else {
               datacrop <- data.frame()
               rawdata <- data.frame()
