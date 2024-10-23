@@ -982,7 +982,12 @@ DEMO.val1<-DEMO.valData3%>%
   mutate(Trial =`purpose/crop`,) %>%
   mutate(Country = capitalize(Country))%>%
   mutate(Event = substr(Event, 1, nchar(Event) - 1))%>%
-  filter(ENID != "SGEAZZ000102")#
+  filter(ENID != "SGEAZZ000102") %>%
+  #filter(format(today, "%Y") != "2024")
+  mutate(today = ifelse(format(today, "%Y") == "2024", 
+                              as.Date(format(today, "%Y-%m-%d"), tz = "UTC") - (365 * 2), 
+                        today)) %>%
+  mutate(today = as.Date(today, origin = "1970-01-01"))
 
 
 
@@ -1039,7 +1044,7 @@ generate_dates <- function(site_selection_date) {
 
 # Generate random dates for events
 set.seed(123)  # Set seed for reproducibility
-DEMO.SUM_data1 <- DEMO.SUM_data[1:67, ] %>%
+DEMO.SUM_data1 <- DEMO.SUM_data[1:65, ] %>%
   rowwise() %>%
   mutate(
     dates = list(generate_dates(`Site Selection`)),
@@ -1057,7 +1062,21 @@ DEMO.SUM_data1 <- DEMO.SUM_data[1:67, ] %>%
   mutate(across(starts_with("event"), as.Date))%>%
   select(-dates)  # Remove the temporary column
 
-DEMO.SUM_data2 <- bind_rows(DEMO.SUM_data1, DEMO.SUM_data[-(1:67), ])
+
+DEMO.SUM_data2 <- bind_rows(DEMO.SUM_data1, DEMO.SUM_data[-(1:65), ])
+
+# DEMO.SUM_data11 <- DEMO.SUM_data2[1:67, ] %>%
+#   rowwise() %>%
+#   mutate(
+#     dates = list(generate_dates(`Site Selection`)),
+#     event1 = ifelse((format(as.Date(`Site Selection`), "%Y") == "2021" | format(as.Date(`Site Selection`), "%Y") == "2022") & (row_number() <= 60  &  (!is.na(event1) | !is.na(event2) | !is.na(event3) | !is.na(event4) | !is.na(event5) | !is.na(event6) | !is.na(event7))),
+#                     ifelse(is.na(dates[[1]]), NA, format(dates[[1]], "%Y-%m-%d")),
+#                     format(event1, "%Y-%m-%d"))
+#   )%>%
+#   mutate(across(starts_with("event"), as.Date))%>%
+#   select(-dates)
+# DEMO.SUM_data2 <- bind_rows(DEMO.SUM_data11, DEMO.SUM_data[-(1:67), ])
+    
 
 
 temp_file <- tempfile()
