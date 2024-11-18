@@ -131,10 +131,38 @@
 
             <div id="define-the-filter-options" class="section level4">
                 <h4>Define the Stage</h4>
-                <p>The user will need to select the stage for which the data is being collected. This could be the validation, piloting, or NOT trials.</p>
+    <p>The user will need to select the <em>stage</em> for which data is being collected. This is a single selection, meaning only one stage can be chosen at a time. The available stages are:</p>
+    
+    <ul>
+        <li><em>Validation</em>: This stage is used to confirm the effectiveness of various agricultural practices or methods. It focuses on gathering data to validate certain treatments or farming practices.</li>
+        <li><em>Piloting</em>: A phase where new practices or methods are tested on a smaller scale before wider implementation.</li>
+        <li><em>Research</em>: A stage focused on experimentation and investigation to gain deeper insights into agricultural practices or to develop new techniques.</li>
+    </ul>
 
-                <h4>Define the Experiment</h4>
-                <p>The user will need to select the trial experiment.</p>
+    <h4>Define the Experiment</h4>
+    <p>Once the stage is selected, the user will need to choose the <em>experiment</em> associated with that stage. This is also a single selection. The available experiments differ depending on the selected stage:</p>
+    
+    <p>If the stage is <em>'Validation'</em>, the experiments options are:</p>
+    <ul>
+        <li><em>Fertilizer Recommendation</em>: Testing different treatment options to determine the best recommendations for specific crops and regions.</li>
+        <li><em>Variety Selection</em>: Identifying the most suitable crop varieties for specific growing conditions.</li>
+        <li><em>Planting Date</em>: Evaluating the optimal planting dates for different crops.</li>
+        <li><em>Intercropping</em>: Exploring the effectiveness of planting multiple crops together for improved yields or pest management.</li>
+    </ul>
+
+    <p>If the stage is <em>'Research'</em>, the experiments are:</p>
+    <ul>
+        <li><em>NOT</em>: A placeholder or on farm trials.</li>
+        <li><em>Variety Selection</em>: Research to identify the best crop varieties for different environmental conditions.</li>
+        <li><em>Planting Date</em>: Investigating the impact of planting dates on crop growth and yields.</li>
+    </ul>
+
+    <p>If the stage is <em>'Piloting'</em>, the experiments are:</p>
+    <ul>
+        <li><em>Fertilizer Recommendation</em>: Piloting different fertilizer applications to assess effectiveness in real-world conditions.</li>
+        <li><em>Variety Selection</em>: Piloting the best-performing crop varieties for practical evaluation.</li>
+        <li><em>Planting Date</em>: Testing planting dates to measure their impact on crop yields in field conditions.</li>
+    </ul>
 
                 <h4>Define the Date</h4>
                 <p>The user will need to specify the trial period for which to monitor the submissions. The default period initially selected is the earliest date of submission and the current date. These vary for different use cases.</p>

@@ -147,16 +147,17 @@ full_data<-df_list %>% reduce(full_join, by=c("start","today","intro/country","i
     ~stringr::str_replace_all(.x, c("plot_plot/"), ""))
 
 full_data <- full_data%>%
+  mutate(Trial = "Fertilizer Recommendation")%>%
   rename(
     ENID = `intro/wrong_ENID`,
     HHID = `intro/wrong_ID`,
     todayVal = today,
-    Trial = crop,
+    Crop = crop,
     plantingDate = `planting/plantingDetails/planting_date`
   )#%>%mutate(todayVal2 = todayVal)
 
 VAL_data <- full_data %>%
-  dplyr::select(todayVal, ENID, HHID, Trial, treat, `intro/event`) %>%
+  dplyr::select(todayVal, ENID, HHID, Trial, treat,Crop, `intro/event`) %>%
   distinct(ENID, HHID, Trial, treat, `intro/event`, .keep_all = TRUE)%>%
   pivot_wider(names_from = `intro/event`, values_from = todayVal) %>%
   arrange(ENID, HHID, Trial, treat) %>%
@@ -194,15 +195,16 @@ RWA.VAL_data <- EN.HH_data %>%
 dataev<-data%>%
   dplyr::select(today, `intro/wrong_ENID`,`intro/wrong_ID` ,crop, `intro/event`,  `planting/plantingDetails/planting_date`) 
 dataev <- dataev%>%
+  mutate(Trial = "Fertilizer Recommendation")%>%
   rename(
     ENID = `intro/wrong_ENID`,
     HHID = `intro/wrong_ID`,
     todayVal = today,
-    Trial =crop,
+    Crop = crop,
     plantingDate = `planting/plantingDetails/planting_date`
   )
 dataev1 <- dataev%>%
-  dplyr::select(todayVal, ENID, HHID, Trial,  `intro/event`) %>%
+  dplyr::select(todayVal, ENID, HHID, Trial,Crop,  `intro/event`) %>%
   distinct(ENID, HHID, Trial, `intro/event`, .keep_all = TRUE)%>%
   pivot_wider(names_from = `intro/event`, values_from = todayVal) %>%
   arrange(ENID, HHID, Trial) %>%
@@ -235,9 +237,14 @@ RWA.SUM_data <- EN.HH_data %>%
 RWA.O_data<-valTest %>% 
   select(-any_of(system_var))%>% 
   select(-c(start,`intro/barcodehousehold_1`))%>% 
-  rename(Country = `intro/country`)%>% 
+  rename(Country = `intro/country`,
+         Crop = crop)%>% 
   rename_with(
-  ~stringr::str_replace_all(.x, c("intro/"), ""))
+  ~stringr::str_replace_all(.x, c("intro/"), ""))%>% 
+  mutate(Trial = "Fertilizer Recommendation",
+         Stage = "Validation"
+         )
+  
 
 
 
@@ -338,17 +345,18 @@ NOTSol1<-NOTSol%>%
   mutate(Event = coalesce(`start/event`, Event) )%>%
   arrange(ENID,HHID, desc(today)) %>% #sort to Keep last entry by date in duplicated records
   distinct(ENID,HHID,today,Event, .keep_all = TRUE)  %>%
-  mutate(Stage = "NOT Trials") %>%
+  mutate(Stage = "Research",
+         Trial = "NOT") %>%
   mutate(Country = coalesce(`start/country`, Country) )%>%
   mutate(Country = capitalize(Country))
   
 NOTSol2<-NOTSol1%>%
-  dplyr::select(any_of(c(  "today", "Event"  , "Trial", "ENID" , "HHID" 
+  dplyr::select(any_of(c(  "today", "Event","Stage"  , "Trial", "ENID" , "HHID" 
   )  ))%>%
   arrange(Event) %>%
   mutate(Event = paste( "event",Event, sep = ""))%>%
   pivot_wider(names_from = Event, values_from = today, values_fn = last) %>%
-  mutate(Stage = "NOT Trials") %>%
+  mutate(Stage = "Research") %>%
   arrange(Stage,Trial, 
           ENID, HHID )
 
@@ -368,7 +376,7 @@ NOTSol2<-NOTSol1%>%
 #   mutate(Event = coalesce(`start/event`, Event) )%>%
 #   mutate(Event = paste( "event",Event, sep = ""))%>%
 #   pivot_wider(names_from = Event, values_from = today) %>%
-#   mutate(Stage = "NOT Trials") %>%
+#   mutate(Stage = "Research") %>%
 #   #rename(`Site Selection` =event1)%>%
 #   arrange(Stage,Trial, 
 #           ENID, HHID )%>%
@@ -472,7 +480,8 @@ NOTSol2<-NOTSol1%>%
   mutate(today = as.IDate(today)) %>%
   arrange(ENID,HHID, desc(today)) %>% #sort to Keep last entry by date in duplicated records
   distinct(ENID,HHID,Event, .keep_all = TRUE)  %>%
-  mutate(Stage = "Validation") %>%
+  mutate(Stage = "Validation",
+         Trial = "Fertilizer Recommendation") %>%
   mutate(
     Country = coalesce(`intro/country`, Country) )%>%
   mutate(Country = capitalize(Country))%>%
@@ -484,12 +493,10 @@ NOTSol2<-NOTSol1%>%
 
 
 valSol2<-valSol1%>%
-  dplyr::select(any_of(c(  "today", "Event"  ,  "ENID" , "HHID" 
+  dplyr::select(any_of(c(  "today", "Event"  ,  "Stage", "Trial", "ENID" , "HHID" 
                            )  ))%>%
   arrange(Event) %>%
   pivot_wider(names_from = Event, values_from = today, values_fn = last) %>%
-  mutate(Stage = "Validation") %>%
-  mutate(Trial = "Validation") %>%
   arrange(Stage,Trial, 
           ENID, HHID )
 
@@ -638,8 +645,6 @@ KL.ENHHReg <- KL.ENReg %>%
   suppressWarnings()
  
 
-
-
 #Validation data
 KL.val1<-KL.valData%>%
   
@@ -654,14 +659,16 @@ KL.val1<-KL.valData%>%
     Event= `intro/event`,
     latitude= `location/latitude`,
     longitude= `location/longitude`,
-    today = today
+    today = today,
+    Crop = `planting/planting_1/crop_cultivated`
   ) %>%
   mutate(ENID = if_else(ENID == "KHENKE000028", "KLENKE000028", ENID)) %>%
   mutate(today = as.IDate(today)) %>%
   arrange(ENID,HHID, desc(today)) %>% #sort to Keep last entry by date in duplicated records
   distinct(ENID,HHID,Event, .keep_all = TRUE)  %>%
   mutate(Stage = "Validation") %>%
-  mutate(Trial = "Validation") %>%
+  mutate(Trial = "Fertilizer Recommendation") %>%
+  mutate(Crop = "Maize") %>%
   mutate(Country = capitalize(Country))%>%
   filter(ENID != "KLENKE000000" ) %>%#leave out the enumerator registered for testing and monitoring the tool and is not expected to collect data
   filter(ENID != "KLENKE123456")
@@ -669,7 +676,7 @@ KL.val1<-KL.valData%>%
 
 
 KL.val2 <- KL.val1 %>%
-  dplyr::select(any_of(c("today", "Event", "ENID", "HHID"))) %>%
+  dplyr::select(any_of(c("today","Crop", "Event",  "Stage", "Trial", "ENID", "HHID"))) %>%
   mutate(ENID = if_else(ENID == "KHENKE000028", "KLENKE000028", ENID)) %>%
   arrange(Event) %>%
   pivot_wider(names_from = Event, values_from = today, values_fn = last) %>%
@@ -694,7 +701,7 @@ KL.SUM_data <- KL.val2 %>%
   filter(ENID != "KLENKE123456")%>%
   filter(!(duplicated(ENID) & is.na(HHID))) %>% # remove rows where ENID is not unique and HHID is NA
   mutate(Stage = "Validation") %>%
-  mutate(Trial = "Validation") %>%
+  mutate(Trial = "Fertilizer Recommendation") %>%
   suppressWarnings()
 
 KL.val1 <- lapply(KL.val1, function(x) {
@@ -799,19 +806,20 @@ MC.val1<-MC.valData%>%
     Event= `intro/event`,
     latitude= `location/latitude`,
     longitude= `location/longitude`,
-    today = today
+    today = today,
+    Crop = `planting/planting_1/crop_cultivated`
   ) %>%
   mutate(today = as.IDate(today)) %>%
   arrange(ENID,HHID, desc(today)) %>% #sort to Keep last entry by date in duplicated records
   distinct(ENID,HHID,Event, .keep_all = TRUE)  %>%
   mutate(Stage = "Validation") %>%
-  mutate(Trial = "Validation") %>%
+  mutate(Trial = "Fertilizer Recommendation") %>%
   mutate(Country = capitalize(Country))
 
 
 
 MC.val2 <- MC.val1 %>%
-  dplyr::select(any_of(c("today", "Event", "ENID", "HHID"))) %>%
+  dplyr::select(any_of(c("today", "Event", "Crop", "Stage", "Trial","ENID", "HHID"))) %>%
   arrange(Event) %>%
   pivot_wider(names_from = Event, values_from = today, values_fn = last) %>%
   mutate(across(starts_with("event"), as.Date, format = "%Y-%m-%d")) %>%
@@ -833,7 +841,7 @@ MC.SUM_data <- MC.val2 %>%
   distinct(ENID,HHID, .keep_all = TRUE) %>%
   filter(!(duplicated(ENID) & is.na(HHID))) %>% # remove rows where ENID is not unique and HHID is NA
   mutate(Stage = "Validation") %>%
-  mutate(Trial = "Validation") %>%
+  mutate(Trial = "Fertilizer Recommendation") %>%
   suppressWarnings()
 
 MC.val1 <- lapply(MC.val1, function(x) {
@@ -979,7 +987,8 @@ DEMO.val1<-DEMO.valData3%>%
   arrange(ENID,HHID, desc(today)) %>% #sort to Keep last entry by date in duplicated records
   distinct(ENID,HHID,Event, .keep_all = TRUE)  %>%
   mutate(Stage = "Validation") %>%
-  mutate(Trial =`purpose/crop`,) %>%
+  mutate(Crop =`purpose/crop`,) %>%
+  mutate(Trial ='Fertilizer Recommendation',) %>%
   mutate(Country = capitalize(Country))%>%
   mutate(Event = substr(Event, 1, nchar(Event) - 1))%>%
   filter(ENID != "SGEAZZ000102") %>%
@@ -992,7 +1001,7 @@ DEMO.val1<-DEMO.valData3%>%
 
 
 DEMO.val2 <- DEMO.val1 %>%
-  dplyr::select(any_of(c("today","Stage","Trial", "Event", "ENID", "HHID"))) %>%
+  dplyr::select(any_of(c("today","Stage","Trial","Crop", "Event", "ENID", "HHID"))) %>%
   arrange(Event) %>%
   pivot_wider(names_from = Event, values_from = today, values_fn = last) %>%
   mutate(across(starts_with("event"), as.Date, format = "%Y-%m-%d")) %>%
@@ -1165,13 +1174,13 @@ CE.val1<-CE.valData%>%
   arrange(ENID,HHID, desc(today)) %>% #sort to Keep last entry by date in duplicated records
   distinct(ENID,HHID,Event, .keep_all = TRUE)  %>%
   mutate(Stage = "Validation") %>%
-  mutate(Trial = "Validation") %>%
+  mutate(Trial = "Fertilizer Recommendation") %>%
   mutate(Country = capitalize(Country))
 
 
 
 CE.val2 <- CE.val1 %>%
-  dplyr::select(any_of(c("today", "Event", "ENID", "HHID"))) %>%
+  dplyr::select(any_of(c("today", "Event",  "Crop", "Stage", "Trial", "ENID", "HHID"))) %>%
   arrange(Event) %>%
   pivot_wider(names_from = Event, values_from = today, values_fn = last) %>%
   mutate(across(starts_with("event"), as.Date, format = "%Y-%m-%d")) %>%
@@ -1194,7 +1203,8 @@ CE.SUM_data <- CE.val2 %>%
   distinct(ENID,HHID, .keep_all = TRUE) %>%
   filter(!(duplicated(ENID) & is.na(HHID))) %>% # remove rows where ENID is not unique and HHID is NA
   mutate(Stage = "Validation") %>%
-  mutate(Trial = "Validation") %>%
+  mutate(Trial = "Fertilizer Recommendation",
+         Crop= "Soybean") %>%
   suppressWarnings()
 
 CE.val1 <- lapply(CE.val1, function(x) {
@@ -1231,13 +1241,14 @@ CE.IC1<-CE.ICData %>%
   )%>%
   arrange(ENID,HHID, desc(today)) %>% #sort to Keep last entry by date in duplicated records
   distinct(ENID,HHID,Event, .keep_all = TRUE)  %>%
-  mutate(Stage = "NOT Trials") %>%
-  mutate(Trial = "Intercropping") %>%
+  mutate(Stage = "Validation") %>%
+  mutate(Trial = "Intercropping",
+         Crop= "Soybean") %>%
   mutate(Country = capitalize(Country))
 
 
 CE.IC2 <- CE.IC1 %>%
-  dplyr::select(any_of(c("today", "Event", "ENID", "HHID"))) %>%
+  dplyr::select(any_of(c("today", "Event", "Crop", "Stage", "Trial", "ENID", "HHID"))) %>%
   arrange(Event) %>%
   pivot_wider(names_from = Event, values_from = today, values_fn = last) %>%
   mutate(across(starts_with("event"), as.Date, format = "%Y-%m-%d")) %>%
@@ -1252,8 +1263,9 @@ CE.ICSUM_data <- CE.IC2 %>%
   arrange(ENID,HHID, desc(`Site Selection`)) %>%
   distinct(ENID,HHID, .keep_all = TRUE) %>%
   filter(!(duplicated(ENID) & is.na(HHID))) %>% # remove rows where ENID is not unique and HHID is NA
-  mutate(Stage = "NOT Trials") %>%
-  mutate(Trial = "Intercropping") %>%
+  mutate(Stage = "Validation") %>%
+  mutate(Trial = "Intercropping",
+         Crop= "Soybean") %>%
   suppressWarnings()
 
 CE.IC1 <- lapply(CE.IC1, function(x) {
