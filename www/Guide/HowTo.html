@@ -121,7 +121,8 @@
     <div class="container-fluid2">
         <div id="dcmt" class="section level1">
             <h2 class="center-text">Data Collection Monitoring Tool Guide</h2>
-            <p>This tool helps users monitor trials for their Minimum Viable Products (MVPs). It guides users through a series of steps to crosscheck submissions and track progress in near real-time. Additionally, it facilitates seamless communication with relevant extension agents in the field.</p>
+            <p>This tool helps users monitor trials for their Minimum Viable Products (MVPs). It guides users through a series of steps to crosscheck submissions and track progress in near real-time (data is updated on the dashboard every 24 hours). 
+                Additionally, it facilitates seamless communication with relevant extension agents in the field. </p>
         </div>
 
         <div id="define-the-trial-conditions" class="section level3">
@@ -130,10 +131,39 @@
 
             <div id="define-the-filter-options" class="section level4">
                 <h4>Define the Stage</h4>
-                <p>The user will need to select the stage for which the data is being collected. This could be the validation, piloting, or NOT trials.</p>
+                <p>The user is required to select the specific stage for which data is being collected. This is a single selection, meaning only one stage can be chosen at a time. The available stages are:</p>
+                
+                <ul>
+                    <li><em>Research</em>: A stage focused on experimentation and investigation, usually on-station or on-farm trials, to gain deeper insights into agricultural practices or to develop new techniques.</li>
+                    <li><em>Validation</em>: This stage is used to confirm the effectiveness of various treatments/ methods or practices. These are usually side-by-side comparisons.</li>
+                    <li><em>Piloting</em>: A phase where new practices or methods are tested on a larger scale by surveying a focus group, before wider implementation.</li>        
+                </ul>
 
                 <h4>Define the Experiment</h4>
-                <p>The user will need to select the trial experiment.</p>
+                <p>Once the stage is selected, the user must then choose the corresponding experiment for the trial. This is also a single selection. The available experiments vary depending on the chosen stage:</p>
+                
+                <p>If the stage is <em>'Research'</em>, the available experiments are focused on more exploratory or theoretical studies:</p>
+                <ul>
+                    <li><em>NOTs</em>: Done for assessment of limiting nutrients or fertilization effects.</li>
+                    <li><em>Variety Selection</em>: Research on the best crop varieties for different environmental conditions or experimental settings.</li>
+                    <li><em>Planting Date</em>: Investigating the effects of planting dates on crop growth and yields. </li>
+                </ul>
+
+                <p>If the stage is <em>'Validation'</em>, the user can choose from the following experiments:</p>
+                <ul>
+                    <li><em>Fertilizer Recommendation</em>: Testing fertilizer packages to determine the best recommendations for specific crops.</li>
+                    <li><em>Variety Selection</em>: Identifying which crop varieties are most suitable for the specific growing conditions.</li>
+                    <li><em>Planting Date</em>: Evaluating the optimal planting dates for different crops.</li>
+                    <li><em>Intercropping</em>: Exploring the effectiveness of planting multiple crops together for improved yields or pest management.</li>
+                </ul>
+                
+
+                <p>If the stage is <em>'Piloting'</em>, the experiments available in this stage are geared toward testing practices on a larger scale before wider adoption:</p>
+                <ul>
+                    <li><em>Fertilizer Recommendation</em>: Piloting different fertilizer applications to determine effectiveness in real-world conditions.</li>
+                    <li><em>Variety Selection</em>: Piloting the most promising crop varieties to assess performance.</li>
+                    <li><em>Planting Date</em>: Testing the impact of planting dates on yields in practical, real-world settings.</li>
+                </ul>
 
                 <h4>Define the Date</h4>
                 <p>The user will need to specify the trial period for which to monitor the submissions. The default period initially selected is the earliest date of submission and the current date. These vary for different use cases.</p>
@@ -166,6 +196,8 @@
                 <li class="highlight-purple">Purple: The event is scheduled for the future, and the submission period has not yet begun.</li>
                 <li >White: If submission for other events was completed but Event 1 (usually planting) is not yet submitted.</li>
             </ul>
+            <p>Additionally, to view all the events across the table that are not visible, the user can click anywhere on the table and use the right arrow key (on keyboard) to scroll. 
+                Alternatively, the user can scroll to the bottom and use the table scrollbar.</p>
         </div>
 
         <div id="issues-page" class="section level3">

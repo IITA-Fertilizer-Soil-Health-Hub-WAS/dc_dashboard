@@ -13,7 +13,6 @@ ona_auth_token <- function(token) {
 ona_auth_token(token = Sys.getenv("ONA_TOKEN"))
 
 
-
 ##########################################################################################
 ##########################EiA_Demo_Validation#############################################
 ##########################################################################################
@@ -23,8 +22,8 @@ DEMO.Register_EN<-ona_data_get(base_url = "https://api.ona.io", auth_mode =  "to
 DEMO.RegisterVerify_HH<-ona_data_get(base_url = "https://api.ona.io", auth_mode =  "token",form_id = 808710)
 #PotatoFertRT<-  ona_data_get(base_url = "https://api.ona.io", auth_mode =  "token",form_id = 757128)
 DEMO.valData<-ona_data_get(base_url = "https://api.ona.io", auth_mode =  "token",form_id =808706 )
-
-
+DEMO.valDataNew<-ona_data_get(base_url = "https://api.ona.io", auth_mode =  "token",form_id =825726 )
+DEMO.valDataNew$group_plot[[7]]$`group_plot/group_layout/crop`
 
 ##########################################################################################
 ##########################SNS-RWANDA######################################################
