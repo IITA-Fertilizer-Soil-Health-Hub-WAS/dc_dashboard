@@ -1,6 +1,6 @@
 # Some support functions and definitions
 
-#basemap for leaflet
+#Helper function for basemap - leaflet
 basemap <- leaflet() %>%
   addProviderTiles(providers$CartoDB.Positron) #%>%
 
@@ -33,8 +33,8 @@ shinyjs.hrefAuto = function(url) { window.location.href = url;};"
 usecases.index<-c("ATAFI-MOVE" =1 , "BAYGAP-(BAYER)" =2 ,  "Cocoa-Soils" = 3  , "DEMO"  =21   , "DRC-Coffee-OLAM" =5 ,
                   "DSR-Extension-Vietnam"=6 ,   "DSRC-SE-ASIA" =7  ,"DigGreen-ETHIOPIA" =8 , "Fert-Ethiopia" =9 ,"Govt-Egypt"   =10 ,
                   "Govt-LatAm"=11 , "KALRO"  =20,  "Mercy-Corps-SPROUT" = 18  ,    "Morocco-CA" =14     , "One-Acre-Fund"  =12   ,
-                  "Planting-S-Asia"  =16  ,      "Rainforest-Alliance" =17  ,   "SAA-NIGERIA"   =13    ,  "SNS-RWANDA" =4 ,
-                  "Solidaridad-Soy-Advisory"=15,  "GH-CerLeg-Esoko"  =19, "ex-Wcover-Ghana" = 22)
+                  "Planting-S-Asia"  =16  ,      "BioSSA" =17  ,   "SAA-NIGERIA"   =13    ,  "SNS-RWANDA" =4 ,
+                  "Solidaridad-Soy-Advisory"=15,  "GH-CerLeg-Esoko"  =19, "ex-Wcover-Ghana" = 22,"Rainforest-Alliance" =23)
 
 
 create_tab_panel <- function(tab_name) {
@@ -192,41 +192,43 @@ create_tab_panel <- function(tab_name) {
 
 # Function to create navbarMenu with tabPanel elements
 create_navbarMenu <- function(tab_names) {
-  
   # Create a list of tab panels using lapply
   tab_panels <- lapply(tab_names, create_tab_panel)
-  
   # Use do.call to create the navbarMenu with the list of tab panels
   do.call(navbarMenu, c("Usecase", tab_panels))
 }
 
-
-
-
+load_data_from_s3 <- function(file_name) {
+  future({
+    save_object(paste0("s3://rtbglr/", Sys.getenv("bucket_path"), file_name), 
+                file = tempfile(fileext = ".csv")) %>%
+      fread()
+  })
+}
 
 blank2na = function(x,na.strings=c('','.','NA','na','N/A','n/a','<NA>','NaN','nan')) {
   if (is.factor(x)) {
     lab = attr(x, 'label', exact = T)
     labs1 <- attr(x, 'labels', exact = T)
     labs2 <- attr(x, 'value.labels', exact = T)
-    
+
     # trimws will convert factor to character
     x = trimws(x,'both')
     if (! is.null(lab)) lab = trimws(lab,'both')
     if (! is.null(labs1)) labs1 = trimws(labs1,'both')
     if (! is.null(labs2)) labs2 = trimws(labs2,'both')
-    
+
     if (!is.null(na.strings)) {
       # convert to NA
       x[x %in% na.strings] = NA
-      # also remember to remove na.strings from value labels 
+      # also remember to remove na.strings from value labels
       labs1 = labs1[! labs1 %in% na.strings]
       labs2 = labs2[! labs2 %in% na.strings]
     }
-    
+
     # the levels will be reset here
     x = factor(x)
-    
+
     if (! is.null(lab)) attr(x, 'label') <- lab
     if (! is.null(labs1)) attr(x, 'labels') <- labs1
     if (! is.null(labs2)) attr(x, 'value.labels') <- labs2
@@ -234,21 +236,21 @@ blank2na = function(x,na.strings=c('','.','NA','na','N/A','n/a','<NA>','NaN','na
     lab = attr(x, 'label', exact = T)
     labs1 <- attr(x, 'labels', exact = T)
     labs2 <- attr(x, 'value.labels', exact = T)
-    
+
     # trimws will convert factor to character
     x = trimws(x,'both')
     if (! is.null(lab)) lab = trimws(lab,'both')
     if (! is.null(labs1)) labs1 = trimws(labs1,'both')
     if (! is.null(labs2)) labs2 = trimws(labs2,'both')
-    
+
     if (!is.null(na.strings)) {
       # convert to NA
       x[x %in% na.strings] = NA
-      # also remember to remove na.strings from value labels 
+      # also remember to remove na.strings from value labels
       labs1 = labs1[! labs1 %in% na.strings]
       labs2 = labs2[! labs2 %in% na.strings]
     }
-    
+
     if (! is.null(lab)) attr(x, 'label') <- lab
     if (! is.null(labs1)) attr(x, 'labels') <- labs1
     if (! is.null(labs2)) attr(x, 'value.labels') <- labs2
@@ -260,96 +262,67 @@ blank2na = function(x,na.strings=c('','.','NA','na','N/A','n/a','<NA>','NaN','na
 
 
 
+# ## Helper function for calender/ date-based background coloring
+# get_background_color <- function(value, current_date, target_dates, target_dates_prev = NULL, trial_type = NULL, target_dates_potato = NULL, target_dates_rice = NULL,target_dates_prev_potato= NULL,target_dates_prev_rice= NULL) {
+# 
+#   value <- as.Date(value , format = "%Y-%m-%d")
+#   #
+#   if (is.na(target_dates) || is.na(value)) {
+#     return("#fff") #future event
+#   }else if (is.na(target_dates) && is.na(value)) {
+#     return("#BE93D4") #future event
+#   }else if (is.na(value) && current_date <= target_dates) {
+#     return("#BE93D4") #future event
+#   }else if (!is.na(target_dates)&& is.na(value) && current_date >= target_dates){
+#     return("#c3531f")
+#   }else if (!is.na(target_dates)&& is.na(value) && current_date <= target_dates){
+#     return("#fdb415")
+#   }else if (!is.na(target_dates)&& !is.na(value) &&  as.Date(value , format = "%Y-%m-%d") <= target_dates) {
+#     return("#55b047")
+#   }else if (!is.na(target_dates)&& !is.na(value) && as.Date(value , format = "%Y-%m-%d") >= target_dates){
+#     return("#c3531f")
+#   }else if(!is.na(target_dates)&&  is.na(value) && current_date <= target_dates && current_date >= target_dates_prev){
+#     return("#fdb415")
+#   }else if(!is.na(target_dates)&&  is.na(value) && current_date <= target_dates && current_date <= target_dates_prev){
+#     return("#BE93D4")
+#   }else if (trial_type=="potatoIrish" && !is.na(target_dates_potato)&& !is.na(value) &&  as.Date(value , format = "%Y-%m-%d") <= target_dates_potato) {
+#     return("#55b047")
+#   }else if (trial_type=="rice" && !is.na(target_dates_rice)&& !is.na(value) &&  as.Date(value , format = "%Y-%m-%d") <= target_dates_rice) {
+#     return("#55b047")
+#   } else if (trial_type=="potatoIrish" && !is.na(target_dates_potato)&& !is.na(value) && as.Date(value , format = "%Y-%m-%d") >= target_dates_potato){
+#     return("#c3531f")
+#   }else if (trial_type=="rice" && !is.na(target_dates_rice)&& !is.na(value) && as.Date(value , format = "%Y-%m-%d") >= target_dates_rice){
+#     return("#c3531f")
+#   }else if( trial_type=="potatoIrish" && !is.na(target_dates_potato)&&  is.na(value) && current_date <= target_dates_potato && current_date >= target_dates_prev){
+#     return("#fdb415")
+#   }else if( trial_type=="rice" && !is.na(target_dates_rice)&&  is.na(value) && current_date <= target_dates_rice && current_date >= target_dates_prev){
+#     return("#fdb415")
+#   }else if(trial_type=="potatoIrish" && !is.na(target_dates_potato)&&  is.na(value) && current_date <= target_dates_potato && current_date <= target_dates_prev){
+#     return("#BE93D4")
+#   }else if(trial_type=="rice" && !is.na(target_dates_rice)&&  is.na(value) && current_date <= target_dates_rice && current_date <= target_dates_prev){
+#     return("#BE93D4")
+#   }else if( trial_type=="potatoIrish" && !is.na(target_dates_potato)&&  is.na(value) && current_date <= target_dates_potato && current_date >= target_dates_prev_potato){
+#     return("#fdb415")
+#   } else if( trial_type=="rice" && !is.na(target_dates_rice)&&  is.na(value) && current_date <= target_dates_rice && current_date >= target_dates_prev_rice){
+#     return("#fdb415")
+#   }else if(trial_type=="potatoIrish" && !is.na(target_dates_potato)&&  is.na(value) && current_date <= target_dates_potato && current_date <= target_dates_prev_potato){
+#     return("#BE93D4")
+#   }else if(trial_type=="rice" && !is.na(target_dates_rice)&&  is.na(value) && current_date <= target_dates_rice && current_date <= target_dates_prev_rice){
+#     return("#BE93D4")
+#   }else if( trial_type=="potatoIrish" && !is.na(target_dates_potato)&& is.na(value) && current_date >= target_dates_potato){
+#     return("#c3531f")
+#   }else if( trial_type=="rice" && !is.na(target_dates_rice)&& is.na(value) && current_date >= target_dates_rice){
+#     return("#c3531f")
+#   } else if (is.na(target_dates_potato)&& is.na(value) ){
+#     return("#BE93D4")
+#   }else if (is.na(target_dates_rice)&& is.na(value) ){
+#     return("#BE93D4")
+#   }else if (is.na(target_dates)&& is.na(value) ){
+#     return("#BE93D4")
+#   }else {
+#     return()
+#   }
+# 
+# }
 
 
-# Helper function to load and process data
-load_and_process_data <- function(path_prefix, data_files, columns_to_rename = NULL, pattern_issues = NULL) {
-  data_list <- lapply(data_files, function(file) {
-    save_object(paste0("s3://rtbglr/", Sys.getenv("bucket_path"), file), 
-                file = tempfile(fileext = ".csv")) %>%
-      fread()
-  })
-  
-  if (!is.null(columns_to_rename)) {
-    data_list[[1]] <- data_list[[1]] %>%
-      rename(!!!columns_to_rename) %>%
-      mutate(Stage = "Validation") # for 'stage' filter purpose
-  }
-  
-  return(list(
-    raw_data = data_list[[1]],
-    data_crop = data_list[[2]],
-    pattern_issues = pattern_issues
-  ))
-}
-
-# Helper function for generating UI elements
-generate_ui_elements <- function(i, datacrop, rawdata) {
-  list(
-    stage_ui = renderUI({
-      selectInput(
-        paste0("stagefinder_", i),
-        label = "Stage",
-        multiple = FALSE,
-        choices = c('Research', 'Validation', 'Piloting'),
-        selected = "Validation"
-      )
-    }),
-    experiment_ui = renderUI({
-      req(input[[paste0("stagefinder_", i)]])
-      stage <- input[[paste0("stagefinder_", i)]]
-      
-      experiment_choices <- if (stage == 'Research') {
-        c('NOT', 'Variety Selection', 'Planting Date')
-      } else if (stage == 'Validation') {
-        c('Fertilizer Recommendation', 'Variety Selection', 'Planting Date', 'Intercropping')
-      } else {
-        c('Fertilizer Recommendation', 'Variety Selection', 'Planting Date')
-      }
-      
-      selectInput(paste0("experimentfinder_", i), label = "Experiment", multiple = FALSE, 
-                  choices =experiment_choices , selected = sort(unique(datacrop$Trial))[1])
-    }),
-    crop_ui = renderUI({
-      selectInput(
-        paste0("cropfinder_", i),
-        label = "Crop",
-        multiple = TRUE,
-        choices = c("All", sort(unique(datacrop$Crop))),
-        selected = "All"
-      )
-    }),
-    date_ui = renderUI({
-      dateRangeInput(paste0("datefinder_", i),
-                     "Date",
-                     start = min(na.omit(rawdata$today)),
-                     end = Sys.time())
-    }),
-    enumerator_ui = renderUI({
-      selectInput(paste0("enumeratorfinder_", i),
-                  label = "Enumerator",
-                  multiple = TRUE,
-                  choices = c("All", sort(unique(datacrop$ENID))),
-                  selected = "All")
-    }),
-    household_ui = renderUI({
-      selectInput(paste0("householdfinder_", i),
-                  label = "Household",
-                  multiple = TRUE,
-                  choices = c("All", sort(unique(na.omit(datacrop$HHID)))),
-                  selected = "All")
-    }),
-    totals_ui = renderUI({
-      infoBox("Total submissions", paste0(nrow(rawdata)), icon = icon("list"),
-              color = "olive", width = "100%")
-    }),
-    country_ui = renderUI({
-      infoBox("Country", HTML(paste(unique(na.omit(rawdata$Country)), collapse = ", ")), icon = icon("globe"),
-              color = "olive", width = "100%")
-    }),
-    project_ui = renderUI({
-      infoBox("Usecase", as.character(input$nav), icon = icon("barcode"),
-              color = "olive", width = "100%")
-    })
-  )
-}

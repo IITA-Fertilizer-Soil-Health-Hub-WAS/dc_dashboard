@@ -1,3 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="generator" content="pandoc">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Data Collection Monitoring Tool Guide</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .container-fluid {
+            width: 100%;
+            margin: 0 auto;
+            padding: 0;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0);
+        }
+
+        .container-fluid2 {
+            /*max-width: 900px;  Constrain width for better readability */
+            margin: 0px auto; /* Centering the container */
+            padding: 20px;
+            background-color: #ffffff; /* White background for the main container */
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        h2, h3, h4 {
+            color: #4a3d29;
+        }
+
+        h2 {
+            border-bottom: 3px solid #4a3d29;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        h3 {
+            margin-top: 20px;
+            margin-bottom: 15px;
+            font-weight: normal;
+        }
+
+        p {
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            transition: box-shadow 0.3s ease, transform 0.3s ease; /* Added transform */
+        }
+
+        .section:hover {
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transform: translateY(-2px); /* Slight lift effect */
+        }
+
+        .section.level1 {
+            border-left: 6px solid #412a22;
+        }
+
+        .divider {
+            margin: 20px 0;
+            text-align: center;
+            border-top: 1px solid #ccc;
+            padding-top: 10px;
+        }
+
+        .center-text {
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .container-fluid2 {
+                width: 95%;
+                padding: 15px;
+            }
+
+            .section {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid2">
+        <h2>Key Terms</h2>
+        <p>Below are the descriptions of key terms, events, and procedures used to track and evaluate data collection activities.</p>
+
+        <div class="section level1"><strong>Usecase:</strong> Usecase short name</div>
+        <div class="section level1"><strong>Form:</strong> ODK generated form used for the survey</div>
+        <div class="section level1"><strong>Country:</strong> National administrative level. Target geography of the specified project.</div>
+        <div class="section level1"><strong>Enumerator:</strong> Survey personnel charged with data collection</div>
+        <div class="section level1"><strong>Household:</strong> An agricultural household where at least one member is operating a holding or when the household head, reference person, or main income earner is economically active in agriculture.</div>
+        <div class="section level1"><strong>ENID:</strong> Enumerator identification number (Hover to get enumerator details).</div>
+        <div class="section level1"><strong>HHID:</strong> Household identification number.</div>
+        <div class="section level1"><strong>Plot number:</strong> Plot identification number.</div>
+        <div class="section level1"><strong>Complete:</strong> Submitted with correct information within the required time period.</div>
+        <div class="section level1"><strong>Missing Details:</strong> Missing information within the required time period.</div>
+        <div class="section level1"><strong>Overdue:</strong> Submission overdue with or without information submitted.</div>
+        <div class="section level1"><strong>Future Event:</strong> Future data collection event, due date not yet passed and information not yet submitted.</div>
+        <div class="section level1"><strong>Issues:</strong> Data issues that might arise from submissions</div>
+        <div class="section level1"><strong>Data Preview:</strong> Preview and download data as submitted via ODK forms by the enumerators</div>
+        <div class="section level1"><strong>Events:</strong> Various field events monitored (these can vary with usecase).</div>
+
+        <div class="divider">
+            <p class="center-text"><strong> Events</strong></p>
+        </div>       
+        <div></div>
+        <div class=""><strong>Banana</strong> </div>
+        <div class="section level1"><strong>Event 0:</strong>Root Sampling </div>
+        <div class="section level1"><strong>Event 1:</strong>Germination</div>
+        <div class="section level1"><strong>Event 2:</strong> Height (average of all measurements taken for different plants for any one submission) </div>
+        <div class="section level1"><strong>Event 3:</strong> Emerged leaf number (average of all measurements taken for different plants for any one submission)</div>
+        <div class="section level1"><strong>Event 4:</strong>Living leaves (average of all measurements taken for different plants for any one submission)</div>
+        <div class="section level1"><strong>Event 5:</strong>Stem circumference (average of all measurements taken for different plants for any one submission)  </div>
+        <div class="section level1"><strong>Event 6:</strong>SPAD </div>
+        <div class="section level1"><strong>Event 7:</strong> Final Harvest date </div>
+        <div class="section level1"><strong>Event 8:</strong> Soil sampling</div>
+        <div class="section level1"><strong>Event 12:</strong> Pest and Diseases number</div>
+        <div class="section level1"><strong>Event 13:</strong> Suckers</div>
+        <div class="section level1"><strong>Event 30:</strong>Leaf sampling for N and P</div>
+
+
+        <div></div>
+        <div class=""><strong>Cassava</strong> </div>
+        <div class="section level1"><strong>Event 1:</strong>Unforeseen observation </div>
+        <div class="section level1"><strong>Event 2:</strong> Planting date </div>
+        <div class="section level1"><strong>Event 3:</strong> Replanting date </div>
+        <div class="section level1"><strong>Event 4:</strong>Number of Plants- germination plant stand </div>
+        <div class="section level1"><strong>Event 5:</strong>Height (average of all measurements taken for different plants for any one submission)  </div>
+        <div class="section level1"><strong>Event 6:</strong>Stem number </div>
+        <div class="section level1"><strong>Event 7:</strong> Leaf number </div>
+        <div class="section level1"><strong>Event 8:</strong> SPAD</div>
+        <div class="section level1"><strong>Event 9:</strong> Harvest date</div>
+        <div class="section level1"><strong>Event 10:</strong> Pest and Diseases number</div>
+        <div class="section level1"><strong>Event 11:</strong> Soil sampling</div>
+        <div class="section level1"><strong>Event 12:</strong> Plant sampling for N and P content</div>
+        <div class="section level1"><strong>Event 13:</strong>Microbial sampling </div>
+
+        
+        
+        <div></div>
+        <div class=""><strong>Legumes (Common bean, cowpea,soybean)</strong> </div>
+
+        <div class="section level1"><strong>Event 1:</strong> Height (average of all measurements taken for different plants for any one submission)</div>
+        <div class="section level1"><strong>Event 2:</strong> Diameter (average of all measurements taken for different plants  for any one submission)</div>
+        <div class="section level1"><strong>Event 3:</strong> SPAD</div>
+        <div class="section level1"><strong>Event 4:</strong> Soil sampling</div>
+        <div class="section level1"><strong>Event 5:</strong> Microbial sampling</div>
+        <div class="section level1"><strong>Event 6:</strong> Number of Plants- germination plant stand</div>
+        <div class="section level1"><strong>Event 7:</strong> Harvest date</div>
+        <div class="section level1"><strong>Event 8:</strong> Plant sampling</div>
+        <div class="section level1"><strong>Event 9:</strong> Abiotic stress report</div>
+        <div class="section level1"><strong>Event 10:</strong> Planting date</div>
+        <div class="section level1"><strong>Event 11:</strong> Flowering date</div>
+        <div class="section level1"><strong>Event 26:</strong> Unforeseen observation</div>
+        <div class="section level1"><strong>Event 31:</strong> Pest and Diseases number</div>
+
+     
+
+
+    </div>
+</body>
+</html>
 
 
 
