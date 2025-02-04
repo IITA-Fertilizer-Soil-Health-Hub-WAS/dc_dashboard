@@ -1,7 +1,8 @@
-
-##########################SNS-RWANDA######################################################
+##########################Data Processing Script######################################################
 
 #####This Script runs daily to  update and aggregate data collected
+
+#####Logic: transform data to show identifiers (HHID, ENID, PID...), location , date of submission and  events
 
 #print(wd)
 
@@ -24,7 +25,7 @@ if(!'aws.s3' %in% installed.packages()[, 'Package']) {install.packages('aws.s3',
 suppressMessages(suppressWarnings(library("aws.s3",character.only = TRUE)))
 
 
-
+##########################SNS-RWANDA######################################################
 #ID DATA (Enumerators and households)
 #merge enum +household registration data
 Register_EN.Ids <- Register_EN%>%
@@ -66,8 +67,6 @@ EN.HH_data <- Register_EN.Ids %>%
     `Site Selection` = ifelse(is.na(HHID), NA, `Site Selection`)
   )%>% select(-c(today,ENtoday)) %>% 
   suppressWarnings()
-
-
 
 
 #Validation data
@@ -168,15 +167,11 @@ VAL_data <- full_data %>%
   ) %>% distinct(ENID, HHID, Trial, treat, .keep_all = TRUE)%>% 
   mutate(event1 = plantingDate)%>% select(-(plantingDate))%>% suppressWarnings()
 
-
-
 # Join Identifiers+Validation Data
 RWA.VAL_data <- EN.HH_data %>%
   left_join(VAL_data, by = c("ENID","HHID")) %>% #join identifiers and val data while keeping all enumerators/households
   mutate(Date = coalesce(todayVal, DateId))%>%select(-c(DateId,todayVal))%>%
   suppressWarnings()
-
-
 
 dataev<-data%>%
   dplyr::select(today, `intro/wrong_ENID`,`intro/wrong_ID` ,crop, `intro/event`,  `planting/plantingDetails/planting_date`) 
@@ -252,29 +247,6 @@ aws.s3::put_object(file = temp_file,
                    bucket = "rtbglr", 
                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SNSRwandaOdata.csv"))
 unlink(temp_file)
-
-
-
-# zz <- rawConnection(raw(0), "r+")
-# write.csv(RWA.VAL_data, zz, row.names = FALSE)
-# aws.s3::put_object(file = rawConnectionValue(zz),
-#                    bucket = "rtbglr", object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SNSRwandaVALdata.csv") )
-# close(zz)
-# 
-# zz <- rawConnection(raw(0), "r+")
-# write.csv(RWA.SUM_data, zz, row.names = FALSE)
-# aws.s3::put_object(file = rawConnectionValue(zz),
-#                    bucket = "rtbglr", object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SNSRwandaSUMdata.csv"))
-# close(zz)
-# 
-# zz <- rawConnection(raw(0), "r+")
-# write.csv(RWA.O_data, zz, row.names = FALSE)
-# aws.s3::put_object(file = rawConnectionValue(zz),
-#                    bucket = "rtbglr", object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SNSRwandaOdata.csv")) 
-# close(zz)
-# #setwd(wd)
-
-
 
 
 ##########################SOLIDARIDAD#####################################################
@@ -472,10 +444,8 @@ NOTSol2<-NOTSol1%>%
   mutate(Country = capitalize(Country))%>%
   select(-any_of(c( "_notes" , "_total_media", "_id", "_tags", "_uuid" ,"start", "_edited","_status" ,"_version" , "_duration"  ,"_xform_id" ,"_attachments", "_geolocation" ,"_media_count" ,"formhub/uuid"   ,
                                                             "_submitted_by","consent/photo","_date_modified","meta/instanceID"  ,"_submission_time", "_xform_id_string" ,"_bamboo_dataset_id"  ,
-                                                            "_media_all_received"  ,  "consent/read_consent_form"    ,"consent/copy",  "consent/give_consent", "intro/country" )))
-  
-
-
+                                                            "_media_all_received"  ,  "consent/read_consent_form"    ,"consent/copy",  "consent/give_consent", "intro/country" )
+                 ))
 
 valSol2<-valSol1%>%
   dplyr::select(any_of(c(  "today", "Event"  ,  "Stage", "Trial", "ENID" , "HHID" 
@@ -487,20 +457,9 @@ valSol2<-valSol1%>%
           ENID, HHID )
 
 valSol1<-as.data.frame(valSol1)
-# SOL.SUM_data <- f.seg_data %>%
-#   left_join(valSol2, by = c("ENID","HHID")) %>% #join identifiers and val data while keeping all enumerators/households
-#   suppressWarnings()
-
-
-# 
-# # Remove columns with all NA values
-# clean_data <- n[, colSums(is.na(n)) != nrow(n)]
-
 
 #rbind valSol2, NOTSol2 and save as SOL.SUM_data on aws
 NOTValSol2 <-bind_rows(valSol2, NOTSol2)
-  
-
 
 NOTSolID<-NOTSol1%>%
   rename(
@@ -512,8 +471,6 @@ NOTSolID<-NOTSol1%>%
   )  ))%>%
   filter(!is.na(HHfirstName)) %>%
   distinct(ENID, HHID, .keep_all = TRUE)
-  
-
 
 NOTValSol2 <-NOTValSol2 %>%
   left_join(NOTSolID, by = c("ENID","HHID")) %>% 
@@ -539,8 +496,6 @@ NOTValSol2 <- lapply(NOTValSol2, function(x) {
 
 NOTValSol2 <- as.data.frame(NOTValSol2)
 
-
-
 #save to bucket
 temp_file <- tempfile()
 write.csv(NOTValSol2, temp_file, row.names = FALSE)
@@ -564,28 +519,6 @@ aws.s3::put_object(file = temp_file,
 unlink(temp_file)
 
 
-# zz <- rawConnection(raw(0), "r+")
-# write.csv(NOTValSol2, zz, row.names = FALSE)
-# aws.s3::put_object(file = rawConnectionValue(zz),
-#                    bucket = "rtbglr", object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SolidaridadSUMdata.csv"))
-# close(zz)
-# 
-# 
-# zz <- rawConnection(raw(0), "r+")
-# write.csv(valSol1, zz, row.names = FALSE)
-# aws.s3::put_object(file = rawConnectionValue(zz),
-#                    bucket = "rtbglr", object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SolidaridadOdata.csv"))
-# close(zz)
-# 
-# zz <- rawConnection(raw(0), "r+")
-# write.csv(NOTSol1, zz, row.names = FALSE)
-# aws.s3::put_object(file = rawConnectionValue(zz),
-#                    bucket = "rtbglr", object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SolidaridadNOTdata.csv"))
-# close(zz)
-
-
-
-
 ##########################KALRO###########################################################
 #ID DATA (Enumerators and households)
 #merge enum +household registration data
@@ -600,10 +533,6 @@ KL.ENReg <- KL.Register_EN%>%
   select(any_of(c("ENtoday","ENID","ENfirstName","ENSurname","ENphoneNo"))) %>%
   arrange(ENID, desc(ENtoday)) %>% #sort to Keep last entry by date in duplicated records
   distinct(ENID, .keep_all = TRUE)# Keep last entry by date in duplicated records
-  
-
-
-
 
 KL.HHReg<-KL.RegisterVerify_HH%>%
   select(any_of(c( "register_hh/today"
@@ -621,7 +550,6 @@ KL.HHReg<-KL.RegisterVerify_HH%>%
          HHSurname = `register_hh/new_barcode/surname`,
          HHID=`register_hh/new_barcode/household_id`,
          HHphoneNo=`register_hh/new_barcode/phone_number` 
-         
   )%>%
   mutate(`Site Selection` = as.Date(`Site Selection`)) %>%
   filter(!is.na(HHID)) %>%  # Filter out rows where HHID is NA
@@ -630,11 +558,9 @@ KL.HHReg<-KL.RegisterVerify_HH%>%
 KL.ENHHReg <- KL.ENReg %>%
   full_join(KL.HHReg, by = "ENID") %>%
   suppressWarnings()
- 
 
 #Validation data
 KL.val1<-KL.valData%>%
-  
   as.data.frame()%>%
   select(-any_of(c( "_notes" , "_total_media", "_id", "_tags", "_uuid" ,"start", "_edited","_status" ,"_version" , "_duration"  ,"_xform_id" ,"_attachments", "_geolocation" ,"_media_count" ,"formhub/uuid"   ,
                     "_submitted_by","consent/photo","_date_modified","meta/instanceID"  ,"_submission_time", "_xform_id_string" ,"_bamboo_dataset_id"  ,
@@ -660,8 +586,6 @@ KL.val1<-KL.valData%>%
   filter(ENID != "KLENKE000000" ) %>%#leave out the enumerator registered for testing and monitoring the tool and is not expected to collect data
   filter(ENID != "KLENKE123456")
 
-
-
 KL.val2 <- KL.val1 %>%
   dplyr::select(any_of(c("today","Crop", "Event",  "Stage", "Trial", "ENID", "HHID"))) %>%
   mutate(ENID = if_else(ENID == "KHENKE000028", "KLENKE000028", ENID)) %>%
@@ -670,13 +594,11 @@ KL.val2 <- KL.val1 %>%
   mutate(across(starts_with("event"), as.Date, format = "%Y-%m-%d")) %>%
   arrange( ENID, HHID)%>%
   suppressWarnings()
-
  
 #join to include all EN details... some not in the hh details. 
 
 KL.ENHHReg2<-KL.ENHHReg %>%
-  dplyr::select(-any_of(c("Country", "ENtoday", "ENfirstName","ENSurname","ENphoneNo" ))) 
-
+  dplyr::select(-any_of(c("Country", "ENtoday", "ENfirstName","ENSurname","ENphoneNo" )))
 
 #get hh details
 KL.SUM_data <- KL.val2 %>%
@@ -702,7 +624,7 @@ KL.val1 <- lapply(KL.val1, function(x) {
 KL.val1 <- as.data.frame(KL.val1)
 ##### KLENKE000000 KLHHKE000000 not duplicated... one househld id used in training with multiple people asigned with different details.  
 ###training data to be excluded later...
-#View(KL.SUM_data)
+
 #save to bucket
 temp_file <- tempfile()
 write.csv(KL.val1, temp_file, row.names = FALSE)
@@ -718,22 +640,8 @@ aws.s3::put_object(file = temp_file,
                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "KLSUMdata.csv"))
 unlink(temp_file)
 
-# zz <- rawConnection(raw(0), "r+")
-# write.csv(KL.SUM_data, zz, row.names = FALSE)
-# aws.s3::put_object(file = rawConnectionValue(zz),
-#                    bucket = "rtbglr", object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "KLSUMdata.csv"))
-# close(zz)
-# 
-# 
-# zz <- rawConnection(raw(0), "r+")
-# write.csv(KL.val1, zz, row.names = FALSE)
-# aws.s3::put_object(file = rawConnectionValue(zz),
-#                    bucket = "rtbglr", object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "KLOdata.csv"))
-# close(zz)
-
 
 ##########################MercyCorpsSprot#################################################
-
 #ID DATA (Enumerators and households)
 #merge enum +household registration data
 MC.ENReg <- MC.Register_EN%>%
@@ -764,22 +672,17 @@ MC.HHReg<-MC.RegisterVerify_HH%>%
          HHSurname = `register_hh/new_barcode/surname`,
          HHID=`register_hh/new_barcode/household_id`,
          HHphoneNo=`register_hh/new_barcode/phone_number`
-
   )%>%
   mutate(`Site Selection` = as.Date(`Site Selection`)) %>%
   filter(!is.na(HHID)) %>%  # Filter out rows where HHID is NA
   distinct(ENID,HHID,Country,`Site Selection`,HHphoneNo, .keep_all = TRUE)
 
-
 MC.ENHHReg <- MC.ENReg %>%
   full_join(MC.HHReg, by = "ENID") %>%
   suppressWarnings()
 
-
-
 #Validation data
 MC.val1<-MC.valData%>%
-
   as.data.frame()%>%
   select(-any_of(c( "_notes" , "_total_media", "_id", "_tags", "_uuid" ,"start", "_edited","_status" ,"_version" , "_duration"  ,"_xform_id" ,"_attachments", "_geolocation" ,"_media_count" ,"formhub/uuid"   ,
                     "_submitted_by","consent/photo","_date_modified","meta/instanceID"  ,"_submission_time", "_xform_id_string" ,"_bamboo_dataset_id"  ,
@@ -801,8 +704,6 @@ MC.val1<-MC.valData%>%
   mutate(Trial = "Fertilizer Recommendation") %>%
   mutate(Country = capitalize(Country))
 
-
-
 MC.val2 <- MC.val1 %>%
   dplyr::select(any_of(c("today", "Event", "Crop", "Stage", "Trial","ENID", "HHID"))) %>%
   arrange(Event) %>%
@@ -811,12 +712,10 @@ MC.val2 <- MC.val1 %>%
   arrange( ENID, HHID)%>%
   suppressWarnings()
 
-
 #join to include all EN details... some not in the hh details.
 
 MC.ENHHReg2<-MC.ENHHReg %>%
   dplyr::select(-any_of(c("Country", "ENtoday", "ENfirstName","ENSurname","ENphoneNo" )))
-
 
 #get hh details
 MC.SUM_data <- MC.val2 %>%
@@ -839,7 +738,6 @@ MC.val1 <- lapply(MC.val1, function(x) {
 
 MC.val1 <- as.data.frame(MC.val1)
 
-
 temp_file <- tempfile()
 write.csv(MC.val1, temp_file, row.names = FALSE)
 aws.s3::put_object(file = temp_file,
@@ -855,11 +753,7 @@ aws.s3::put_object(file = temp_file,
 unlink(temp_file)
 
 
-
-
-# ##########################EiA_Demo_Validation#############################################
-
-
+###########################EiA_Demo_Validation#############################################
 #ID DATA (Enumerators and households)
 #merge enum +household registration data
 DEMO.ENReg <- DEMO.Register_EN%>%
@@ -890,12 +784,10 @@ DEMO.HHReg<-DEMO.RegisterVerify_HH%>%
          HHSurname = `detailsHH/surNameHH`,
          HHID=HHID,
          HHphoneNo=`detailsHH/phoneNrHH`
-
   )%>%
   mutate(`Site Selection` = as.Date(`Site Selection`)) %>%
   filter(!is.na(HHID)) %>%  # Filter out rows where HHID is NA
   distinct(ENID,HHID,Country,`Site Selection`,HHphoneNo, .keep_all = TRUE)
-
 
 DEMO.ENHHReg <- DEMO.ENReg %>%
   full_join(DEMO.HHReg, by = "ENID") %>%
@@ -906,7 +798,7 @@ DEMO.ENHHReg <- DEMO.ENReg %>%
 extract_coordinates <- function(point) {
   # Split the string by "."
   parts <- strsplit(point, "\\.")[[1]]
-
+  
   latitude_part1 <- parts[1]
   latitude_part2 <- substr(parts[2], 1, nchar(parts[2]) - 1)
   latitude <- paste(latitude_part1, latitude_part2, sep = ".")
@@ -914,12 +806,9 @@ extract_coordinates <- function(point) {
   # Extract longitude: last digit of the second part + third part
   last_digit_second_part <- substr(parts[2], nchar(parts[2]), nchar(parts[2]))
   longitude <- paste(last_digit_second_part, parts[3], sep = ".")
-
   longitude <- sub(" .*", "", longitude)
-
   return(c(latitude = latitude, longitude = longitude))
 }
-
 
 # # Apply the function to the 'geopoint' column and convert to a data frame
 extracted_data <- t(sapply(DEMO.valData$geopoint, extract_coordinates))
@@ -928,8 +817,6 @@ colnames(extracted_df) <- c("Latitude", "Longitude")
 
 # Combine the existing dataframe with the new latitude and longitude columns
 DEMO.valData2 <- cbind(DEMO.valData, extracted_df)
-
-
 
 # Define the bounds for Nigeria
 lat_min <- 4.3
@@ -944,14 +831,7 @@ DEMO.valData3 <- DEMO.valData2 %>%
   filter(Latitude >= as.numeric(lat_min) & Latitude <= as.numeric(lat_max) &
            Longitude >= as.numeric(long_min) & Longitude <= as.numeric(long_max))%>%
   mutate(country = ifelse(country == "NG", "ZZ", country)) %>%
-  # mutate(crop= case_when(
-  #   grepl("R$", `purpose/event`) ~ "Rice",
-  #   grepl("M$", `purpose/event`) ~ "Maize",
-  #   grepl("C$", `purpose/event`) ~ "Cassava",
-  #   TRUE ~ NA_character_
-  #   ))%>%
   suppressWarnings()
-
 
 #Validation data
 DEMO.val1<-DEMO.valData3%>%
@@ -983,80 +863,6 @@ DEMO.val1<-DEMO.valData3%>%
                         today)) %>%
   mutate(today = as.Date(today, origin = "1970-01-01"))
 
-
-# DEMO.RegisterVerify_HH$`new_barcode_dataSCRIBEcode_02c9e5d2f2504f57ae636de562b9f837_ENDDS/surname_dataSCRIBEcode_9499aeaeb65d44bca139a99e82e885c0_ENDDS`
-# View(DEMO.RegisterVerify_HH)
-# DEMO.ENReg <- DEMO.Register_EN%>%
-#   rename(
-#     ENID = `purpose/enumerator_ID`,
-#     ENSurname = `purpose/surname`,
-#     ENphoneNo = `purpose/phone_number`,
-#     ENfirstName= `purpose/first_name`,
-#     ENtoday = today
-#   ) %>%
-#   select(any_of(c("ENtoday","ENID","ENfirstName","ENSurname","ENphoneNo"))) %>%
-#   arrange(ENID, desc(ENtoday)) %>% #sort to Keep last entry by date in duplicated records
-#   distinct(ENID, .keep_all = TRUE)# Keep last entry by date in duplicated records
-# 
-# DEMO.HHReg<-DEMO.RegisterVerify_HH%>%
-#   select(any_of(c( "today"
-#                    ,"country_ID_dataSCRIBEcode_95be8089f5c845e183a371095d44a55e_ENDDS"
-#                    ,"enumerator_ID_1_dataSCRIBEcode_8d227caed3e047498cb3296bab10df0c_ENDDS"
-#                    ,"detailsHH/surNameHH"
-#                    ,"detailsHH/firstNameHH"
-#                    ,"HHID"
-#                    ,"detailsHH/phoneNrHH"
-#   )))%>%
-#   rename(`Site Selection` =`today`,
-#          Country =country_ID_dataSCRIBEcode_95be8089f5c845e183a371095d44a55e_ENDDS,
-#          ENID=enumerator_ID_1_dataSCRIBEcode_8d227caed3e047498cb3296bab10df0c_ENDDS,
-#          HHfirstName=`detailsHH/firstNameHH`,
-#          HHSurname = `detailsHH/surNameHH`,
-#          HHID=HHID,
-#          HHphoneNo=`detailsHH/phoneNrHH`
-#          
-#   )%>%
-#   mutate(`Site Selection` = as.Date(`Site Selection`)) %>%
-#   filter(!is.na(HHID)) %>%  # Filter out rows where HHID is NA
-#   distinct(ENID,HHID,Country,`Site Selection`,HHphoneNo, .keep_all = TRUE)
-# 
-# 
-# DEMO.ENHHReg <- DEMO.ENReg %>%
-#   full_join(DEMO.HHReg, by = "ENID") %>%
-#   suppressWarnings()
-
-# #DEMO.valDataNew$group_plot[[3]]$`group_plot/group_layout/crop`
-# DEMO.valDataNew$`group_intro/event`
-# #Validation data
-# DEMO.val1<-DEMO.valDataNew%>%
-#   as.data.frame()%>%
-#   select(-any_of(c( "_notes" , "_total_media", "_id", "_tags", "_uuid" ,"start", "_edited","_status" ,"_version" , "_duration"  ,"_xform_id" ,"_attachments", "_geolocation" ,"_media_count" ,"formhub/uuid"   ,
-#                     "_submitted_by","consent/photo","_date_modified","meta/instanceID"  ,"_submission_time", "_xform_id_string" ,"_bamboo_dataset_id"  ,
-#                     "_media_all_received"  ,  "consent/read_consent_form"    ,"consent/copy",  "consent/give_consent")))%>%
-#   rename(
-#     ENID = `group_intro/enumerator_id`,
-#     HHID = `group_intro/household_id`,
-#     Country = `group_location/country`,
-#     Event= `group_intro/event`,
-#     latitude= `group_intro/latitude`,
-#     longitude= `group_intro/longitude`
-#   ) %>%
-#   mutate(today = as.IDate(today)) %>%
-#   arrange(ENID,HHID, desc(today)) %>% #sort to Keep last entry by date in duplicated records
-#   distinct(ENID,HHID,Event, .keep_all = TRUE)  %>%
-#   mutate(Stage = "Validation") %>%
-#   mutate(Crop ="Maize",) %>%
-#   mutate(Trial ='Fertilizer Recommendation',) %>%
-#   mutate(Country = capitalize(Country))%>%
-#   mutate(Event = substr(Event, 1, nchar(Event) - 1))%>%
-#   filter(ENID != "SGEAZZ000102") %>%
-#   #filter(format(today, "%Y") != "2024")
-#   mutate(today = ifelse(format(today, "%Y") == "2024", 
-#                         as.Date(format(today, "%Y-%m-%d"), tz = "UTC") - (365 * 2), 
-#                         today)) %>%
-#   mutate(today = as.Date(today, origin = "1970-01-01"))
-
-
 DEMO.val2 <- DEMO.val1 %>%
   dplyr::select(any_of(c("today","Stage","Trial","Crop", "Event", "ENID", "HHID"))) %>%
   arrange(Event) %>%
@@ -1065,12 +871,10 @@ DEMO.val2 <- DEMO.val1 %>%
   arrange( ENID, HHID)%>%
   suppressWarnings()
 
-
 #join to include all EN details... some not in the hh details.
 
 DEMO.ENHHReg2<-DEMO.ENHHReg %>%
   dplyr::select(-any_of(c("Country", "ENtoday", "ENfirstName","ENSurname","ENphoneNo" )))
-
 
 #get hh details
 DEMO.SUM_data <- DEMO.val2 %>%
@@ -1092,7 +896,6 @@ DEMO.val1 <- lapply(DEMO.val1, function(x) {
 })
 
 DEMO.val1 <- as.data.frame(DEMO.val1)
-
 
 ####SESS1
 # Function to generate random dates
@@ -1128,22 +931,7 @@ DEMO.SUM_data1 <- DEMO.SUM_data[1:65, ] %>%
   mutate(across(starts_with("event"), as.Date))%>%
   select(-dates)  # Remove the temporary column
 
-
 DEMO.SUM_data2 <- bind_rows(DEMO.SUM_data1, DEMO.SUM_data[-(1:65), ])
-
-################off
-# DEMO.SUM_data11 <- DEMO.SUM_data2[1:67, ] %>%
-#   rowwise() %>%
-#   mutate(
-#     dates = list(generate_dates(`Site Selection`)),
-#     event1 = ifelse((format(as.Date(`Site Selection`), "%Y") == "2021" | format(as.Date(`Site Selection`), "%Y") == "2022") & (row_number() <= 60  &  (!is.na(event1) | !is.na(event2) | !is.na(event3) | !is.na(event4) | !is.na(event5) | !is.na(event6) | !is.na(event7))),
-#                     ifelse(is.na(dates[[1]]), NA, format(dates[[1]], "%Y-%m-%d")),
-#                     format(event1, "%Y-%m-%d"))
-#   )%>%
-#   mutate(across(starts_with("event"), as.Date))%>%
-#   select(-dates)
-# DEMO.SUM_data2 <- bind_rows(DEMO.SUM_data11, DEMO.SUM_data[-(1:67), ])
-    
 
 
 temp_file <- tempfile()
@@ -1161,12 +949,7 @@ aws.s3::put_object(file = temp_file,
 unlink(temp_file)
 
 
-
-
-##########################################################################################
 ##########################GH-CerLeg-Esoko#################################################
-##########################################################################################
-
 #ID DATA (Enumerators and households)
 #merge enum +household registration data
 CE.ENReg <- CE.Register_EN%>%
@@ -1197,17 +980,14 @@ CE.HHReg<-CE.RegisterVerify_HH%>%
          HHSurname = `register_hh/new_barcode/surname`,
          HHID=`register_hh/new_barcode/household_id`,
          HHphoneNo=`register_hh/new_barcode/phone_number`
-         
   )%>%
   mutate(`Site Selection` = as.Date(`Site Selection`)) %>%
   filter(!is.na(HHID)) %>%  # Filter out rows where HHID is NA
   distinct(ENID,HHID,Country,`Site Selection`,HHphoneNo, .keep_all = TRUE)
 
-
 CE.ENHHReg <- CE.ENReg %>%
   full_join(CE.HHReg, by = "ENID") %>%
   suppressWarnings()
-
 
 
 #Validation/fertilizer data
@@ -1236,8 +1016,6 @@ CE.val1<-CE.valData%>%
          Crop= "Soybean") %>%
   mutate(Country = capitalize(Country))
 
-
-
 CE.val2 <- CE.val1 %>%
   dplyr::select(any_of(c("today", "Event",  "Crop", "Stage", "Trial", "ENID", "HHID"))) %>%
   arrange(Event) %>%
@@ -1246,13 +1024,10 @@ CE.val2 <- CE.val1 %>%
   arrange( ENID, HHID)%>%
   suppressWarnings()
 
-
 #join to include all EN details... some not in the hh details.
 
 CE.ENHHReg2<-CE.ENHHReg %>%
   dplyr::select(-any_of(c("Country", "ENtoday", "ENfirstName","ENSurname","ENphoneNo" )))
-
-
 
 #get hh details
 CE.SUM_data <- CE.val2 %>%
@@ -1266,7 +1041,6 @@ CE.SUM_data <- CE.val2 %>%
          Crop= "Soybean") %>%
   suppressWarnings()
 
-
 CE.val1 <- lapply(CE.val1, function(x) {
   if (is.list(x)) {
     sapply(x, paste, collapse = ',')
@@ -1277,11 +1051,8 @@ CE.val1 <- lapply(CE.val1, function(x) {
 
 CE.val1 <- as.data.frame(CE.val1)
 
-
-
 #intercropping data
 CE.IC1<-CE.ICData %>%
-  
   as.data.frame()%>%
   select(-any_of(c( "_notes" , "_total_media", "_id", "_tags", "_uuid" ,"start", "_edited","_status" ,"_version" , "_duration"  ,"_xform_id" ,"_attachments", "_geolocation" ,"_media_count" ,"formhub/uuid"   ,
                     "_submitted_by","consent/photo","_date_modified","meta/instanceID"  ,"_submission_time", "_xform_id_string" ,"_bamboo_dataset_id"  ,
@@ -1306,7 +1077,6 @@ CE.IC1<-CE.ICData %>%
          Crop= "Soybean") %>%
   mutate(Country = capitalize(Country))
 
-
 CE.IC2 <- CE.IC1 %>%
   dplyr::select(any_of(c("today", "Event", "Crop", "Stage", "Trial", "ENID", "HHID"))) %>%
   arrange(Event) %>%
@@ -1314,7 +1084,6 @@ CE.IC2 <- CE.IC1 %>%
   mutate(across(starts_with("event"), as.Date, format = "%Y-%m-%d")) %>%
   arrange( ENID, HHID)%>%
   suppressWarnings()
-
 
 #get hh details
 CE.ICSUM_data <- CE.IC2 %>%
@@ -1368,17 +1137,12 @@ unlink(temp_file)
 
 
 
-
-
- #########################################################################################
 ##########################    BioSSA     #################################################
- #########################################################################################
-
+# Banana, cassava, legumes and yams data
 #BANANA
 BS.NOTData_banana1<-BS.NOTData_banana %>%
   tidyr::unnest(`repeat`) 
 
-BS.NOT1_ban$ENID
 BS.NOT1_ban<-BS.NOTData_banana1%>%
   as.data.frame()%>%
   select(-any_of(c( "_notes" , "_total_media", "_id", "_tags", "_uuid" ,"start", "_edited","_status" ,"_version" , "_duration"  ,"_xform_id" ,"_attachments", "_geolocation" ,"_media_count" ,"formhub/uuid"   ,
@@ -1414,37 +1178,6 @@ BS.NOT1_ban<-BS.NOTData_banana1%>%
   mutate(Stage = "Research") %>%
   mutate(Trial = "NOT") %>%
   mutate(Country = capitalize(Country))
-
-
-
-
-#select few cls... distinct plotid en ,append events
-
-# BS.NOT2_ban <- BS.NOT1_ban %>%
-#   dplyr::select(any_of(c("today", "Event",  "Crop", "Stage", "Trial", "ENID", "HHID"))) %>%
-#   arrange(Event) %>%
-#   pivot_wider(names_from = Event, values_from = today, values_fn = last) %>%
-#   mutate(across(starts_with("event"), as.Date, format = "%Y-%m-%d")) %>%
-#   arrange( ENID, HHID)%>%
-#   suppressWarnings()
-
-# reqcols_ban<-c("repeat/group/group_harvest/root_number","repeat/group/plant_new_leaf_per_plot","repeat/group/group_height/plant_height_cm_1",
-#   "repeat/group/group_height/plant_height_cm_2",  "repeat/group/group_height/plant_height_cm_3",  "repeat/group/group_height/plant_height_cm_4",
-#   "repeat/group/group_height/plant_height_cm_5",  "repeat/group/group_height/plant_height_cm_6",  "repeat/group/group_height/plant_height_cm_7",
-#   "repeat/group/group_height/plant_height_cm_8",  "repeat/group/group_height/plant_height_cm_9", "repeat/group/group_leaf/emerged_leaf_number_1",
-#   "repeat/group/group_leaf/emerged_leaf_number_2",  "repeat/group/group_leaf/emerged_leaf_number_3",  "repeat/group/group_leaf/emerged_leaf_number_4",
-#   "repeat/group/group_leaf/emerged_leaf_number_5",  "repeat/group/group_leaf/emerged_leaf_number_6",  "repeat/group/group_leaf/emerged_leaf_number_7",
-#   "repeat/group/group_leaf/emerged_leaf_number_8",  "repeat/group/group_leaf/emerged_leaf_number_9", "repeat/group/group_living/leaf_number_1",
-#   "repeat/group/group_living/leaf_number_2",  "repeat/group/group_living/leaf_number_3",  "repeat/group/group_living/leaf_number_4",
-#   "repeat/group/group_living/leaf_number_5",  "repeat/group/group_living/leaf_number_6",  "repeat/group/group_living/leaf_number_7",
-#   "repeat/group/group_living/leaf_number_8",  "repeat/group/group_living/leaf_number_9", "repeat/group/group_stem/stem_circumference_cm_1",
-#   "repeat/group/leaf_chlorophyll_SPAD","repeat/group/group_harvest/harvest_date","repeat/group/group_height/soil_sample_date",
-#   "repeat/group/unforseen_event", "repeat/group/group_pest/pest_number","repeat/group/group_suckers/sucker_date_plant",
-#   "repeat/group/sampling/leaf_N_percent","repeat/group/sampling/leaf_P_percent"
-#   )
-# 
-# BS.NOT1_bann<-BS.NOT1_ban%>%
-#   select(any_of(c( "today", "Event", "Crop", "Stage", "Trial", "ENID", "HHID" ,reqcols_ban)))
 
 
 BS.NOT2_ban <- BS.NOT1_ban %>%
@@ -1601,67 +1334,9 @@ BS.NOT2_ban_agg <- BS.NOT2_ban %>%
     )
   )
 
-#
-#
-# BS.NOT2_ban <- BS.NOT1_ban %>%
-#   mutate_at(  value_to_pivot = case_when(
-#     Event == "event0" ~ `repeat/group/group_harvest/root_number`,
-#     Event == "event1" ~ as.character(`repeat/group/plant_new_leaf_per_plot`),
-#     Event == "event2" ~ as.character(round(rowMeans(select(.,
-#                                 `repeat/group/group_height/plant_height_cm_1`,
-#                                 `repeat/group/group_height/plant_height_cm_2`,
-#                                 `repeat/group/group_height/plant_height_cm_3`,
-#                                 `repeat/group/group_height/plant_height_cm_4`,
-#                                 `repeat/group/group_height/plant_height_cm_5`,
-#                                 `repeat/group/group_height/plant_height_cm_6`,
-#                                 `repeat/group/group_height/plant_height_cm_7`,
-#                                 `repeat/group/group_height/plant_height_cm_8`,
-#                                 `repeat/group/group_height/plant_height_cm_9`), na.rm = TRUE),1
-#     )),
-#     Event == "event3" ~ as.character(round(rowMeans(select(.,
-#                                   `repeat/group/group_leaf/emerged_leaf_number_1`,
-#                                   `repeat/group/group_leaf/emerged_leaf_number_2`,
-#                                   `repeat/group/group_leaf/emerged_leaf_number_3`,
-#                                   `repeat/group/group_leaf/emerged_leaf_number_4`,
-#                                   `repeat/group/group_leaf/emerged_leaf_number_5`,
-#                                   `repeat/group/group_leaf/emerged_leaf_number_6`,
-#                                   `repeat/group/group_leaf/emerged_leaf_number_7`,
-#                                   `repeat/group/group_leaf/emerged_leaf_number_8`,
-#                                   `repeat/group/group_leaf/emerged_leaf_number_9`), na.rm = TRUE),1
-#     )),
-#     Event == "event4" ~ as.character(round(rowMeans(select(.,
-#                                 `repeat/group/group_living/leaf_number_1`,
-#                                 `repeat/group/group_living/leaf_number_2`,
-#                                 `repeat/group/group_living/leaf_number_3`,
-#                                 `repeat/group/group_living/leaf_number_4`,
-#                                 `repeat/group/group_living/leaf_number_5`,
-#                                 `repeat/group/group_living/leaf_number_6`,
-#                                 `repeat/group/group_living/leaf_number_7`,
-#                                 `repeat/group/group_living/leaf_number_8`,
-#                                 `repeat/group/group_living/leaf_number_9`), na.rm = TRUE),1
-#     )),
-#     Event == "event5" ~ as.character(`repeat/group/group_stem/stem_circumference_cm_1`),
-#     Event == "event6" ~ as.character(`repeat/group/leaf_chlorophyll_SPAD`),
-#     #Event == "event7" ~ `repeat/group/group_harvest/harvest_date`,
-#     #Event == "event8" ~ `repeat/group/group_height/soil_sample_date`,
-#     #Event == "event11" ~ `repeat/group/unforseen_event`,
-#     Event == "event12" ~ as.character(),
-#     #Event == "event13" ~ `repeat/group/group_suckers/sucker_date_plant`,
-#     #Event == "event30" ~ paste0("%N:",`repeat/group/sampling/leaf_N_percent`," %P:", `repeat/group/sampling/leaf_P_percent`),
-#     TRUE ~ NA_character_
-#   )) %>%
-#   arrange(Event) %>%
-#   pivot_wider(names_from = Event, values_from = value_to_pivot, values_fn = last) %>%
-#   dplyr::select(any_of(c("today", "Event", "Crop", "Stage", "Trial", "ENID", "HHID")), starts_with("event")) %>%
-#   arrange(ENID, HHID) %>%
-#   suppressWarnings()
-
-
-
 #CASSAVA
 BS.NOTData_cassava1<-BS.NOTData_cassavaS2 %>%
   tidyr::unnest(`group_measure/repeat`)
-
 
 BS.NOT1_cas<-BS.NOTData_cassava1%>%
   as.data.frame()%>%
@@ -1707,8 +1382,6 @@ BS.NOT1_cas<-BS.NOTData_cassava1%>%
   mutate(Stage = "Research") %>%
   mutate(Trial = "NOT") %>%
   mutate(Country = capitalize(Country))
-
-
 
 BS.NOT2_cas <- BS.NOT1_cas %>%
   mutate(value_to_pivot = case_when(
@@ -1854,41 +1527,6 @@ BS.NOT2_cas_agg <- BS.NOT2_cas %>%
     )
   )
 
-
-# BS.NOT2_cas <- BS.NOT1_cas %>%
-#   mutate(value_to_pivot = case_when(
-#     # Event == "event1" ~ `group_measure/repeat/unforseen_events`,
-#     # Event == "event2" ~ `group_measure/repeat/group/planting_date`,
-#     # Event == "event3" ~ `group_measure/repeat/group/planting_date_replanting`,
-#     Event == "event4" ~ as.character(`group_measure/repeat/group/plant_density_plot`),
-#     Event == "event5" ~ as.character(round(rowMeans(select(.,
-#                                         `group_measure/repeat/group_height/plant_height_cm_1`,
-#                                         `group_measure/repeat/group_height/plant_height_cm_2`,
-#                                         `group_measure/repeat/group_height/plant_height_cm_3`,
-#                                         `group_measure/repeat/group_height/plant_height_cm_4`,
-#                                         `group_measure/repeat/group_height/plant_height_cm_5`,
-#                                         `group_measure/repeat/group_height/plant_height_cm_6`,
-#                                         `group_measure/repeat/group_height/plant_height_cm_7`,
-#                                         `group_measure/repeat/group_height/plant_height_cm_8`,
-#                                         `group_measure/repeat/group_height/plant_height_cm_9`), na.rm = TRUE),1
-#     )),
-#     #Event == "event6" ~ `group_measure/repeat/group_stem/stem_number_plot`,
-#     #Event == "event7" ~ `group_measure/repeat/group_leaf/leaf_number_1`,
-#     Event == "event8" ~ as.character(`group_measure/repeat/leaf_chlorophyll_SPAD`),
-#     #Event == "event9" ~ `group_measure/repeat/group_harvest/harvest_date`,
-#     #Event == "event10" ~ `group_measure/repeat/group_pest/pest_number`,
-#     #Event == "event11" ~ `group_measure/repeat/soil/soil_sample_date`,
-#     #Event == "event12" ~ `group_measure/repeat/sampling/plant_sample_date`,
-#     #Event == "event13" ~ `microbio_sample_date`,
-#     TRUE ~ NA_character_
-#   )) %>%
-#   arrange(Event) %>%
-#   pivot_wider(names_from = Event, values_from = value_to_pivot, values_fn = last) %>%
-#   dplyr::select(any_of(c("today", "Event", "Crop", "Stage", "Trial", "ENID", "HHID")),starts_with("event")) %>%
-#   arrange(ENID, HHID) %>%
-#   suppressWarnings()
-
-
 #Legumes
 BS.NOTData_legumes1<-BS.NOTData_legumesS2 %>%
   tidyr::unnest(`group_measure/repeat`)
@@ -1933,7 +1571,6 @@ BS.NOT1_leg<-BS.NOTData_legumes1%>%
   mutate(Trial = "NOT") %>%
   mutate(Country = capitalize(Country))
 
-
 BS.NOT2_leg <- BS.NOT1_leg %>%
   mutate(value_to_pivot = case_when(
     Event == "event1" ~ {
@@ -1955,10 +1592,8 @@ BS.NOT2_leg <- BS.NOT1_leg %>%
         "group_measure/repeat/group_height/plant_height_cm_14",
         "group_measure/repeat/group_height/plant_height_cm_15"
       )
-
       # Select only the existing columns
       existing_columns <- plant_height_columns[plant_height_columns %in% colnames(BS.NOT1_leg)]
-
       # Calculate the mean if any columns exist
       if (length(existing_columns) > 0) {
         as.character(round(rowMeans(select(., all_of(existing_columns)), na.rm = TRUE), 1))
@@ -1976,10 +1611,8 @@ BS.NOT2_leg <- BS.NOT1_leg %>%
         "group_measure/repeat/group_diameter/plant_diameter_cm_4",
         "group_measure/repeat/group_diameter/plant_diameter_cm_5"
       )
-
       # Select only the existing columns
       existing_columns <- diameter_columns[diameter_columns %in% colnames(BS.NOT1_leg)]
-
       # Calculate the mean if columns exist
       if (length(existing_columns) > 0) {
         as.character(round(rowMeans(select(., all_of(existing_columns)), na.rm = TRUE), 1))
@@ -2069,96 +1702,6 @@ BS.NOT2_leg_agg <- BS.NOT2_leg %>%
     )
   )
 
-
-# BS.NOT2_leg <- BS.NOT1_leg %>%
-#   mutate(value_to_pivot = case_when(
-#     Event == "event1" ~ as.character(round(rowMeans(select(.,
-#                                 `group_measure/repeat/group_height/plant_height_cm_1`,
-#                                 `group_measure/repeat/group_height/plant_height_cm_2`,
-#                                 `group_measure/repeat/group_height/plant_height_cm_3`,
-#                                 `group_measure/repeat/group_height/plant_height_cm_4`,
-#                                 `group_measure/repeat/group_height/plant_height_cm_5`,
-#                                 `group_measure/repeat/group_height/plant_height_cm_6`,
-#                                 `group_measure/repeat/group_height/plant_height_cm_7`,
-#                                 `group_measure/repeat/group_height/plant_height_cm_8`,
-#                                 `group_measure/repeat/group_height/plant_height_cm_9`,
-#                                 `group_measure/repeat/group_height/plant_height_cm_10`,
-#                                 `group_measure/repeat/group_height/plant_height_cm_11`,
-#                                 `group_measure/repeat/group_height/plant_height_cm_12`,
-#                                 `group_measure/repeat/group_height/plant_height_cm_13`,
-#                                 `group_measure/repeat/group_height/plant_height_cm_14`,
-#                                 `group_measure/repeat/group_height/plant_height_cm_15`), na.rm = TRUE),1
-#     )),
-#     # Event == "event2" ~ round(rowMeans(select(.,
-#     #                             `group_measure/repeat/group_diameter/plant_diameter_cm_1`, ",",
-#     #                             `group_measure/repeat/group_diameter/plant_diameter_cm_2`, ",",
-#     #                             `group_measure/repeat/group_diameter/plant_diameter_cm_3`, ",",
-#     #                             `group_measure/repeat/group_diameter/plant_diameter_cm_4`, ",",
-#     #                             `group_measure/repeat/group_diameter/plant_diameter_cm_5`), na.rm = TRUE),1
-#     # ),
-#     Event == "event3" ~ as.character(`group_measure/repeat/leaf_chlorophyll_SPAD`),
-#     #Event == "event4" ~ `group_measure/repeat/soil/soil_sample_date`,
-#     #Event == "event5" ~ `microbio_sample_date`,
-#     Event == "event6" ~ as.character(`group_measure/repeat/group_plot/plant_density_plot`),
-#     #Event == "event7" ~ `group_measure/repeat/group_harvest/harvest_date`,
-#     #Event == "event8" ~ `group_measure/repeat/group_sample/plant_sample_date`,
-#     #Event == "event9" ~ `group_measure/repeat/group_pest/abiotic_stress`,
-#     Event == "event11" ~ as.character(`group_measure/repeat/group_plot/flowering_date`),
-#     #Event == "event26" ~ `group_measure/repeat/unforseen_event`,
-#     Event == "event31" ~ as.character(`group_measure/repeat/group_pest/pest_number`),
-#
-#     TRUE ~ NA_character_
-#   )) %>%
-#   arrange(Event) %>%
-#   pivot_wider(names_from = Event, values_from = value_to_pivot, values_fn = last) %>%
-#   dplyr::select(any_of(c("today", "Event", "Crop", "Stage", "Trial", "ENID", "HHID")),starts_with("event")) %>%
-#   arrange(ENID, HHID) %>%
-#   suppressWarnings()
-
-
-# Event == "event1" ~ {
-#   if (all(c(
-#     "group_measure/repeat/group_height/plant_height_cm_1",
-#     "group_measure/repeat/group_height/plant_height_cm_2",
-#     "group_measure/repeat/group_height/plant_height_cm_3",
-#     "group_measure/repeat/group_height/plant_height_cm_4",
-#     "group_measure/repeat/group_height/plant_height_cm_5",
-#     "group_measure/repeat/group_height/plant_height_cm_6",
-#     "group_measure/repeat/group_height/plant_height_cm_7",
-#     "group_measure/repeat/group_height/plant_height_cm_8",
-#     "group_measure/repeat/group_height/plant_height_cm_9",
-#     "group_measure/repeat/group_height/plant_height_cm_10",
-#     "group_measure/repeat/group_height/plant_height_cm_11",
-#     "group_measure/repeat/group_height/plant_height_cm_12",
-#     "group_measure/repeat/group_height/plant_height_cm_13",
-#     "group_measure/repeat/group_height/plant_height_cm_14",
-#     "group_measure/repeat/group_height/plant_height_cm_15"
-#   ) %in% colnames(BS.NOT1_leg))) {
-#     # If all required columns exist, calculate the mean and round it
-#     as.character(round(rowMeans(select(.,
-#                                        `group_measure/repeat/group_height/plant_height_cm_1`,
-#                                        `group_measure/repeat/group_height/plant_height_cm_2`,
-#                                        `group_measure/repeat/group_height/plant_height_cm_3`,
-#                                        `group_measure/repeat/group_height/plant_height_cm_4`,
-#                                        `group_measure/repeat/group_height/plant_height_cm_5`,
-#                                        `group_measure/repeat/group_height/plant_height_cm_6`,
-#                                        `group_measure/repeat/group_height/plant_height_cm_7`,
-#                                        `group_measure/repeat/group_height/plant_height_cm_8`,
-#                                        `group_measure/repeat/group_height/plant_height_cm_9`,
-#                                        `group_measure/repeat/group_height/plant_height_cm_10`,
-#                                        `group_measure/repeat/group_height/plant_height_cm_11`,
-#                                        `group_measure/repeat/group_height/plant_height_cm_12`,
-#                                        `group_measure/repeat/group_height/plant_height_cm_13`,
-#                                        `group_measure/repeat/group_height/plant_height_cm_14`,
-#                                        `group_measure/repeat/group_height/plant_height_cm_15`), na.rm = TRUE), 1))
-#   } else {
-#     NA_character_
-#   }
-# },
-
-
-
-
 ##yam
 # BS.NOTData_yam1<-BS.NOTData_yamS2 %>%
 #   tidyr::unnest(`group_measure/repeat`)
@@ -2211,7 +1754,7 @@ BS.NOT2 <- lapply(BS.NOT2, function(x) {
 })
 
 BS.NOT2 <- as.data.frame(BS.NOT2)
-BS.NOT2$ENID
+
 temp_file <- tempfile()
 write.csv(BS.NOT1, temp_file, row.names = FALSE)
 aws.s3::put_object(file = temp_file,
