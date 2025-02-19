@@ -258,6 +258,31 @@ blank2na = function(x,na.strings=c('','.','NA','na','N/A','n/a','<NA>','NaN','na
 }
 
 
+# create log files (logs errors and sessions)
+folder_path <- "logs"
+error_log_path <- file.path(folder_path, "logs_error.txt")
+session_log_path <- file.path(folder_path, "logs_sessions.txt")
+if (!dir.exists(folder_path)) {
+  dir.create(folder_path)
+}
+if (!file.exists(error_log_path)) {
+  file.create(error_log_path)
+}
+if (!file.exists(session_log_path)) {
+  file.create(session_log_path)
+}
+
+
+# Helper function to get country based on IP address using ipinfo.io
+get_user_country <- function(remoteAddr) {
+  ip_address <- remoteAddr  # Get the user's IP address
+  url <- paste0("https://ipinfo.io/", ip_address, "/json")
+  response <- GET(url)
+  data <- fromJSON(content(response, "text", encoding = "UTF-8"))
+  country <- data$country
+  return(country)
+}
+
 ## Helper function for calendar/date-based background coloring
 dynamic_colorcodeS <- function(datacroptable) {
   

@@ -1165,7 +1165,7 @@ BS.NOT1_ban<-BS.NOTData_banana1%>%
   unnest(Event) %>%
   mutate(
     today = as.IDate(today),
-    ENID = str_to_title(coalesce(`start/enumerator_ID`, `start/enumerator_ID_1`)),
+    ENID = str_to_title(coalesce(str_trim(`start/enumerator_ID`), str_trim(`start/enumerator_ID_1`))),
     HHID = plot_id,
     Crop = "Banana",
     Event = paste0("event", Event),
@@ -1369,7 +1369,7 @@ BS.NOT1_cas<-BS.NOTData_cassava1%>%
   unnest(Event) %>%
   mutate(
     today = as.IDate(today),
-    ENID = str_to_title(`group_start/enumerator_ID_1`),
+    ENID = str_to_title(str_trim(`group_start/enumerator_ID_1`)),
     HHID = plot_id,
     Crop = "Cassava",
     Event = paste0("event", Event),
@@ -1531,6 +1531,8 @@ BS.NOT2_cas_agg <- BS.NOT2_cas %>%
 BS.NOTData_legumes1<-BS.NOTData_legumesS2 %>%
   tidyr::unnest(`group_measure/repeat`)
 
+
+
 BS.NOT1_leg<-BS.NOTData_legumes1%>%
   as.data.frame()%>%
   select(-any_of(c( "_notes" , "_total_media", "_id", "_tags", "_uuid" ,"start", "_edited","_status" ,"_version" , "_duration"  ,"_xform_id" ,"_attachments", "_geolocation" ,"_media_count" ,"formhub/uuid"   ,
@@ -1558,7 +1560,7 @@ BS.NOT1_leg<-BS.NOTData_legumes1%>%
   unnest(Event) %>%
   mutate(
     today = as.IDate(today),
-    ENID = str_to_title(`group_start/enumerator_ID_1`),
+    ENID = str_to_title(str_trim(`group_start/enumerator_ID_1`)),
     HHID = plot_id,
     Event = paste0("event", Event),
     latitude= -6,
@@ -1768,8 +1770,3 @@ aws.s3::put_object(file = temp_file,
                    bucket = "rtbglr",
                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "BSSUMdata.csv"))
 unlink(temp_file)
-
-
-
-
-

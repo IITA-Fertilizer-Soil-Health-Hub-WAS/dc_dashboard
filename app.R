@@ -3,7 +3,7 @@ packages <- c("shiny", "shinyauthr", "shinydashboard", "tidyr", "ggplot2", "sf",
               "stringr", "plotly", "shinyBS", "shinyjs", "leaflet", "shinyalert", "magrittr", 
               "shinycssloaders", "reactable", "tippy", "shinyWidgets", "auth0", "data.table", 
               "dplyr", "shinydashboardPlus", "shinythemes", "tools", "rmarkdown", "aws.s3", "DT", 
-              "gganimate", "promises","future","parallel", "furrr")
+              "gganimate", "promises","future","parallel", "furrr", "AzureRMR", "AzureStor","AzureAuth","futile.logger")
 
 # Install missing packages
 new_packages <- packages[!(packages %in% installed.packages()[, "Package"])]
@@ -31,10 +31,41 @@ ui <- fluidPage(
 #### Define server logic ----------------------
 server <- function(input, output, session) {
   
+  # List of active use cases on DCMT
+  active_use_case_list <- c("DEMO", "Mercy-Corps-SPROUT", "Solidaridad-Soy-Advisory", 
+                            "GH-CerLeg-Esoko", "ex-Wcover-Ghana", "KALRO", "SNS-RWANDA", "BioSSA")
+  user_use_case_data <- names(session$userData$auth0_info$eia_apps)  
+  # Filter user use case data based on active use cases    # dropdown displays only active usecases
+  user_use_case_data <- user_use_case_data[user_use_case_data %in% active_use_case_list]
+  
+  observe({
+    remoteAddr<-session$clientData$remoteAddr
+    user_id <- paste0( session$userData$auth0_info$nickname)
+    country <- get_user_country(remoteAddr)
+    
+    tryCatch(
+    # Log session start time, country, and user ID
+    if (!is.na(user_id)) {
+      usecases <- paste(user_use_case_data, collapse = ", ")
+      flog.threshold(INFO)
+      flog.appender(appender.file("logs/logs_sessions.txt")) # logs app usage
+      flog.info("Session started at: %s | User ID: %s | Country: %s | Usecase Access: %s ", format(Sys.time(), "%H:%M:%S"), user_id, country, usecases)
+    } else {
+      return(NULL)
+    }
+    ,error = function(e) NULL)
+  })
+  
+  observe({
+    # Set up error logging)
+    flog.threshold(ERROR)
+    flog.appender(appender.file("logs/logs_error.txt")) #logs errors
+  })
+ 
+  
   keep_alive <- shiny::reactiveTimer(intervalMs = 10000, session = shiny::getDefaultReactiveDomain())
   shiny::observe({keep_alive()})
   
-  user_use_case_data <- names(session$userData$auth0_info$eia_apps)
 
   # Ensure "DEMO" is listed first, if available
   user_use_case_data <- if ("DEMO" %in% user_use_case_data) {
@@ -67,14 +98,10 @@ server <- function(input, output, session) {
   })
   
   ## Define UI render function ----------------------
-  # List of active use cases
-  active_use_case_list <- c("DEMO", "Mercy-Corps-SPROUT", "Solidaridad-Soy-Advisory", 
-                            "GH-CerLeg-Esoko", "ex-Wcover-Ghana", "KALRO", "SNS-RWANDA", "BioSSA")
+  
   
   # Sidebar rendering logic
   output$sidebarpanel <- renderUI({
-    # Filter user use case data based on active use cases    # dropdown displays only active usecases
-    user_use_case_data <- user_use_case_data[user_use_case_data %in% active_use_case_list]
     
     # Header and Navbar Setup
     navbarPage(
@@ -90,7 +117,7 @@ server <- function(input, output, session) {
       create_navbarMenu(user_use_case_data)
     )
   })
-
+  
   ##########################################################################################################################################
   #################################################### SERVER FUNCTIONS ####################################################################
   ##########################################################################################################################################
@@ -102,6 +129,7 @@ server <- function(input, output, session) {
 
   valuesapp <- reactiveValues(datacrop = NULL, rawdata = NULL, patternissues= NULL,patternissuesE= NULL,
                               datacrop0 = NULL,datacrop00 = NULL)   # set app reactive values
+  
   
   ##Define and load data for each usecase
   observeEvent(input$nav,{
@@ -143,9 +171,10 @@ server <- function(input, output, session) {
         valuesapp$patternissues <- case_data$patternissues
         valuesapp$patternissuesE <- case_data$patternissuesE
       }
-      
-    }, error = function(e) NULL)
+      #print(S)
+    },error = function(e) {               flog.error("Error: %s", e$message)         })
     
+    tryCatch({
     #retrieve data values
     datacrop<-valuesapp$datacrop
     rawdata<-valuesapp$rawdata
@@ -212,7 +241,8 @@ server <- function(input, output, session) {
     output[[paste0("cropfinderr_", i)]] <- renderUI({
       selectInput(paste0("cropfinder_", i), label = "Crop", multiple = TRUE, 
                   #choices = c("All", sort(unique(datacrop$Crop))), selected = "All"
-                  choices = sort(unique(datacrop$Crop)),selected = sort(unique(datacrop$Crop))[1]
+                  choices = c(sort(unique(datacrop$Crop)),"All"), selected =sort(unique(datacrop$Crop))[1]
+                  #choices = sort(unique(datacrop$Crop)),selected = sort(unique(datacrop$Crop))[1]
                   )
     })
     
@@ -250,6 +280,7 @@ server <- function(input, output, session) {
     output[[paste0("project_", i)]] <- renderUI({
       infoBox("Usecase", as.character(input$nav), icon = icon("barcode"), color = "olive", width = "100%")
     })
+    
   
     ## Dynamic filters and auto-updates for graphics and tables
     observe({
@@ -298,20 +329,20 @@ server <- function(input, output, session) {
         
         # apply filters - on fly
         #Stage filter
-        tryCatch(
+        tryCatch({
           if (stageUsecase %in% stageUsecase ){
             datacrop<-datacrop[datacrop$Stage %in% stageUsecase, ]
             datacropOO<-rawdata[rawdata$Stage %in% stageUsecase, ]
           }
-          ,error = function(e) NULL)
+          },error = function(e) {               flog.error("Error: %s", e$message)         })
         
         #experiment/trial filter
-        tryCatch(
+        tryCatch({
           if (experimentUsecase %in% experimentUsecase){
             datacrop<-datacrop[datacrop$Trial %in% experimentUsecase, ]
             datacropOO<-datacropOO[datacropOO$Trial %in% experimentUsecase, ]
           }
-          ,error = function(e) NULL)
+          },error = function(e) {               flog.error("Error: %s", e$message)         })
         
         #updates total and country based on stage and trial/experiment
         output[[paste0("Totsub_box_",i)]] <-renderUI({
@@ -329,7 +360,7 @@ server <- function(input, output, session) {
         })
         
         #Crop filter
-        tryCatch(
+        tryCatch({
           if ("All" %in% cropUsecase){
             datacrop<-datacrop
             datacropO<-datacropOO
@@ -337,10 +368,10 @@ server <- function(input, output, session) {
             datacrop<-datacrop[datacrop$Crop %in% cropUsecase, ]
             datacropO<-datacropOO[datacropOO$Crop %in% cropUsecase, ]
           }
-          ,error = function(e) NULL)
+          },error = function(e) {               flog.error("Error: %s", e$message)         })
         
         #Enumerator filter
-        tryCatch(
+        tryCatch({
           if ("All" %in% enumeratorUsecase ){
             datacrop<-datacrop
             datacropO<-datacropO
@@ -348,43 +379,41 @@ server <- function(input, output, session) {
             datacrop<-datacrop[datacrop$ENID %in% enumeratorUsecase, ]
             datacropO<-datacropO[datacropO$ENID %in% enumeratorUsecase, ]
           }
-         ,error = function(e) NULL)
+         },error = function(e) {               flog.error("Error: %s", e$message)         })
         
         #Household  filter
-        tryCatch(
+        tryCatch({
           if ("All" %in% householdUsecase){
             datacrop<-datacrop
             datacropO<-datacropO
           }else{
             datacrop<-datacrop[which(datacrop$HHID %in%  householdUsecase), ]
             datacropO<-datacropO[datacropO$HHID %in% householdUsecase, ]
-            
           }
-          ,error = function(e) NULL)
+          },error = function(e) {               flog.error("Error: %s", e$message)         })
         
-        tryCatch(
+        tryCatch({
           datacropO <- datacropO[which(datacropO$today >= dateUsecase[1] & datacropO$today <= dateUsecase[2]), ]
-          ,error = function(e) NULL)
+          },error = function(e) {               flog.error("Error: %s", e$message)         })
         
         #Date  filter
         dateleo<-format(Sys.time(), "%Y-%m-%d")
         datestart<-min(na.omit(rawdata$today))
-        tryCatch(
+        tryCatch({
           if (dateUsecase[1] == datestart && dateUsecase[2] == dateleo ){
             datacrop <- datacrop
           }else{
             datacrop <- datacrop[datacrop$ENID %in% datacropO$ENID, ]
           }
-          ,error = function(e) NULL)
+          },error = function(e) {               flog.error("Error: %s", e$message)         })
         
-        
-        tryCatch(
+        tryCatch({
           if (dateUsecase[1] == datestart && dateUsecase[2] == dateleo ){
             datacrop <- datacrop
           }else{
             datacrop <- datacrop[datacrop$HHID %in% datacropO$HHID, ]
           }
-          ,error = function(e) NULL)
+          },error = function(e) {               flog.error("Error: %s", e$message)         })
         
         ##################Summary tab ################################ 
         basemap <- value(basemap_future)
@@ -397,7 +426,7 @@ server <- function(input, output, session) {
         
         ##Summary_submissions trend
         wgroup <-
-          tryCatch( 
+          tryCatch({ 
           datacropO %>%
             mutate(date = as.Date(today)) %>%
             select(date) %>%
@@ -405,7 +434,7 @@ server <- function(input, output, session) {
             count() %>%
             #rename(total_freq = n) %>%
             mutate(date = as.Date(date))
-          ,error = function(e) NULL)
+          },error = function(e) {               flog.error("Error: %s", e$message)         })
         
         Ir<-ggplot(wgroup, aes(x=date, y= n, group=1)) +
           geom_line(color="#fdb415")+
@@ -420,30 +449,26 @@ server <- function(input, output, session) {
             ggplotly(Ir)
             ,error = function(e) NULL)
         })
-        
+        #})
+      
         ##Enumerator Ranking
         datacroptableF <- future({
-          
           datacroptable<-datacrop 
-          
           datacroptable<-as.data.frame(datacroptable)
-          
           # # Check if columns exist in the dataframe
           missing_columns <- setdiff(columns_to_append, colnames(datacroptable))
-          
           # # Append missing columns only
-          tryCatch(  
+          tryCatch({  
             if (length(missing_columns) > 0) {
             datacroptable[, missing_columns] <- NA
           } 
-          ,error = function(e) NULL)
+          },error = function(e) {               flog.error("Error: %s", e$message) })
           
           datacroptable<-  
-            tryCatch( 
+            tryCatch({ 
               datacroptable %>%
                 select(any_of(columns_to_append ))
-              ,error = function(e) NULL)
-          
+              },error = function(e) {               flog.error("Error: %s", e$message)         })
           colnames(datacroptable) <- toTitleCase(colnames(datacroptable)) #Title case for table headers
           return(datacroptable)
         })
@@ -451,27 +476,27 @@ server <- function(input, output, session) {
         datacroptable<-value(datacroptableF)
         
         ranksEVF <- future({
-          tryCatch({
+          tryCatch({{
             # Summarize the number of submissions per event (excluding ENID, HHID, and Trial columns)
             datacroptable %>%
               select(-any_of(c("ENID", "HHID", "Trial"))) %>%
               summarise(across(.fns = ~sum(!is.na(.)))) %>%
               suppressWarnings()  
-          }, error = function(e) NULL)
+          }},error = function(e) {               flog.error("Error: %s", e$message)         })
         })
           
         ranksF <- future({
-          tryCatch({
+          tryCatch({{
             datacroptable %>%
               select(-any_of(c("HHID", "Trial"))) %>%
               group_by(ENID) %>%
               summarise(across(.fns = ~sum(!is.na(.)))) %>%
               suppressWarnings()  # Suppress warnings during summary
-          }, error = function(e) NULL)
+          }},error = function(e) {               flog.error("Error: %s", e$message)         })
         })
         
         ranks.events<-value(ranksEVF)
-        ranks<-value(ranksF)
+        ranks<- value(ranksF) 
         
         ##Overall events ranking
         output[[paste0("rankingevents_",i)]]  <- renderReactable({
@@ -506,14 +531,11 @@ server <- function(input, output, session) {
         ################ISSUES TABLE ################################
             # Create a future for background processing
         datacropissuesF <- future({
-          
           # Copying the data for processing
           datacropI <- datacroptable 
-          
           # Select relevant columns for further processing
           datacropissues <- datacropI %>%
             dplyr::select(any_of(c("ENID", "HHID")))
-          
           # Define event condition function
           event_conditions <- function(row) {
             for (i in 3:length(row)) { # Start from the "event1" column index
@@ -528,28 +550,28 @@ server <- function(input, output, session) {
           
           # Try to process datacropissuesA
           datacropissuesA <- 
-            tryCatch({
+            tryCatch({{
             datacropissues %>%
               filter(!grepl(patternissues, ENID)) %>%
               mutate(Issues = ifelse(!grepl(patternissues, ENID), "Check ENID", NA)) %>%
               mutate(Issues = as.character(Issues))
-          }, error = function(e) NULL)
+          }},error = function(e) {               flog.error("Error: %s", e$message)         })
           # Try to process datacropissuesB
           datacropissuesB <- 
-            tryCatch({
+            tryCatch({{
             datacropissues %>%
               filter(!grepl(patternissuesE, HHID)) %>%
               mutate(Issues = ifelse(!grepl(patternissuesE, HHID), "Check HHID", NA)) %>%
               mutate(Issues = as.character(Issues))
-          }, error = function(e) NULL)
-          # Try to process datacropissuesC
+          }},error = function(e) {               flog.error("Error: %s", e$message)         })
+          
           datacropissuesC <- 
-            tryCatch({
+            tryCatch({{
             datacropI %>%
               filter(apply(datacropI[, 3:ncol(datacropI)], 1, event_conditions)) %>%
               dplyr::select(any_of(c("ENID", "HHID"))) %>%
               mutate(Issues = "Check submission events")
-          }, error = function(e) NULL)
+          }},error = function(e) {               flog.error("Error: %s", e$message)         })
           # Combine all data issues into one dataframe
           datacropissues <- bind_rows(datacropissuesA, datacropissuesB, datacropissuesC)
           datacropissues <- as.data.frame(datacropissues)  # Ensure it is a data frame
@@ -584,7 +606,8 @@ server <- function(input, output, session) {
             colDef(style = dynamic_colorcodeS(datacroptable)) #calls/\applies helper function 'dynamic_colorcodeS'
           })
           # dispaly table data with reactable
-          reactable(datacroptable,
+          reactable(
+            datacroptable,
                     pagination = FALSE,
                     showPagination = TRUE,
                     paginateSubRows = FALSE,
@@ -674,7 +697,6 @@ server <- function(input, output, session) {
           }
         )
       })
-        
       outputOptions(output, paste0("trials_map_",i), suspendWhenHidden = FALSE)
       outputOptions(output, paste0("submission_trend_",i), suspendWhenHidden = FALSE)
       outputOptions(output, paste0("tabledownload_",i), suspendWhenHidden = FALSE)
@@ -682,8 +704,9 @@ server <- function(input, output, session) {
       outputOptions(output, paste0("ranking_",i), suspendWhenHidden = FALSE)
       outputOptions(output, paste0("rankingevents_",i), suspendWhenHidden = FALSE)
       outputOptions(output, paste0("issues_",i), suspendWhenHidden = FALSE)
-        
     })
+    
+    },error = function(e) {               flog.error("Error: %s", e$message)         })
   })
   session$allowReconnect(TRUE)
 }
