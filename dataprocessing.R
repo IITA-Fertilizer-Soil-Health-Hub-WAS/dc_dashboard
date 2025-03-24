@@ -23,8 +23,12 @@ if(!'R.utils' %in% installed.packages()[, 'Package']) {install.packages('R.utils
 suppressMessages(suppressWarnings(library(R.utils)))
 if(!'aws.s3' %in% installed.packages()[, 'Package']) {install.packages('aws.s3', repos = 'http://cran.us.r-project.org')}
 suppressMessages(suppressWarnings(library("aws.s3",character.only = TRUE)))
+if(!'AzureStor' %in% installed.packages()[, 'Package']) {install.packages('AzureStor', repos = 'http://cran.us.r-project.org')}
+suppressMessages(suppressWarnings(library("AzureStor",character.only = TRUE)))
 
-
+#azure storage
+bl_endp_key <- storage_endpoint(Sys.getenv("account_endpoint"), key=Sys.getenv("account_key"))
+cont <- storage_container(bl_endp_key, Sys.getenv("container_name"))
 ##########################SNS-RWANDA######################################################
 #ID DATA (Enumerators and households)
 #merge enum +household registration data
@@ -225,29 +229,42 @@ RWA.O_data<-valTest %>%
          )
 
 
+# #save to bucket 
+# temp_file <- tempfile()
+# write.csv(RWA.VAL_data, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr", 
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SNSRwandaVALdata.csv"))
+# unlink(temp_file)
+# 
+# temp_file <- tempfile()
+# write.csv(RWA.SUM_data, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr", 
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SNSRwandaSUMdata.csv"))
+# unlink(temp_file)
+# 
+# temp_file <- tempfile()
+# write.csv(RWA.O_data, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr", 
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SNSRwandaOdata.csv"))
+# unlink(temp_file)
 
-#save to bucket 
-temp_file <- tempfile()
-write.csv(RWA.VAL_data, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr", 
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SNSRwandaVALdata.csv"))
-unlink(temp_file)
+#via azure storage
+w_con <- textConnection("foo", "w")
+write.csv(RWA.O_data, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"SNSRwandaOdata.csv"))
+close(r_con)
 
-temp_file <- tempfile()
-write.csv(RWA.SUM_data, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr", 
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SNSRwandaSUMdata.csv"))
-unlink(temp_file)
-
-temp_file <- tempfile()
-write.csv(RWA.O_data, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr", 
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SNSRwandaOdata.csv"))
-unlink(temp_file)
-
+w_con <- textConnection("foo", "w")
+write.csv(RWA.SUM_data, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"SNSRwandaSUMdata.csv"))
+close(r_con)
 
 ##########################SOLIDARIDAD#####################################################
 
@@ -496,28 +513,50 @@ NOTValSol2 <- lapply(NOTValSol2, function(x) {
 
 NOTValSol2 <- as.data.frame(NOTValSol2)
 
-#save to bucket
-temp_file <- tempfile()
-write.csv(NOTValSol2, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr", 
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SolidaridadSUMdata.csv"))
-unlink(temp_file)
+# #save to bucket
+# temp_file <- tempfile()
+# write.csv(NOTValSol2, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr", 
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SolidaridadSUMdata.csv"))
+# unlink(temp_file)
+# 
+# temp_file <- tempfile()
+# write.csv(valSol1, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr", 
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SolidaridadOdata.csv"))
+# unlink(temp_file)
+# 
+# temp_file <- tempfile()
+# write.csv(NOTSol1, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr", 
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SolidaridadNOTdata.csv"))
+# unlink(temp_file)
 
-temp_file <- tempfile()
-write.csv(valSol1, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr", 
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SolidaridadOdata.csv"))
-unlink(temp_file)
 
-temp_file <- tempfile()
-write.csv(NOTSol1, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr", 
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SolidaridadNOTdata.csv"))
-unlink(temp_file)
+#via azure storage
+w_con <- textConnection("foo", "w")
+write.csv(NOTValSol2, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"SolidaridadSUMdata.csv"))
+close(r_con)
 
+w_con <- textConnection("foo", "w")
+write.csv(valSol1, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"SolidaridadOdata.csv"))
+close(r_con)
+
+w_con <- textConnection("foo", "w")
+write.csv(NOTSol1, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"SolidaridadNOTdata.csv"))
+close(r_con)
 
 ##########################KALRO###########################################################
 #ID DATA (Enumerators and households)
@@ -625,21 +664,36 @@ KL.val1 <- as.data.frame(KL.val1)
 ##### KLENKE000000 KLHHKE000000 not duplicated... one househld id used in training with multiple people asigned with different details.  
 ###training data to be excluded later...
 
-#save to bucket
-temp_file <- tempfile()
-write.csv(KL.val1, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr", 
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "KLOdata.csv"))
-unlink(temp_file)
+# #save to aws bucket
+# temp_file <- tempfile()
+# write.csv(KL.val1, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr", 
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "KLOdata.csv"))
+# unlink(temp_file)
+# 
+# temp_file <- tempfile()
+# write.csv(KL.SUM_data, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr", 
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "KLSUMdata.csv"))
+# unlink(temp_file)
 
-temp_file <- tempfile()
-write.csv(KL.SUM_data, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr", 
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "KLSUMdata.csv"))
-unlink(temp_file)
 
+#via azure storage
+w_con <- textConnection("foo", "w")
+write.csv(KL.val1, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"KLOdata.csv"))
+close(r_con)
+
+w_con <- textConnection("foo", "w")
+write.csv(KL.SUM_data, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"KLSUMdata.csv"))
+close(r_con)
 
 ##########################MercyCorpsSprot#################################################
 #ID DATA (Enumerators and households)
@@ -738,20 +792,36 @@ MC.val1 <- lapply(MC.val1, function(x) {
 
 MC.val1 <- as.data.frame(MC.val1)
 
-temp_file <- tempfile()
-write.csv(MC.val1, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr",
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "MCOdata.csv"))
-unlink(temp_file)
+# #via aws
+# temp_file <- tempfile()
+# write.csv(MC.val1, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr",
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "MCOdata.csv"))
+# unlink(temp_file)
+# 
+# temp_file <- tempfile()
+# write.csv(MC.SUM_data, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr",
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "MCSUMdata.csv"))
+# unlink(temp_file)
 
-temp_file <- tempfile()
-write.csv(MC.SUM_data, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr",
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "MCSUMdata.csv"))
-unlink(temp_file)
 
+#via azure storage
+w_con <- textConnection("foo", "w")
+write.csv(MC.val1, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"MCOdata.csv"))
+close(r_con)
+
+w_con <- textConnection("foo", "w")
+write.csv(MC.SUM_data, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"MCSUMdata.csv"))
+close(r_con)
 
 ###########################EiA_Demo_Validation#############################################
 #ID DATA (Enumerators and households)
@@ -933,21 +1003,36 @@ DEMO.SUM_data1 <- DEMO.SUM_data[1:65, ] %>%
 
 DEMO.SUM_data2 <- bind_rows(DEMO.SUM_data1, DEMO.SUM_data[-(1:65), ])
 
+# #Via aws
+# temp_file <- tempfile()
+# write.csv(DEMO.val1, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr",
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "DEMOOdata.csv"))
+# unlink(temp_file)
+# 
+# temp_file <- tempfile()
+# write.csv(DEMO.SUM_data2, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr",
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "DEMOSUMdata.csv"))
+# unlink(temp_file)
 
-temp_file <- tempfile()
-write.csv(DEMO.val1, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr",
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "DEMOOdata.csv"))
-unlink(temp_file)
 
-temp_file <- tempfile()
-write.csv(DEMO.SUM_data2, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr",
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "DEMOSUMdata.csv"))
-unlink(temp_file)
+#via azure storage
+w_con <- textConnection("foo", "w")
+write.csv(DEMO.val1, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"DEMOOdata.csv"))
+close(r_con)
 
+w_con <- textConnection("foo", "w")
+write.csv(DEMO.SUM_data2, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"DEMOSUMdata.csv"))
+close(r_con)
 
 ##########################GH-CerLeg-Esoko#################################################
 #ID DATA (Enumerators and households)
@@ -1107,34 +1192,65 @@ CE.IC1 <- lapply(CE.IC1, function(x) {
 
 CE.IC1 <- as.data.frame(CE.IC1)
 
-temp_file <- tempfile()
-write.csv(CE.val1, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr",
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "CEOdata.csv"))
-unlink(temp_file)
+# #via aws storage
+# temp_file <- tempfile()
+# write.csv(CE.val1, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr",
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "CEOdata.csv"))
+# unlink(temp_file)
+# 
+# temp_file <- tempfile()
+# write.csv(CE.SUM_data, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr",
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "CESUMdata.csv"))
+# unlink(temp_file)
+# 
+# temp_file <- tempfile()
+# write.csv(CE.IC1, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr",
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "CEICOdata.csv"))
+# unlink(temp_file)
+# 
+# temp_file <- tempfile()
+# write.csv(CE.ICSUM_data, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr",
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "CEICSUMdata.csv"))
+# unlink(temp_file)
 
-temp_file <- tempfile()
-write.csv(CE.SUM_data, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr",
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "CESUMdata.csv"))
-unlink(temp_file)
 
-temp_file <- tempfile()
-write.csv(CE.IC1, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr",
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "CEICOdata.csv"))
-unlink(temp_file)
 
-temp_file <- tempfile()
-write.csv(CE.ICSUM_data, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr",
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "CEICSUMdata.csv"))
-unlink(temp_file)
+#via azure storage
+w_con <- textConnection("foo", "w")
+write.csv(CE.val1, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"CEOdata.csv"))
+close(r_con)
 
+w_con <- textConnection("foo", "w")
+write.csv(CE.SUM_data, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"CESUMdata.csv"))
+close(r_con)
+
+w_con <- textConnection("foo", "w")
+write.csv(CE.IC1, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"CEICOdata.csv"))
+close(r_con)
+
+w_con <- textConnection("foo", "w")
+write.csv(CE.ICSUM_data, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"CEICSUMdata.csv"))
+close(r_con)
 
 
 ##########################    BioSSA     #################################################
@@ -1757,16 +1873,36 @@ BS.NOT2 <- lapply(BS.NOT2, function(x) {
 
 BS.NOT2 <- as.data.frame(BS.NOT2)
 
-temp_file <- tempfile()
-write.csv(BS.NOT1, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr",
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "BSOdata.csv"))
-unlink(temp_file)
 
-temp_file <- tempfile()
-write.csv(BS.NOT2, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr",
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "BSSUMdata.csv"))
-unlink(temp_file)
+#via aws storage
+# temp_file <- tempfile()
+# write.csv(BS.NOT1, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr",
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "BSOdata.csv"))
+# unlink(temp_file)
+# 
+# temp_file <- tempfile()
+# write.csv(BS.NOT2, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr",
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "BSSUMdata.csv"))
+# unlink(temp_file)
+
+
+#via azure storage
+w_con <- textConnection("foo", "w")
+write.csv(BS.NOT1, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"BSOdata.csv"))
+close(r_con)
+
+w_con <- textConnection("foo", "w")
+write.csv(BS.NOT2, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"BSSUMdata.csv"))
+close(r_con)
+
+

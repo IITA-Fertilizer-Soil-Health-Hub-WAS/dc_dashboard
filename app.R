@@ -2,7 +2,7 @@
 packages <- c("shiny", "shinyauthr", "shinydashboard", "tidyr", "ggplot2", "sf", "lubridate", 
               "stringr", "plotly", "shinyBS", "shinyjs", "leaflet", "shinyalert", "magrittr", 
               "shinycssloaders", "reactable", "tippy", "shinyWidgets", "auth0", "data.table", 
-              "dplyr", "shinydashboardPlus", "shinythemes", "tools", "rmarkdown", "aws.s3", "DT", 
+              "dplyr", "shinydashboardPlus", "shinythemes", "tools", "rmarkdown", "aws.s3", "DT", "httr","jsonlite",
               "gganimate", "promises","future","parallel", "furrr", "AzureRMR", "AzureStor","AzureAuth","futile.logger")
 
 # Install missing packages
@@ -163,8 +163,8 @@ server <- function(input, output, session) {
       if (input$nav %in% names(usecase_files)) {
         case_data <- usecase_files[[input$nav]]
         # Use future to load data in parallel
-        datacrop_future <- load_data_from_s3(case_data$datacrop)
-        rawdata_future <- load_data_from_s3(case_data$rawdata)
+        datacrop_future <- load_data(case_data$datacrop)
+        rawdata_future <- load_data(case_data$rawdata)
         # Collect results using `value()` 
         valuesapp$datacrop <- value(datacrop_future)
         valuesapp$rawdata <- value(rawdata_future)
@@ -296,11 +296,11 @@ server <- function(input, output, session) {
       
       # Special data handling for specific use cases
       if (input_nav == "Solidaridad-Soy-Advisory" && "Research" %in% stageUsecase) {
-        rawdata_future <- load_data_from_s3("SolidaridadNOTdata.csv")
+        rawdata_future <- load_data("SolidaridadNOTdata.csv")
         valuesapp$rawdata <- value(rawdata_future)
       }else if (input_nav == "GH-CerLeg-Esoko" && "Intercropping" %in% experimentUsecase) {
-        datacrop_future <- load_data_from_s3("CEICSUMdata.csv")
-        rawdata_future <- load_data_from_s3("CEICOdata.csv")
+        datacrop_future <- load_data("CEICSUMdata.csv")
+        rawdata_future <- load_data("CEICOdata.csv")
         valuesapp$datacrop <- value(datacrop_future)
         valuesapp$rawdata <- value(rawdata_future)
       }

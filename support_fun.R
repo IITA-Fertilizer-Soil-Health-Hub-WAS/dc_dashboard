@@ -177,14 +177,32 @@ create_navbarMenu <- function(tab_names) {
   do.call(navbarMenu, c("Usecase", tab_panels))
 }
 
-# Function to load usecase processed data
-load_data_from_s3 <- function(file_name) {
+# #AWS S3 IMPORT: Function to load usecase processed data
+# load_data <- function(file_name) {
+#   future({
+#     save_object(paste0("s3://rtbglr/", Sys.getenv("bucket_path"), file_name), 
+#                 file = tempfile(fileext = ".csv")) %>%
+#       fread()
+#   })
+# }
+
+# Function to load CSV from Azure Blob Storage
+load_data <- function(file_name) {
   future({
-    save_object(paste0("s3://rtbglr/", Sys.getenv("bucket_path"), file_name), 
-                file = tempfile(fileext = ".csv")) %>%
-      fread()
+    # Initialize Azure storage connection using the account name and key
+    bl_endp_key <- storage_endpoint(Sys.getenv("account_endpoint"), key=Sys.getenv("account_key"))
+    # Connect to the Azure Blob container
+    cont <- storage_container(bl_endp_key, Sys.getenv("container_name"))
+    
+    # Download the file from Azure Blob Storage to a temporary file
+    file_path<-paste0(Sys.getenv("dest_path"),file_name)
+    temp_file <- tempfile(fileext = ".csv")
+    download_blob(cont, file_path, temp_file, overwrite = TRUE)
+    # Read the CSV data
+    fread(temp_file)
   })
 }
+
 
 #ggplot theme
 them2<-theme(panel.background = element_rect(fill = "white"), # bg of the panel
