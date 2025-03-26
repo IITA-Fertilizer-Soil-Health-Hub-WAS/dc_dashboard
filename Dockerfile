@@ -15,5 +15,3 @@ RUN Rscript libraries.R
 RUN Rscript dataprocessing.R
 
 CMD ["R", "-e", "shiny::runApp('app.R', host='0.0.0.0', port=80)"]
-
-# comment to force new deployment for auth0 2

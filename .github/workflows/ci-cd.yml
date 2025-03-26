@@ -50,31 +50,31 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
-    # - name: Transfer deploy script
-    #   uses: appleboy/scp-action@v0.1.7
-    #   with:
-    #     host: ${{ secrets.DEV_DEPLOYMENT_INSTANCE }}
-    #     username: ${{ secrets.SSH_USER }}
-    #     key: ${{ secrets.SSH_KEY }}
-    #     port: ${{ secrets.SSH_PORT }}
-    #     source: deploy.sh, docker-compose.yml
-    #     target: "~"
+    - name: Transfer deploy script
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.DEV_DEPLOYMENT_INSTANCE }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_KEY }}
+        port: ${{ secrets.SSH_PORT }}
+        source: deploy.sh, docker-compose.yml
+        target: "~"
     
-    # - name: Deploy to Server
-    #   uses: appleboy/ssh-action@v1.2.2
-    #   with:
-    #     host: ${{ secrets.DEV_DEPLOYMENT_INSTANCE }}
-    #     username: ${{ secrets.SSH_USER }}
-    #     key: ${{ secrets.SSH_KEY }}
-    #     port: ${{ secrets.SSH_PORT }}
-    #     script: |
-    #       export ENV=dev
-    #       export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
-    #       export DOCKERHUB_PASSWORD=${{ secrets.DOCKERHUB_PASSWORD }}
-    #       export REPO_NAME=eia2030-dc-dashboard
-    #       export SSH_USER=${{ secrets.SSH_USER }}
-    #       bash deploy.sh
-    #       rm deploy.sh
+    - name: Deploy to Server
+      uses: appleboy/ssh-action@v1.2.2
+      with:
+        host: ${{ secrets.DEV_DEPLOYMENT_INSTANCE }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_KEY }}
+        port: ${{ secrets.SSH_PORT }}
+        script: |
+          export ENV=dev
+          export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
+          export DOCKERHUB_PASSWORD=${{ secrets.DOCKERHUB_PASSWORD }}
+          export REPO_NAME=eia2030-dc-dashboard
+          export SSH_USER=${{ secrets.SSH_USER }}
+          bash deploy.sh
+          rm deploy.sh
 
   # stg:
   #   name: Build & Deploy (stg)
