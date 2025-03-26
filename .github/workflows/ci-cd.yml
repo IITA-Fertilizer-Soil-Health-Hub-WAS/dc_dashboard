@@ -4,8 +4,8 @@ on:
   push:
     branches: 
     - "release/development" 
-    - "release/staging"
-    - "release/production"
+    # - "release/staging"
+    # - "release/production"
 
 permissions:
   contents: read
