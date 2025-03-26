@@ -5,7 +5,7 @@ RUN apt-get update && \
     apt-get clean
 
 # OS dependencies
-RUN apt-get install libmysqlclient-dev libgdal-dev libharfbuzz-dev libfribidi-dev libsodium-dev libudunits2-dev bzip2 libgit2-dev libssh2-1-dev librsvg2-dev -y
+RUN apt-get install libmysqlclient-dev libgdal-dev libharfbuzz-dev libfribidi-dev libsodium-dev libudunits2-dev bzip2 libgit2-dev libssh2-1-dev librsvg2-dev libavfilter-dev libmagick++-dev -y
 
 WORKDIR /app
 
