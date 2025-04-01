@@ -1,4 +1,4 @@
-FROM rocker/shiny:4.2
+FROM rocker/shiny:4.4
 
 RUN apt-get update && \
     apt-get upgrade -y && \
@@ -7,9 +7,14 @@ RUN apt-get update && \
 # OS dependencies
 RUN apt-get install libmysqlclient-dev libgdal-dev libharfbuzz-dev libfribidi-dev libsodium-dev libudunits2-dev bzip2 libgit2-dev libssh2-1-dev librsvg2-dev libavfilter-dev libmagick++-dev -y
 
+RUN apt-get install cargo -y
+
 WORKDIR /app
 
 COPY . .
+
+# RUN sudo R -e "install.packages('raster', dependencies=TRUE, repos='http://cran.rstudio.com/')"
+# RUN sudo R -e "install.packages('terra', dependencies=TRUE, repos='http://cran.rstudio.com/')"
 
 RUN Rscript libraries.R
 RUN Rscript dataprocessing.R
