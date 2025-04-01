@@ -13,9 +13,6 @@ WORKDIR /app
 
 COPY . .
 
-# RUN sudo R -e "install.packages('raster', dependencies=TRUE, repos='http://cran.rstudio.com/')"
-# RUN sudo R -e "install.packages('terra', dependencies=TRUE, repos='http://cran.rstudio.com/')"
-
 RUN Rscript libraries.R
 RUN Rscript dataprocessing.R
 
