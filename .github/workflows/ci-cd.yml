@@ -4,8 +4,8 @@ on:
   push:
     branches: 
     - "release/development" 
-    # - "release/staging"
-    # - "release/production"
+    - "release/staging"
+    - "release/production"
 
 permissions:
   contents: read
@@ -76,132 +76,132 @@ jobs:
           bash deploy.sh
           rm deploy.sh
 
-  # stg:
-  #   name: Build & Deploy (stg)
-  #   runs-on: ubuntu-latest
-  #   if: github.ref == 'refs/heads/release/staging'
+  stg:
+    name: Build & Deploy (stg)
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/release/staging'
 
-  #   steps:
-  #   - name: Checkout
-  #     uses: actions/checkout@v3
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
 
-  #   - name: Set up Docker Buildx
-  #     uses: docker/setup-buildx-action@v2
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
-  #   - name: Configure AWS credentials
-  #     uses: aws-actions/configure-aws-credentials@v2
-  #     with:
-  #       aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #       aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #       aws-region: ${{ secrets.AWS_REGION }}
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
 
-  #   - name: Download envs from S3 bucket
-  #     run: |
-  #       aws s3 cp s3://scio-project-envs/eia2030-dc-dashboard/stg.Renviron .Renviron
-  #       aws s3 cp s3://scio-project-envs/eia2030-dc-dashboard/_auth0-stg.yml _auth0.yml
+    - name: Download envs from S3 bucket
+      run: |
+        aws s3 cp s3://scio-project-envs/${{ secrets.DOCKERHUB_REPOSITORY }}/stg.Renviron .Renviron
+        aws s3 cp s3://scio-project-envs/${{ secrets.DOCKERHUB_REPOSITORY }}/_auth0-stg.yml _auth0.yml
 
-  #   - name: Login to Docker Hub
-  #     uses: docker/login-action@v2
-  #     with:
-  #       username: ${{ secrets.DOCKERHUB_USERNAME }}
-  #       password: ${{ secrets.DOCKERHUB_PASSWORD }}
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-  #   - name: Build and Push Docker Image (stg)
-  #     uses: docker/build-push-action@v3
-  #     with:
-  #       context: .
-  #       push: true
-  #       tags: ${{ secrets.DOCKERHUB_USERNAME }}/eia2030-dc-dashboard:stg
-  #       cache-from: type=gha
-  #       cache-to: type=gha,mode=max
+    - name: Build and Push Docker Image (stg)
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        push: true
+        tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:stg
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
 
-  #   - name: Transfer deploy script
-  #     uses: appleboy/scp-action@v0.1.4
-  #     with:
-  #       host: ${{ secrets.STG_DEPLOYMENT_INSTANCE }}
-  #       username: ${{ secrets.SSH_USER }}
-  #       key: ${{ secrets.SSH_KEY }}
-  #       port: ${{ secrets.SSH_PORT }}
-  #       source: deploy.sh, docker-compose.yml
-  #       target: "~"
+    - name: Transfer deploy script
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.STG_DEPLOYMENT_INSTANCE }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_KEY }}
+        port: ${{ secrets.SSH_PORT }}
+        source: deploy.sh, docker-compose.yml
+        target: "~"
     
-  #   - name: Deploy to Server
-  #     uses: appleboy/ssh-action@v1.0.0
-  #     with:
-  #       host: ${{ secrets.STG_DEPLOYMENT_INSTANCE }}
-  #       username: ${{ secrets.SSH_USER }}
-  #       key: ${{ secrets.SSH_KEY }}
-  #       port: ${{ secrets.SSH_PORT }}
-  #       script: |
-  #         export ENV=stg
-  #         export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
-  #         export DOCKERHUB_PASSWORD=${{ secrets.DOCKERHUB_PASSWORD }}
-  #         export REPO_NAME=eia2030-dc-dashboard
-  #         export SSH_USER=${{ secrets.SSH_USER }}
-  #         bash deploy.sh
-  #         rm deploy.sh
+    - name: Deploy to Server
+      uses: appleboy/ssh-action@v1.2.2
+      with:
+        host: ${{ secrets.STG_DEPLOYMENT_INSTANCE }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_KEY }}
+        port: ${{ secrets.SSH_PORT }}
+        script: |
+          export ENV=stg
+          export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
+          export DOCKERHUB_PASSWORD=${{ secrets.DOCKERHUB_PASSWORD }}
+          export REPO_NAME=eia2030-dc-dashboard
+          export SSH_USER=${{ secrets.SSH_USER }}
+          bash deploy.sh
+          rm deploy.sh
 
-  # prod:
-  #   name: Build & Deploy (prod)
-  #   runs-on: ubuntu-latest
-  #   if: github.ref == 'refs/heads/release/production'
+  prod:
+    name: Build & Deploy (prod)
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/release/production'
 
-  #   steps:
-  #   - name: Checkout
-  #     uses: actions/checkout@v3
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
 
-  #   - name: Set up Docker Buildx
-  #     uses: docker/setup-buildx-action@v2
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
-  #   - name: Configure AWS credentials
-  #     uses: aws-actions/configure-aws-credentials@v2
-  #     with:
-  #       aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #       aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #       aws-region: ${{ secrets.AWS_REGION }}
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
 
-  #   - name: Download envs from S3 bucket
-  #     run: |
-  #       aws s3 cp s3://scio-project-envs/eia2030-dc-dashboard/prod.Renviron .Renviron
-  #       aws s3 cp s3://scio-project-envs/eia2030-dc-dashboard/_auth0-prod.yml _auth0.yml
+    - name: Download envs from S3 bucket
+      run: |
+        aws s3 cp s3://scio-project-envs/${{ secrets.DOCKERHUB_REPOSITORY }}/prod.Renviron .Renviron
+        aws s3 cp s3://scio-project-envs/${{ secrets.DOCKERHUB_REPOSITORY }}/_auth0-prod.yml _auth0.yml
 
-  #   - name: Login to Docker Hub
-  #     uses: docker/login-action@v2
-  #     with:
-  #       username: ${{ secrets.DOCKERHUB_USERNAME }}
-  #       password: ${{ secrets.DOCKERHUB_PASSWORD }}
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-  #   - name: Build and Push Docker Image (prod)
-  #     uses: docker/build-push-action@v3
-  #     with:
-  #       context: .
-  #       push: true
-  #       tags: ${{ secrets.DOCKERHUB_USERNAME }}/eia2030-dc-dashboard:prod
-  #       cache-from: type=gha
-  #       cache-to: type=gha,mode=max
+    - name: Build and Push Docker Image (prod)
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        push: true
+        tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:prod
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
 
-  #   - name: Transfer deploy script
-  #     uses: appleboy/scp-action@v0.1.4
-  #     with:
-  #       host: ${{ secrets.PROD_DEPLOYMENT_INSTANCE }}
-  #       username: ${{ secrets.SSH_USER }}
-  #       key: ${{ secrets.SSH_KEY }}
-  #       port: ${{ secrets.SSH_PORT }}
-  #       source: deploy.sh, docker-compose.yml
-  #       target: "~"
+    - name: Transfer deploy script
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.PROD_DEPLOYMENT_INSTANCE }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_KEY }}
+        port: ${{ secrets.SSH_PORT }}
+        source: deploy.sh, docker-compose.yml
+        target: "~"
     
-  #   - name: Deploy to Server
-  #     uses: appleboy/ssh-action@v1.0.0
-  #     with:
-  #       host: ${{ secrets.PROD_DEPLOYMENT_INSTANCE }}
-  #       username: ${{ secrets.SSH_USER }}
-  #       key: ${{ secrets.SSH_KEY }}
-  #       port: ${{ secrets.SSH_PORT }}
-  #       script: |
-  #         export ENV=prod
-  #         export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
-  #         export DOCKERHUB_PASSWORD=${{ secrets.DOCKERHUB_PASSWORD }}
-  #         export REPO_NAME=eia2030-dc-dashboard
-  #         export SSH_USER=${{ secrets.SSH_USER }}
-  #         bash deploy.sh
-  #         rm deploy.sh
+    - name: Deploy to Server
+      uses: appleboy/ssh-action@v1.2.2
+      with:
+        host: ${{ secrets.PROD_DEPLOYMENT_INSTANCE }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_KEY }}
+        port: ${{ secrets.SSH_PORT }}
+        script: |
+          export ENV=prod
+          export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
+          export DOCKERHUB_PASSWORD=${{ secrets.DOCKERHUB_PASSWORD }}
+          export REPO_NAME=eia2030-dc-dashboard
+          export SSH_USER=${{ secrets.SSH_USER }}
+          bash deploy.sh
+          rm deploy.sh
