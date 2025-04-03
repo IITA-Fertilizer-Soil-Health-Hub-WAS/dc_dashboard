@@ -1,8 +1,8 @@
-##########################################################################################
-##########################SNS-RWANDA######################################################
-##########################################################################################
+##########################Data Processing Script######################################################
 
 #####This Script runs daily to  update and aggregate data collected
+
+#####Logic: transform data to show identifiers (HHID, ENID, PID...), location , date of submission and  events
 
 #print(wd)
 
@@ -23,9 +23,13 @@ if(!'R.utils' %in% installed.packages()[, 'Package']) {install.packages('R.utils
 suppressMessages(suppressWarnings(library(R.utils)))
 if(!'aws.s3' %in% installed.packages()[, 'Package']) {install.packages('aws.s3', repos = 'http://cran.us.r-project.org')}
 suppressMessages(suppressWarnings(library("aws.s3",character.only = TRUE)))
+if(!'AzureStor' %in% installed.packages()[, 'Package']) {install.packages('AzureStor', repos = 'http://cran.us.r-project.org')}
+suppressMessages(suppressWarnings(library("AzureStor",character.only = TRUE)))
 
-
-
+#azure storage
+bl_endp_key <- storage_endpoint(Sys.getenv("account_endpoint"), key=Sys.getenv("account_key"))
+cont <- storage_container(bl_endp_key, Sys.getenv("container_name"))
+##########################SNS-RWANDA######################################################
 #ID DATA (Enumerators and households)
 #merge enum +household registration data
 Register_EN.Ids <- Register_EN%>%
@@ -69,15 +73,10 @@ EN.HH_data <- Register_EN.Ids %>%
   suppressWarnings()
 
 
-
-
 #Validation data
 
 data<-valTest #from ona api download (okapi2.R)
-
-# -----------------------------------------------------------------------------------------
 #data cleaning
-# ------------------------------------------------------------------------------------------
 #remove ystem variables
 system_var<- c("_tags","_uuid","_notes" ,"_edited","_status" ,"_version","_duration" ,"_xform_id",
                "_attachments","_geolocation","_media_count","_total_media","formhub/uuid",
@@ -87,20 +86,16 @@ system_var<- c("_tags","_uuid","_notes" ,"_edited","_status" ,"_version","_durat
 
 data<- data %>% 
   select(-any_of(system_var))
-
 # Update HHID #scanned vs typed ids issue    ...merge vars: scanned - `intro/wrong_ID`, typed-`intro/barcodehousehold_1`...`intro/barcodehousehold`
 data$`intro/barcodehousehold_1` <- sub("RSHHRW1", "RSHHRW0", data$`intro/barcodehousehold_1`)
 data$`intro/wrong_ID` <- sub("LSHH", "RSHH", data$`intro/wrong_ID`)
-
 data$`intro/wrong_ID`<- ifelse(is.na(data$`intro/wrong_ID`) & data$`intro/barcodehousehold_1` != "RSHHRWNaN",
                                data$`intro/barcodehousehold_1`,
                                data$`intro/wrong_ID`)
-#control for `intro/barcodehousehold` variable too
 data$`intro/wrong_ID`<- ifelse(is.na(data$`intro/wrong_ID`) & data$`intro/barcodehousehold` != "RSHHRWNaN",
                                data$`intro/barcodehousehold`,
                                data$`intro/wrong_ID`)
 
-#------------------------------------------------------------------------------------------
 # plant stand data
 Plant_stand_data<- data %>% 
   dplyr::select(start,today,`intro/country` ,`intro/event`,`intro/latitude`,`intro/longitude`,`intro/altitude`,`intro/wrong_ENID`,`intro/wrong_ID`,crop,grep("planting.*", names(data), value = TRUE))
@@ -176,21 +171,11 @@ VAL_data <- full_data %>%
   ) %>% distinct(ENID, HHID, Trial, treat, .keep_all = TRUE)%>% 
   mutate(event1 = plantingDate)%>% select(-(plantingDate))%>% suppressWarnings()
 
-
-
-
-#################################################################################################################
 # Join Identifiers+Validation Data
-#################################################################################################################
-#EN.HH_data  IDENTIFIERS (ENID HHID)
-#VAL_data    val info
-
 RWA.VAL_data <- EN.HH_data %>%
   left_join(VAL_data, by = c("ENID","HHID")) %>% #join identifiers and val data while keeping all enumerators/households
   mutate(Date = coalesce(todayVal, DateId))%>%select(-c(DateId,todayVal))%>%
   suppressWarnings()
-
-
 
 dataev<-data%>%
   dplyr::select(today, `intro/wrong_ENID`,`intro/wrong_ID` ,crop, `intro/event`,  `planting/plantingDetails/planting_date`) 
@@ -230,72 +215,59 @@ RWA.SUM_data <- EN.HH_data %>%
   suppressWarnings()
 
 
-
-
-#################################################################################################################
 #Validation Data
 RWA.O_data<-valTest %>% 
   select(-any_of(system_var))%>% 
   select(-c(start,`intro/barcodehousehold_1`))%>% 
   rename(Country = `intro/country`,
-         Crop = crop)%>% 
+         Crop = crop,
+         HHID = `intro/wrong_ID`)%>% 
   rename_with(
   ~stringr::str_replace_all(.x, c("intro/"), ""))%>% 
   mutate(Trial = "Fertilizer Recommendation",
          Stage = "Validation"
          )
-  
 
 
-
-#save to bucket 
-temp_file <- tempfile()
-write.csv(RWA.VAL_data, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr", 
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SNSRwandaVALdata.csv"))
-unlink(temp_file)
-
-temp_file <- tempfile()
-write.csv(RWA.SUM_data, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr", 
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SNSRwandaSUMdata.csv"))
-unlink(temp_file)
-
-temp_file <- tempfile()
-write.csv(RWA.O_data, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr", 
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SNSRwandaOdata.csv"))
-unlink(temp_file)
-
-
-
-# zz <- rawConnection(raw(0), "r+")
-# write.csv(RWA.VAL_data, zz, row.names = FALSE)
-# aws.s3::put_object(file = rawConnectionValue(zz),
-#                    bucket = "rtbglr", object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SNSRwandaVALdata.csv") )
-# close(zz)
+# #save to bucket 
+# temp_file <- tempfile()
+# write.csv(RWA.VAL_data, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr", 
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SNSRwandaVALdata.csv"))
+# unlink(temp_file)
 # 
-# zz <- rawConnection(raw(0), "r+")
-# write.csv(RWA.SUM_data, zz, row.names = FALSE)
-# aws.s3::put_object(file = rawConnectionValue(zz),
-#                    bucket = "rtbglr", object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SNSRwandaSUMdata.csv"))
-# close(zz)
+# temp_file <- tempfile()
+# write.csv(RWA.SUM_data, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr", 
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SNSRwandaSUMdata.csv"))
+# unlink(temp_file)
 # 
-# zz <- rawConnection(raw(0), "r+")
-# write.csv(RWA.O_data, zz, row.names = FALSE)
-# aws.s3::put_object(file = rawConnectionValue(zz),
-#                    bucket = "rtbglr", object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SNSRwandaOdata.csv")) 
-# close(zz)
-# #setwd(wd)
+# temp_file <- tempfile()
+# write.csv(RWA.O_data, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr", 
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SNSRwandaOdata.csv"))
+# unlink(temp_file)
 
+#via azure storage
+w_con <- textConnection("foo", "w")
+write.csv(RWA.O_data, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"SNSRwandaOdata.csv"))
+close(r_con)
 
+w_con <- textConnection("foo", "w")
+write.csv(RWA.SUM_data, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"SNSRwandaSUMdata.csv"))
+close(r_con)
 
-##########################################################################################
 ##########################SOLIDARIDAD#####################################################
-##########################################################################################
+
 colsnot<-c("_id"                 ,                     "_tags"                      ,              "_uuid"       ,                            
            "event"                            ,        "_notes"                      ,             "_edited"          ,                       
            "_status"                          ,        "_version"                    ,             "_duration"          ,                     
@@ -323,7 +295,7 @@ colsnot<-c("_id"                 ,                     "_tags"                  
            "site_characterization/altitude_field_m",    "site_characterization/admin_4"  ,         "site_characterization/site_name"      )
 
 
-###############Solidaridad NOT trials######################################
+# Solidaridad NOT trials###
 NOTSol1<-NOTSol%>%
   select(-any_of(c( "_notes" , "_total_media", "_id", "_tags", "_uuid" ,"start", "_edited","_status" ,"_version" , "_duration"  ,"_xform_id" ,"_attachments", "_geolocation" ,"_media_count" ,"formhub/uuid"   ,                                      
                     "_submitted_by","consent/photo","_date_modified","meta/instanceID"  , "_xform_id_string" ,"_bamboo_dataset_id"  ,"meta/instanceName" ,
@@ -346,7 +318,8 @@ NOTSol1<-NOTSol%>%
   arrange(ENID,HHID, desc(today)) %>% #sort to Keep last entry by date in duplicated records
   distinct(ENID,HHID,today,Event, .keep_all = TRUE)  %>%
   mutate(Stage = "Research",
-         Trial = "NOT") %>%
+         Trial = "NOT",
+         Crop = "All") %>%
   mutate(Country = coalesce(`start/country`, Country) )%>%
   mutate(Country = capitalize(Country))
   
@@ -356,7 +329,7 @@ NOTSol2<-NOTSol1%>%
   arrange(Event) %>%
   mutate(Event = paste( "event",Event, sep = ""))%>%
   pivot_wider(names_from = Event, values_from = today, values_fn = last) %>%
-  mutate(Stage = "Research") %>%
+  mutate(Crop = "All") %>%
   arrange(Stage,Trial, 
           ENID, HHID )
 
@@ -383,7 +356,7 @@ NOTSol2<-NOTSol1%>%
 #   select(-any_of(c(colsnot)))
 
 
-###############Solidaridad On-farm validations######################################
+###############Solidaridad On-farm validations
 #farmer seg data 
 #f.seg_malawi f.seg_zambia f.seg_mozambique
 # f.seg_malawi1<-f.seg_malawi%>%
@@ -481,36 +454,27 @@ NOTSol2<-NOTSol1%>%
   arrange(ENID,HHID, desc(today)) %>% #sort to Keep last entry by date in duplicated records
   distinct(ENID,HHID,Event, .keep_all = TRUE)  %>%
   mutate(Stage = "Validation",
-         Trial = "Fertilizer Recommendation") %>%
+         Trial = "Fertilizer Recommendation",
+         Crop = "All") %>%
   mutate(
     Country = coalesce(`intro/country`, Country) )%>%
   mutate(Country = capitalize(Country))%>%
   select(-any_of(c( "_notes" , "_total_media", "_id", "_tags", "_uuid" ,"start", "_edited","_status" ,"_version" , "_duration"  ,"_xform_id" ,"_attachments", "_geolocation" ,"_media_count" ,"formhub/uuid"   ,
                                                             "_submitted_by","consent/photo","_date_modified","meta/instanceID"  ,"_submission_time", "_xform_id_string" ,"_bamboo_dataset_id"  ,
-                                                            "_media_all_received"  ,  "consent/read_consent_form"    ,"consent/copy",  "consent/give_consent", "intro/country" )))
-  
-
-
+                                                            "_media_all_received"  ,  "consent/read_consent_form"    ,"consent/copy",  "consent/give_consent", "intro/country" )
+                 ))
 
 valSol2<-valSol1%>%
   dplyr::select(any_of(c(  "today", "Event"  ,  "Stage", "Trial", "ENID" , "HHID" 
                            )  ))%>%
   arrange(Event) %>%
   pivot_wider(names_from = Event, values_from = today, values_fn = last) %>%
+  mutate(Crop = "All") %>%
   arrange(Stage,Trial, 
           ENID, HHID )
 
 valSol1<-as.data.frame(valSol1)
-# SOL.SUM_data <- f.seg_data %>%
-#   left_join(valSol2, by = c("ENID","HHID")) %>% #join identifiers and val data while keeping all enumerators/households
-#   suppressWarnings()
 
-
-# 
-# # Remove columns with all NA values
-# clean_data <- n[, colSums(is.na(n)) != nrow(n)]
-
-###########################################################################################################################
 #rbind valSol2, NOTSol2 and save as SOL.SUM_data on aws
 NOTValSol2 <-bind_rows(valSol2, NOTSol2)
 
@@ -520,16 +484,15 @@ NOTSolID<-NOTSol1%>%
     HHSurname = `site_characterization/surname`,
     HHphoneNo= `site_characterization/phone_number`
   )%>%
-  dplyr::select(any_of(c( "ENID" , "HHID" ,"HHfirstName","HHSurname", "HHphoneNo"
+  dplyr::select(any_of(c("Crop", "ENID" , "HHID" ,"HHfirstName","HHSurname", "HHphoneNo"
   )  ))%>%
   filter(!is.na(HHfirstName)) %>%
   distinct(ENID, HHID, .keep_all = TRUE)
-  
-
 
 NOTValSol2 <-NOTValSol2 %>%
   left_join(NOTSolID, by = c("ENID","HHID")) %>% 
-  filter(!is.na(ENID) & !is.na(HHID))
+  filter(!is.na(ENID) & !is.na(HHID))%>%
+  mutate(Crop = "All") 
 
 NOTSol1 <- lapply(NOTSol1, function(x) {
   if (is.list(x)) {
@@ -550,56 +513,52 @@ NOTValSol2 <- lapply(NOTValSol2, function(x) {
 
 NOTValSol2 <- as.data.frame(NOTValSol2)
 
-
-         
-#save to bucket
-temp_file <- tempfile()
-write.csv(NOTValSol2, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr", 
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SolidaridadSUMdata.csv"))
-unlink(temp_file)
-
-temp_file <- tempfile()
-write.csv(valSol1, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr", 
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SolidaridadOdata.csv"))
-unlink(temp_file)
-
-temp_file <- tempfile()
-write.csv(NOTSol1, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr", 
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SolidaridadNOTdata.csv"))
-unlink(temp_file)
-
-
-# zz <- rawConnection(raw(0), "r+")
-# write.csv(NOTValSol2, zz, row.names = FALSE)
-# aws.s3::put_object(file = rawConnectionValue(zz),
-#                    bucket = "rtbglr", object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SolidaridadSUMdata.csv"))
-# close(zz)
+# #save to bucket
+# temp_file <- tempfile()
+# write.csv(NOTValSol2, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr", 
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SolidaridadSUMdata.csv"))
+# unlink(temp_file)
 # 
+# temp_file <- tempfile()
+# write.csv(valSol1, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr", 
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SolidaridadOdata.csv"))
+# unlink(temp_file)
 # 
-# zz <- rawConnection(raw(0), "r+")
-# write.csv(valSol1, zz, row.names = FALSE)
-# aws.s3::put_object(file = rawConnectionValue(zz),
-#                    bucket = "rtbglr", object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SolidaridadOdata.csv"))
-# close(zz)
-# 
-# zz <- rawConnection(raw(0), "r+")
-# write.csv(NOTSol1, zz, row.names = FALSE)
-# aws.s3::put_object(file = rawConnectionValue(zz),
-#                    bucket = "rtbglr", object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SolidaridadNOTdata.csv"))
-# close(zz)
+# temp_file <- tempfile()
+# write.csv(NOTSol1, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr", 
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "SolidaridadNOTdata.csv"))
+# unlink(temp_file)
 
 
+#via azure storage
+w_con <- textConnection("foo", "w")
+write.csv(NOTValSol2, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"SolidaridadSUMdata.csv"))
+close(r_con)
 
-##########################################################################################
+w_con <- textConnection("foo", "w")
+write.csv(valSol1, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"SolidaridadOdata.csv"))
+close(r_con)
+
+w_con <- textConnection("foo", "w")
+write.csv(NOTSol1, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"SolidaridadNOTdata.csv"))
+close(r_con)
+
 ##########################KALRO###########################################################
-##########################################################################################
-
 #ID DATA (Enumerators and households)
 #merge enum +household registration data
 KL.ENReg <- KL.Register_EN%>%
@@ -613,10 +572,6 @@ KL.ENReg <- KL.Register_EN%>%
   select(any_of(c("ENtoday","ENID","ENfirstName","ENSurname","ENphoneNo"))) %>%
   arrange(ENID, desc(ENtoday)) %>% #sort to Keep last entry by date in duplicated records
   distinct(ENID, .keep_all = TRUE)# Keep last entry by date in duplicated records
-  
-
-
-
 
 KL.HHReg<-KL.RegisterVerify_HH%>%
   select(any_of(c( "register_hh/today"
@@ -634,7 +589,6 @@ KL.HHReg<-KL.RegisterVerify_HH%>%
          HHSurname = `register_hh/new_barcode/surname`,
          HHID=`register_hh/new_barcode/household_id`,
          HHphoneNo=`register_hh/new_barcode/phone_number` 
-         
   )%>%
   mutate(`Site Selection` = as.Date(`Site Selection`)) %>%
   filter(!is.na(HHID)) %>%  # Filter out rows where HHID is NA
@@ -643,11 +597,9 @@ KL.HHReg<-KL.RegisterVerify_HH%>%
 KL.ENHHReg <- KL.ENReg %>%
   full_join(KL.HHReg, by = "ENID") %>%
   suppressWarnings()
- 
 
 #Validation data
 KL.val1<-KL.valData%>%
-  
   as.data.frame()%>%
   select(-any_of(c( "_notes" , "_total_media", "_id", "_tags", "_uuid" ,"start", "_edited","_status" ,"_version" , "_duration"  ,"_xform_id" ,"_attachments", "_geolocation" ,"_media_count" ,"formhub/uuid"   ,
                     "_submitted_by","consent/photo","_date_modified","meta/instanceID"  ,"_submission_time", "_xform_id_string" ,"_bamboo_dataset_id"  ,
@@ -673,8 +625,6 @@ KL.val1<-KL.valData%>%
   filter(ENID != "KLENKE000000" ) %>%#leave out the enumerator registered for testing and monitoring the tool and is not expected to collect data
   filter(ENID != "KLENKE123456")
 
-
-
 KL.val2 <- KL.val1 %>%
   dplyr::select(any_of(c("today","Crop", "Event",  "Stage", "Trial", "ENID", "HHID"))) %>%
   mutate(ENID = if_else(ENID == "KHENKE000028", "KLENKE000028", ENID)) %>%
@@ -683,13 +633,11 @@ KL.val2 <- KL.val1 %>%
   mutate(across(starts_with("event"), as.Date, format = "%Y-%m-%d")) %>%
   arrange( ENID, HHID)%>%
   suppressWarnings()
-
  
 #join to include all EN details... some not in the hh details. 
 
 KL.ENHHReg2<-KL.ENHHReg %>%
-  dplyr::select(-any_of(c("Country", "ENtoday", "ENfirstName","ENSurname","ENphoneNo" ))) 
-
+  dplyr::select(-any_of(c("Country", "ENtoday", "ENfirstName","ENSurname","ENphoneNo" )))
 
 #get hh details
 KL.SUM_data <- KL.val2 %>%
@@ -715,40 +663,39 @@ KL.val1 <- lapply(KL.val1, function(x) {
 KL.val1 <- as.data.frame(KL.val1)
 ##### KLENKE000000 KLHHKE000000 not duplicated... one househld id used in training with multiple people asigned with different details.  
 ###training data to be excluded later...
-#View(KL.SUM_data)
-#save to bucket
-temp_file <- tempfile()
-write.csv(KL.val1, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr", 
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "KLOdata.csv"))
-unlink(temp_file)
 
-temp_file <- tempfile()
-write.csv(KL.SUM_data, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr", 
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "KLSUMdata.csv"))
-unlink(temp_file)
-
-# zz <- rawConnection(raw(0), "r+")
-# write.csv(KL.SUM_data, zz, row.names = FALSE)
-# aws.s3::put_object(file = rawConnectionValue(zz),
-#                    bucket = "rtbglr", object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "KLSUMdata.csv"))
-# close(zz)
+# #save to aws bucket
+# temp_file <- tempfile()
+# write.csv(KL.val1, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr", 
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "KLOdata.csv"))
+# unlink(temp_file)
 # 
-# 
-# zz <- rawConnection(raw(0), "r+")
-# write.csv(KL.val1, zz, row.names = FALSE)
-# aws.s3::put_object(file = rawConnectionValue(zz),
-#                    bucket = "rtbglr", object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "KLOdata.csv"))
-# close(zz)
+# temp_file <- tempfile()
+# write.csv(KL.SUM_data, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr", 
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "KLSUMdata.csv"))
+# unlink(temp_file)
 
 
-##########################################################################################
+#via azure storage
+w_con <- textConnection("foo", "w")
+write.csv(KL.val1, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"KLOdata.csv"))
+close(r_con)
+
+w_con <- textConnection("foo", "w")
+write.csv(KL.SUM_data, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"KLSUMdata.csv"))
+close(r_con)
+
 ##########################MercyCorpsSprot#################################################
-##########################################################################################
-
 #ID DATA (Enumerators and households)
 #merge enum +household registration data
 MC.ENReg <- MC.Register_EN%>%
@@ -779,22 +726,17 @@ MC.HHReg<-MC.RegisterVerify_HH%>%
          HHSurname = `register_hh/new_barcode/surname`,
          HHID=`register_hh/new_barcode/household_id`,
          HHphoneNo=`register_hh/new_barcode/phone_number`
-
   )%>%
   mutate(`Site Selection` = as.Date(`Site Selection`)) %>%
   filter(!is.na(HHID)) %>%  # Filter out rows where HHID is NA
   distinct(ENID,HHID,Country,`Site Selection`,HHphoneNo, .keep_all = TRUE)
 
-
 MC.ENHHReg <- MC.ENReg %>%
   full_join(MC.HHReg, by = "ENID") %>%
   suppressWarnings()
 
-
-
 #Validation data
 MC.val1<-MC.valData%>%
-
   as.data.frame()%>%
   select(-any_of(c( "_notes" , "_total_media", "_id", "_tags", "_uuid" ,"start", "_edited","_status" ,"_version" , "_duration"  ,"_xform_id" ,"_attachments", "_geolocation" ,"_media_count" ,"formhub/uuid"   ,
                     "_submitted_by","consent/photo","_date_modified","meta/instanceID"  ,"_submission_time", "_xform_id_string" ,"_bamboo_dataset_id"  ,
@@ -806,17 +748,15 @@ MC.val1<-MC.valData%>%
     Event= `intro/event`,
     latitude= `location/latitude`,
     longitude= `location/longitude`,
-    today = today,
-    Crop = `planting/planting_1/crop_cultivated`
+    today = today
   ) %>%
-  mutate(today = as.IDate(today)) %>%
+  mutate(today = as.IDate(today),
+         Crop = "Potato") %>%
   arrange(ENID,HHID, desc(today)) %>% #sort to Keep last entry by date in duplicated records
   distinct(ENID,HHID,Event, .keep_all = TRUE)  %>%
   mutate(Stage = "Validation") %>%
   mutate(Trial = "Fertilizer Recommendation") %>%
   mutate(Country = capitalize(Country))
-
-
 
 MC.val2 <- MC.val1 %>%
   dplyr::select(any_of(c("today", "Event", "Crop", "Stage", "Trial","ENID", "HHID"))) %>%
@@ -826,12 +766,10 @@ MC.val2 <- MC.val1 %>%
   arrange( ENID, HHID)%>%
   suppressWarnings()
 
-
 #join to include all EN details... some not in the hh details.
 
 MC.ENHHReg2<-MC.ENHHReg %>%
   dplyr::select(-any_of(c("Country", "ENtoday", "ENfirstName","ENSurname","ENphoneNo" )))
-
 
 #get hh details
 MC.SUM_data <- MC.val2 %>%
@@ -854,27 +792,38 @@ MC.val1 <- lapply(MC.val1, function(x) {
 
 MC.val1 <- as.data.frame(MC.val1)
 
+# #via aws
+# temp_file <- tempfile()
+# write.csv(MC.val1, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr",
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "MCOdata.csv"))
+# unlink(temp_file)
+# 
+# temp_file <- tempfile()
+# write.csv(MC.SUM_data, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr",
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "MCSUMdata.csv"))
+# unlink(temp_file)
 
-temp_file <- tempfile()
-write.csv(MC.val1, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr",
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "MCOdata.csv"))
-unlink(temp_file)
 
-temp_file <- tempfile()
-write.csv(MC.SUM_data, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr",
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "MCSUMdata.csv"))
-unlink(temp_file)
+#via azure storage
+w_con <- textConnection("foo", "w")
+write.csv(MC.val1, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"MCOdata.csv"))
+close(r_con)
 
+w_con <- textConnection("foo", "w")
+write.csv(MC.SUM_data, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"MCSUMdata.csv"))
+close(r_con)
 
-
-# ##########################################################################################
-# ##########################EiA_Demo_Validation#############################################
-# ##########################################################################################
-
+###########################EiA_Demo_Validation#############################################
 #ID DATA (Enumerators and households)
 #merge enum +household registration data
 DEMO.ENReg <- DEMO.Register_EN%>%
@@ -905,23 +854,21 @@ DEMO.HHReg<-DEMO.RegisterVerify_HH%>%
          HHSurname = `detailsHH/surNameHH`,
          HHID=HHID,
          HHphoneNo=`detailsHH/phoneNrHH`
-
   )%>%
   mutate(`Site Selection` = as.Date(`Site Selection`)) %>%
   filter(!is.na(HHID)) %>%  # Filter out rows where HHID is NA
   distinct(ENID,HHID,Country,`Site Selection`,HHphoneNo, .keep_all = TRUE)
 
-
 DEMO.ENHHReg <- DEMO.ENReg %>%
   full_join(DEMO.HHReg, by = "ENID") %>%
   suppressWarnings()
 
-#****
+#****####SESS1
 # Function to extract latitude and longitude
 extract_coordinates <- function(point) {
   # Split the string by "."
   parts <- strsplit(point, "\\.")[[1]]
-
+  
   latitude_part1 <- parts[1]
   latitude_part2 <- substr(parts[2], 1, nchar(parts[2]) - 1)
   latitude <- paste(latitude_part1, latitude_part2, sep = ".")
@@ -929,12 +876,9 @@ extract_coordinates <- function(point) {
   # Extract longitude: last digit of the second part + third part
   last_digit_second_part <- substr(parts[2], nchar(parts[2]), nchar(parts[2]))
   longitude <- paste(last_digit_second_part, parts[3], sep = ".")
-
   longitude <- sub(" .*", "", longitude)
-
   return(c(latitude = latitude, longitude = longitude))
 }
-
 
 # # Apply the function to the 'geopoint' column and convert to a data frame
 extracted_data <- t(sapply(DEMO.valData$geopoint, extract_coordinates))
@@ -943,8 +887,6 @@ colnames(extracted_df) <- c("Latitude", "Longitude")
 
 # Combine the existing dataframe with the new latitude and longitude columns
 DEMO.valData2 <- cbind(DEMO.valData, extracted_df)
-
-
 
 # Define the bounds for Nigeria
 lat_min <- 4.3
@@ -959,14 +901,7 @@ DEMO.valData3 <- DEMO.valData2 %>%
   filter(Latitude >= as.numeric(lat_min) & Latitude <= as.numeric(lat_max) &
            Longitude >= as.numeric(long_min) & Longitude <= as.numeric(long_max))%>%
   mutate(country = ifelse(country == "NG", "ZZ", country)) %>%
-  # mutate(crop= case_when(
-  #   grepl("R$", `purpose/event`) ~ "Rice",
-  #   grepl("M$", `purpose/event`) ~ "Maize",
-  #   grepl("C$", `purpose/event`) ~ "Cassava",
-  #   TRUE ~ NA_character_  
-  #   ))%>%
   suppressWarnings()
-
 
 #Validation data
 DEMO.val1<-DEMO.valData3%>%
@@ -993,12 +928,10 @@ DEMO.val1<-DEMO.valData3%>%
   mutate(Event = substr(Event, 1, nchar(Event) - 1))%>%
   filter(ENID != "SGEAZZ000102") %>%
   #filter(format(today, "%Y") != "2024")
-  mutate(today = ifelse(format(today, "%Y") == "2024", 
-                              as.Date(format(today, "%Y-%m-%d"), tz = "UTC") - (365 * 2), 
+  mutate(today = ifelse(format(today, "%Y") == "2024",
+                              as.Date(format(today, "%Y-%m-%d"), tz = "UTC") - (365 * 2),
                         today)) %>%
   mutate(today = as.Date(today, origin = "1970-01-01"))
-
-
 
 DEMO.val2 <- DEMO.val1 %>%
   dplyr::select(any_of(c("today","Stage","Trial","Crop", "Event", "ENID", "HHID"))) %>%
@@ -1008,12 +941,10 @@ DEMO.val2 <- DEMO.val1 %>%
   arrange( ENID, HHID)%>%
   suppressWarnings()
 
-
 #join to include all EN details... some not in the hh details.
 
 DEMO.ENHHReg2<-DEMO.ENHHReg %>%
   dplyr::select(-any_of(c("Country", "ENtoday", "ENfirstName","ENSurname","ENphoneNo" )))
-
 
 #get hh details
 DEMO.SUM_data <- DEMO.val2 %>%
@@ -1036,8 +967,7 @@ DEMO.val1 <- lapply(DEMO.val1, function(x) {
 
 DEMO.val1 <- as.data.frame(DEMO.val1)
 
-
-
+####SESS1
 # Function to generate random dates
 generate_dates <- function(site_selection_date) {
   event1_date <- site_selection_date + sample(10:17, 1)
@@ -1047,7 +977,7 @@ generate_dates <- function(site_selection_date) {
   event5_date <- event1_date + sample(60:71, 1)
   event6_date <- event1_date + sample(70:95, 1)
   event7_date <- event1_date + sample(80:120, 1)
-  
+
   return(c(event1_date, event2_date, event3_date, event4_date, event5_date, event6_date, event7_date))
 }
 
@@ -1071,44 +1001,40 @@ DEMO.SUM_data1 <- DEMO.SUM_data[1:65, ] %>%
   mutate(across(starts_with("event"), as.Date))%>%
   select(-dates)  # Remove the temporary column
 
-
 DEMO.SUM_data2 <- bind_rows(DEMO.SUM_data1, DEMO.SUM_data[-(1:65), ])
 
-# DEMO.SUM_data11 <- DEMO.SUM_data2[1:67, ] %>%
-#   rowwise() %>%
-#   mutate(
-#     dates = list(generate_dates(`Site Selection`)),
-#     event1 = ifelse((format(as.Date(`Site Selection`), "%Y") == "2021" | format(as.Date(`Site Selection`), "%Y") == "2022") & (row_number() <= 60  &  (!is.na(event1) | !is.na(event2) | !is.na(event3) | !is.na(event4) | !is.na(event5) | !is.na(event6) | !is.na(event7))),
-#                     ifelse(is.na(dates[[1]]), NA, format(dates[[1]], "%Y-%m-%d")),
-#                     format(event1, "%Y-%m-%d"))
-#   )%>%
-#   mutate(across(starts_with("event"), as.Date))%>%
-#   select(-dates)
-# DEMO.SUM_data2 <- bind_rows(DEMO.SUM_data11, DEMO.SUM_data[-(1:67), ])
-    
+# #Via aws
+# temp_file <- tempfile()
+# write.csv(DEMO.val1, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr",
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "DEMOOdata.csv"))
+# unlink(temp_file)
+# 
+# temp_file <- tempfile()
+# write.csv(DEMO.SUM_data2, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr",
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "DEMOSUMdata.csv"))
+# unlink(temp_file)
 
 
-temp_file <- tempfile()
-write.csv(DEMO.val1, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr",
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "DEMOOdata.csv"))
-unlink(temp_file)
+#via azure storage
+w_con <- textConnection("foo", "w")
+write.csv(DEMO.val1, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"DEMOOdata.csv"))
+close(r_con)
 
-temp_file <- tempfile()
-write.csv(DEMO.SUM_data2, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr",
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "DEMOSUMdata.csv"))
-unlink(temp_file)
+w_con <- textConnection("foo", "w")
+write.csv(DEMO.SUM_data2, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"DEMOSUMdata.csv"))
+close(r_con)
 
-
-
-
-##########################################################################################
 ##########################GH-CerLeg-Esoko#################################################
-##########################################################################################
-
 #ID DATA (Enumerators and households)
 #merge enum +household registration data
 CE.ENReg <- CE.Register_EN%>%
@@ -1139,17 +1065,14 @@ CE.HHReg<-CE.RegisterVerify_HH%>%
          HHSurname = `register_hh/new_barcode/surname`,
          HHID=`register_hh/new_barcode/household_id`,
          HHphoneNo=`register_hh/new_barcode/phone_number`
-         
   )%>%
   mutate(`Site Selection` = as.Date(`Site Selection`)) %>%
   filter(!is.na(HHID)) %>%  # Filter out rows where HHID is NA
   distinct(ENID,HHID,Country,`Site Selection`,HHphoneNo, .keep_all = TRUE)
 
-
 CE.ENHHReg <- CE.ENReg %>%
   full_join(CE.HHReg, by = "ENID") %>%
   suppressWarnings()
-
 
 
 #Validation/fertilizer data
@@ -1174,10 +1097,9 @@ CE.val1<-CE.valData%>%
   arrange(ENID,HHID, desc(today)) %>% #sort to Keep last entry by date in duplicated records
   distinct(ENID,HHID,Event, .keep_all = TRUE)  %>%
   mutate(Stage = "Validation") %>%
-  mutate(Trial = "Fertilizer Recommendation") %>%
+  mutate(Trial = "Fertilizer Recommendation",
+         Crop= "Soybean") %>%
   mutate(Country = capitalize(Country))
-
-
 
 CE.val2 <- CE.val1 %>%
   dplyr::select(any_of(c("today", "Event",  "Crop", "Stage", "Trial", "ENID", "HHID"))) %>%
@@ -1187,13 +1109,10 @@ CE.val2 <- CE.val1 %>%
   arrange( ENID, HHID)%>%
   suppressWarnings()
 
-
 #join to include all EN details... some not in the hh details.
 
 CE.ENHHReg2<-CE.ENHHReg %>%
   dplyr::select(-any_of(c("Country", "ENtoday", "ENfirstName","ENSurname","ENphoneNo" )))
-
-
 
 #get hh details
 CE.SUM_data <- CE.val2 %>%
@@ -1217,11 +1136,8 @@ CE.val1 <- lapply(CE.val1, function(x) {
 
 CE.val1 <- as.data.frame(CE.val1)
 
-
-
 #intercropping data
 CE.IC1<-CE.ICData %>%
-  
   as.data.frame()%>%
   select(-any_of(c( "_notes" , "_total_media", "_id", "_tags", "_uuid" ,"start", "_edited","_status" ,"_version" , "_duration"  ,"_xform_id" ,"_attachments", "_geolocation" ,"_media_count" ,"formhub/uuid"   ,
                     "_submitted_by","consent/photo","_date_modified","meta/instanceID"  ,"_submission_time", "_xform_id_string" ,"_bamboo_dataset_id"  ,
@@ -1246,7 +1162,6 @@ CE.IC1<-CE.ICData %>%
          Crop= "Soybean") %>%
   mutate(Country = capitalize(Country))
 
-
 CE.IC2 <- CE.IC1 %>%
   dplyr::select(any_of(c("today", "Event", "Crop", "Stage", "Trial", "ENID", "HHID"))) %>%
   arrange(Event) %>%
@@ -1254,7 +1169,6 @@ CE.IC2 <- CE.IC1 %>%
   mutate(across(starts_with("event"), as.Date, format = "%Y-%m-%d")) %>%
   arrange( ENID, HHID)%>%
   suppressWarnings()
-
 
 #get hh details
 CE.ICSUM_data <- CE.IC2 %>%
@@ -1278,30 +1192,717 @@ CE.IC1 <- lapply(CE.IC1, function(x) {
 
 CE.IC1 <- as.data.frame(CE.IC1)
 
-temp_file <- tempfile()
-write.csv(CE.val1, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr",
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "CEOdata.csv"))
-unlink(temp_file)
+# #via aws storage
+# temp_file <- tempfile()
+# write.csv(CE.val1, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr",
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "CEOdata.csv"))
+# unlink(temp_file)
+# 
+# temp_file <- tempfile()
+# write.csv(CE.SUM_data, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr",
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "CESUMdata.csv"))
+# unlink(temp_file)
+# 
+# temp_file <- tempfile()
+# write.csv(CE.IC1, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr",
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "CEICOdata.csv"))
+# unlink(temp_file)
+# 
+# temp_file <- tempfile()
+# write.csv(CE.ICSUM_data, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr",
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "CEICSUMdata.csv"))
+# unlink(temp_file)
 
-temp_file <- tempfile()
-write.csv(CE.SUM_data, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr",
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "CESUMdata.csv"))
-unlink(temp_file)
 
-temp_file <- tempfile()
-write.csv(CE.IC1, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr",
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "CEICOdata.csv"))
-unlink(temp_file)
 
-temp_file <- tempfile()
-write.csv(CE.ICSUM_data, temp_file, row.names = FALSE)
-aws.s3::put_object(file = temp_file,
-                   bucket = "rtbglr",
-                   object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "CEICSUMdata.csv"))
-unlink(temp_file)
+#via azure storage
+w_con <- textConnection("foo", "w")
+write.csv(CE.val1, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"CEOdata.csv"))
+close(r_con)
+
+w_con <- textConnection("foo", "w")
+write.csv(CE.SUM_data, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"CESUMdata.csv"))
+close(r_con)
+
+w_con <- textConnection("foo", "w")
+write.csv(CE.IC1, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"CEICOdata.csv"))
+close(r_con)
+
+w_con <- textConnection("foo", "w")
+write.csv(CE.ICSUM_data, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"CEICSUMdata.csv"))
+close(r_con)
+
+
+##########################    BioSSA     #################################################
+# Banana, cassava, legumes and yams data
+#BANANA
+BS.NOTData_banana1<-BS.NOTData_banana %>%
+  tidyr::unnest(`repeat`) 
+
+BS.NOT1_ban<-BS.NOTData_banana1%>%
+  as.data.frame()%>%
+  select(-any_of(c( "_notes" , "_total_media", "_id", "_tags", "_uuid" ,"start", "_edited","_status" ,"_version" , "_duration"  ,"_xform_id" ,"_attachments", "_geolocation" ,"_media_count" ,"formhub/uuid"   ,
+                    "_submitted_by","consent/photo","_date_modified","meta/instanceID"  ,"_submission_time", "_xform_id_string" ,"_bamboo_dataset_id"  ,
+                    "_media_all_received"  ,  "consent/read_consent_form"    ,"consent/copy",  "consent/give_consent")))%>%
+  rename(
+    Country = `group_project/country`,
+    Event= `start/event`,
+    latitude= `repeat/site_characterization/latitude`,
+    longitude= `repeat/site_characterization/longitude`,
+    today = `repeat/date`
+
+  ) %>%
+  mutate(
+    plot_id = ifelse(
+      is.na(`repeat/plot_id`),
+      paste0("TZ20240MUS", `repeat/plot_number`),`repeat/plot_id`
+    )) %>%
+  mutate(Event = strsplit(as.character(Event), " ")) %>%
+  unnest(Event) %>%
+  mutate(
+    today = as.IDate(today),
+    ENID = str_to_title(coalesce(str_trim(`start/enumerator_ID`), str_trim(`start/enumerator_ID_1`))),
+    HHID = plot_id,
+    Crop = "Banana",
+    Event = paste0("event", Event),
+    latitude= as.numeric(latitude),
+    longitude = as.numeric(longitude),
+    #`Site Selection` = as.IDate(today)
+  )%>%
+  arrange(ENID,HHID, desc(today)) %>% #sort to Keep last entry by date in duplicated records
+  #distinct(ENID,HHID,Event, .keep_all = TRUE)  %>%
+  mutate(Stage = "Research") %>%
+  mutate(Trial = "NOT") %>%
+  mutate(Country = capitalize(Country))
+
+
+BS.NOT2_ban <- BS.NOT1_ban %>%
+  mutate(value_to_pivot = case_when(
+    Event == "event0" ~ if ("repeat/group/group_harvest/root_number" %in% colnames(BS.NOT1_ban)) {
+      as.character(`repeat/group/group_harvest/root_number`)
+    } else {
+      NA_character_
+    },
+    Event == "event1" ~ if ("repeat/group/plant_new_leaf_per_plot" %in% colnames(BS.NOT1_ban)) {
+      as.character(`repeat/group/plant_new_leaf_per_plot`)
+    } else {
+      NA_character_
+    },
+    Event == "event2" ~ {
+      # List of height columns
+      height_columns <- c(
+        "repeat/group/group_height/plant_height_cm_1",
+        "repeat/group/group_height/plant_height_cm_2",
+        "repeat/group/group_height/plant_height_cm_3",
+        "repeat/group/group_height/plant_height_cm_4",
+        "repeat/group/group_height/plant_height_cm_5",
+        "repeat/group/group_height/plant_height_cm_6",
+        "repeat/group/group_height/plant_height_cm_7",
+        "repeat/group/group_height/plant_height_cm_8",
+        "repeat/group/group_height/plant_height_cm_9"
+      )
+
+      # Select only the existing columns
+      existing_columns <- height_columns[height_columns %in% colnames(BS.NOT1_ban)]
+
+      # Calculate the mean if columns exist
+      if (length(existing_columns) > 0) {
+        as.character(round(rowMeans(select(., all_of(existing_columns)), na.rm = TRUE), 1))
+      } else {
+        NA_character_
+      }
+    },
+    Event == "event3" ~ {
+      # List of emerged leaf number columns
+      leaf_columns <- c(
+        "repeat/group/group_leaf/emerged_leaf_number_1",
+        "repeat/group/group_leaf/emerged_leaf_number_2",
+        "repeat/group/group_leaf/emerged_leaf_number_3",
+        "repeat/group/group_leaf/emerged_leaf_number_4",
+        "repeat/group/group_leaf/emerged_leaf_number_5",
+        "repeat/group/group_leaf/emerged_leaf_number_6",
+        "repeat/group/group_leaf/emerged_leaf_number_7",
+        "repeat/group/group_leaf/emerged_leaf_number_8",
+        "repeat/group/group_leaf/emerged_leaf_number_9"
+      )
+
+      # Select only the existing columns
+      existing_columns <- leaf_columns[leaf_columns %in% colnames(BS.NOT1_ban)]
+
+      # Calculate the mean if columns exist
+      if (length(existing_columns) > 0) {
+        as.character(round(rowMeans(select(., all_of(existing_columns)), na.rm = TRUE), 1))
+      } else {
+        NA_character_
+      }
+    },
+    Event == "event4" ~ {
+      # List of leaf number columns
+      leaf_number_columns <- c(
+        "repeat/group/group_living/leaf_number_1",
+        "repeat/group/group_living/leaf_number_2",
+        "repeat/group/group_living/leaf_number_3",
+        "repeat/group/group_living/leaf_number_4",
+        "repeat/group/group_living/leaf_number_5",
+        "repeat/group/group_living/leaf_number_6",
+        "repeat/group/group_living/leaf_number_7",
+        "repeat/group/group_living/leaf_number_8",
+        "repeat/group/group_living/leaf_number_9"
+      )
+
+      # Select only the existing columns
+      existing_columns <- leaf_number_columns[leaf_number_columns %in% colnames(BS.NOT1_ban)]
+
+      # Calculate the mean if columns exist
+      if (length(existing_columns) > 0) {
+        as.character(round(rowMeans(select(., all_of(existing_columns)), na.rm = TRUE), 1))
+      } else {
+        NA_character_
+      }
+    },
+    Event == "event5" ~ if ("repeat/group/group_stem/stem_circumference_cm_1" %in% colnames(BS.NOT1_ban)) {
+      as.character(`repeat/group/group_stem/stem_circumference_cm_1`)
+    } else {
+      NA_character_
+    },
+    
+    Event == "event6" ~ if ("repeat/group/leaf_chlorophyll_SPAD" %in% colnames(BS.NOT1_ban)) {
+      as.character(`repeat/group/leaf_chlorophyll_SPAD`)
+    } else {
+      NA_character_
+    },
+
+    Event == "event7" ~ if ("repeat/group/group_harvest/harvest_date" %in% colnames(BS.NOT1_ban)) {
+      `repeat/group/group_harvest/harvest_date`
+    } else {
+      NA_character_
+    },
+
+    Event == "event8" ~ if ("repeat/group/group_height/soil_sample_date" %in% colnames(BS.NOT1_ban)) {
+      `repeat/group/group_height/soil_sample_date`
+    } else {
+      NA_character_
+    },
+
+    Event == "event11" ~ if ("repeat/group/unforseen_event" %in% colnames(BS.NOT1_ban)) {
+      `repeat/group/unforseen_event`
+    } else {
+      NA_character_
+    },
+
+    Event == "event12" ~ if ("repeat/group/group_pest/pest_number" %in% colnames(BS.NOT1_ban)) {
+      as.character(`repeat/group/group_pest/pest_number`)
+    }else {
+      NA_character_
+    },
+
+    Event == "event13" ~ if ("repeat/group/group_suckers/sucker_date_plant" %in% colnames(BS.NOT1_ban)) {
+      `repeat/group/group_suckers/sucker_date_plant`
+    } else {
+      NA_character_
+    },
+
+    Event == "event30" ~ if ("repeat/group/sampling/leaf_N_percent" %in% colnames(BS.NOT1_ban) &&
+                             "repeat/group/sampling/leaf_P_percent" %in% colnames(BS.NOT1_ban)) {
+      paste0("%N:", `repeat/group/sampling/leaf_N_percent`, " %P:", `repeat/group/sampling/leaf_P_percent`)
+    } else {
+      NA_character_
+    },
+
+    TRUE ~ NA_character_
+  )) %>%
+  arrange(Event) %>%
+  pivot_wider(names_from = Event, values_from = value_to_pivot, values_fn = last) %>%
+  dplyr::select(any_of(c("today", "Event", "Crop", "Stage", "Trial", "ENID", "HHID")), starts_with("event")) %>%
+  arrange(ENID, HHID) %>%
+  suppressWarnings()
+
+event_columns <- grep("^event", names(BS.NOT2_ban), value = TRUE)
+BS.NOT2_ban_agg <- BS.NOT2_ban %>%
+  group_by(HHID, Crop, Stage, Trial) %>%
+  reframe(
+    today = first(today), 
+    ENID = list(unique(ENID)),  
+    across(
+      all_of(event_columns),
+      ~ ifelse(length(na.omit(.)) > 0, list(na.omit(.)), NA),
+      .names = "{.col}"
+    )
+  )
+
+#CASSAVA
+BS.NOTData_cassava1<-BS.NOTData_cassavaS2 %>%
+  tidyr::unnest(`group_measure/repeat`)
+
+BS.NOT1_cas<-BS.NOTData_cassava1%>%
+  as.data.frame()%>%
+  select(-any_of(c( "_notes" , "_total_media", "_id", "_tags", "_uuid" ,"start", "_edited","_status" ,"_version" , "_duration"  ,"_xform_id" ,"_attachments", "_geolocation" ,"_media_count" ,"formhub/uuid"   ,
+                    "_submitted_by","consent/photo","_date_modified","meta/instanceID"  ,"_submission_time", "_xform_id_string" ,"_bamboo_dataset_id"  ,
+                    "_media_all_received"  ,  "consent/read_consent_form"    ,"consent/copy",  "consent/give_consent")))%>%
+  rename(
+    Country = `group_start/country`,
+    Event= `group_start/event`,
+    latitude= `group_measure/repeat/site_characterization/latitude`,
+    longitude= `group_measure/repeat/site_characterization/longitude`,
+    today = `group_measure/repeat/group/date`
+  ) %>%
+  mutate(
+    plot_id = case_when(
+      Country == "Tanzania" ~ ifelse(
+        is.na(`group_measure/repeat/plot_id`),
+        paste0("TZ202402CAS", `group_measure/repeat/plot_number`),
+        `group_measure/repeat/plot_id`
+      ),
+      Country == "Nigeria" ~ ifelse(
+        is.na(`group_measure/repeat/plot_id`),
+        paste0("NG202402CAS", `group_measure/repeat/plot_id_1`),
+        `group_measure/repeat/plot_id`
+      ),
+      TRUE ~ `group_measure/repeat/plot_id`  # Keep original value if neither condition is met
+    )
+    )%>%
+  mutate(Event = strsplit(as.character(Event), " ")) %>%
+  unnest(Event) %>%
+  mutate(
+    today = as.IDate(today),
+    ENID = str_to_title(str_trim(`group_start/enumerator_ID_1`)),
+    HHID = plot_id,
+    Crop = "Cassava",
+    Event = paste0("event", Event),
+    latitude= as.numeric(latitude),
+    longitude = as.numeric(longitude),
+    #`Site Selection` = as.IDate(today)
+  )%>%
+  arrange(ENID,HHID, desc(today)) %>% #sort to Keep last entry by date in duplicated records
+  #distinct(ENID,HHID,Event, .keep_all = TRUE)  %>%
+  mutate(Stage = "Research") %>%
+  mutate(Trial = "NOT") %>%
+  mutate(Country = capitalize(Country))
+
+BS.NOT2_cas <- BS.NOT1_cas %>%
+  mutate(value_to_pivot = case_when(
+    Event == "event1" ~ if (all(c(
+      "group_measure/repeat/unforseen_events"
+    ) %in% colnames(BS.NOT1_cas))) {
+      `group_measure/repeat/unforseen_events`
+    } else {
+      NA_character_
+    },
+
+    Event == "event2" ~ if (all(c(
+      "group_measure/repeat/group/planting_date"
+    ) %in% colnames(BS.NOT1_cas))) {
+      `group_measure/repeat/group/planting_date`
+    } else {
+      NA_character_
+    },
+
+    Event == "event3" ~ if (all(c(
+      "group_measure/repeat/group/planting_date_replanting"
+    ) %in% colnames(BS.NOT1_cas))) {
+      `group_measure/repeat/group/planting_date_replanting`
+    } else {
+      NA_character_
+    },
+
+    Event == "event4" ~ if (all(c(
+      "group_measure/repeat/group/plant_density_plot"
+    ) %in% colnames(BS.NOT1_cas))) {
+      as.character(`group_measure/repeat/group/plant_density_plot`)
+    } else {
+      NA_character_
+    },
+
+    Event == "event5" ~ {
+      # List of potential plant height columns
+      plant_height_columns <- c(
+        "group_measure/repeat/group_height/plant_height_cm_1",
+        "group_measure/repeat/group_height/plant_height_cm_2",
+        "group_measure/repeat/group_height/plant_height_cm_3",
+        "group_measure/repeat/group_height/plant_height_cm_4",
+        "group_measure/repeat/group_height/plant_height_cm_5",
+        "group_measure/repeat/group_height/plant_height_cm_6",
+        "group_measure/repeat/group_height/plant_height_cm_7",
+        "group_measure/repeat/group_height/plant_height_cm_8",
+        "group_measure/repeat/group_height/plant_height_cm_9"
+      )
+
+      # Select only the existing columns from the plant_height_columns list
+      existing_columns <- plant_height_columns[plant_height_columns %in% colnames(BS.NOT1_cas)]
+
+      # Calculate the mean of the existing columns if any exist
+      if (length(existing_columns) > 0) {
+        as.character(round(rowMeans(select(., all_of(existing_columns)), na.rm = TRUE), 1))
+      } else {
+        NA_character_  # Return NA if none of the columns exist
+      }
+    },
+
+    Event == "event6" ~ if (all(c(
+      "group_measure/repeat/group_stem/stem_number_plot"
+    ) %in% colnames(BS.NOT1_cas))) {
+      `group_measure/repeat/group_stem/stem_number_plot`
+    } else {
+      NA_character_
+    },
+
+    Event == "event7" ~ if (all(c(
+      "group_measure/repeat/group_leaf/leaf_number_1"
+    ) %in% colnames(BS.NOT1_cas))) {
+      `group_measure/repeat/group_leaf/leaf_number_1`
+    } else {
+      NA_character_
+    },
+
+    Event == "event8" ~ if (all(c(
+      "group_measure/repeat/leaf_chlorophyll_SPAD"
+    ) %in% colnames(BS.NOT1_cas))) {
+      as.character(`group_measure/repeat/leaf_chlorophyll_SPAD`)
+    } else {
+      NA_character_
+    },
+
+    Event == "event9" ~ if (all(c(
+      "group_measure/repeat/group_harvest/harvest_date"
+    ) %in% colnames(BS.NOT1_cas))) {
+      `group_measure/repeat/group_harvest/harvest_date`
+    } else {
+      NA_character_
+    },
+
+    Event == "event10" ~ if (all(c(
+      "group_measure/repeat/group_pest/pest_number"
+    ) %in% colnames(BS.NOT1_cas))) {
+      `group_measure/repeat/group_pest/pest_number`
+    } else {
+      NA_character_
+    },
+
+    Event == "event11" ~ if (all(c(
+      "group_measure/repeat/soil/soil_sample_date"
+    ) %in% colnames(BS.NOT1_cas))) {
+      `group_measure/repeat/soil/soil_sample_date`
+    } else {
+      NA_character_
+    },
+
+    Event == "event12" ~ if (all(c(
+      "group_measure/repeat/sampling/plant_sample_date"
+    ) %in% colnames(BS.NOT1_cas))) {
+      `group_measure/repeat/sampling/plant_sample_date`
+    } else {
+      NA_character_
+    },
+
+    Event == "event13" ~ if (all(c(
+      "microbio_sample_date"
+    ) %in% colnames(BS.NOT1_cas))) {
+      `microbio_sample_date`
+    } else {
+      NA_character_
+    },
+
+    TRUE ~ NA_character_
+  )) %>%
+  arrange(Event) %>%
+  pivot_wider(names_from = Event, values_from = value_to_pivot, values_fn = last) %>%
+  dplyr::select(any_of(c("today", "Event", "Crop", "Stage", "Trial", "ENID", "HHID")), starts_with("event")) %>%
+  arrange(ENID, HHID) %>%
+  suppressWarnings()
+
+event_columns_cas <- grep("^event", names(BS.NOT2_cas), value = TRUE)
+BS.NOT2_cas_agg <- BS.NOT2_cas %>%
+  group_by(HHID, Crop, Stage, Trial) %>%
+  reframe(
+    today = first(today), 
+    ENID = list(unique(ENID)),  
+    across(
+      all_of(event_columns_cas),
+      ~ ifelse(length(na.omit(.)) > 0, list(na.omit(.)), NA),
+      .names = "{.col}"
+    )
+  )
+
+#Legumes
+BS.NOTData_legumes1<-BS.NOTData_legumesS2 %>%
+  tidyr::unnest(`group_measure/repeat`)
+
+
+
+BS.NOT1_leg<-BS.NOTData_legumes1%>%
+  as.data.frame()%>%
+  select(-any_of(c( "_notes" , "_total_media", "_id", "_tags", "_uuid" ,"start", "_edited","_status" ,"_version" , "_duration"  ,"_xform_id" ,"_attachments", "_geolocation" ,"_media_count" ,"formhub/uuid"   ,
+                    "_submitted_by","consent/photo","_date_modified","meta/instanceID"  ,"_submission_time", "_xform_id_string" ,"_bamboo_dataset_id"  ,
+                    "_media_all_received"  ,  "consent/read_consent_form"    ,"consent/copy",  "consent/give_consent")))%>%
+  rename(
+    Country = `group_start/country`,
+    Event= `group_start/event`,
+    today = `group_measure/repeat/date`,
+    Crop = `group_start/crop`
+
+  ) %>%
+  mutate(
+    plot_id = case_when(
+      Country == "Tanzania" & Crop == "common_bean" ~ coalesce(`group_measure/repeat/plot_id`, paste0("TZ202402BEA", `group_measure/repeat/plot_number`)),
+      Country == "Tanzania" & Crop == "soybean" ~ coalesce(`group_measure/repeat/plot_id`, paste0("TZ202402SOY", `group_measure/repeat/plot_number`)),
+      Country == "Tanzania" & Crop == "cowpea" ~ coalesce(`group_measure/repeat/plot_id`, paste0("TZ202402CWP", `group_measure/repeat/plot_number`)),
+      Country == "Nigeria" & Crop == "common_bean" ~ coalesce(`group_measure/repeat/plot_id`, paste0("NG202402BEA", `group_measure/repeat/plot_number`)),
+      Country == "Nigeria" & Crop == "soybean" ~ coalesce(`group_measure/repeat/plot_id`, paste0("NG202402SOY", `group_measure/repeat/plot_number`)),
+      Country == "Nigeria" & Crop == "cowpea" ~ coalesce(`group_measure/repeat/plot_id`, paste0("NG202402CWP", `group_measure/repeat/plot_number`)),
+      TRUE ~ `group_measure/repeat/plot_id`  # Keep original plot_id if no condition matches
+    )
+  )%>%
+  mutate(Event = strsplit(as.character(Event), " ")) %>%
+  unnest(Event) %>%
+  mutate(
+    today = as.IDate(today),
+    ENID = str_to_title(str_trim(`group_start/enumerator_ID_1`)),
+    HHID = plot_id,
+    Event = paste0("event", Event),
+    latitude= -6,
+    longitude= 37,
+    #`Site Selection` = as.IDate(today)
+  )%>%
+  arrange(ENID,HHID, desc(today)) %>% #sort to Keep last entry by date in duplicated records
+  #distinct(ENID,HHID,Event, .keep_all = TRUE)  %>%
+  mutate(Stage = "Research") %>%
+  mutate(Trial = "NOT") %>%
+  mutate(Country = capitalize(Country))
+
+BS.NOT2_leg <- BS.NOT1_leg %>%
+  mutate(value_to_pivot = case_when(
+    Event == "event1" ~ {
+      # List of plant height columns
+      plant_height_columns <- c(
+        "group_measure/repeat/group_height/plant_height_cm_1",
+        "group_measure/repeat/group_height/plant_height_cm_2",
+        "group_measure/repeat/group_height/plant_height_cm_3",
+        "group_measure/repeat/group_height/plant_height_cm_4",
+        "group_measure/repeat/group_height/plant_height_cm_5",
+        "group_measure/repeat/group_height/plant_height_cm_6",
+        "group_measure/repeat/group_height/plant_height_cm_7",
+        "group_measure/repeat/group_height/plant_height_cm_8",
+        "group_measure/repeat/group_height/plant_height_cm_9",
+        "group_measure/repeat/group_height/plant_height_cm_10",
+        "group_measure/repeat/group_height/plant_height_cm_11",
+        "group_measure/repeat/group_height/plant_height_cm_12",
+        "group_measure/repeat/group_height/plant_height_cm_13",
+        "group_measure/repeat/group_height/plant_height_cm_14",
+        "group_measure/repeat/group_height/plant_height_cm_15"
+      )
+      # Select only the existing columns
+      existing_columns <- plant_height_columns[plant_height_columns %in% colnames(BS.NOT1_leg)]
+      # Calculate the mean if any columns exist
+      if (length(existing_columns) > 0) {
+        as.character(round(rowMeans(select(., all_of(existing_columns)), na.rm = TRUE), 1))
+      } else {
+        NA_character_
+      }
+    },
+
+    Event == "event2" ~ {
+      # List of diameter columns
+      diameter_columns <- c(
+        "group_measure/repeat/group_diameter/plant_diameter_cm_1",
+        "group_measure/repeat/group_diameter/plant_diameter_cm_2",
+        "group_measure/repeat/group_diameter/plant_diameter_cm_3",
+        "group_measure/repeat/group_diameter/plant_diameter_cm_4",
+        "group_measure/repeat/group_diameter/plant_diameter_cm_5"
+      )
+      # Select only the existing columns
+      existing_columns <- diameter_columns[diameter_columns %in% colnames(BS.NOT1_leg)]
+      # Calculate the mean if columns exist
+      if (length(existing_columns) > 0) {
+        as.character(round(rowMeans(select(., all_of(existing_columns)), na.rm = TRUE), 1))
+      } else {
+        NA_character_
+      }
+    },
+
+    Event == "event3" ~ if ("group_measure/repeat/leaf_chlorophyll_SPAD" %in% colnames(BS.NOT1_leg)) {
+      as.character(`group_measure/repeat/leaf_chlorophyll_SPAD`)
+    } else {
+      NA_character_
+    },
+
+    Event == "event4" ~ if ("group_measure/repeat/soil/soil_sample_date" %in% colnames(BS.NOT1_leg)) {
+      as.character(`group_measure/repeat/soil/soil_sample_date`)
+    } else {
+      NA_character_
+    },
+
+    Event == "event5" ~ if ("microbio_sample_date" %in% colnames(BS.NOT1_leg)) {
+      as.character(`microbio_sample_date`)
+    } else {
+      NA_character_
+    },
+
+    Event == "event6" ~ if ("group_measure/repeat/group_plot/plant_density_plot" %in% colnames(BS.NOT1_leg)) {
+      as.character(`group_measure/repeat/group_plot/plant_density_plot`)
+    } else {
+      NA_character_
+    },
+
+    Event == "event7" ~ if ("group_measure/repeat/group_harvest/harvest_date" %in% colnames(BS.NOT1_leg)) {
+      as.character(`group_measure/repeat/group_harvest/harvest_date`)
+    } else {
+      NA_character_
+    },
+
+    Event == "event8" ~ if ("group_measure/repeat/group_sample/plant_sample_date" %in% colnames(BS.NOT1_leg)) {
+      as.character(`group_measure/repeat/group_sample/plant_sample_date`)
+    } else {
+      NA_character_
+    },
+
+    Event == "event9" ~ if ("group_measure/repeat/group_pest/abiotic_stress" %in% colnames(BS.NOT1_leg)) {
+      as.character(`group_measure/repeat/group_pest/abiotic_stress`)
+    } else {
+      NA_character_
+    },
+
+    Event == "event11" ~ if ("group_measure/repeat/group_plot/flowering_date" %in% colnames(BS.NOT1_leg)) {
+      as.character(`group_measure/repeat/group_plot/flowering_date`)
+    } else {
+      NA_character_
+    },
+
+    Event == "event26" ~ if ("group_measure/repeat/unforseen_event" %in% colnames(BS.NOT1_leg)) {
+      as.character(`group_measure/repeat/unforseen_event`)
+    } else {
+      NA_character_
+    },
+
+    Event == "event31" ~ if ("group_measure/repeat/group_pest/pest_number" %in% colnames(BS.NOT1_leg)) {
+      as.character(`group_measure/repeat/group_pest/pest_number`)
+    } else {
+      NA_character_
+    },
+
+    TRUE ~ NA_character_
+  )) %>%
+  arrange(Event) %>%
+  pivot_wider(names_from = Event, values_from = value_to_pivot, values_fn = last) %>%
+  dplyr::select(any_of(c("today", "Event", "Crop", "Stage", "Trial", "ENID", "HHID")), starts_with("event")) %>%
+  arrange(ENID, HHID) %>%
+  suppressWarnings()
+
+event_columns_leg <- grep("^event", names(BS.NOT2_leg), value = TRUE)
+BS.NOT2_leg_agg <- BS.NOT2_leg %>%
+  group_by(HHID, Crop, Stage, Trial) %>%
+  reframe(
+    today = first(today), 
+    ENID = list(unique(ENID)),  
+    across(
+      all_of(event_columns_leg),
+      ~ ifelse(length(na.omit(.)) > 0, list(na.omit(.)), NA),
+      .names = "{.col}"
+    )
+  )
+
+##yam
+# BS.NOTData_yam1<-BS.NOTData_yamS2 %>%
+#   tidyr::unnest(`group_measure/repeat`)
+#
+# BS.NOT1_yam<-BS.NOTData_yam1%>%
+#   as.data.frame()%>%
+#   select(-any_of(c( "_notes" , "_total_media", "_id", "_tags", "_uuid" ,"start", "_edited","_status" ,"_version" , "_duration"  ,"_xform_id" ,"_attachments", "_geolocation" ,"_media_count" ,"formhub/uuid"   ,
+#                     "_submitted_by","consent/photo","_date_modified","meta/instanceID"  ,"_submission_time", "_xform_id_string" ,"_bamboo_dataset_id"  ,
+#                     "_media_all_received"  ,  "consent/read_consent_form"    ,"consent/copy",  "consent/give_consent")))%>%
+#   rename(
+#     Country = `group_start/country`,
+#     Event= `group_start/event`,
+#     today = `group_measure/repeat/date`
+#
+#   ) %>%
+#   mutate(
+#     today = as.IDate(today),
+#     ENID = `group_start/enumerator_ID_1`,
+#     HHID = `group_measure/repeat/plot_number`,
+#     Crop = `group_start/crop`,
+#     Event = paste0("event", Event),
+#     latitude= -6,
+#     longitude= 37,
+#     `Site Selection` = as.IDate(today)
+#   )%>%
+#   arrange(ENID,HHID, desc(today)) %>% #sort to Keep last entry by date in duplicated records
+#   #distinct(ENID,HHID,Event, .keep_all = TRUE)  %>%
+#   mutate(Stage = "Research") %>%
+#   mutate(Trial = "NOT") %>%
+#   mutate(Country = capitalize(Country))
+#
+#
+# BS.NOT2_yam <- BS.NOT1_yam %>%
+#   dplyr::select(any_of(c("today", "Event",  "Crop", "Stage", "Trial", "ENID", "HHID"))) %>%
+#   arrange(Event) %>%
+#   pivot_wider(names_from = Event, values_from = today, values_fn = last) %>%
+#   mutate(across(starts_with("event"), as.Date, format = "%Y-%m-%d")) %>%
+#   arrange( ENID, HHID)%>%
+#   suppressWarnings()
+
+BS.NOT1 <- dplyr::bind_rows(BS.NOT1_ban,BS.NOT1_cas,BS.NOT1_leg)
+BS.NOT2 <- dplyr::bind_rows(BS.NOT2_ban_agg,BS.NOT2_cas_agg,BS.NOT2_leg_agg)
+
+BS.NOT2 <- lapply(BS.NOT2, function(x) {
+  if (is.list(x)) {
+    sapply(x, paste, collapse = ',')
+  } else {
+    x
+  }
+})
+
+BS.NOT2 <- as.data.frame(BS.NOT2)
+
+
+#via aws storage
+# temp_file <- tempfile()
+# write.csv(BS.NOT1, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr",
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "BSOdata.csv"))
+# unlink(temp_file)
+# 
+# temp_file <- tempfile()
+# write.csv(BS.NOT2, temp_file, row.names = FALSE)
+# aws.s3::put_object(file = temp_file,
+#                    bucket = "rtbglr",
+#                    object = paste0("s3://rtbglr/", Sys.getenv("bucket_path"), "BSSUMdata.csv"))
+# unlink(temp_file)
+
+
+#via azure storage
+w_con <- textConnection("foo", "w")
+write.csv(BS.NOT1, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"BSOdata.csv"))
+close(r_con)
+
+w_con <- textConnection("foo", "w")
+write.csv(BS.NOT2, w_con)
+r_con <- textConnection(textConnectionValue(w_con))
+close(w_con)
+upload_blob(cont, src=r_con, dest= paste0(Sys.getenv("dest_path"),"BSSUMdata.csv"))
+close(r_con)
+
+
