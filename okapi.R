@@ -22,8 +22,10 @@ DEMO.Register_EN<-ona_data_get(base_url = "https://api.ona.io", auth_mode =  "to
 DEMO.RegisterVerify_HH<-ona_data_get(base_url = "https://api.ona.io", auth_mode =  "token",form_id = 808710)
 #PotatoFertRT<-  ona_data_get(base_url = "https://api.ona.io", auth_mode =  "token",form_id = 757128)
 DEMO.valData<-ona_data_get(base_url = "https://api.ona.io", auth_mode =  "token",form_id =808706 )
-DEMO.valDataNew<-ona_data_get(base_url = "https://api.ona.io", auth_mode =  "token",form_id =825726 )
-DEMO.valDataNew$group_plot[[7]]$`group_plot/group_layout/crop`
+# DEMO.Register_EN<-ona_data_get(base_url = "https://api.ona.io", auth_mode =  "token",form_id = 752966)
+# DEMO.RegisterVerify_HH<-ona_data_get(base_url = "https://api.ona.io", auth_mode =  "token",form_id = 752965)
+# DEMO.valDataNew<-ona_data_get(base_url = "https://api.ona.io", auth_mode =  "token",form_id =825726 )
+
 
 ##########################################################################################
 ##########################SNS-RWANDA######################################################
@@ -83,3 +85,18 @@ CE.Register_EN<-ona_data_get(base_url = "https://api.ona.io", auth_mode =  "toke
 CE.RegisterVerify_HH<-ona_data_get(base_url = "https://api.ona.io", auth_mode =  "token",form_id = 804928)
 CE.valData<-ona_data_get(base_url = "https://api.ona.io", auth_mode =  "token",form_id =804068 )
 CE.ICData<-ona_data_get(base_url = "https://api.ona.io", auth_mode =  "token",form_id =803455 )
+
+
+##########################################################################################
+##########################    BioSSA     #################################################
+##########################################################################################
+BS.NOTData_banana<-ona_data_get(base_url = "https://api.ona.io", auth_mode =  "token",form_id =801786 )
+BS.NOTData_bananaS2<-ona_data_get(base_url = "https://api.ona.io", auth_mode =  "token",form_id =822732 )
+BS.NOTData_cassava<-ona_data_get(base_url = "https://api.ona.io", auth_mode =  "token",form_id =801595 )
+BS.NOTData_cassavaS2<-ona_data_get(base_url = "https://api.ona.io", auth_mode =  "token",form_id =822730 )
+BS.NOTData_legumes<-ona_data_get(base_url = "https://api.ona.io", auth_mode =  "token",form_id =808612 )
+BS.NOTData_legumesS2<-ona_data_get(base_url = "https://api.ona.io", auth_mode =  "token",form_id =822746 )
+BS.NOTData_yam<-ona_data_get(base_url = "https://api.ona.io", auth_mode =  "token",form_id =801783 )
+BS.NOTData_yamS2<-ona_data_get(base_url = "https://api.ona.io", auth_mode =  "token",form_id =822731 )
+
+
