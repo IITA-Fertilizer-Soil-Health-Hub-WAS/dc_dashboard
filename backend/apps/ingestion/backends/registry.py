@@ -6,11 +6,15 @@ here; the rest of the engine (ingestion, onboarding, write-back) is unchanged.
 from __future__ import annotations
 
 from .base import CollectionBackend
+from .kobo import KoboBackend
+from .odkcentral import OdkCentralBackend
 from .ona import OnaBackend
 
-# Register backends here. Stubs for other tools can be added incrementally.
+# Register backends here. Adding a new collection tool = one entry.
 _BACKENDS: dict[str, type[CollectionBackend]] = {
     OnaBackend.type: OnaBackend,
+    KoboBackend.type: KoboBackend,
+    OdkCentralBackend.type: OdkCentralBackend,
 }
 
 # (value, label) choices for model fields / form selects.
