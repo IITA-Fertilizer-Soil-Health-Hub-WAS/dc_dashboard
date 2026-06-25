@@ -126,6 +126,22 @@ def test_build_config_skips_unincluded_forms():
     assert ids == [200]  # only the included form
 
 
+def test_wizard_onboards_forms_without_event_key(client, staff):
+    # Multi-form projects (each form a stage) don't map event_key at onboarding;
+    # validation must NOT block this — mappings are configured later.
+    client.force_login(staff)
+    post = {
+        "code": "HUB-SL", "name": "Hub SL",
+        "form_count": "2",
+        "form-0-present": "1", "form-0-include": "1", "form-0-id": "885626",
+        "form-1-present": "1", "form-1-include": "1", "form-1-id": "885629",
+    }
+    resp = client.post("/manage/new-project/", post)
+    assert resp.status_code == 302  # onboarded, no event_key error
+    uc = UseCase.objects.get(code="HUB-SL")
+    assert uc.forms.count() == 2
+
+
 def test_wizard_creates_use_case(client, staff):
     client.force_login(staff)
     post = {

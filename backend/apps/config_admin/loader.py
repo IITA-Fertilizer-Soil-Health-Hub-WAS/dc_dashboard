@@ -49,17 +49,15 @@ def validate_config(data: dict[str, Any]) -> list[str]:
     if not meta.get("code"):
         problems.append("use_case.code is required")
 
+    # Forms only need an id here. Roles, field mappings and event modelling vary
+    # by project (events can come from a column or from separate forms) and are
+    # configured per use case after onboarding — so we don't force them.
     forms = data.get("forms", []) or []
-    roles = [f.get("role") for f in forms]
-    if "VALIDATION" not in roles:
-        problems.append("at least one form with role VALIDATION is expected")
+    if not forms:
+        problems.append("at least one form is expected")
     for f in forms:
         if not f.get("ona_form_id"):
-            problems.append(f"form with role {f.get('role')} is missing ona_form_id")
-        if f.get("role") == "VALIDATION":
-            targets = {m.get("target") for m in (f.get("mappings") or [])}
-            if "event_key" not in targets:
-                problems.append("VALIDATION form must map an 'event_key' field")
+            problems.append("a form is missing its ona_form_id (form_id)")
 
     # Event schedule: sequences should be unique and strictly ordered.
     seqs = [ev.get("sequence") for ev in (data.get("event_schedule", []) or [])]
