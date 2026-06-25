@@ -4,6 +4,18 @@
   <div class="card infobox"><div class="n">{{ uc.code }}</div><div class="l">Use case</div></div>
 </div>
 
+<div class="card" style="margin-top:1rem;">
+  <h3 style="margin-bottom:.7rem;">Review &amp; write-back health</h3>
+  <div style="display:flex;gap:1.4rem;flex-wrap:wrap;">
+    <div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:#3f9142;">{{ health.approved }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Approved</div></div>
+    <div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:var(--muted);">{{ health.in_review }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">In review</div></div>
+    <div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:var(--red);">{{ health.declined }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Declined</div></div>
+    <div style="border-left:1px solid var(--line);padding-left:1.4rem;"><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:#0a4630;">{{ health.wb_sent }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Synced to source</div></div>
+    <div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:var(--gold);">{{ health.wb_pending }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Write-back pending</div></div>
+    <div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:var(--red);">{{ health.wb_failed }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Write-back failed</div></div>
+  </div>
+</div>
+
 <div class="cards" style="margin-top:1rem; align-items:flex-start;">
   <div class="card" style="flex:1; min-width:340px;">
     <h3>Trials by location</h3>

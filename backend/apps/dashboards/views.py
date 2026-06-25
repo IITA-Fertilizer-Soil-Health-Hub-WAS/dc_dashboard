@@ -61,8 +61,25 @@ def tab_summary(request, code):
         "country": ", ".join(uc.countries) or "—",
         "trend_html": submission_trend_html(submissions),
         "map_html": trials_map_html(households),
+        "health": _health_counts(uc),
     }
     return render(request, "dashboards/_summary.html", ctx)
+
+
+def _health_counts(uc) -> dict:
+    """Per-use-case review + write-back health for the Summary tab."""
+    from apps.review.models import ReviewState
+
+    subs = Submission.objects.filter(use_case=uc)
+    closed = [ReviewState.APPROVED, ReviewState.DECLINED]
+    return {
+        "approved": subs.filter(review__state=ReviewState.APPROVED).count(),
+        "declined": subs.filter(review__state=ReviewState.DECLINED).count(),
+        "in_review": subs.exclude(review__state__in=closed).count(),
+        "wb_sent": subs.filter(writeback_status=Submission.WriteBackStatus.SENT).count(),
+        "wb_pending": subs.filter(writeback_status=Submission.WriteBackStatus.PENDING).count(),
+        "wb_failed": subs.filter(writeback_status=Submission.WriteBackStatus.FAILED).count(),
+    }
 
 
 @login_required
@@ -224,6 +241,40 @@ def submission_review(request, code, submission_id):
         "uc": uc, "submission": submission, "values": values, "flags": flags,
         "actions": actions, "review": review, "can": can, "ok": ok, "error": error,
     })
+
+
+@login_required
+@require_POST
+def bulk_submission_action(request, code):
+    """Apply one review action to many selected submissions at once."""
+    uc = get_scoped_use_case(request, code)
+    action = request.POST.get("action")
+    ids = request.POST.getlist("ids")
+    ok = 0
+    failures: list[str] = []
+
+    if action in ACTION_SERVICES and ids:
+        service = ACTION_SERVICES[action]
+        submissions = Submission.objects.filter(use_case=uc, pk__in=ids)
+        for submission in submissions:
+            try:
+                service(request.user, submission, note=request.POST.get("note", ""))
+                ok += 1
+            except (ReviewPermissionDenied, TransitionError) as exc:
+                failures.append(str(exc))
+    elif not ids:
+        failures.append("No submissions selected.")
+    else:
+        failures.append(f"Unknown bulk action: {action}")
+
+    ctx = _issues_context(request, uc)
+    label = dict(ReviewAction.choices).get(action, action)
+    if ok:
+        ctx["ok"] = f"{label}: {ok} submission(s) updated."
+    if failures:
+        # Collapse repeated permission/transition messages.
+        ctx["error"] = "; ".join(sorted(set(failures))[:3])
+    return render(request, "dashboards/_issues.html", ctx)
 
 
 def _issues_context(request, uc) -> dict:
