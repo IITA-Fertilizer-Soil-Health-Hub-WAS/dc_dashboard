@@ -11,3 +11,6 @@ staticfiles/
 *.egg-info/
 .coverage
 htmlcov/
+
+# macOS
+.DS_Store
