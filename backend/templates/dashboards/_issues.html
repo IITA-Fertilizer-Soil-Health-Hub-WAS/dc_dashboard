@@ -16,6 +16,8 @@
           <td><span class="pill">{{ flag.submission.review.get_state_display }}</span></td>
           <td>
             {% with sid=flag.submission.id %}
+            <a class="btn btn-edit" href="{% url 'dashboards:submission_review' uc.code sid %}"
+               style="text-decoration:none;">Review &amp; edit</a>
             {% if can.open_review %}
               <button class="btn btn-open"
                 hx-post="{% url 'dashboards:submission_action' uc.code sid %}"

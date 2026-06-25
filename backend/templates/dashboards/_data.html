@@ -3,7 +3,7 @@
   <table>
     <thead>
       <tr><th>Enumerator</th><th>{{ uc.household_label }}</th><th>Event</th>
-        <th>Crop</th><th>Date</th><th>State</th></tr>
+        <th>Crop</th><th>Date</th><th>State</th><th></th></tr>
     </thead>
     <tbody>
       {% for s in submissions %}
@@ -14,9 +14,10 @@
           <td>{{ s.crop.name|default:"—" }}</td>
           <td>{{ s.event_date|default:"—" }}</td>
           <td><span class="pill">{{ s.review.get_state_display }}</span></td>
+          <td style="text-align:right;"><a href="{% url 'dashboards:submission_review' uc.code s.id %}">Review</a></td>
         </tr>
       {% empty %}
-        <tr><td colspan="6">No submissions yet.</td></tr>
+        <tr><td colspan="7">No submissions yet.</td></tr>
       {% endfor %}
     </tbody>
   </table>

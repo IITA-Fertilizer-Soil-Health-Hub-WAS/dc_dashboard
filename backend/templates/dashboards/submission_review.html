@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Review {{ submission.ona_uuid|truncatechars:16 }} · {{ uc.code }}{% endblock %}
+{% block crumbs %}
+  <span class="sep">/</span><a href="{% url 'dashboards:usecase' uc.code %}">{{ uc.name }}</a>
+  <span class="sep">/</span><span class="cur">Review submission</span>
+{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h2>Review submission</h2>
+    {% if review %}<span class="pill">{{ review.get_state_display }}</span>{% endif %}
+    {% if submission.writeback_status != 'NONE' %}
+      <span class="pill" style="{% if submission.writeback_status == 'SENT' %}background:#e7f0ea;color:#0a4630;{% elif submission.writeback_status == 'FAILED' %}background:#fdecea;color:#a33617;{% endif %}">
+        write-back: {{ submission.get_writeback_status_display }}</span>
+    {% endif %}
+  </div>
+  <p class="subtle" style="margin:.1rem 0 1rem;">
+    <span class="mono">{{ submission.ona_uuid }}</span> · {{ submission.event_key|default:"—" }}
+    · enum {{ submission.enumerator.enid|default:"—" }} · {{ uc.household_label|lower }} {{ submission.household.hhid|default:"—" }}
+    · {{ submission.event_date|default:"—" }}
+  </p>
+
+  {% if ok %}<div class="pill" style="margin-bottom:.8rem;background:#e7f0ea;color:#0a4630;">{{ ok }}</div>{% endif %}
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+
+  <div style="display:grid;grid-template-columns:1.7fr 1fr;gap:1.2rem;align-items:start;">
+    <div>
+      <!-- Editable values -->
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="padding:.8rem 1.1rem;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:.6rem;">
+          <h3 style="margin:0;">Field values</h3>
+          <span class="subtle" style="font-size:.78rem;">edits change the authoritative value; raw stays intact</span>
+        </div>
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="save_edits">
+          <table>
+            <thead><tr><th>Field</th><th>Raw (source)</th><th>Current (authoritative)</th></tr></thead>
+            <tbody>
+              {% for v in values %}
+                <tr>
+                  <td class="mono">{{ v.field_key }}{% if v.is_edited %} <span class="pill" style="font-size:.66rem;">edited</span>{% endif %}</td>
+                  <td class="subtle">{{ v.raw_value|default:"—" }}</td>
+                  <td>
+                    {% if can.edit %}
+                      <input name="val-{{ v.field_key }}" value="{{ v.current_value|default:'' }}"
+                             style="width:100%;padding:.35rem .5rem;border:1px solid var(--line);border-radius:6px;font-family:var(--mono);font-size:.82rem;">
+                    {% else %}{{ v.current_value|default:"—" }}{% endif %}
+                  </td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="3"><div class="empty" style="border:none;">No mapped values.</div></td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% if can.edit and values %}
+            <div style="padding:.8rem 1.1rem;border-top:1px solid var(--line);display:flex;gap:.6rem;align-items:center;">
+              <input name="note" placeholder="Reason for edit (optional)"
+                     style="flex:1;padding:.4rem .6rem;border:1px solid var(--line);border-radius:7px;font-size:.85rem;">
+              <button class="btn btn-edit" type="submit">Save edits</button>
+            </div>
+          {% endif %}
+        </form>
+      </div>
+
+      <!-- Open issues -->
+      {% if flags %}
+        <div class="card" style="margin-top:1rem;">
+          <h3>Open issues <span class="pill">{{ flags|length }}</span></h3>
+          <ul style="margin:.5rem 0 0;padding-left:1.1rem;">
+            {% for f in flags %}<li style="margin-bottom:.2rem;">{{ f.message }}{% if f.field_key %} <span class="mono subtle">({{ f.field_key }})</span>{% endif %} <span class="pill" style="font-size:.66rem;">{{ f.severity }}</span></li>{% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+    </div>
+
+    <div>
+      <!-- Workflow actions -->
+      <div class="card">
+        <h3>Review actions</h3>
+        <p class="subtle" style="font-size:.8rem;margin:.3rem 0 .8rem;">Move this submission through the review workflow.</p>
+        <div style="display:flex;flex-direction:column;gap:.5rem;">
+          {% if can.open_review %}{% include "dashboards/_action_btn.html" with action="OPEN_REVIEW" label="Open review" cls="btn-open" %}{% endif %}
+          {% if can.request_edit %}{% include "dashboards/_action_btn.html" with action="REQUEST_EDIT" label="Request edit" cls="btn-request" %}{% endif %}
+          {% if can.decline %}{% include "dashboards/_action_btn.html" with action="DECLINE" label="Decline" cls="btn-decline" %}{% endif %}
+          {% if can.qc_approve %}{% include "dashboards/_action_btn.html" with action="QC_APPROVE" label="QC approve" cls="btn-approve" %}{% endif %}
+          {% if can.open_review %}{% include "dashboards/_action_btn.html" with action="REOPEN" label="Reopen" cls="btn-request" %}{% endif %}
+        </div>
+      </div>
+
+      <!-- Audit trail -->
+      <div class="card" style="margin-top:1rem;">
+        <h3>History</h3>
+        <ul style="list-style:none;margin:.5rem 0 0;padding:0;font-size:.82rem;">
+          {% for a in actions %}
+            <li style="padding:.4rem 0;border-bottom:1px solid var(--line-soft);">
+              <strong>{{ a.get_action_display }}</strong>
+              <span class="subtle">{{ a.created_at|date:"j M H:i" }}{% if a.actor %} · {{ a.actor.email }}{% endif %}</span>
+              {% if a.field_key %}<div class="subtle mono" style="font-size:.74rem;">{{ a.field_key }}: {{ a.old_value|default:"—" }} → {{ a.new_value|default:"—" }}</div>{% endif %}
+              {% if a.note %}<div class="subtle" style="font-size:.76rem;">“{{ a.note }}”</div>{% endif %}
+            </li>
+          {% empty %}<li class="subtle">No actions yet.</li>{% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+{% endblock %}

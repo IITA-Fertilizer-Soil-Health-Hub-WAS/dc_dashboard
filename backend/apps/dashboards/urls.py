@@ -16,6 +16,11 @@ urlpatterns = [
     path("usecase/<slug:code>/tab/final/", views.tab_final, name="tab_final"),
     path("usecase/<slug:code>/final.csv", views.export_final, name="export_final"),
     path(
+        "usecase/<slug:code>/submission/<uuid:submission_id>/review/",
+        views.submission_review,
+        name="submission_review",
+    ),
+    path(
         "usecase/<slug:code>/submission/<uuid:submission_id>/action/",
         views.submission_action,
         name="submission_action",

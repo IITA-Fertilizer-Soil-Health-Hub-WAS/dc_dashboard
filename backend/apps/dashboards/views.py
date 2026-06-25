@@ -11,7 +11,7 @@ import csv
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
 from django.http import HttpResponse
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
 
 from apps.rbac.permissions import user_can, visible_use_cases
@@ -168,6 +168,62 @@ def submission_action(request, code, submission_id):
     ctx = _issues_context(request, uc)
     ctx["error"] = error
     return render(request, "dashboards/_issues.html", ctx)
+
+
+@login_required
+def submission_review(request, code, submission_id):
+    """Full review screen: edit field values and run workflow actions."""
+    uc = get_scoped_use_case(request, code)
+    submission = get_object_or_404(
+        Submission.objects.select_related("enumerator", "household", "crop", "review", "form"),
+        use_case=uc, pk=submission_id,
+    )
+    error = ok = None
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        note = request.POST.get("note", "")
+        try:
+            if action == "save_edits":
+                if not user_can(request.user, "edit", uc):
+                    raise ReviewPermissionDenied("You may not edit submissions here.")
+                current = {v.field_key: v.current_value for v in submission.values.all()}
+                changed = 0
+                for key, new in request.POST.items():
+                    if not key.startswith("val-"):
+                        continue
+                    fk = key[4:]
+                    if str(current.get(fk, "") or "") != new:
+                        services.edit_value(request.user, submission, field_key=fk,
+                                            new_value=new, note=note)
+                        changed += 1
+                ok = f"Saved {changed} field edit(s)." if changed else "No changes to save."
+            elif action in ACTION_SERVICES:
+                ACTION_SERVICES[action](request.user, submission, note=note)
+                ok = f"{dict(ReviewAction.choices).get(action, action)} recorded."
+            else:
+                error = f"Unknown action: {action}"
+        except ReviewPermissionDenied as exc:
+            error = str(exc)
+        except TransitionError as exc:
+            error = str(exc)
+        submission.refresh_from_db()
+
+    values = submission.values.all().order_by("field_key")
+    flags = submission.flags.filter(status=ValidationFlag.Status.OPEN).select_related("rule")
+    actions = submission.actions.select_related("actor").order_by("-created_at")[:15]
+    review = getattr(submission, "review", None)
+    can = {
+        "edit": user_can(request.user, "edit", uc),
+        "decline": user_can(request.user, "decline", uc),
+        "request_edit": user_can(request.user, "request_edit", uc),
+        "qc_approve": user_can(request.user, "qc_approve", uc),
+        "open_review": user_can(request.user, "open_review", uc),
+    }
+    return render(request, "dashboards/submission_review.html", {
+        "uc": uc, "submission": submission, "values": values, "flags": flags,
+        "actions": actions, "review": review, "can": can, "ok": ok, "error": error,
+    })
 
 
 def _issues_context(request, uc) -> dict:
