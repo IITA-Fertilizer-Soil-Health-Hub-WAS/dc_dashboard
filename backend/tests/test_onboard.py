@@ -82,6 +82,37 @@ def test_wizard_projects_partial_is_staff_only(client, django_user_model):
     assert client.get("/manage/new-project/projects/").status_code == 403
 
 
+def test_wizard_has_no_forced_role_dropdown(client, staff):
+    # Onboarding must not force form classification — role is a hidden default.
+    client.force_login(staff)
+    html = client.get("/manage/new-project/").content.decode()
+    assert 'name="form-IDX-role"' in html  # hidden default
+    assert 'class="frole"' not in html     # no visible role <select>
+
+
+def test_identities_derived_without_registration_form(django_user_model):
+    """A project with only data forms (no registration form) still gets
+    enumerators/households auto-created from the submission data."""
+    from apps.submissions.models import Enumerator, Household
+    from apps.usecases.models import FieldMapping, FormDefinition, UseCase
+
+    uc = UseCase.objects.create(code="AID", name="AID")
+    form = FormDefinition.objects.create(use_case=uc, ona_form_id=1,
+                                         role=FormDefinition.Role.VALIDATION)
+    FieldMapping.objects.create(form=form, target_field="ENID", source_paths=["enid"])
+    FieldMapping.objects.create(form=form, target_field="HHID", source_paths=["hhid"])
+
+    class Fake:
+        def get_data(self, fid):
+            return [{"_uuid": "u1", "enid": "EN1", "hhid": "HH1"}]
+
+    from apps.ingestion.sync import sync_use_case
+    sync_use_case(uc, client=Fake())
+    assert Enumerator.objects.filter(use_case=uc, enid="EN1").exists()
+    hh = Household.objects.get(use_case=uc, hhid="HH1")
+    assert hh.enumerator.enid == "EN1"
+
+
 def test_build_config_skips_unincluded_forms():
     from apps.console.onboarding import build_config
     # form 0 is a discovered row (present) but unticked -> skipped; form 1 included.

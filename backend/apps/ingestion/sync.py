@@ -175,13 +175,21 @@ def _upsert_submission(use_case, form, raw_rec, mapped, crop_by_name, test_ids, 
     )
     content_hash = _hash({**raw_rec, "_row_uuid": ona_uuid})
 
-    enumerator = (
-        Enumerator.objects.filter(use_case=use_case, enid=enid).first() if enid else None
-    )
+    # Identities are derived from the data itself, so a project does not need a
+    # dedicated registration form. A registration form (if present) is processed
+    # first and enriches these with names/contact/geo; here we just ensure they
+    # exist so rankings and the household list populate for any project shape.
+    enumerator = None
+    if enid:
+        enumerator, _ = Enumerator.objects.get_or_create(
+            use_case=use_case, enid=enid, defaults={"is_test": enid in test_ids}
+        )
     hhid = mapped.get("HHID")
-    household = (
-        Household.objects.filter(use_case=use_case, hhid=hhid).first() if hhid else None
-    )
+    household = None
+    if hhid:
+        household, _ = Household.objects.get_or_create(
+            use_case=use_case, hhid=hhid, defaults={"enumerator": enumerator}
+        )
     crop = crop_by_name.get(mapped.get("Crop")) if mapped.get("Crop") else None
 
     existing = Submission.objects.filter(use_case=use_case, ona_uuid=ona_uuid).first()

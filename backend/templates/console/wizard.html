@@ -11,7 +11,7 @@
   .fld input,.fld select{width:100%;padding:.5rem .65rem;border:1px solid var(--line);border-radius:8px;font-family:var(--sans);font-size:.9rem;background:var(--surface);}
   .fld input:focus,.fld select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-50);}
   .formblock{border:1px solid var(--line);border-radius:10px;padding:.8rem 1rem;margin-bottom:.6rem;background:var(--surface-2);
-    display:grid;grid-template-columns:auto 1fr 180px auto;gap:.7rem;align-items:center;}
+    display:grid;grid-template-columns:auto 1fr auto;gap:.7rem;align-items:center;}
   .formblock .fname{font-weight:600;}
   .formblock .mapwrap{grid-column:1 / -1;}
   .maps{display:grid;grid-template-columns:1fr 1fr;gap:.5rem .9rem;margin-top:.4rem;}
@@ -71,7 +71,7 @@
 
     <section>
       <h3><span class="num">2</span> Forms to monitor</h3>
-      <p class="subtle" style="font-size:.8rem;margin:.1rem 0 .5rem;">Tick the forms to include and set each one's role. Pick a project above to populate these.</p>
+      <p class="subtle" style="font-size:.8rem;margin:.1rem 0 .5rem;">Tick the forms you want to monitor. Pick a project above to populate these. You can refine each form (role, field mappings) later under <em>Manage → Forms</em>.</p>
       <div id="forms"><p class="subtle" style="font-size:.82rem;">No project selected yet.</p></div>
       <input type="hidden" name="form_count" id="form_count" value="0">
     </section>
@@ -95,11 +95,9 @@
     <div class="formblock" data-idx="">
       <input type="hidden" name="form-IDX-present" value="1">
       <input type="hidden" name="form-IDX-id" class="fid" value="">
+      <input type="hidden" name="form-IDX-role" value="VALIDATION">
       <input type="checkbox" name="form-IDX-include" value="1" checked title="Include this form">
       <span class="fname">FORM NAME</span>
-      <select name="form-IDX-role" class="frole">
-        {% for val,lbl in roles %}<option value="{{ val }}">{{ lbl }}</option>{% endfor %}
-      </select>
       <button type="button" class="btn btn-request mini"
         hx-post="{% url 'console:discover_fields' %}"
         hx-target="next .mapwrap" hx-vals='js:{index: this.closest(".formblock").dataset.idx, form_id: this.closest(".formblock").querySelector(".fid").value, backend: document.getElementById("f_backend").value, base_url: document.getElementById("f_baseurl").value, token: document.getElementById("f_token").value}'>
@@ -111,12 +109,6 @@
 
   <script>
     let formIdx = 0;
-    function guessRole(title){
-      const t = (title || '').toLowerCase();
-      if (t.includes('enumerator') || t.includes('register enum')) return 'ENUM_REG';
-      if (t.includes('household') || t.includes('register_household') || t.includes('verify')) return 'HH_REG';
-      return 'VALIDATION';
-    }
     function addFormRow(id, title){
       const html = document.getElementById('formTpl').innerHTML.replaceAll('IDX', formIdx);
       const wrap = document.createElement('div');
@@ -125,9 +117,6 @@
       block.dataset.idx = formIdx;
       block.querySelector('.fid').value = id || '';
       block.querySelector('.fname').textContent = title || ('Form ' + (id||''));
-      const role = guessRole(title);
-      const sel = block.querySelector('.frole');
-      if (sel) sel.value = role;
       document.getElementById('forms').appendChild(block);
       htmx.process(block);
       formIdx++;
