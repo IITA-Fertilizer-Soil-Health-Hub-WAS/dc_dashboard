@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Use cases · EiA2030 DCMT{% endblock %}
+{% block crumbs %}<span class="sep">/</span><span class="cur">Use cases</span>{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h2>Your use cases</h2>
+    {% if use_cases %}<span class="pill">{{ use_cases|length }}</span>{% endif %}
+  </div>
+  <p class="subtle" style="margin:.1rem 0 1.4rem;">Monitoring trials across the projects you have access to.</p>
+
+  {% if use_cases %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:1.1rem;">
+      {% for uc in use_cases %}
+        <a class="usecase-link" href="{% url 'dashboards:usecase' uc.code %}">
+          <span class="uc-mark">{{ uc.name|slice:":1"|upper }}</span>
+          <span class="uc-body">
+            <b>{{ uc.name }}</b>
+            <div class="subtle" style="font-size:.8rem;margin-top:.15rem;">
+              {{ uc.countries|join:", "|default:"—" }}
+            </div>
+          </span>
+          <span class="pill">{{ uc.code }}</span>
+          <span class="arrow">→</span>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty">No use cases available yet.<br><span class="subtle">Contact a Platform Admin to be granted access.</span></div>
+  {% endif %}
+{% endblock %}

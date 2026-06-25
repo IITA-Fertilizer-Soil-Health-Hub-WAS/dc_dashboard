@@ -1,0 +1,28 @@
+{% extends "console/base.html" %}
+{% block console_main %}
+  <div class="page-head">
+    <h2>{% if instance %}Edit {{ m.label|lower }}{% else %}New {{ m.label|lower }}{% endif %}</h2>
+  </div>
+  <p class="subtle" style="margin:.1rem 0 1.2rem;">
+    {% if instance %}{{ instance }}{% else %}Create a new {{ m.singular }} record.{% endif %}
+  </p>
+
+  <div class="card form-card" style="max-width:640px;">
+    <form method="post">
+      {% csrf_token %}
+      {% if form.non_field_errors %}<ul class="errorlist">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      {% for f in form %}
+        <div class="field">
+          <label for="{{ f.id_for_label }}">{{ f.label }}{% if f.field.required %} *{% endif %}</label>
+          {{ f }}
+          {% if f.help_text %}<div class="helptext">{{ f.help_text }}</div>{% endif %}
+          {% if f.errors %}<ul class="errorlist">{% for e in f.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+        </div>
+      {% endfor %}
+      <div class="form-actions">
+        <button class="btn btn-open" type="submit">{% if instance %}Save changes{% else %}Create{% endif %}</button>
+        <a class="subtle" href="{% url 'console:list' m.key %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}

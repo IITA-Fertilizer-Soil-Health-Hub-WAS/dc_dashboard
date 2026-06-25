@@ -1,0 +1,23 @@
+from __future__ import annotations
+
+from django.urls import path
+
+from . import views
+
+app_name = "dashboards"
+
+urlpatterns = [
+    path("", views.index, name="index"),
+    path("usecase/<slug:code>/", views.usecase_detail, name="usecase"),
+    path("usecase/<slug:code>/tab/summary/", views.tab_summary, name="tab_summary"),
+    path("usecase/<slug:code>/tab/enumerators/", views.tab_enumerators, name="tab_enumerators"),
+    path("usecase/<slug:code>/tab/issues/", views.tab_issues, name="tab_issues"),
+    path("usecase/<slug:code>/tab/data/", views.tab_data, name="tab_data"),
+    path("usecase/<slug:code>/tab/final/", views.tab_final, name="tab_final"),
+    path("usecase/<slug:code>/final.csv", views.export_final, name="export_final"),
+    path(
+        "usecase/<slug:code>/submission/<uuid:submission_id>/action/",
+        views.submission_action,
+        name="submission_action",
+    ),
+]

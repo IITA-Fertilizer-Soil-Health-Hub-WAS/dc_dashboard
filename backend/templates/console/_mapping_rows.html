@@ -1,0 +1,23 @@
+{% load console_extras %}
+{% if error %}
+  <div class="err" style="margin:.4rem 0;">{{ error }} — type the ONA field paths manually below.</div>
+{% endif %}
+<div class="maps">
+  {% for t in targets %}
+    <div class="map-row">
+      <label>{{ t.label }}{% if t.required %} <span style="color:var(--red)">*</span>{% endif %}</label>
+      {% if fields %}
+        <select name="map-{{ index }}-{{ t.key }}">
+          <option value="">— none —</option>
+          {% for f in fields %}
+            <option value="{{ f }}" {% if suggested|get_item:t.key == f %}selected{% endif %}>{{ f }}</option>
+          {% endfor %}
+        </select>
+      {% else %}
+        <input type="text" name="map-{{ index }}-{{ t.key }}"
+               value="{{ suggested|get_item:t.key|default:'' }}" placeholder="e.g. intro/{{ t.key|lower }}">
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+{% if fields %}<p class="subtle" style="font-size:.76rem;margin:.5rem 0 0;">Auto-suggested from the latest submission — adjust if needed.</p>{% endif %}

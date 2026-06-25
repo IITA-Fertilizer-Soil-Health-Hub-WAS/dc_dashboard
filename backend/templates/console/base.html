@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ m.label }} · Manage · EiA2030 DCMT{% endblock %}
+{% block crumbs %}
+  <span class="sep">/</span><span class="cur">Manage</span>
+  <span class="sep">/</span><span class="cur">{{ m.label }}</span>
+{% endblock %}
+
+{% block extrahead %}
+<style>
+  /* Console content is full-width — navigation lives in the single green rail. */
+  .toolbar{display:flex;align-items:center;gap:.7rem;margin:.3rem 0 1rem;flex-wrap:wrap;}
+  .toolbar form{display:flex;gap:.4rem;flex:1;min-width:200px;}
+  .search{flex:1;max-width:360px;padding:.45rem .7rem;border:1px solid var(--line);border-radius:8px;
+    background:var(--surface);font-family:var(--sans);font-size:.88rem;}
+  .search:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-50);}
+  .btn-new{background:var(--brand);color:#fff;text-decoration:none;display:inline-flex;align-items:center;
+    gap:.35rem;padding:.45rem .8rem;border-radius:8px;font-weight:600;font-size:.85rem;}
+  .row-actions a{font-size:.8rem;margin-right:.7rem;}
+  .row-actions a.del{color:var(--red);}
+  .cellbool{font-weight:700;}
+  .cellbool.t{color:#3f9142;} .cellbool.f{color:var(--faint);}
+  .pager{display:flex;gap:.5rem;align-items:center;margin-top:1rem;color:var(--muted);font-size:.85rem;}
+  .pager a{padding:.3rem .7rem;border:1px solid var(--line);border-radius:7px;background:var(--surface);}
+  .form-card .field{margin-bottom:1rem;}
+  .form-card label{display:block;font-size:.8rem;font-weight:600;color:var(--muted);margin-bottom:.3rem;}
+  .form-card input,.form-card select,.form-card textarea{width:100%;padding:.5rem .65rem;border:1px solid var(--line);
+    border-radius:8px;font-family:var(--sans);font-size:.9rem;background:var(--surface);}
+  .form-card textarea{min-height:90px;font-family:var(--mono);font-size:.82rem;}
+  .form-card input:focus,.form-card select:focus,.form-card textarea:focus{outline:none;border-color:var(--brand);
+    box-shadow:0 0 0 3px var(--brand-50);}
+  .form-card .helptext{font-size:.74rem;color:var(--faint);margin-top:.25rem;}
+  .form-card .errorlist{list-style:none;padding:0;margin:.3rem 0 0;color:var(--red);font-size:.8rem;}
+  .form-actions{display:flex;gap:.6rem;align-items:center;margin-top:1.4rem;}
+</style>
+{% endblock %}
+
+{% block content %}
+  {% block console_main %}{% endblock %}
+{% endblock %}

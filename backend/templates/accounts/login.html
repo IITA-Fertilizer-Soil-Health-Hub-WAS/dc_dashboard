@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Sign in · EiA2030 DCMT{% endblock %}
+{% block guest_content %}
+<div style="width:100%;max-width:420px;">
+  <div style="text-align:center;margin-bottom:1.4rem;">
+    <svg width="48" height="48" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:.6rem;">
+      <rect width="32" height="32" rx="8" fill="#0d5c3f"/>
+      <path d="M16 24c-5 0-9-3.5-9-9 5 0 9 0 9 9z" fill="#c8a23a"/>
+      <path d="M16 24c0-7 4-12 9-13 0 8-4 13-9 13z" fill="#7fc99a"/>
+      <path d="M16 24v-6" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/>
+    </svg>
+    <h2 style="font-size:1.5rem;">EiA · Data Collection Monitor</h2>
+    <p class="subtle" style="margin:.35rem 0 0;">Excellence in Agronomy 2030</p>
+  </div>
+
+  <div class="card" style="padding:1.6rem;">
+    {% if auth0_configured %}
+      <a class="btn btn-open" style="display:block;font-size:.95rem;padding:.7rem;text-align:center;text-decoration:none;"
+         href="{{ auth0_login_url }}{% if next %}?next={{ next|urlencode }}{% endif %}">
+        Continue with Auth0
+      </a>
+      <p class="subtle" style="font-size:.78rem;margin:.9rem 0 0;text-align:center;line-height:1.5;">
+        First sign-in creates your account. A Platform Admin approves access and assigns your role.
+      </p>
+    {% else %}
+      <div class="err" style="text-align:left;margin:0;">
+        <strong>Auth0 is not configured.</strong> Set <code>AUTH0_DOMAIN</code>,
+        <code>AUTH0_CLIENT_ID</code> and <code>AUTH0_CLIENT_SECRET</code> to enable
+        organisation sign-in. Admins can use the form below.
+      </div>
+    {% endif %}
+
+    <div class="divider"><span>or sign in as administrator</span></div>
+
+    <form method="post" action="{% url 'login' %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}">
+      {% if form.non_field_errors %}
+        <div class="err" style="margin:.2rem 0 .8rem;">
+          {% for e in form.non_field_errors %}{{ e }}{% endfor %}
+        </div>
+      {% endif %}
+      <label class="fld">
+        <span>Email</span>
+        <input type="email" name="username" autocomplete="username"
+               value="{{ form.username.value|default:'' }}" required>
+      </label>
+      <label class="fld">
+        <span>Password</span>
+        <input type="password" name="password" autocomplete="current-password" required>
+      </label>
+      <button type="submit" class="btn btn-request" style="width:100%;padding:.6rem;margin-top:.3rem;">
+        Sign in
+      </button>
+    </form>
+  </div>
+</div>
+
+<style>
+  .divider{display:flex;align-items:center;gap:.7rem;margin:1.2rem 0 1rem;color:var(--faint);font-size:.74rem;text-transform:uppercase;letter-spacing:.08em;}
+  .divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--line);}
+  .fld{display:block;margin-bottom:.7rem;}
+  .fld span{display:block;font-size:.78rem;font-weight:600;color:var(--muted);margin-bottom:.25rem;}
+  .fld input{width:100%;padding:.55rem .65rem;border:1px solid var(--line);border-radius:8px;font-family:var(--sans);font-size:.9rem;background:var(--surface-2);}
+  .fld input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-50);background:#fff;}
+</style>
+{% endblock %}

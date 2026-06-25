@@ -1,0 +1,45 @@
+<div class="cards" style="margin-top:1rem; align-items:flex-start;">
+  <div class="card" style="flex:1; min-width:300px;">
+    <h3>Enumerator ranking</h3>
+    <table>
+      <thead><tr><th>Enumerator</th><th>Name</th><th>Submissions</th></tr></thead>
+      <tbody>
+        {% for e in ranking %}
+          <tr><td>{{ e.enid }}</td><td>{{ e.first_name }} {{ e.surname }}</td><td>{{ e.n }}</td></tr>
+        {% empty %}
+          <tr><td colspan="3">No enumerators yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card" style="margin-top:1rem;">
+  <h3>Event completion</h3>
+  <div class="legend" style="margin-bottom:.6rem;">
+    <span><i class="swatch" style="background:#55b047"></i>Complete</span>
+    <span><i class="swatch" style="background:#fdb415"></i>Due</span>
+    <span><i class="swatch" style="background:#c3531f"></i>Overdue</span>
+    <span><i class="swatch" style="background:#BE93D4"></i>Future</span>
+  </div>
+  <table>
+    <thead>
+      <tr><th>{{ uc.household_label }}</th><th>Enumerator</th>
+        {% for ek in grid.event_keys %}<th>{{ ek }}</th>{% endfor %}</tr>
+    </thead>
+    <tbody>
+      {% for row in grid.rows %}
+        <tr>
+          <td>{{ row.hhid }}</td><td>{{ row.enid }}</td>
+          {% for c in row.cells %}
+            <td title="{{ c.event_key }}: {{ c.status }} {{ c.date }}">
+              <span class="cell" style="background:{{ c.color }}"></span>
+            </td>
+          {% endfor %}
+        </tr>
+      {% empty %}
+        <tr><td colspan="{{ grid.event_keys|length|add:2 }}">No data yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

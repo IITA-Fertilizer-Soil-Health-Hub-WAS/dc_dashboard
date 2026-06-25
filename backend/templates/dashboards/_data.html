@@ -1,0 +1,23 @@
+<div class="card" style="margin-top:1rem;">
+  <h3>Data preview <span class="pill">latest {{ submissions|length }}</span></h3>
+  <table>
+    <thead>
+      <tr><th>Enumerator</th><th>{{ uc.household_label }}</th><th>Event</th>
+        <th>Crop</th><th>Date</th><th>State</th></tr>
+    </thead>
+    <tbody>
+      {% for s in submissions %}
+        <tr>
+          <td>{{ s.enumerator.enid|default:"—" }}</td>
+          <td>{{ s.household.hhid|default:"—" }}</td>
+          <td>{{ s.event_key }}</td>
+          <td>{{ s.crop.name|default:"—" }}</td>
+          <td>{{ s.event_date|default:"—" }}</td>
+          <td><span class="pill">{{ s.review.get_state_display }}</span></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6">No submissions yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

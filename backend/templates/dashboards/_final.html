@@ -1,0 +1,39 @@
+<div class="card" style="margin-top:1rem;">
+  <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
+    <h3 style="margin:0;">Final data <span class="pill">{{ count }} approved</span></h3>
+    <span style="flex:1"></span>
+    <a class="btn btn-open" href="{% url 'dashboards:export_final' uc.code %}" style="text-decoration:none;">Download CSV</a>
+  </div>
+  <p class="subtle" style="margin:.5rem 0 0;font-size:.82rem;">
+    Only submissions that passed review (approved) appear here, using their authoritative
+    (reviewed/edited) values. This is the clean dataset.
+  </p>
+  <table style="margin-top:.8rem;">
+    <thead>
+      <tr><th>{{ uc.household_label }}</th><th>Enumerator</th><th>Event</th>
+        <th>Crop</th><th>Date</th><th>Edited fields</th><th>Write-back</th></tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+        {% with s=row.submission %}
+        <tr>
+          <td>{{ s.household.hhid|default:"—" }}</td>
+          <td>{{ s.enumerator.enid|default:"—" }}</td>
+          <td>{{ s.event_key }}</td>
+          <td>{{ s.crop.name|default:"—" }}</td>
+          <td>{{ s.event_date|default:"—" }}</td>
+          <td>{% if row.edited %}<span class="pill">{{ row.edited }} edited</span>{% else %}<span class="subtle">—</span>{% endif %}</td>
+          <td>
+            {% if s.writeback_status == 'SENT' %}<span class="pill" style="background:#e7f0ea;color:#0a4630;">synced</span>
+            {% elif s.writeback_status == 'FAILED' %}<span class="pill" style="background:#fdecea;color:#a33617;">failed</span>
+            {% elif s.writeback_status == 'PENDING' %}<span class="pill">pending</span>
+            {% else %}<span class="subtle">—</span>{% endif %}
+          </td>
+        </tr>
+        {% endwith %}
+      {% empty %}
+        <tr><td colspan="7"><div class="empty" style="border:none;">No approved submissions yet. Approve submissions in the Issues tab to build the final dataset.</div></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

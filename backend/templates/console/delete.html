@@ -1,0 +1,13 @@
+{% extends "console/base.html" %}
+{% block console_main %}
+  <div class="page-head"><h2>Delete {{ m.label|lower }}</h2></div>
+  <div class="card" style="max-width:560px;">
+    <p>Are you sure you want to delete <strong>{{ obj }}</strong>?</p>
+    <p class="subtle">This cannot be undone. Related records may be affected.</p>
+    <form method="post" style="margin-top:1.2rem;display:flex;gap:.6rem;align-items:center;">
+      {% csrf_token %}
+      <button class="btn btn-decline" type="submit">Delete permanently</button>
+      <a class="subtle" href="{% url 'console:list' m.key %}">Cancel</a>
+    </form>
+  </div>
+{% endblock %}

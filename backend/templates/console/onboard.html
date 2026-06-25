@@ -1,0 +1,72 @@
+{% extends "console/base.html" %}
+{% block title %}Onboard project · Manage · EiA2030 DCMT{% endblock %}
+{% block crumbs %}<span class="sep">/</span><span class="cur">Manage</span><span class="sep">/</span><span class="cur">Onboard project</span>{% endblock %}
+{% block extrahead %}{{ block.super }}
+<style>
+  .steps{display:flex;gap:.6rem;margin:.2rem 0 1.4rem;flex-wrap:wrap;}
+  .step{flex:1;min-width:180px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:.9rem 1rem;}
+  .step .num{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--brand-50);color:var(--brand-700);font-weight:700;font-size:.8rem;margin-bottom:.4rem;}
+  .step b{display:block;font-family:var(--serif);font-size:.98rem;}
+  .step p{margin:.25rem 0 0;color:var(--muted);font-size:.82rem;line-height:1.45;}
+  .two-col{display:grid;grid-template-columns:1.4fr 1fr;gap:1.2rem;align-items:start;}
+  textarea.yaml{width:100%;min-height:320px;font-family:var(--mono);font-size:.8rem;border:1px solid var(--line);border-radius:10px;padding:.7rem;background:var(--surface-2);}
+  textarea.yaml:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-50);}
+  .discover{max-height:420px;overflow:auto;}
+  .discover table{font-size:.82rem;}
+  @media (max-width:900px){.two-col{grid-template-columns:1fr;}}
+</style>
+{% endblock %}
+{% block console_main %}
+  <div class="page-head"><h2>Onboard a project — advanced (YAML)</h2>
+    <a class="subtle" href="{% url 'console:onboard' %}" style="margin-left:auto;font-size:.82rem;">← Back to guided wizard</a>
+  </div>
+  <p class="subtle" style="margin:.1rem 0 1.2rem;">Paste a full use-case config. Prefer the guided wizard unless you're copying an existing project.</p>
+
+  <div class="steps">
+    <div class="step"><span class="num">1</span><b>Define</b><p>Describe the project and its ONA forms (paste a config, or copy an existing one and tweak).</p></div>
+    <div class="step"><span class="num">2</span><b>Sync</b><p>Press <em>Sync now</em> on the use case to pull submissions from ONA.</p></div>
+    <div class="step"><span class="num">3</span><b>Monitor</b><p>The project appears under <em>Monitor</em> with maps, trends, issues and review.</p></div>
+  </div>
+
+  {% if problems %}
+    <div class="err">
+      <strong>Couldn't onboard:</strong>
+      <ul style="margin:.4rem 0 0;">{% for p in problems %}<li>{{ p }}</li>{% endfor %}</ul>
+    </div>
+  {% endif %}
+
+  <div class="two-col">
+    <div class="card">
+      <h3>Project configuration (YAML)</h3>
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <textarea class="yaml" name="yaml" spellcheck="false">{{ yaml_text|default:yaml_template }}</textarea>
+        <div style="display:flex;align-items:center;gap:.8rem;margin-top:.8rem;flex-wrap:wrap;">
+          <button class="btn btn-open" type="submit">Onboard project</button>
+          <label class="subtle" style="font-size:.82rem;">…or upload a file: <input type="file" name="file" accept=".yaml,.yml"></label>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3>ONA forms available <span class="pill">discovery</span></h3>
+      {% if discover_error %}
+        <p class="subtle" style="font-size:.82rem;">{{ discover_error }}<br>Set <code>ONA_TOKEN</code> to list forms here. You can still enter form IDs manually in the config.</p>
+      {% elif discovered_forms %}
+        <div class="discover">
+          <table>
+            <thead><tr><th>Form ID</th><th>Title</th></tr></thead>
+            <tbody>
+              {% for f in discovered_forms %}
+                <tr><td class="mono">{{ f.id }}</td><td>{{ f.title }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="subtle" style="font-size:.78rem;margin-top:.6rem;">Copy a Form ID into <code>ona_form_id</code> in the config on the left.</p>
+      {% else %}
+        <p class="subtle" style="font-size:.82rem;">No forms found for this token.</p>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

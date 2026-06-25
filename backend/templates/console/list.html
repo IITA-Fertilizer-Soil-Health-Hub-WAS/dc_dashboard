@@ -1,0 +1,73 @@
+{% extends "console/base.html" %}
+{% block console_main %}
+  <div class="page-head">
+    <h2>{{ m.label }}</h2>
+    <span class="pill">{{ count }}</span>
+  </div>
+
+  <div class="toolbar">
+    {% if m.search_fields %}
+      <form method="get">
+        <input class="search" type="search" name="q" value="{{ q }}"
+               placeholder="Search {{ m.label|lower }}…">
+        <button class="btn btn-request" type="submit">Search</button>
+      </form>
+    {% else %}<span style="flex:1"></span>{% endif %}
+    {% if m.key == 'use-cases' %}
+      <a class="btn-new" style="background:var(--gold);color:var(--brand-900);" href="{% url 'console:onboard' %}">Onboard project</a>
+    {% endif %}
+    {% if not m.readonly %}
+      <a class="btn-new" href="{% url 'console:create' m.key %}">+ New</a>
+    {% endif %}
+  </div>
+
+  {% if messages %}{% for msg in messages %}<div class="pill" style="margin-bottom:.7rem;">{{ msg }}</div>{% endfor %}{% endif %}
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <table>
+      <thead>
+        <tr>
+          {% for col in columns %}<th>{{ col }}</th>{% endfor %}
+          <th style="text-align:right;">{% if not m.readonly %}Actions{% endif %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            {% for c in row.cells %}
+              <td>
+                {% if c.kind == 'bool' %}
+                  <span class="cellbool {% if c.value %}t{% else %}f{% endif %}">{% if c.value %}✓{% else %}✗{% endif %}</span>
+                {% elif c.kind == 'empty' %}<span class="subtle">—</span>
+                {% else %}{{ c.value }}{% endif %}
+              </td>
+            {% endfor %}
+            <td class="row-actions" style="text-align:right;white-space:nowrap;">
+              {% for a in m.actions %}
+                <form method="post" action="{% url 'console:action' m.key row.pk a.slug %}" style="display:inline;">
+                  {% csrf_token %}
+                  <button class="btn {{ a.style }}" type="submit"
+                          style="padding:.25rem .55rem;font-size:.74rem;">{{ a.label }}</button>
+                </form>
+              {% endfor %}
+              {% if not m.readonly %}
+                <a href="{% url 'console:edit' m.key row.pk %}">Edit</a>
+                <a class="del" href="{% url 'console:delete' m.key row.pk %}">Delete</a>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="{{ columns|length|add:1 }}"><div class="empty" style="border:none;">Nothing here yet.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page.has_other_pages %}
+    <div class="pager">
+      {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}{% if q %}&q={{ q }}{% endif %}">← Prev</a>{% endif %}
+      <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+      {% if page.has_next %}<a href="?page={{ page.next_page_number }}{% if q %}&q={{ q }}{% endif %}">Next →</a>{% endif %}
+    </div>
+  {% endif %}
+{% endblock %}

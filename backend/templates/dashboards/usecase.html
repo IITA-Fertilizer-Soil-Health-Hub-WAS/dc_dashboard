@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}{{ uc.name }} · EiA2030 DCMT{% endblock %}
+{% block crumbs %}
+  <span class="sep">/</span><a href="{% url 'dashboards:index' %}">Use cases</a>
+  <span class="sep">/</span><span class="cur">{{ uc.name }}</span>
+{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h2>{{ uc.name }}</h2>
+    <span class="pill">{{ uc.code }}</span>
+    {% if uc.countries %}<span class="subtle">{{ uc.countries|join:", " }}</span>{% endif %}
+  </div>
+
+  <nav class="tabs" id="tabs">
+    <button class="active" hx-get="{% url 'dashboards:tab_summary' uc.code %}"
+            hx-target="#tabbody" hx-on::after-request="setActive(this)">Summary</button>
+    <button hx-get="{% url 'dashboards:tab_enumerators' uc.code %}"
+            hx-target="#tabbody" hx-on::after-request="setActive(this)">Enumerators</button>
+    <button hx-get="{% url 'dashboards:tab_issues' uc.code %}"
+            hx-target="#tabbody" hx-on::after-request="setActive(this)">Issues</button>
+    <button hx-get="{% url 'dashboards:tab_data' uc.code %}"
+            hx-target="#tabbody" hx-on::after-request="setActive(this)">Data Preview</button>
+    <button hx-get="{% url 'dashboards:tab_final' uc.code %}"
+            hx-target="#tabbody" hx-on::after-request="setActive(this)">Final data</button>
+  </nav>
+
+  <div id="tabbody" hx-get="{% url 'dashboards:tab_summary' uc.code %}" hx-trigger="load">
+    <div class="subtle" style="padding:1.4rem 0;">Loading…</div>
+  </div>
+
+  <script>
+    function setActive(btn){
+      document.querySelectorAll('#tabs button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+  </script>
+{% endblock %}

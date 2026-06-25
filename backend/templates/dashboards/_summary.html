@@ -1,0 +1,16 @@
+<div class="cards" style="margin-top:1rem;">
+  <div class="card infobox"><div class="n">{{ total_submissions }}</div><div class="l">Submissions</div></div>
+  <div class="card infobox"><div class="n">{{ country }}</div><div class="l">Country</div></div>
+  <div class="card infobox"><div class="n">{{ uc.code }}</div><div class="l">Use case</div></div>
+</div>
+
+<div class="cards" style="margin-top:1rem; align-items:flex-start;">
+  <div class="card" style="flex:1; min-width:340px;">
+    <h3>Trials by location</h3>
+    {{ map_html|safe }}
+  </div>
+  <div class="card" style="flex:1; min-width:340px;">
+    <h3>Trend of submissions</h3>
+    {{ trend_html|safe }}
+  </div>
+</div>

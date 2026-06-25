@@ -1,0 +1,51 @@
+<div class="card" style="margin-top:1rem;" id="issues-panel">
+  <h3>Issues <span class="pill">{{ flags|length }} open</span></h3>
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+  <table>
+    <thead>
+      <tr><th>Enumerator</th><th>{{ uc.household_label }}</th><th>Issue</th>
+        <th>Severity</th><th>State</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+      {% for flag in flags %}
+        <tr>
+          <td>{{ flag.submission.enumerator.enid|default:"—" }}</td>
+          <td>{{ flag.submission.household.hhid|default:"—" }}</td>
+          <td>{{ flag.message }}{% if flag.field_key %} <span class="pill">{{ flag.field_key }}</span>{% endif %}</td>
+          <td>{{ flag.severity }}</td>
+          <td><span class="pill">{{ flag.submission.review.get_state_display }}</span></td>
+          <td>
+            {% with sid=flag.submission.id %}
+            {% if can.open_review %}
+              <button class="btn btn-open"
+                hx-post="{% url 'dashboards:submission_action' uc.code sid %}"
+                hx-target="#issues-panel" hx-swap="outerHTML"
+                hx-vals='{"action":"OPEN_REVIEW"}'>Open</button>
+            {% endif %}
+            {% if can.request_edit %}
+              <button class="btn btn-request"
+                hx-post="{% url 'dashboards:submission_action' uc.code sid %}"
+                hx-target="#issues-panel" hx-swap="outerHTML"
+                hx-vals='{"action":"REQUEST_EDIT"}'>Request edit</button>
+            {% endif %}
+            {% if can.decline %}
+              <button class="btn btn-decline"
+                hx-post="{% url 'dashboards:submission_action' uc.code sid %}"
+                hx-target="#issues-panel" hx-swap="outerHTML"
+                hx-vals='{"action":"DECLINE"}'>Decline</button>
+            {% endif %}
+            {% if can.qc_approve %}
+              <button class="btn btn-approve"
+                hx-post="{% url 'dashboards:submission_action' uc.code sid %}"
+                hx-target="#issues-panel" hx-swap="outerHTML"
+                hx-vals='{"action":"QC_APPROVE"}'>QC approve</button>
+            {% endif %}
+            {% endwith %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6">No open issues. 🎉</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
