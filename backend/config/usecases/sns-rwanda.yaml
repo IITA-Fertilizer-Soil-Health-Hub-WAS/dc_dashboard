@@ -1,0 +1,84 @@
+# SNS-RWANDA use case — ported from the R app (okapi.R form IDs,
+# dataprocessing.R field renames, support_fun.R event offsets, app.R ID patterns).
+# Adding a use case now means writing a file like this — no code changes.
+use_case:
+  code: SNS-RWANDA
+  name: SNS Rwanda
+  is_active: true
+  countries: [Rwanda]
+  enid_patterns: ["^RSENRW"]      # was patternissues
+  hhid_patterns: ["^RSHHRW"]      # was patternissuesE
+  plugin: null
+  timezone: Africa/Kigali
+  household_label: Household
+  test_ids: ["RSENRW000001"]    # enumerator registered only for testing/monitoring
+
+crops:
+  - {name: maize}
+  - {name: potato, aliases: [potatoIrish]}
+  - {name: rice}
+
+trials:
+  - {name: Fertilizer Recommendation, code: FR}
+
+stages: [Research, Validation, Piloting]
+
+forms:
+  # Enumerator registration (form 750671)
+  - ona_form_id: 750671
+    role: ENUM_REG
+    mappings:
+      - {target: ENID,       source: ["purpose/enumerator_ID"], transform: DIRECT, required: true}
+      - {target: ENfirstName, source: ["purpose/first_name"],   transform: DIRECT}
+      - {target: ENSurname,  source: ["purpose/surname"],       transform: DIRECT}
+      - {target: ENphoneNo,  source: ["purpose/phone_number"],  transform: DIRECT}
+      - {target: ENtoday,    source: ["today"],                 transform: DATE_PARSE}
+
+  # Household registration / verification (form 750672)
+  - ona_form_id: 750672
+    role: HH_REG
+    mappings:
+      - {target: ENID, transform: DIRECT, required: true,
+         source: ["enumerator_ID_dataSCRIBEcode_a1e28af2b2a745b6bb29467aa015164c_ENDDS"]}
+      - {target: HHID, transform: DIRECT, required: true,
+         source: ["new_barcode_dataSCRIBEcode_02c9e5d2f2504f57ae636de562b9f837_ENDDS/household_ID_dataSCRIBEcode_85e11f6972e14bd0bfc5282a6d6b226f_ENDDS"]}
+      - {target: GEO, transform: SPLIT_GEOPOINT, transform_args: {into: [LAT, LON, ALT, ERR]},
+         source: ["new_barcode_dataSCRIBEcode_02c9e5d2f2504f57ae636de562b9f837_ENDDS/household_geopoint_dataSCRIBEcode_46dd9da06bc541a0a2917f8b4fcf0bd8_ENDDS"]}
+      - {target: Country, transform: DIRECT,
+         source: ["country_ID_dataSCRIBEcode_95be8089f5c845e183a371095d44a55e_ENDDS"]}
+      - {target: today, source: ["today"], transform: DATE_PARSE}
+
+  # Validation data (form 752552) — multi-event trial submissions
+  - ona_form_id: 752552
+    role: VALIDATION
+    system_vars_drop: ["_uuid", "_submission_time", "meta/instanceID", "_xform_id_string"]
+    mappings:
+      - {target: ENID,      source: ["intro/wrong_ENID", "intro/enumerator_ID"], transform: COALESCE}
+      - {target: HHID,      source: ["intro/wrong_ID", "intro/household_ID"],    transform: COALESCE}
+      - {target: event_key, source: ["intro/event"],     transform: DIRECT, required: true}
+      - {target: Country,   source: ["intro/country"],   transform: DIRECT}
+      - {target: LAT,       source: ["intro/latitude"],  transform: DIRECT}
+      - {target: LON,       source: ["intro/longitude"], transform: DIRECT}
+      - {target: Crop,      source: ["crop"],            transform: LOOKUP}
+      - {target: today,     source: ["today"],           transform: DATE_PARSE, required: true}
+
+# Event timeline — exact offsets from support_fun.R dynamic_colorcodeS.
+# Event1 anchored on Site Selection (+14); the rest anchored on Event1.
+event_schedule:
+  - {event_key: Event1, sequence: 1, anchor: SITE_SELECTION, offset_days: 14}
+  - {event_key: Event2, sequence: 2, anchor: EVENT1, offset_days: 29}
+  - {event_key: Event3, sequence: 3, anchor: EVENT1, offset_days: 43}
+  - {event_key: Event4, sequence: 4, anchor: EVENT1, offset_days: 64, crop_overrides: {potato: 57}}
+  - {event_key: Event5, sequence: 5, anchor: EVENT1, offset_days: 78, crop_overrides: {potato: 71}}
+  - {event_key: Event6, sequence: 6, anchor: EVENT1, offset_days: 92, crop_overrides: {potato: 85}}
+  - {event_key: Event7, sequence: 7, anchor: EVENT1, offset_days: 112}
+
+validation_rules:
+  - {code: enid_pattern, type: REGEX_ID, severity: ERROR,
+     params: {field: ENID, patterns: ["^RSENRW"], message: "Check ENID"}}
+  - {code: hhid_pattern, type: REGEX_ID, severity: ERROR,
+     params: {field: HHID, patterns: ["^RSHHRW"], message: "Check HHID"}}
+  - {code: event_sequence, type: EVENT_SEQUENCE, severity: WARNING,
+     params: {message: "Check submission events"}}
+  - {code: event_window, type: DATE_WINDOW, severity: WARNING,
+     params: {use_schedule: true}}

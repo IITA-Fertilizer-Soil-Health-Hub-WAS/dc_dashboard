@@ -1,0 +1,136 @@
+"""Onboarding a new project to monitor — both the guided wizard and YAML import.
+
+Reflects the ONA model: a project == a use case; its forms == the entries.
+"""
+from __future__ import annotations
+
+import pytest
+
+from apps.console.onboarding import build_config, suggest_mappings, suggest_target
+from apps.usecases.models import UseCase
+
+pytestmark = pytest.mark.django_db
+
+YAML = """
+use_case:
+  code: NEW-PROJ
+  name: New Project
+  enid_patterns: ['^EN']
+forms:
+  - ona_form_id: 123456
+    role: VALIDATION
+    mappings:
+      - {target: ENID, source: ['intro/enumerator_id'], transform: DIRECT}
+      - {target: event_key, source: ['intro/event'], transform: DIRECT}
+event_schedule:
+  - {event_key: Event1, sequence: 1, anchor: SITE_SELECTION, offset_days: 14}
+"""
+
+
+@pytest.fixture
+def staff(django_user_model):
+    return django_user_model.objects.create_superuser("admin@x.org", "pw")
+
+
+# ---- helpers ----
+def test_suggest_target_heuristics():
+    assert suggest_target("intro/enumerator_id") == "ENID"
+    assert suggest_target("start/barcodehousehold") == "HHID"
+    assert suggest_target("intro/event") == "event_key"
+    assert suggest_target("planting/crop_cultivated") == "Crop"
+    assert suggest_target("intro/household_geopoint") == "GEO"
+    assert suggest_target("some/random_note") is None
+
+
+def test_suggest_mappings_picks_first_match():
+    fields = ["intro/enumerator_id", "intro/household_id", "intro/event", "meta/x"]
+    chosen = suggest_mappings(fields)
+    assert chosen["ENID"] == "intro/enumerator_id"
+    assert chosen["HHID"] == "intro/household_id"
+    assert chosen["event_key"] == "intro/event"
+
+
+def test_build_config_assembles_full_use_case():
+    post = {
+        "code": "WZ", "name": "Wizard", "countries": "Rwanda", "crops": "maize",
+        "enid_patterns": "^EN", "hhid_patterns": "^HH",
+        "num_events": "2", "interval_days": "14",
+        "form_count": "1", "form-0-id": "999", "form-0-role": "VALIDATION",
+        "map-0-ENID": "intro/enumerator_id", "map-0-event_key": "intro/event",
+    }
+    cfg = build_config(post)
+    assert cfg["use_case"]["code"] == "WZ"
+    assert len(cfg["forms"]) == 1
+    assert len(cfg["event_schedule"]) == 2
+    assert any(r["code"] == "enid_pattern" for r in cfg["validation_rules"])
+
+
+# ---- wizard (form-based) ----
+def test_wizard_renders(client, staff):
+    client.force_login(staff)
+    resp = client.get("/manage/new-project/")
+    assert resp.status_code == 200
+    assert b"Onboard a project" in resp.content
+
+
+def test_wizard_creates_use_case(client, staff):
+    client.force_login(staff)
+    post = {
+        "code": "WZ-1", "name": "Wizard One", "enid_patterns": "^EN",
+        "num_events": "1", "interval_days": "14",
+        "form_count": "1", "form-0-id": "999", "form-0-role": "VALIDATION",
+        "map-0-ENID": "intro/enumerator_id", "map-0-event_key": "intro/event",
+    }
+    resp = client.post("/manage/new-project/", post)
+    assert resp.status_code == 302
+    assert UseCase.objects.filter(code="WZ-1").exists()
+
+
+def test_field_discovery_fallback_without_token(client, staff):
+    client.force_login(staff)
+    resp = client.post("/manage/new-project/fields/", {"index": "0", "form_id": "123"})
+    assert resp.status_code == 200
+    assert b"map-0-ENID" in resp.content  # mapping rows rendered
+
+
+def test_wizard_non_staff_forbidden(client, django_user_model):
+    user = django_user_model.objects.create_user("u@x.org", "pw", is_active=True)
+    client.force_login(user)
+    assert client.get("/manage/new-project/").status_code == 403
+
+
+# ---- YAML import (advanced) ----
+def test_yaml_import_creates_use_case(client, staff):
+    client.force_login(staff)
+    resp = client.post("/manage/new-project/advanced/", {"yaml": YAML})
+    assert resp.status_code == 302
+    uc = UseCase.objects.get(code="NEW-PROJ")
+    assert uc.forms.count() == 1
+
+
+def test_yaml_import_rejects_bad_config(client, staff):
+    client.force_login(staff)
+    resp = client.post("/manage/new-project/advanced/", {"yaml": "use_case:\n  name: x\n"})
+    assert resp.status_code == 200
+    assert not UseCase.objects.filter(name="x").exists()
+
+
+def test_list_forms_parses_response(monkeypatch):
+    from apps.ingestion import ona_client
+
+    class FakeResp:
+        status_code = 200
+
+        def json(self):
+            return [{"formid": 1, "title": "Reg", "num_of_submissions": 5,
+                     "last_submission_time": "2026-01-01"}]
+
+    class FakeClient:
+        def __init__(self, *a, **k): pass
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def get(self, *a, **k): return FakeResp()
+
+    monkeypatch.setattr(ona_client.httpx, "Client", FakeClient)
+    forms = ona_client.OnaClient(token="t").list_forms()
+    assert forms[0]["formid"] == 1 and forms[0]["last_submission"] == "2026-01-01"
