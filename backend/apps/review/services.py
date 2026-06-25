@@ -107,6 +107,27 @@ def comment(user, submission, note: str) -> Review:
     return _transition(user=user, submission=submission, action=ReviewAction.COMMENT, note=note)
 
 
+@transaction.atomic
+def assign(user, submission, assignee) -> Review:
+    """Assign a submission to a reviewer (not a state transition). Coordinators
+    and QC may assign; the assignee is notified by email."""
+    if not user_can(user, "open_review", submission.use_case):
+        raise ReviewPermissionDenied(
+            f"{getattr(user, 'email', user)} cannot assign in {submission.use_case.code}"
+        )
+    review = get_or_create_review(submission)
+    review.assigned_to = assignee
+    review.save(update_fields=["assigned_to", "updated_at"])
+    ReviewActionLog.objects.create(
+        submission=submission, actor=user, action=ReviewAction.ASSIGN,
+        from_state=review.state, to_state=review.state,
+        note=f"Assigned to {getattr(assignee, 'email', assignee)}",
+    )
+    from .notifications import notify_assignment
+    notify_assignment(submission, assignee)
+    return review
+
+
 def system_flag(submission, note: str = "") -> Review:
     """Move a fresh (INGESTED) submission to FLAGGED. Called by the validation
     engine when an ERROR-severity rule produces an open flag. No-op if the

@@ -25,11 +25,10 @@ services:
     env_file:
       - path: .env
         required: false
-    command: >
-      sh -c "python manage.py migrate &&
-             gunicorn eia_dcmt.wsgi:application --bind 0.0.0.0:8000
-             --worker-class gthread --workers 2 --threads 4
-             --timeout 120 --worker-tmp-dir /dev/shm --graceful-timeout 30"
+    # NOTE: keep this on ONE line. A multi-line YAML block leaves literal newlines
+    # in the args, which the shell treats as command separators (gunicorn then
+    # starts with defaults: sync worker, short timeout — causing request SIGKILLs).
+    command: sh -c "python manage.py migrate && gunicorn eia_dcmt.wsgi:application --bind 0.0.0.0:8000 --worker-class gthread --workers 2 --threads 4 --timeout 120 --worker-tmp-dir /dev/shm --graceful-timeout 30"
     environment:
       DJANGO_SETTINGS_MODULE: eia_dcmt.settings.dev
       DATABASE_URL: postgres://eia:eia@db:5432/eia_dcmt

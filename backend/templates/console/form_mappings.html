@@ -1,0 +1,74 @@
+{% extends "console/base.html" %}
+{% block title %}Field mappings · {{ form }} · EiA2030 DCMT{% endblock %}
+{% block crumbs %}<span class="sep">/</span><span class="cur">Manage</span><span class="sep">/</span><a href="{% url 'console:list' 'forms' %}">Forms</a><span class="sep">/</span><span class="cur">Mappings</span>{% endblock %}
+{% block extrahead %}{{ block.super }}
+<style>
+  .maptable input[type=text]{width:100%;padding:.35rem .5rem;border:1px solid var(--line);border-radius:6px;font-family:var(--mono);font-size:.82rem;}
+  .maptable select{padding:.35rem .4rem;border:1px solid var(--line);border-radius:6px;font-size:.82rem;}
+  .maptable td{vertical-align:middle;}
+</style>
+{% endblock %}
+{% block console_main %}
+  <div class="page-head">
+    <h2>Field mappings</h2>
+    <span class="pill">{{ form.use_case.code }} · {{ form.get_role_display }} · form {{ form.ona_form_id }}</span>
+  </div>
+  <p class="subtle" style="margin:.1rem 0 1rem;">Map this form's source field paths to canonical fields the engine understands (ENID, HHID, event_key, Crop, GEO, today…).</p>
+
+  {% if messages %}{% for msg in messages %}<div class="pill" style="margin-bottom:.7rem;background:#e7f0ea;color:#0a4630;">{{ msg }}</div>{% endfor %}{% endif %}
+
+  <form method="post" class="card" style="padding:0;overflow:hidden;">
+    {% csrf_token %}
+    <table class="maptable">
+      <thead>
+        <tr><th>Target field</th><th>Source path(s) — comma separated</th><th>Transform</th><th>Required</th><th>Order</th><th>Delete</th></tr>
+      </thead>
+      <tbody id="maprows">
+        {% for m in mappings %}
+          <tr>
+            <td><input type="text" name="map-{{ m.pk }}-target" value="{{ m.target_field }}"></td>
+            <td><input type="text" name="map-{{ m.pk }}-source" value="{{ m.source_paths|join:', ' }}"></td>
+            <td>
+              <select name="map-{{ m.pk }}-transform">
+                {% for v,l in transforms %}<option value="{{ v }}" {% if m.transform == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+              </select>
+            </td>
+            <td style="text-align:center;"><input type="checkbox" name="map-{{ m.pk }}-required" {% if m.required %}checked{% endif %}></td>
+            <td><input type="text" name="map-{{ m.pk }}-order" value="{{ m.order }}" style="width:52px;"></td>
+            <td style="text-align:center;"><input type="checkbox" name="map-{{ m.pk }}-delete"></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div style="padding:.8rem 1.1rem;border-top:1px solid var(--line);display:flex;gap:.6rem;align-items:center;">
+      <button class="btn btn-request" type="button" onclick="addRow()">+ Add mapping</button>
+      <span style="flex:1"></span>
+      <a class="subtle" href="{% url 'console:list' 'forms' %}">Back to forms</a>
+      <button class="btn btn-open" type="submit">Save mappings</button>
+    </div>
+  </form>
+
+  <template id="rowTpl">
+    <tr>
+      <td><input type="text" name="new-IDX-target" placeholder="ENID"></td>
+      <td><input type="text" name="new-IDX-source" placeholder="intro/enumerator_id"></td>
+      <td>
+        <select name="new-IDX-transform">
+          {% for v,l in transforms %}<option value="{{ v }}">{{ l }}</option>{% endfor %}
+        </select>
+      </td>
+      <td style="text-align:center;"><input type="checkbox" name="new-IDX-required"></td>
+      <td><input type="text" name="new-IDX-order" value="0" style="width:52px;"></td>
+      <td></td>
+    </tr>
+  </template>
+  <script>
+    let newIdx = 0;
+    function addRow(){
+      const html = document.getElementById('rowTpl').innerHTML.replaceAll('IDX', newIdx);
+      const tb = document.getElementById('maprows');
+      tb.insertAdjacentHTML('beforeend', html);
+      newIdx++;
+    }
+  </script>
+{% endblock %}

@@ -215,6 +215,9 @@ def submission_review(request, code, submission_id):
                                             new_value=new, note=note)
                         changed += 1
                 ok = f"Saved {changed} field edit(s)." if changed else "No changes to save."
+            elif action == "assign_me":
+                services.assign(request.user, submission, request.user)
+                ok = "Assigned to you."
             elif action in ACTION_SERVICES:
                 ACTION_SERVICES[action](request.user, submission, note=note)
                 ok = f"{dict(ReviewAction.choices).get(action, action)} recorded."
@@ -278,11 +281,45 @@ def bulk_submission_action(request, code):
 
 
 def _issues_context(request, uc) -> dict:
+    from django.db.models import Q
+
+    from apps.review.models import ReviewState
+    from apps.validation.models import ValidationRule
+
+    # Filters come from GET (filter bar) or POST (action re-renders carry them).
+    src = request.POST if request.method == "POST" else request.GET
+    f = {
+        "q": (src.get("q") or "").strip(),
+        "event": src.get("event") or "",
+        "state": src.get("state") or "",
+        "severity": src.get("severity") or "",
+        "assigned_me": src.get("assigned_me") == "1",
+    }
+
     flags = (
         ValidationFlag.objects.filter(rule__use_case=uc, status=ValidationFlag.Status.OPEN)
         .select_related("submission", "submission__review", "submission__enumerator",
                         "submission__household", "rule")
         .order_by("submission__ona_uuid")
+    )
+    if f["q"]:
+        flags = flags.filter(
+            Q(submission__enumerator__enid__icontains=f["q"])
+            | Q(submission__household__hhid__icontains=f["q"])
+            | Q(message__icontains=f["q"])
+        )
+    if f["event"]:
+        flags = flags.filter(submission__event_key=f["event"])
+    if f["state"]:
+        flags = flags.filter(submission__review__state=f["state"])
+    if f["severity"]:
+        flags = flags.filter(severity=f["severity"])
+    if f["assigned_me"]:
+        flags = flags.filter(submission__review__assigned_to=request.user)
+
+    events = sorted(
+        Submission.objects.filter(use_case=uc).exclude(event_key="")
+        .values_list("event_key", flat=True).distinct()
     )
     can = {
         "decline": user_can(request.user, "decline", uc),
@@ -291,7 +328,12 @@ def _issues_context(request, uc) -> dict:
         "qc_approve": user_can(request.user, "qc_approve", uc),
         "open_review": user_can(request.user, "open_review", uc),
     }
-    return {"uc": uc, "flags": flags, "can": can}
+    return {
+        "uc": uc, "flags": flags, "can": can, "filters": f,
+        "event_options": events,
+        "state_options": ReviewState.choices,
+        "severity_options": ValidationRule.Severity.choices,
+    }
 
 
 # Field values for an edit modal/inline form (optional helper used by templates).

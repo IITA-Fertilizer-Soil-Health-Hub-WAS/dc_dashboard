@@ -73,8 +73,9 @@ def test_issues_hides_actions_for_viewer(client, setup):
     uc, _, _, viewer, _ = setup
     client.force_login(viewer)
     resp = client.get(reverse("dashboards:tab_issues", args=[uc.code]))
-    assert b"Decline" not in resp.content
-    assert b"QC approve" not in resp.content
+    # Match button text precisely (">Decline<"), not the "Declined" state-filter option.
+    assert b">Decline</button>" not in resp.content
+    assert b">QC approve</button>" not in resp.content
 
 
 def test_inline_decline_action(client, setup):

@@ -36,6 +36,7 @@ class ReviewAction(models.TextChoices):
     COMMENT = "COMMENT", "Comment"
     SUPERSEDE = "SUPERSEDE", "Supersede"
     SYSTEM_FLAG = "SYSTEM_FLAG", "System flag"
+    ASSIGN = "ASSIGN", "Assign"
 
 
 class Review(BaseModel):

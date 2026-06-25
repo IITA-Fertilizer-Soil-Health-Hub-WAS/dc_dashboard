@@ -3,8 +3,31 @@
   {% if ok %}<div class="pill" style="margin:.3rem 0;background:#e7f0ea;color:#0a4630;">{{ ok }}</div>{% endif %}
   {% if error %}<div class="err">{{ error }}</div>{% endif %}
 
-  {% if flags %}
   <form id="bulk-form">
+    <div class="toolbar" style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;margin:.2rem 0 .7rem;">
+      <input class="search" type="search" name="q" value="{{ filters.q }}" placeholder="Search id / issue…"
+             style="padding:.4rem .6rem;border:1px solid var(--line);border-radius:7px;font-size:.85rem;min-width:160px;">
+      <select name="event" style="padding:.4rem .5rem;border:1px solid var(--line);border-radius:7px;font-size:.85rem;">
+        <option value="">All events</option>
+        {% for e in event_options %}<option value="{{ e }}" {% if filters.event == e %}selected{% endif %}>{{ e }}</option>{% endfor %}
+      </select>
+      <select name="state" style="padding:.4rem .5rem;border:1px solid var(--line);border-radius:7px;font-size:.85rem;">
+        <option value="">Any state</option>
+        {% for v,l in state_options %}<option value="{{ v }}" {% if filters.state == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+      </select>
+      <select name="severity" style="padding:.4rem .5rem;border:1px solid var(--line);border-radius:7px;font-size:.85rem;">
+        <option value="">Any severity</option>
+        {% for v,l in severity_options %}<option value="{{ v }}" {% if filters.severity == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+      </select>
+      <label class="subtle" style="font-size:.8rem;display:flex;align-items:center;gap:.25rem;">
+        <input type="checkbox" name="assigned_me" value="1" {% if filters.assigned_me %}checked{% endif %}> mine
+      </label>
+      <button class="btn btn-open" type="button" hx-get="{% url 'dashboards:tab_issues' uc.code %}"
+              hx-include="#bulk-form" hx-target="#issues-panel" hx-swap="outerHTML">Filter</button>
+      <a class="subtle" style="font-size:.82rem;" hx-get="{% url 'dashboards:tab_issues' uc.code %}"
+         hx-target="#issues-panel" hx-swap="outerHTML" href="#">Clear</a>
+    </div>
+  {% if flags %}
     <div class="toolbar" style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin:.2rem 0 .7rem;">
       <span class="subtle" style="font-size:.82rem;">Bulk actions on selected:</span>
       {% if can.open_review %}
@@ -51,8 +74,8 @@
         {% endfor %}
       </tbody>
     </table>
-  </form>
   {% else %}
-    <div class="empty" style="border:none;">No open issues. 🎉</div>
+    <div class="empty" style="border:none;">No open issues match the filters. 🎉</div>
   {% endif %}
+  </form>
 </div>

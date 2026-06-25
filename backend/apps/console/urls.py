@@ -8,6 +8,7 @@ app_name = "console"
 
 urlpatterns = [
     # Must precede the generic "<slug:key>/" pattern.
+    path("forms/<uuid:pk>/mappings/", views.FormMappingsView.as_view(), name="form_mappings"),
     path("writeback/", views.WriteBackQueueView.as_view(), name="writeback"),
     path("new-project/", views.WizardView.as_view(), name="onboard"),
     path("new-project/advanced/", views.OnboardProjectView.as_view(), name="onboard_yaml"),

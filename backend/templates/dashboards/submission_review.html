@@ -77,7 +77,15 @@
       <!-- Workflow actions -->
       <div class="card">
         <h3>Review actions</h3>
-        <p class="subtle" style="font-size:.8rem;margin:.3rem 0 .8rem;">Move this submission through the review workflow.</p>
+        <p class="subtle" style="font-size:.8rem;margin:.3rem 0 .6rem;">
+          {% if review.assigned_to %}Assigned to <strong>{{ review.assigned_to.email }}</strong>.{% else %}Unassigned.{% endif %}
+        </p>
+        {% if can.open_review %}
+          <form method="post" style="margin:0 0 .6rem;">
+            {% csrf_token %}<input type="hidden" name="action" value="assign_me">
+            <button class="btn btn-request" type="submit" style="width:100%;">Assign to me</button>
+          </form>
+        {% endif %}
         <div style="display:flex;flex-direction:column;gap:.5rem;">
           {% if can.open_review %}{% include "dashboards/_action_btn.html" with action="OPEN_REVIEW" label="Open review" cls="btn-open" %}{% endif %}
           {% if can.request_edit %}{% include "dashboards/_action_btn.html" with action="REQUEST_EDIT" label="Request edit" cls="btn-request" %}{% endif %}

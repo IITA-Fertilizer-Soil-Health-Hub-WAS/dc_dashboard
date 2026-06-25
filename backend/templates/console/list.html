@@ -50,6 +50,9 @@
                           style="padding:.25rem .55rem;font-size:.74rem;">{{ a.label }}</button>
                 </form>
               {% endfor %}
+              {% if m.key == 'forms' %}
+                <a href="{% url 'console:form_mappings' row.pk %}">Mappings</a>
+              {% endif %}
               {% if not m.readonly %}
                 <a href="{% url 'console:edit' m.key row.pk %}">Edit</a>
                 <a class="del" href="{% url 'console:delete' m.key row.pk %}">Delete</a>

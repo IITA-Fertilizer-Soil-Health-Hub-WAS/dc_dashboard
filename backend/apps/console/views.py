@@ -386,3 +386,63 @@ class WriteBackQueueView(StaffMixin, View):
                 writeback_submission_task.delay(str(pk))
                 messages.success(request, "Write-back retried.")
         return redirect("console:writeback")
+
+
+def _csv_list(value: str | None) -> list[str]:
+    return [p.strip() for p in (value or "").split(",") if p.strip()]
+
+
+class FormMappingsView(StaffMixin, View):
+    """Inline editor for one form's field mappings (add / edit / delete rows)."""
+
+    def _form(self, pk):
+        from apps.usecases.models import FormDefinition
+
+        return get_object_or_404(FormDefinition.objects.select_related("use_case"), pk=pk)
+
+    def _ctx(self, form):
+        from apps.usecases.models import FieldMapping
+
+        return _console_page_ctx("forms") | {
+            "form": form,
+            "mappings": form.mappings.all().order_by("order", "target_field"),
+            "transforms": FieldMapping.Transform.choices,
+        }
+
+    def get(self, request, pk):
+        return render(request, "console/form_mappings.html", self._ctx(self._form(pk)))
+
+    def post(self, request, pk):
+        from apps.usecases.models import FieldMapping
+
+        form = self._form(pk)
+        # Update or delete existing mappings.
+        for m in list(form.mappings.all()):
+            if request.POST.get(f"map-{m.pk}-delete"):
+                m.delete()
+                continue
+            target = (request.POST.get(f"map-{m.pk}-target") or "").strip()
+            if not target:
+                continue
+            m.target_field = target
+            m.source_paths = _csv_list(request.POST.get(f"map-{m.pk}-source"))
+            m.transform = request.POST.get(f"map-{m.pk}-transform") or "DIRECT"
+            m.required = bool(request.POST.get(f"map-{m.pk}-required"))
+            m.order = int(request.POST.get(f"map-{m.pk}-order") or 0)
+            m.save()
+        # Create any new rows.
+        i, created = 0, 0
+        while f"new-{i}-target" in request.POST:
+            target = (request.POST.get(f"new-{i}-target") or "").strip()
+            if target:
+                FieldMapping.objects.create(
+                    form=form, target_field=target,
+                    source_paths=_csv_list(request.POST.get(f"new-{i}-source")),
+                    transform=request.POST.get(f"new-{i}-transform") or "DIRECT",
+                    required=bool(request.POST.get(f"new-{i}-required")),
+                    order=int(request.POST.get(f"new-{i}-order") or 0),
+                )
+                created += 1
+            i += 1
+        messages.success(request, f"Mappings saved{f' (+{created} new)' if created else ''}.")
+        return redirect("console:form_mappings", pk=pk)
