@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Overview · EiA2030 DCMT{% endblock %}
+{% block crumbs %}<span class="sep">/</span><span class="cur">Overview</span>{% endblock %}
+{% block content %}
+  <div class="page-head"><h2>Overview</h2><span class="pill">{{ rows|length }} use cases</span></div>
+  <p class="subtle" style="margin:.1rem 0 1.2rem;">Monitoring and review status across all projects you can see.</p>
+
+  <div class="cards" style="margin-bottom:1.2rem;">
+    <div class="card infobox"><div class="n">{{ totals.total }}</div><div class="l">Submissions</div></div>
+    <div class="card infobox"><div class="n" style="color:#3f9142;">{{ totals.approved }}</div><div class="l">Approved</div></div>
+    <div class="card infobox"><div class="n" style="color:var(--muted);">{{ totals.in_review }}</div><div class="l">In review</div></div>
+    <div class="card infobox"><div class="n" style="color:var(--red);">{{ totals.open_issues }}</div><div class="l">Open issues</div></div>
+    <div class="card infobox"><div class="n" style="color:var(--gold);">{{ totals.wb_pending }}</div><div class="l">Write-back pending</div></div>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <table>
+      <thead>
+        <tr><th>Use case</th><th>Submissions</th><th>Approved</th><th>In review</th>
+          <th>Open issues</th><th>WB pending</th><th>WB failed</th></tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+          <tr>
+            <td><a href="{% url 'dashboards:usecase' r.uc.code %}"><strong>{{ r.uc.name }}</strong></a>
+              <div class="subtle" style="font-size:.78rem;">{{ r.uc.countries|join:", " }}</div></td>
+            <td style="font-variant-numeric:tabular-nums;">{{ r.total }}</td>
+            <td style="color:#3f9142;">{{ r.approved }}</td>
+            <td>{{ r.in_review }}</td>
+            <td>{% if r.open_issues %}<span class="pill" style="background:#fdecea;color:#a33617;">{{ r.open_issues }}</span>{% else %}—{% endif %}</td>
+            <td>{% if r.wb_pending %}<span class="pill" style="background:#f6efd7;">{{ r.wb_pending }}</span>{% else %}—{% endif %}</td>
+            <td>{% if r.wb_failed %}<span class="pill" style="background:#fdecea;color:#a33617;">{{ r.wb_failed }}</span>{% else %}—{% endif %}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7"><div class="empty" style="border:none;">No use cases yet.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

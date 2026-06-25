@@ -200,6 +200,10 @@
             <span class="msym">add_circle</span>Onboard project
           </a>
         {% endif %}
+        <a href="{% url 'dashboards:overview' %}" title="Cross-use-case overview"
+           class="{% if request.resolver_match.url_name == 'overview' %}active{% endif %}">
+          <span class="msym">dashboard</span>Overview
+        </a>
         <a href="{% url 'dashboards:my_queue' %}" title="Submissions assigned to me"
            class="{% if request.resolver_match.url_name == 'my_queue' %}active{% endif %}">
           <span class="msym">assignment_ind</span>My queue

@@ -43,6 +43,35 @@ def index(request):
 
 
 @login_required
+def overview(request):
+    """Cross-use-case overview: key metrics for every use case I can see."""
+    from apps.validation.models import ValidationFlag
+
+    closed = [ReviewState.APPROVED, ReviewState.DECLINED]
+    rows = []
+    totals = {"total": 0, "approved": 0, "in_review": 0, "open_issues": 0,
+              "wb_pending": 0, "wb_failed": 0}
+    for uc in visible_use_cases(request.user):
+        subs = Submission.objects.filter(use_case=uc)
+        row = {
+            "uc": uc,
+            "total": subs.count(),
+            "approved": subs.filter(review__state=ReviewState.APPROVED).count(),
+            "in_review": subs.exclude(review__state__in=closed).count(),
+            "open_issues": ValidationFlag.objects.filter(
+                rule__use_case=uc, status=ValidationFlag.Status.OPEN).count(),
+            "wb_pending": subs.filter(
+                writeback_status=Submission.WriteBackStatus.PENDING).count(),
+            "wb_failed": subs.filter(
+                writeback_status=Submission.WriteBackStatus.FAILED).count(),
+        }
+        rows.append(row)
+        for k in totals:
+            totals[k] += row[k]
+    return render(request, "dashboards/overview.html", {"rows": rows, "totals": totals})
+
+
+@login_required
 def my_queue(request):
     """Submissions assigned to me that still need action, across my use cases."""
     submissions = (
