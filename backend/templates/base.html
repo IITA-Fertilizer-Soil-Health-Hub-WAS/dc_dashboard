@@ -200,6 +200,11 @@
             <span class="msym">add_circle</span>Onboard project
           </a>
         {% endif %}
+        <a href="{% url 'dashboards:my_queue' %}" title="Submissions assigned to me"
+           class="{% if request.resolver_match.url_name == 'my_queue' %}active{% endif %}">
+          <span class="msym">assignment_ind</span>My queue
+          {% if my_queue_count %}<span class="pill" style="margin-left:auto;font-size:.66rem;">{{ my_queue_count }}</span>{% endif %}
+        </a>
         <div class="lbl">Monitor</div>
         {% for uc in nav_use_cases %}
           <a href="{% url 'dashboards:usecase' uc.code %}"

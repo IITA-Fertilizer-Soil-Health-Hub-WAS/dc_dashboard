@@ -16,7 +16,7 @@ from django.views.decorators.http import require_POST
 
 from apps.rbac.permissions import user_can, visible_use_cases
 from apps.review import services
-from apps.review.models import ReviewAction
+from apps.review.models import ReviewAction, ReviewActionLog, ReviewState
 from apps.review.state_machine import ReviewPermissionDenied, TransitionError
 from apps.submissions.models import Enumerator, Submission, SubmissionValue
 from apps.validation.models import ValidationFlag
@@ -40,6 +40,47 @@ def index(request):
     """Landing page: the use cases this user may view."""
     use_cases = visible_use_cases(request.user)
     return render(request, "dashboards/index.html", {"use_cases": use_cases})
+
+
+@login_required
+def my_queue(request):
+    """Submissions assigned to me that still need action, across my use cases."""
+    submissions = (
+        Submission.objects.filter(
+            use_case__in=visible_use_cases(request.user),
+            review__assigned_to=request.user,
+        )
+        .exclude(review__state__in=[ReviewState.APPROVED, ReviewState.DECLINED])
+        .select_related("use_case", "enumerator", "household", "review")
+        .order_by("review__state", "-updated_at")
+    )
+    return render(request, "dashboards/my_queue.html",
+                  {"submissions": submissions, "count": submissions.count()})
+
+
+@login_required
+def export_audit(request, code):
+    """CSV of the review audit trail for a use case."""
+    uc = get_scoped_use_case(request, code)
+    logs = (
+        ReviewActionLog.objects.filter(submission__use_case=uc)
+        .select_related("actor", "submission")
+        .order_by("created_at")
+    )
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = f'attachment; filename="{uc.code.lower()}_audit.csv"'
+    writer = csv.writer(response)
+    writer.writerow(["timestamp", "actor", "submission", "action", "from_state",
+                     "to_state", "field", "old_value", "new_value", "note"])
+    for log in logs:
+        writer.writerow([
+            log.created_at.isoformat(),
+            log.actor.email if log.actor else "system",
+            log.submission.ona_uuid,
+            log.action, log.from_state, log.to_state,
+            log.field_key, log.old_value, log.new_value, log.note,
+        ])
+    return response
 
 
 @login_required

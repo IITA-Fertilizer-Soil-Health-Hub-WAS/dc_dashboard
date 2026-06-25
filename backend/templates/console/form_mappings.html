@@ -62,6 +62,23 @@
       <td></td>
     </tr>
   </template>
+  <div class="card" style="margin-top:1.2rem;">
+    <h3>Import mappings from CSV</h3>
+    <p class="subtle" style="font-size:.82rem;margin:.3rem 0 .6rem;">
+      Columns: <code>target, source, transform, required, order</code>. Multiple source paths in one cell are separated by <code>;</code>. A header row is optional. Imported rows are <strong>added</strong> to the list above.
+    </p>
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="import_csv">
+      <textarea name="csv" spellcheck="false" placeholder="ENID,intro/enumerator_id,DIRECT,true,0&#10;HHID,intro/hh;intro/barcode,COALESCE,true,1"
+                style="width:100%;min-height:120px;font-family:var(--mono);font-size:.8rem;border:1px solid var(--line);border-radius:8px;padding:.6rem;background:var(--surface-2);"></textarea>
+      <div style="display:flex;align-items:center;gap:.8rem;margin-top:.7rem;">
+        <button class="btn btn-open" type="submit">Import CSV</button>
+        <label class="subtle" style="font-size:.82rem;">…or upload: <input type="file" name="csv_file" accept=".csv"></label>
+      </div>
+    </form>
+  </div>
+
   <script>
     let newIdx = 0;
     function addRow(){

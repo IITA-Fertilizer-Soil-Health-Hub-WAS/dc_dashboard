@@ -14,6 +14,15 @@ def navigation(request):
     if user is None or not user.is_authenticated:
         return {"nav_use_cases": [], "console_groups": []}
 
+    from apps.review.models import ReviewState
+    from apps.submissions.models import Submission
+
+    my_queue_count = (
+        Submission.objects.filter(review__assigned_to=user)
+        .exclude(review__state__in=[ReviewState.APPROVED, ReviewState.DECLINED])
+        .count()
+    )
+
     console_groups = []
     active_group = None
     if user.is_staff:
@@ -28,4 +37,5 @@ def navigation(request):
         "nav_use_cases": visible_use_cases(user),
         "console_groups": console_groups,
         "console_active_group": active_group,
+        "my_queue_count": my_queue_count,
     }

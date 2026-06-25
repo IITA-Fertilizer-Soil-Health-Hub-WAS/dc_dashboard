@@ -8,7 +8,9 @@ app_name = "dashboards"
 
 urlpatterns = [
     path("", views.index, name="index"),
+    path("my-queue/", views.my_queue, name="my_queue"),
     path("usecase/<slug:code>/", views.usecase_detail, name="usecase"),
+    path("usecase/<slug:code>/audit.csv", views.export_audit, name="export_audit"),
     path("usecase/<slug:code>/tab/summary/", views.tab_summary, name="tab_summary"),
     path("usecase/<slug:code>/tab/enumerators/", views.tab_enumerators, name="tab_enumerators"),
     path("usecase/<slug:code>/tab/issues/", views.tab_issues, name="tab_issues"),

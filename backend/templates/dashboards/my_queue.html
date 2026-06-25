@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}My queue · EiA2030 DCMT{% endblock %}
+{% block crumbs %}<span class="sep">/</span><span class="cur">My queue</span>{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h2>My queue</h2>
+    <span class="pill">{{ count }}</span>
+  </div>
+  <p class="subtle" style="margin:.1rem 0 1.2rem;">Submissions assigned to you that still need review, across your use cases.</p>
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <table>
+      <thead>
+        <tr><th>Use case</th><th>Enumerator</th><th>Household/Plot</th><th>Event</th><th>State</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for s in submissions %}
+          <tr>
+            <td>{{ s.use_case.code }}</td>
+            <td>{{ s.enumerator.enid|default:"—" }}</td>
+            <td>{{ s.household.hhid|default:"—" }}</td>
+            <td>{{ s.event_key|default:"—" }}</td>
+            <td><span class="pill">{{ s.review.get_state_display }}</span></td>
+            <td style="text-align:right;">
+              <a class="btn btn-edit" style="text-decoration:none;"
+                 href="{% url 'dashboards:submission_review' s.use_case.code s.id %}">Review &amp; edit</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6"><div class="empty" style="border:none;">Nothing assigned to you. 🎉</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

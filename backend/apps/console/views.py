@@ -416,6 +416,10 @@ class FormMappingsView(StaffMixin, View):
         from apps.usecases.models import FieldMapping
 
         form = self._form(pk)
+
+        if request.POST.get("action") == "import_csv":
+            return self._import_csv(request, form)
+
         # Update or delete existing mappings.
         for m in list(form.mappings.all()):
             if request.POST.get(f"map-{m.pk}-delete"):
@@ -446,3 +450,42 @@ class FormMappingsView(StaffMixin, View):
             i += 1
         messages.success(request, f"Mappings saved{f' (+{created} new)' if created else ''}.")
         return redirect("console:form_mappings", pk=pk)
+
+    def _import_csv(self, request, form):
+        """Bulk-create mappings from CSV. Columns: target, source, transform,
+        required, order. Multiple source paths in one cell are separated by ';'."""
+        import csv
+        import io
+
+        from apps.usecases.models import FieldMapping
+
+        raw = request.POST.get("csv") or ""
+        if "csv_file" in request.FILES:
+            raw = request.FILES["csv_file"].read().decode("utf-8", "replace")
+        if not raw.strip():
+            messages.error(request, "No CSV provided.")
+            return redirect("console:form_mappings", pk=form.pk)
+
+        reader = csv.reader(io.StringIO(raw))
+        rows = list(reader)
+        # Skip an optional header row.
+        if rows and rows[0] and rows[0][0].strip().lower() in {"target", "target_field"}:
+            rows = rows[1:]
+
+        created = 0
+        for row in rows:
+            if not row or not row[0].strip():
+                continue
+            cols = (row + ["", "", "", ""])[:5]
+            target, source, transform, required, order = (c.strip() for c in cols)
+            FieldMapping.objects.create(
+                form=form,
+                target_field=target,
+                source_paths=[s.strip() for s in source.split(";") if s.strip()],
+                transform=(transform or "DIRECT").upper(),
+                required=required.lower() in {"1", "true", "yes", "y"},
+                order=int(order) if order.isdigit() else 0,
+            )
+            created += 1
+        messages.success(request, f"Imported {created} mapping(s) from CSV.")
+        return redirect("console:form_mappings", pk=form.pk)

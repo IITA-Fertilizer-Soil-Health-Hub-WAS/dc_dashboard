@@ -9,6 +9,8 @@
     <h2>{{ uc.name }}</h2>
     <span class="pill">{{ uc.code }}</span>
     {% if uc.countries %}<span class="subtle">{{ uc.countries|join:", " }}</span>{% endif %}
+    <span style="flex:1"></span>
+    <a class="subtle" style="font-size:.82rem;" href="{% url 'dashboards:export_audit' uc.code %}">Audit log (CSV)</a>
   </div>
 
   <nav class="tabs" id="tabs">
