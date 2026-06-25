@@ -90,6 +90,10 @@ def build_config(post) -> dict[str, Any]:
         fid = post.get(f"form-{i}-id")
         if not fid:
             continue
+        # Rows rendered from a discovered project carry 'present'; if such a row's
+        # include checkbox is unticked, skip it. Manual rows (no 'present') include.
+        if post.get(f"form-{i}-present") and not post.get(f"form-{i}-include"):
+            continue
         role = post.get(f"form-{i}-role") or "VALIDATION"
         mappings = []
         for t in CANONICAL_TARGETS:

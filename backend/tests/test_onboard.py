@@ -71,6 +71,28 @@ def test_wizard_renders(client, staff):
     resp = client.get("/manage/new-project/")
     assert resp.status_code == 200
     assert b"Onboard a project" in resp.content
+    # Discovery is async: the page must NOT block on a network call.
+    assert b"Discovering projects" in resp.content
+    assert b'id="project-list"' in resp.content
+
+
+def test_wizard_projects_partial_is_staff_only(client, django_user_model):
+    user = django_user_model.objects.create_user("u@x.org", "pw", is_active=True)
+    client.force_login(user)
+    assert client.get("/manage/new-project/projects/").status_code == 403
+
+
+def test_build_config_skips_unincluded_forms():
+    from apps.console.onboarding import build_config
+    # form 0 is a discovered row (present) but unticked -> skipped; form 1 included.
+    cfg = build_config({
+        "code": "X", "name": "X", "form_count": "2",
+        "form-0-present": "1", "form-0-id": "100", "form-0-role": "VALIDATION",
+        "form-1-present": "1", "form-1-include": "1", "form-1-id": "200",
+        "form-1-role": "ENUM_REG",
+    })
+    ids = [f["ona_form_id"] for f in cfg["forms"]]
+    assert ids == [200]  # only the included form
 
 
 def test_wizard_creates_use_case(client, staff):

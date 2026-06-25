@@ -10,21 +10,26 @@
   .fld label{display:block;font-size:.78rem;font-weight:600;color:var(--muted);margin-bottom:.25rem;}
   .fld input,.fld select{width:100%;padding:.5rem .65rem;border:1px solid var(--line);border-radius:8px;font-family:var(--sans);font-size:.9rem;background:var(--surface);}
   .fld input:focus,.fld select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-50);}
-  .formblock{border:1px solid var(--line);border-radius:10px;padding:1rem;margin-bottom:.8rem;background:var(--surface-2);}
-  .maps{display:grid;grid-template-columns:1fr 1fr;gap:.5rem .9rem;margin-top:.6rem;}
+  .formblock{border:1px solid var(--line);border-radius:10px;padding:.8rem 1rem;margin-bottom:.6rem;background:var(--surface-2);
+    display:grid;grid-template-columns:auto 1fr 180px auto;gap:.7rem;align-items:center;}
+  .formblock .fname{font-weight:600;}
+  .formblock .mapwrap{grid-column:1 / -1;}
+  .maps{display:grid;grid-template-columns:1fr 1fr;gap:.5rem .9rem;margin-top:.4rem;}
   .map-row label{display:block;font-size:.74rem;color:var(--muted);margin-bottom:.15rem;}
   .map-row select,.map-row input{width:100%;padding:.4rem .55rem;border:1px solid var(--line);border-radius:7px;font-size:.84rem;font-family:var(--mono);background:var(--surface);}
-  .mini{font-size:.82rem;padding:.35rem .7rem;}
+  .mini{font-size:.8rem;padding:.3rem .65rem;}
   .proj-list{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.5rem;}
   .proj-chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:.3rem .7rem;font-size:.8rem;cursor:pointer;}
   .proj-chip:hover{border-color:var(--brand);color:var(--brand);}
+  .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--brand);border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle;margin-right:.4rem;}
+  @keyframes sp{to{transform:rotate(360deg)}}
 </style>
 {% endblock %}
 {% block console_main %}
   <div class="page-head"><h2>Onboard a project to monitor</h2>
     <a class="subtle" href="{% url 'console:onboard_yaml' %}" style="margin-left:auto;font-size:.82rem;">Advanced: paste YAML →</a>
   </div>
-  <p class="subtle" style="margin:.1rem 0 1.2rem;">An ONA <strong>project</strong> becomes a use case; each <strong>form</strong> in it is an entry. Pick fields, we auto-map, then Sync.</p>
+  <p class="subtle" style="margin:.1rem 0 1.2rem;">Pick a project from your collection server, choose which forms to monitor, and we set the rest up.</p>
 
   {% if problems %}
     <div class="err"><strong>Couldn't onboard:</strong><ul style="margin:.4rem 0 0;">{% for p in problems %}<li>{{ p }}</li>{% endfor %}</ul></div>
@@ -34,30 +39,27 @@
     {% csrf_token %}
     <section>
       <h3><span class="num">1</span> Project</h3>
-      {% if discover_error %}
-        <p class="subtle" style="font-size:.82rem;">{{ discover_error }} — enter details manually.</p>
-      {% elif projects %}
-        <p class="subtle" style="font-size:.82rem;margin:.2rem 0 0;">Discovered projects — click to prefill:</p>
-        <div class="proj-list">
-          {% for p in projects %}
-            <span class="proj-chip" onclick="prefillProject(this)"
-                  data-name="{{ p.name }}"
-                  data-forms='[{% for f in p.forms %}{"id":"{{ f.id }}","title":"{{ f.title|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}]'>
-              {{ p.name }} <span class="subtle">({{ p.forms|length }})</span>
-            </span>
-          {% endfor %}
-        </div>
-      {% endif %}
-      <div class="grid2" style="margin-top:.7rem;">
+      <div class="grid2" style="margin-bottom:.6rem;">
         <div class="fld"><label>Collection server</label>
-          <select name="backend">
+          <select name="backend" id="f_backend">
             {% for val,lbl in backends %}<option value="{{ val }}" {% if posted.backend == val %}selected{% endif %}>{{ lbl }}</option>{% endfor %}
           </select>
         </div>
-        <div class="fld"><label>Server URL (blank = default)</label><input name="base_url" value="{{ posted.base_url }}" placeholder="https://api.ona.io"></div>
-        <div class="fld" style="grid-column:1 / -1;"><label>API token (blank = use configured)</label><input name="token" value="{{ posted.token }}" placeholder="paste a token to use a different account/server"></div>
+        <div class="fld"><label>Server URL (blank = default)</label><input name="base_url" id="f_baseurl" value="{{ posted.base_url }}" placeholder="https://api.ona.io"></div>
+        <div class="fld" style="grid-column:1 / -1;"><label>API token (blank = use configured)</label>
+          <div style="display:flex;gap:.5rem;">
+            <input name="token" id="f_token" value="{{ posted.token }}" placeholder="paste a token to use a different account/server" style="flex:1;">
+            <button type="button" class="btn btn-request mini" onclick="loadProjects()">Find projects</button>
+          </div>
+        </div>
       </div>
-      <div class="grid2" style="margin-top:.7rem;">
+      <!-- Projects load asynchronously so the wizard opens instantly. -->
+      <div id="project-list" hx-get="{% url 'console:wizard_projects' %}" hx-trigger="load"
+           hx-vals='js:{backend: document.getElementById("f_backend").value, base_url: document.getElementById("f_baseurl").value, token: document.getElementById("f_token").value}'>
+        <span class="subtle" style="font-size:.82rem;"><span class="spin"></span>Discovering projects on the server…</span>
+      </div>
+
+      <div class="grid2" style="margin-top:.8rem;">
         <div class="fld"><label>Use-case code *</label><input name="code" id="f_code" required value="{{ posted.code }}" placeholder="SNS-RWANDA"></div>
         <div class="fld"><label>Name *</label><input name="name" id="f_name" required value="{{ posted.name }}" placeholder="SNS Rwanda"></div>
         <div class="fld"><label>Countries (comma)</label><input name="countries" value="{{ posted.countries }}" placeholder="Rwanda"></div>
@@ -68,9 +70,9 @@
     </section>
 
     <section>
-      <h3><span class="num">2</span> Forms (entries)</h3>
-      <div id="forms"></div>
-      <button type="button" class="btn btn-request mini" onclick="addForm()">+ Add form</button>
+      <h3><span class="num">2</span> Forms to monitor</h3>
+      <p class="subtle" style="font-size:.8rem;margin:.1rem 0 .5rem;">Tick the forms to include and set each one's role. Pick a project above to populate these.</p>
+      <div id="forms"><p class="subtle" style="font-size:.82rem;">No project selected yet.</p></div>
       <input type="hidden" name="form_count" id="form_count" value="0">
     </section>
 
@@ -91,21 +93,17 @@
 
   <template id="formTpl">
     <div class="formblock" data-idx="">
-      <div class="grid2">
-        <div class="fld"><label>ONA form ID *</label>
-          <input name="form-IDX-id" class="fid" list="dlIDX" placeholder="752552" required>
-          <datalist id="dlIDX"></datalist>
-        </div>
-        <div class="fld"><label>Role</label>
-          <select name="form-IDX-role">
-            {% for val,lbl in roles %}<option value="{{ val }}">{{ lbl }}</option>{% endfor %}
-          </select>
-        </div>
-      </div>
-      <button type="button" class="btn btn-request mini" style="margin-top:.6rem;"
+      <input type="hidden" name="form-IDX-present" value="1">
+      <input type="hidden" name="form-IDX-id" class="fid" value="">
+      <input type="checkbox" name="form-IDX-include" value="1" checked title="Include this form">
+      <span class="fname">FORM NAME</span>
+      <select name="form-IDX-role" class="frole">
+        {% for val,lbl in roles %}<option value="{{ val }}">{{ lbl }}</option>{% endfor %}
+      </select>
+      <button type="button" class="btn btn-request mini"
         hx-post="{% url 'console:discover_fields' %}"
-        hx-target="next .mapwrap" hx-vals='js:{index: this.closest(".formblock").dataset.idx, form_id: this.closest(".formblock").querySelector(".fid").value, backend: document.querySelector("[name=backend]")?.value, base_url: document.querySelector("[name=base_url]")?.value, token: document.querySelector("[name=token]")?.value}'>
-        Discover &amp; auto-map fields
+        hx-target="next .mapwrap" hx-vals='js:{index: this.closest(".formblock").dataset.idx, form_id: this.closest(".formblock").querySelector(".fid").value, backend: document.getElementById("f_backend").value, base_url: document.getElementById("f_baseurl").value, token: document.getElementById("f_token").value}'>
+        Auto-map fields
       </button>
       <div class="mapwrap"></div>
     </div>
@@ -113,14 +111,24 @@
 
   <script>
     let formIdx = 0;
-    function addForm(prefillId, prefillTitle){
-      const tpl = document.getElementById('formTpl').innerHTML.replaceAll('IDX', formIdx);
+    function guessRole(title){
+      const t = (title || '').toLowerCase();
+      if (t.includes('enumerator') || t.includes('register enum')) return 'ENUM_REG';
+      if (t.includes('household') || t.includes('register_household') || t.includes('verify')) return 'HH_REG';
+      return 'VALIDATION';
+    }
+    function addFormRow(id, title){
+      const html = document.getElementById('formTpl').innerHTML.replaceAll('IDX', formIdx);
       const wrap = document.createElement('div');
-      wrap.innerHTML = tpl;
+      wrap.innerHTML = html;
       const block = wrap.firstElementChild;
       block.dataset.idx = formIdx;
+      block.querySelector('.fid').value = id || '';
+      block.querySelector('.fname').textContent = title || ('Form ' + (id||''));
+      const role = guessRole(title);
+      const sel = block.querySelector('.frole');
+      if (sel) sel.value = role;
       document.getElementById('forms').appendChild(block);
-      if (prefillId) block.querySelector('.fid').value = prefillId;
       htmx.process(block);
       formIdx++;
       document.getElementById('form_count').value = formIdx;
@@ -128,15 +136,23 @@
     function prefillProject(el){
       document.getElementById('f_name').value = el.dataset.name;
       if(!document.getElementById('f_code').value){
-        document.getElementById('f_code').value = el.dataset.name.toUpperCase().replace(/[^A-Z0-9]+/g,'-');
+        document.getElementById('f_code').value = el.dataset.name.toUpperCase().replace(/[^A-Z0-9]+/g,'-').replace(/^-|-$/g,'');
       }
       document.getElementById('forms').innerHTML = '';
       formIdx = 0;
       const forms = JSON.parse(el.dataset.forms || '[]');
-      if(forms.length){ forms.forEach(f => addForm(f.id, f.title)); }
-      else { addForm(); }
+      if(forms.length){ forms.forEach(f => addFormRow(f.id, f.title)); }
+      else { document.getElementById('forms').innerHTML = '<p class="subtle" style="font-size:.82rem;">This project has no forms.</p>'; }
     }
-    // Start with one empty form block.
-    addForm();
+    function loadProjects(){
+      const el = document.getElementById('project-list');
+      el.innerHTML = '<span class="subtle" style="font-size:.82rem;"><span class="spin"></span>Discovering…</span>';
+      htmx.ajax('GET', '{% url 'console:wizard_projects' %}', {target:'#project-list', values:{
+        refresh: '1',
+        backend: document.getElementById('f_backend').value,
+        base_url: document.getElementById('f_baseurl').value,
+        token: document.getElementById('f_token').value,
+      }});
+    }
   </script>
 {% endblock %}

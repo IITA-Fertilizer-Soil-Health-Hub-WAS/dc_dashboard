@@ -1,0 +1,16 @@
+{% if discover_error %}
+  <p class="subtle" style="font-size:.82rem;">{{ discover_error }} You can still type details below.</p>
+{% elif projects %}
+  <p class="subtle" style="font-size:.82rem;margin:.2rem 0 .4rem;">Pick a project to monitor:</p>
+  <div class="proj-list">
+    {% for p in projects %}
+      <span class="proj-chip" onclick="prefillProject(this)"
+            data-name="{{ p.name }}"
+            data-forms='[{% for f in p.forms %}{"id":"{{ f.id }}","title":"{{ f.title|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}]'>
+        {{ p.name }} <span class="subtle">({{ p.forms|length }} forms)</span>
+      </span>
+    {% endfor %}
+  </div>
+{% else %}
+  <p class="subtle" style="font-size:.82rem;">No projects found for this server/token.</p>
+{% endif %}

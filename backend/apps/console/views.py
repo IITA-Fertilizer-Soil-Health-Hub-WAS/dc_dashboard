@@ -229,26 +229,17 @@ class WizardView(StaffMixin, View):
     """Form-based onboarding: a *project* on a collection server becomes a use
     case; its *forms* become the entries. Auto-suggests mappings, then imports."""
 
-    def _projects(self, request):
-        try:
-            return _backend_from_request(request).discover_projects(), None
-        except NotImplementedError:
-            return [], "This backend doesn't support project discovery — enter details manually."
-        except Exception as exc:
-            return [], f"Could not reach the server: {exc}"
-
     def _ctx(self, request, **extra):
         from apps.ingestion.backends.registry import BACKEND_CHOICES
         from apps.usecases.models import FormDefinition
 
         from .onboarding import CANONICAL_TARGETS
 
-        projects, discover_error = self._projects(request)
+        # No network here — projects are discovered asynchronously (see
+        # WizardProjectsView) so the wizard opens instantly.
         ctx = {
             "groups": grouped(),
             "console_key": "use-cases",
-            "projects": projects,
-            "discover_error": discover_error,
             "roles": FormDefinition.Role.choices,
             "backends": BACKEND_CHOICES,
             "targets": CANONICAL_TARGETS,
@@ -279,6 +270,38 @@ class WizardView(StaffMixin, View):
             problems = [str(exc)]
         return render(request, "console/wizard.html",
                       self._ctx(request, problems=problems, posted=request.POST))
+
+
+class WizardProjectsView(StaffMixin, View):
+    """HTMX: discover projects on the selected server (loaded after the page so
+    the wizard opens instantly)."""
+
+    def get(self, request):
+        import hashlib
+
+        from django.core.cache import cache
+
+        src = request.GET
+        key = "wizard_projects:" + hashlib.sha256(
+            f"{src.get('backend')}|{src.get('base_url')}|{src.get('token')}".encode()
+        ).hexdigest()
+        # The "Find projects" button forces a fresh fetch; auto-load uses the cache.
+        if request.GET.get("refresh") != "1":
+            cached = cache.get(key)
+            if cached is not None:
+                return render(request, "console/_wizard_projects.html", cached)
+
+        projects, error = [], None
+        try:
+            projects = _backend_from_request(request).discover_projects()
+        except NotImplementedError:
+            error = "This backend doesn't support discovery — enter details manually."
+        except Exception as exc:
+            error = f"Could not reach the server: {exc}"
+        ctx = {"projects": projects, "discover_error": error}
+        if not error:
+            cache.set(key, ctx, 300)  # 5 min
+        return render(request, "console/_wizard_projects.html", ctx)
 
 
 class FieldDiscoveryView(StaffMixin, View):

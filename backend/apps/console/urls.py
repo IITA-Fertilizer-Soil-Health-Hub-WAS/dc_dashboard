@@ -12,6 +12,7 @@ urlpatterns = [
     path("writeback/", views.WriteBackQueueView.as_view(), name="writeback"),
     path("new-project/", views.WizardView.as_view(), name="onboard"),
     path("new-project/advanced/", views.OnboardProjectView.as_view(), name="onboard_yaml"),
+    path("new-project/projects/", views.WizardProjectsView.as_view(), name="wizard_projects"),
     path("new-project/fields/", views.FieldDiscoveryView.as_view(), name="discover_fields"),
     path("<slug:key>/", views.ConsoleListView.as_view(), name="list"),
     path("<slug:key>/new/", views.ConsoleFormView.as_view(), name="create"),
