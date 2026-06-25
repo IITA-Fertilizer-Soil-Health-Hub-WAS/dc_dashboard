@@ -1,0 +1,24 @@
+"""Root URL configuration."""
+from __future__ import annotations
+
+from django.contrib import admin
+from django.urls import include, path
+from django.views.generic import RedirectView
+
+from apps.accounts.views import LoginLandingView
+from apps.common.views import healthcheck
+
+# Auth0 is the only end-user auth path. Our /login/ landing is the single entry
+# point; allauth's local login/signup are shadowed with redirects to it (these
+# must precede the allauth include).
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("login/", LoginLandingView.as_view(), name="login"),
+    path("accounts/login/", RedirectView.as_view(pattern_name="login", query_string=True)),
+    path("accounts/signup/", RedirectView.as_view(pattern_name="login", query_string=True)),
+    path("accounts/", include("allauth.urls")),
+    path("healthz/", healthcheck, name="healthcheck"),
+    path("api/", include("apps.api.urls")),
+    path("manage/", include("apps.console.urls")),
+    path("", include("apps.dashboards.urls")),
+]

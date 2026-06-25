@@ -1,0 +1,65 @@
+[project]
+name = "eia-dcmt"
+version = "0.1.0"
+description = "EiA2030 Data Collection Monitoring Tool — Django redesign of the R Shiny dashboard"
+requires-python = ">=3.12"
+dependencies = [
+    "Django>=5.0,<5.2",
+    "psycopg[binary]>=3.1",
+    "django-environ>=0.11",
+    "djangorestframework>=3.15",
+    "django-guardian>=2.4",
+    "django-allauth>=0.63",
+    "PyJWT>=2.8",
+    "cryptography>=42",
+    "requests>=2.31",
+    "celery>=5.3",
+    "redis>=5.0",
+    "django-celery-beat>=2.6",
+    "httpx>=0.27",
+    "PyYAML>=6.0",
+    "plotly>=5.20",
+    "folium>=0.16",
+    "gunicorn>=21.2",
+    "whitenoise>=6.6",
+    "django-unfold==0.96.0",  # pinned: newer releases require Django >= 5.2
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-django>=4.8",
+    "factory-boy>=3.3",
+    "vcrpy>=6.0",
+    "ruff>=0.5",
+    "mypy>=1.10",
+    "django-stubs>=5.0",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["eia_dcmt*", "apps*", "plugins*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["migrations"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "DJ"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "eia_dcmt.settings.test"
+python_files = ["test_*.py", "tests.py"]
+addopts = "-q --reuse-db"
+
+[tool.mypy]
+plugins = ["mypy_django_plugin.main"]
+ignore_missing_imports = true
+
+[tool.django-stubs]
+django_settings_module = "eia_dcmt.settings.dev"
