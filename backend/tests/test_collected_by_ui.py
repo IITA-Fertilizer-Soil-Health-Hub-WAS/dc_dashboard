@@ -85,6 +85,49 @@ def test_audit_export_includes_collector(client, attributed):
     assert collector.user_id in body
 
 
+def test_collectors_ranking_lists_account(client, attributed):
+    uc, collector, coord = attributed
+    client.force_login(coord)
+    resp = client.get(reverse("dashboards:tab_enumerators", args=[uc.code]))
+    assert resp.status_code == 200
+    assert b"Collectors" in resp.content
+    assert collector.user_id.encode() in resp.content
+    assert b"Field Collector" in resp.content  # full_name in the collectors table
+
+
+def test_summary_attribution_coverage(client, attributed):
+    uc, collector, coord = attributed
+    client.force_login(coord)
+    resp = client.get(reverse("dashboards:tab_summary", args=[uc.code]))
+    assert resp.status_code == 200
+    # The single submission is attributed -> 100%.
+    assert b"100%" in resp.content
+    assert b"Attributed to a user" in resp.content
+    assert b"Identity coverage" in resp.content
+
+
+def test_attribution_zero_when_unlinked(client, django_user_model):
+    uc = UseCase.objects.create(code="ZERO", name="Zero")
+    Enumerator.objects.create(use_case=uc, enid="ENZ")  # not linked
+    form = FormDefinition.objects.create(
+        use_case=uc, ona_form_id=2, role=FormDefinition.Role.VALIDATION
+    )
+    for order, (t, s) in enumerate([("ENID", "enid"), ("event_key", "ev")]):
+        FieldMapping.objects.create(form=form, target_field=t, source_paths=[s], order=order)
+
+    class Fake:
+        def get_data(self, fid):
+            return [{"_uuid": "z1", "enid": "ENZ", "ev": "Event1"}]
+
+    sync_use_case(uc, client=Fake())
+    coord = django_user_model.objects.create_user("z@x.org", "pw", is_active=True)
+    UseCaseMembership.objects.create(user=coord, use_case=uc, role=Role.TRIAL_COORDINATOR)
+    client.force_login(coord)
+    resp = client.get(reverse("dashboards:tab_summary", args=[uc.code]))
+    assert resp.status_code == 200
+    assert b"0%" in resp.content
+
+
 def test_unlinked_enumerator_shows_placeholder(client, django_user_model):
     uc = UseCase.objects.create(code="NOLINK", name="No link")
     Enumerator.objects.create(use_case=uc, enid="ENX")  # no user

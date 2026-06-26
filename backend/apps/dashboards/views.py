@@ -9,7 +9,7 @@ from __future__ import annotations
 import csv
 
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
@@ -134,8 +134,26 @@ def tab_summary(request, code):
         "trend_html": submission_trend_html(submissions),
         "map_html": trials_map_html(households),
         "health": _health_counts(uc),
+        "attribution": _attribution_stats(uc),
     }
     return render(request, "dashboards/_summary.html", ctx)
+
+
+def _attribution_stats(uc) -> dict:
+    """How much of a use case's data traces to a registered platform account.
+
+    Tracks migration off the ONA-era ENID bridge toward stamped UserIDs — the
+    closer to 100%, the more of the data is owned by a known collector.
+    """
+    subs = Submission.objects.filter(use_case=uc)
+    total = subs.count()
+    attributed = subs.filter(collected_by__isnull=False).count()
+    return {
+        "total": total,
+        "attributed": attributed,
+        "unattributed": total - attributed,
+        "pct": round(attributed / total * 100) if total else 0,
+    }
 
 
 def _health_counts(uc) -> dict:
@@ -163,11 +181,22 @@ def tab_enumerators(request, code):
         .annotate(n=Count("submissions"))
         .order_by("-n")
     )
+    # Ranking by platform identity (collected_by), not ENID — the identity-first
+    # view of who collected what, spanning the ENID bridge and stamped UserIDs.
+    from apps.accounts.models import User
+
+    collectors = (
+        User.objects.annotate(
+            n=Count("collected_submissions", filter=Q(collected_submissions__use_case=uc))
+        )
+        .filter(n__gt=0)
+        .order_by("-n", "email")
+    )
     grid = build_event_grid(uc)
     return render(
         request,
         "dashboards/_enumerators.html",
-        {"uc": uc, "ranking": ranking, "grid": grid},
+        {"uc": uc, "ranking": ranking, "collectors": collectors, "grid": grid},
     )
 
 

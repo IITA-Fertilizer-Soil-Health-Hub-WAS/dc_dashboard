@@ -20,6 +20,24 @@
       </tbody>
     </table>
   </div>
+
+  <div class="card" style="flex:1; min-width:300px;">
+    <h3>Collectors <span class="subtle" style="font-weight:400;font-size:.8rem;">by platform account</span></h3>
+    <table>
+      <thead><tr><th>UserID</th><th>Name</th><th>Submissions</th></tr></thead>
+      <tbody>
+        {% for c in collectors %}
+          <tr>
+            <td class="mono" title="{{ c.email }}">{{ c.user_id }}</td>
+            <td>{{ c.full_name|default:c.email }}</td>
+            <td>{{ c.n }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="3" class="subtle">No submissions attributed to an account yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <div class="card" style="margin-top:1rem;">

@@ -2,6 +2,21 @@
   <div class="card infobox"><div class="n">{{ total_submissions }}</div><div class="l">Submissions</div></div>
   <div class="card infobox"><div class="n">{{ country }}</div><div class="l">Country</div></div>
   <div class="card infobox"><div class="n">{{ uc.code }}</div><div class="l">Use case</div></div>
+  <div class="card infobox" title="{{ attribution.attributed }} of {{ attribution.total }} submissions trace to a registered platform account">
+    <div class="n">{{ attribution.pct }}%</div><div class="l">Attributed to a user</div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:1rem;">
+  <h3 style="margin-bottom:.5rem;">Identity coverage</h3>
+  <p class="subtle" style="margin:0 0 .7rem;font-size:.82rem;">
+    {{ attribution.attributed }} of {{ attribution.total }} submissions trace to a
+    registered platform account
+    {% if attribution.unattributed %}· {{ attribution.unattributed }} still need a linked collector{% endif %}.
+  </p>
+  <div style="height:12px;border-radius:7px;background:var(--line);overflow:hidden;">
+    <div style="height:100%;width:{{ attribution.pct }}%;background:#3f9142;"></div>
+  </div>
 </div>
 
 <div class="card" style="margin-top:1rem;">
