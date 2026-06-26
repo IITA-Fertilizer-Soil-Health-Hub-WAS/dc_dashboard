@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from django.urls import path
 
-from . import views
+from . import team, views
 
 app_name = "dashboards"
 
@@ -10,6 +10,9 @@ urlpatterns = [
     path("", views.index, name="index"),
     path("overview/", views.overview, name="overview"),
     path("my-queue/", views.my_queue, name="my_queue"),
+    path("team/", team.team, name="team"),
+    path("team/grant/", team.team_grant, name="team_grant"),
+    path("team/revoke/", team.team_revoke, name="team_revoke"),
     path("usecase/<slug:code>/", views.usecase_detail, name="usecase"),
     path("usecase/<slug:code>/audit.csv", views.export_audit, name="export_audit"),
     path("usecase/<slug:code>/tab/summary/", views.tab_summary, name="tab_summary"),

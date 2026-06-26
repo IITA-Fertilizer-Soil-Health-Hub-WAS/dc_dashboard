@@ -1,7 +1,7 @@
 """Template context shared across all pages (the app shell needs it everywhere)."""
 from __future__ import annotations
 
-from apps.rbac.permissions import visible_use_cases
+from apps.rbac.permissions import can_manage_access, pending_users, visible_use_cases
 
 
 def navigation(request):
@@ -33,9 +33,13 @@ def navigation(request):
         if match is not None and match.app_name == "console":
             current = REGISTRY.get(match.kwargs.get("key"))
             active_group = current.group if current else None
+    manages_access = can_manage_access(user)
+    pending_count = pending_users().count() if manages_access else 0
     return {
         "nav_use_cases": visible_use_cases(user),
         "console_groups": console_groups,
         "console_active_group": active_group,
         "my_queue_count": my_queue_count,
+        "can_manage_access": manages_access,
+        "pending_approvals_count": pending_count,
     }

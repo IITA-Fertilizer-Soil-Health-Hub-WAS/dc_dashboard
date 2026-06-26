@@ -104,3 +104,162 @@ def visible_use_cases(user):
         | Q(country__region__memberships__user=user),
         is_active=True,
     ).distinct()
+
+
+# ---------------------------------------------------------------------------
+# Delegated administration: coordinators grant access within their own scope.
+#
+# Two independent limits bound every grant:
+#   1. SCOPE — you may only grant at a scope your coordinator authority covers
+#      (region covers its countries + use cases; country covers its use cases).
+#   2. ROLE CEILING — you may only assign a role at or below your own rank, and
+#      never Platform Admin (that is the Django superuser flag, set elsewhere).
+# can_grant() enforces both and is the single check every POST must pass.
+# ---------------------------------------------------------------------------
+
+# Higher number = more authority. Quality roles sit above field roles but below
+# coordinators. Platform Admin is off the scale and not grantable via the UI.
+ROLE_RANK: dict[str, int] = {
+    Role.PLATFORM_ADMIN: 100,
+    Role.REGIONAL_COORDINATOR: 80,
+    Role.COUNTRY_COORDINATOR: 70,
+    Role.TRIAL_COORDINATOR: 60,
+    Role.QUALITY_CHECK: 40,
+    Role.SURVEY_DOMAIN_EXPERT: 40,
+    Role.ENUMERATOR: 20,
+    Role.VIEWER: 10,
+}
+
+
+def _authority(user) -> tuple[set, set, set]:
+    """The (region_ids, country_ids, use_case_ids) a user has coordinator authority over."""
+    region_ids: set = set()
+    country_ids: set = set()
+    uc_ids: set = set()
+    rows = UseCaseMembership.objects.filter(user=user, role__in=COORDINATORS).values(
+        "region_id", "country_id", "use_case_id"
+    )
+    for r in rows:
+        if r["region_id"]:
+            region_ids.add(r["region_id"])
+        elif r["country_id"]:
+            country_ids.add(r["country_id"])
+        elif r["use_case_id"]:
+            uc_ids.add(r["use_case_id"])
+    return region_ids, country_ids, uc_ids
+
+
+def _max_grant_rank(user) -> int:
+    """The highest role rank a user is entitled to confer."""
+    if getattr(user, "is_platform_admin", False):
+        return ROLE_RANK[Role.PLATFORM_ADMIN]
+    roles = UseCaseMembership.objects.filter(user=user, role__in=COORDINATORS).values_list(
+        "role", flat=True
+    )
+    return max((ROLE_RANK.get(r, 0) for r in roles), default=0)
+
+
+def can_manage_access(user) -> bool:
+    """Whether a user can administer access at all (Platform Admin or any coordinator)."""
+    if not getattr(user, "is_authenticated", False) or not user.is_active:
+        return False
+    if getattr(user, "is_platform_admin", False):
+        return True
+    return UseCaseMembership.objects.filter(user=user, role__in=COORDINATORS).exists()
+
+
+def grantable_roles(user) -> list[str]:
+    """Roles `user` may assign — at or below their own rank, never Platform Admin."""
+    cap = _max_grant_rank(user)
+    if cap <= 0:
+        return []
+    return [
+        r for r in Role.values
+        if r != Role.PLATFORM_ADMIN and ROLE_RANK.get(r, 999) <= cap
+    ]
+
+
+def can_grant_at(user, scope_obj) -> bool:
+    """Whether `user`'s coordinator authority covers this scope (Region/Country/UseCase)."""
+    if getattr(user, "is_platform_admin", False):
+        return True
+    from apps.usecases.models import Country, Region, UseCase
+
+    region_ids, country_ids, uc_ids = _authority(user)
+    if isinstance(scope_obj, Region):
+        return scope_obj.id in region_ids
+    if isinstance(scope_obj, Country):
+        return scope_obj.id in country_ids or scope_obj.region_id in region_ids
+    if isinstance(scope_obj, UseCase):
+        if scope_obj.id in uc_ids:
+            return True
+        if scope_obj.country_id and scope_obj.country_id in country_ids:
+            return True
+        return bool(
+            scope_obj.country_id
+            and scope_obj.country.region_id in region_ids
+        )
+    return False
+
+
+def can_grant(user, scope_obj, role: str) -> bool:
+    """The single authority check: may `user` grant `role` at `scope_obj`?"""
+    if role == Role.PLATFORM_ADMIN:
+        return False
+    if not can_manage_access(user):
+        return False
+    if ROLE_RANK.get(role, 999) > _max_grant_rank(user):
+        return False
+    return can_grant_at(user, scope_obj)
+
+
+def grantable_scopes(user) -> dict:
+    """Scopes (regions/countries/use cases) `user` may grant within, for menus."""
+    from apps.usecases.models import Country, Region, UseCase
+
+    if getattr(user, "is_platform_admin", False):
+        return {
+            "regions": Region.objects.all(),
+            "countries": Country.objects.select_related("region").all(),
+            "use_cases": UseCase.objects.filter(is_active=True).select_related("country"),
+        }
+    region_ids, country_ids, uc_ids = _authority(user)
+    return {
+        "regions": Region.objects.filter(id__in=region_ids),
+        "countries": Country.objects.select_related("region").filter(
+            Q(id__in=country_ids) | Q(region_id__in=region_ids)
+        ),
+        "use_cases": UseCase.objects.filter(
+            Q(id__in=uc_ids)
+            | Q(country_id__in=country_ids)
+            | Q(country__region_id__in=region_ids),
+            is_active=True,
+        ).select_related("country"),
+    }
+
+
+def manageable_memberships(user):
+    """Memberships `user` may view/revoke — those whose scope their authority covers."""
+    if not can_manage_access(user):
+        return UseCaseMembership.objects.none()
+    qs = UseCaseMembership.objects.select_related(
+        "user", "use_case", "country", "region", "granted_by"
+    )
+    if getattr(user, "is_platform_admin", False):
+        return qs
+    region_ids, country_ids, uc_ids = _authority(user)
+    return qs.filter(
+        Q(region_id__in=region_ids)
+        | Q(country_id__in=country_ids)
+        | Q(country__region_id__in=region_ids)
+        | Q(use_case_id__in=uc_ids)
+        | Q(use_case__country_id__in=country_ids)
+        | Q(use_case__country__region_id__in=region_ids)
+    )
+
+
+def pending_users():
+    """Users awaiting approval (inactive). Visible to any access manager."""
+    from apps.accounts.models import User
+
+    return User.objects.filter(is_active=False).order_by("created_at")

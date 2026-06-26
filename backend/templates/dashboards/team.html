@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Team &amp; access · EiA2030 DCMT{% endblock %}
+{% block crumbs %}<span class="sep">/</span><span class="cur">Team &amp; access</span>{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h2>Team &amp; access</h2>
+    {% if pending %}<span class="pill" style="background:#fff5e0;color:#8a5a00;">{{ pending|length }} pending</span>{% endif %}
+  </div>
+  <p class="subtle" style="margin:.1rem 0 1.2rem;max-width:64ch;">
+    Approve new users and grant access. You can only grant within your own scope
+    and up to your own role — a tampered request is rejected, never downgraded.
+  </p>
+
+  {% if messages %}{% for msg in messages %}<div class="pill" style="margin-bottom:.7rem;">{{ msg }}</div>{% endfor %}{% endif %}
+
+  {# ---- Pending approvals ---- #}
+  {# Forms live outside the table; cells reference them via the HTML5 form= attribute. #}
+  {% for u in pending %}
+    <form id="approve-{{ u.pk }}" method="post" action="{% url 'dashboards:team_grant' %}">
+      {% csrf_token %}<input type="hidden" name="user" value="{{ u.pk }}">
+    </form>
+  {% endfor %}
+  <h3 style="margin:.4rem 0 .6rem;">Pending approval</h3>
+  <div class="card" style="padding:0;overflow:hidden;margin-bottom:1.6rem;">
+    <table>
+      <thead><tr><th>User</th><th>Grant scope</th><th>Role</th><th></th></tr></thead>
+      <tbody>
+        {% for u in pending %}
+          <tr>
+            <td><b>{{ u.full_name|default:u.email }}</b><br><span class="subtle mono">{{ u.email }}</span></td>
+            <td>
+              <select name="scope" form="approve-{{ u.pk }}" required class="search" style="max-width:260px;">
+                <option value="">Choose scope…</option>
+                {% for o in scope_options %}<option value="{{ o.value }}">{{ o.label }}</option>{% endfor %}
+              </select>
+            </td>
+            <td>
+              <select name="role" form="approve-{{ u.pk }}" required class="search" style="max-width:200px;">
+                <option value="">Choose role…</option>
+                {% for o in role_options %}<option value="{{ o.value }}">{{ o.label }}</option>{% endfor %}
+              </select>
+            </td>
+            <td style="text-align:right;">
+              <button class="btn btn-open" type="submit" form="approve-{{ u.pk }}">Approve &amp; grant</button>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4"><div class="empty" style="border:none;">No one is waiting for approval. 🎉</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# ---- Grant access to an existing user ---- #}
+  <h3 style="margin:.4rem 0 .6rem;">Grant access to an existing user</h3>
+  <div class="card" style="margin-bottom:1.6rem;">
+    <form method="post" action="{% url 'dashboards:team_grant' %}"
+          style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;">
+      {% csrf_token %}
+      <select name="user" required class="search" style="max-width:260px;">
+        <option value="">User…</option>
+        {% for u in active_users %}<option value="{{ u.pk }}">{{ u.email }}</option>{% endfor %}
+      </select>
+      <select name="scope" required class="search" style="max-width:260px;">
+        <option value="">Scope…</option>
+        {% for o in scope_options %}<option value="{{ o.value }}">{{ o.label }}</option>{% endfor %}
+      </select>
+      <select name="role" required class="search" style="max-width:200px;">
+        <option value="">Role…</option>
+        {% for o in role_options %}<option value="{{ o.value }}">{{ o.label }}</option>{% endfor %}
+      </select>
+      <button class="btn btn-open" type="submit">Grant</button>
+    </form>
+  </div>
+
+  {# ---- Access you administer ---- #}
+  <h3 style="margin:.4rem 0 .6rem;">Access you administer</h3>
+  <div class="card" style="padding:0;overflow:hidden;">
+    <table>
+      <thead><tr><th>User</th><th>Scope</th><th>Role</th><th>Granted by</th><th></th></tr></thead>
+      <tbody>
+        {% for m in memberships %}
+          <tr>
+            <td>{{ m.user.email }}</td>
+            <td>{{ m.scope }}</td>
+            <td><span class="pill">{{ m.get_role_display }}</span></td>
+            <td class="subtle">{{ m.granted_by.email|default:"—" }}</td>
+            <td style="text-align:right;">
+              <form method="post" action="{% url 'dashboards:team_revoke' %}"
+                    onsubmit="return confirm('Revoke {{ m.user.email }}: {{ m.get_role_display }} on {{ m.scope }}?');">
+                {% csrf_token %}
+                <input type="hidden" name="membership" value="{{ m.pk }}">
+                <button class="btn btn-request" type="submit"
+                        style="padding:.25rem .6rem;font-size:.76rem;">Revoke</button>
+              </form>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5"><div class="empty" style="border:none;">No memberships within your scope yet.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

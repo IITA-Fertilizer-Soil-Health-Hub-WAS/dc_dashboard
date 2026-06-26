@@ -209,6 +209,13 @@
           <span class="msym">assignment_ind</span>My queue
           {% if my_queue_count %}<span class="pill" style="margin-left:auto;font-size:.66rem;">{{ my_queue_count }}</span>{% endif %}
         </a>
+        {% if can_manage_access %}
+          <a href="{% url 'dashboards:team' %}" title="Approve users and grant access within your scope"
+             class="{% if request.resolver_match.url_name == 'team' %}active{% endif %}">
+            <span class="msym">groups</span>Team &amp; access
+            {% if pending_approvals_count %}<span class="pill" style="margin-left:auto;font-size:.66rem;">{{ pending_approvals_count }}</span>{% endif %}
+          </a>
+        {% endif %}
         <div class="lbl">Monitor</div>
         {% for uc in nav_use_cases %}
           <a href="{% url 'dashboards:usecase' uc.code %}"
