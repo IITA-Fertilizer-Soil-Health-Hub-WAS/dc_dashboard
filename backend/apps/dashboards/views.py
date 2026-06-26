@@ -8,9 +8,10 @@ from __future__ import annotations
 
 import csv
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
 
@@ -33,6 +34,17 @@ ACTION_SERVICES = {
     ReviewAction.QC_APPROVE: services.qc_approve,
     ReviewAction.REOPEN: services.reopen,
 }
+
+
+def style_preview(request):
+    """Dev-only component gallery — eyeball the redesign without signing in.
+
+    Gated on DEBUG, so it exists locally (settings.dev) and is a hard 404 in
+    staging/production. No authentication, by design, so it can't surface data.
+    """
+    if not settings.DEBUG:
+        raise Http404()
+    return render(request, "dashboards/style_preview.html")
 
 
 @login_required

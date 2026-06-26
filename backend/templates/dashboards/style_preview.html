@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Component preview · EiA2030 DCMT{% endblock %}
+{% block guest_content %}
+<div style="width:100%; max-width:1080px;">
+  <div class="page-head">
+    <h2>Component preview</h2>
+    <span class="pill neutral">dev only</span>
+  </div>
+  <p class="lede">A gallery of the redesigned UI — the same components used across
+    Team &amp; access, the dashboards, and onboarding. This page is unauthenticated
+    and only exists while <code>DEBUG</code> is on.</p>
+
+  <div style="display:grid; grid-template-columns:300px 1fr; gap:1.1rem; align-items:start;">
+
+    {# ---- the redesigned sidebar user card ---- #}
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div style="background:linear-gradient(170deg,var(--brand) 0%,var(--brand-900) 100%); padding:.85rem 1rem;">
+        <div class="userbox" style="border:none; padding:0;">
+          <div class="avatar">U</div>
+          <div class="who">
+            <b title="uma@institution.org · U-1A2B3C4D">Uma Coordinator</b>
+            <span class="org"><span class="msym">domain</span>Soil Health Hub</span>
+            <a href="#">Sign out</a>
+          </div>
+        </div>
+      </div>
+      <div style="padding:.7rem .9rem;">
+        <div class="subtle" style="font-size:.78rem;">Hub operator view shows</div>
+        <div class="userbox" style="border:none; padding:.4rem 0 0;">
+          <div class="avatar" style="background:var(--brand-50); color:var(--brand);">H</div>
+          <div class="who">
+            <b style="color:var(--ink);">Hub Operator</b>
+            <span class="org" style="color:#9a7a1c;"><span class="msym">hub</span>All institutions</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:1.1rem;">
+
+      <div class="card">
+        <div class="section" style="margin:0 0 .6rem;"><div class="st"><h3>Pills &amp; status</h3></div></div>
+        <div style="display:flex; gap:.5rem; flex-wrap:wrap; align-items:center;">
+          <span class="pill">default</span>
+          <span class="pill ok">100%</span>
+          <span class="pill info">in review</span>
+          <span class="pill warn">3 pending</span>
+          <span class="pill danger">failed</span>
+          <span class="pill gold">collaborator</span>
+          <span class="pill neutral">unlinked</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section" style="margin:0 0 .6rem;"><div class="st"><h3>Roles, scopes &amp; identity</h3></div></div>
+        <div style="display:flex; gap:.5rem; flex-wrap:wrap; align-items:center;">
+          <span class="chip role">Country Coordinator</span>
+          <span class="chip role">Enumerator</span>
+          <span class="chip scope"><span class="msym">category</span>SNS-RWANDA</span>
+          <span class="chip scope"><span class="msym">flag</span>Rwanda</span>
+          <span class="chip scope"><span class="msym">public</span>East Africa</span>
+          <span class="chip ext"><span class="msym">public</span>external</span>
+          <span class="uid">U-1A2B3C4D</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section" style="margin:0 0 .6rem;"><div class="st"><h3>Banners</h3></div></div>
+        <div style="display:flex; flex-direction:column; gap:.6rem;">
+          <div class="banner info"><span class="msym">info</span><div class="bx">Approved <b>aline@x.org</b> and granted Enumerator on SNS-RWANDA.</div></div>
+          <div class="banner gold"><span class="msym">shield_lock</span><div class="bx">They keep their own institution and only gain access to this one project — never your other data.</div></div>
+          <div class="banner warn"><span class="msym">warning</span><div class="bx">2 enumerators matched more than one account — link those manually.</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section" style="margin:0 0 .6rem;"><div class="st"><h3>Buttons</h3></div></div>
+        <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
+          <button class="btn btn-open">Grant</button>
+          <button class="btn btn-approve">Approve &amp; grant</button>
+          <button class="btn btn-edit">Invite</button>
+          <button class="btn btn-request">Search</button>
+          <button class="btn btn-decline">Revoke</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section" style="margin:0 0 .6rem;"><div class="st"><h3>Identity coverage</h3></div></div>
+        <div style="display:flex; flex-direction:column; gap:.7rem;">
+          <div><div class="meter"><i style="width:100%;"></i></div><div class="subtle" style="font-size:.78rem; margin-top:.25rem;">42 of 42 traced — 100%</div></div>
+          <div><div class="meter"><i style="width:64%;"></i></div><div class="subtle" style="font-size:.78rem; margin-top:.25rem;">27 of 42 traced — 15 need a linked collector</div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  {# ---- a faithful slice of the Team & access table ---- #}
+  <div class="section">
+    <div class="st"><h3><span class="msym">manage_accounts</span>Access you administer</h3>
+      <div class="desc">How the membership table now reads — avatar, scope chip, role chip, and an external badge for collaborators.</div></div>
+  </div>
+  <div class="card" style="padding:0; overflow:hidden;">
+    <table>
+      <thead><tr><th>Person</th><th>Scope</th><th>Role</th><th>Granted by</th><th></th></tr></thead>
+      <tbody>
+        <tr>
+          <td><div class="idcell"><span class="av">A</span><div><div class="nm">Aline Uwase</div><div class="sub">aline@x.org</div></div></div></td>
+          <td><span class="chip scope"><span class="msym">flag</span>Rwanda</span></td>
+          <td><span class="chip role">Country Coordinator</span></td>
+          <td class="subtle">hub@x.org</td>
+          <td style="text-align:right;"><button class="btn btn-decline" style="padding:.25rem .6rem; font-size:.76rem;">Revoke</button></td>
+        </tr>
+        <tr>
+          <td><div class="idcell"><span class="av">J</span><div><div class="nm">Jean Habimana</div><div class="sub">jean@partner.org</div></div></div></td>
+          <td><span class="chip scope"><span class="msym">category</span>SNS-RWANDA</span> <span class="chip ext"><span class="msym">public</span>external</span></td>
+          <td><span class="chip role">Viewer</span></td>
+          <td class="subtle">aline@x.org</td>
+          <td style="text-align:right;"><button class="btn btn-decline" style="padding:.25rem .6rem; font-size:.76rem;">Revoke</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="subtle" style="margin-top:1.4rem;">Sign in to see these in context on
+    <strong>Team &amp; access</strong>, the dashboards, and onboarding.</p>
+</div>
+{% endblock %}
