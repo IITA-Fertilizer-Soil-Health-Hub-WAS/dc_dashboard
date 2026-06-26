@@ -33,6 +33,8 @@ def navigation(request):
         if match is not None and match.app_name == "console":
             current = REGISTRY.get(match.kwargs.get("key"))
             active_group = current.group if current else None
+    from apps.accounts.services import claim_admin_available
+
     manages_access = can_manage_access(user)
     pending_count = pending_users().count() if manages_access else 0
     return {
@@ -42,4 +44,5 @@ def navigation(request):
         "my_queue_count": my_queue_count,
         "can_manage_access": manages_access,
         "pending_approvals_count": pending_count,
+        "show_claim_admin": claim_admin_available(user),
     }

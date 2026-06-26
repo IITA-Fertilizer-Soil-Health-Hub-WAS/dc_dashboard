@@ -60,10 +60,20 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
 
     def save_user(self, request, sociallogin, form=None):
         """Finish provisioning a first-time Auth0 user."""
+        from .models import User
+        from .services import platform_admin_exists
+
         user = super().save_user(request, sociallogin, form)
         self._apply_claims(user, sociallogin.account.extra_data or {})
         user.email_verified = True  # Auth0 verified the email
         if not REQUIRE_ADMIN_APPROVAL_FOR_AUTH0:
+            user.is_active = True
+        # Bootstrap: the very first account on a system with no Platform Admin is
+        # auto-activated so it can reach the in-app "claim Platform Admin" page
+        # (an inactive user never gets a logged-in session). Only the first
+        # account — everyone after stays pending until approved.
+        first_account = not User.objects.exclude(pk=user.pk).exists()
+        if first_account and not platform_admin_exists():
             user.is_active = True
         user.save()
         sync_memberships_from_eia_apps(user)

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Claim Platform Admin · EiA2030 DCMT{% endblock %}
+{% block crumbs %}<span class="sep">/</span><span class="cur">Claim Platform Admin</span>{% endblock %}
+{% block content %}
+  <div class="page-head"><h2>Claim Platform Admin</h2></div>
+  <div class="card" style="max-width:640px;">
+    <p style="margin:.2rem 0 1rem;">
+      This system has <strong>no Platform Admin</strong> yet. As the first signed-in
+      user, you can claim that role to finish setup. A Platform Admin can approve
+      users, grant access, manage use cases, and configure ingestion.
+    </p>
+    <p class="subtle" style="margin:0 0 1.2rem;">
+      This is a one-time action. Once you (or anyone) claims it, this page closes
+      permanently — further admins are promoted from within the app under
+      <em>Team &amp; access</em>.
+    </p>
+    <form method="post">
+      {% csrf_token %}
+      <div style="display:flex;gap:.7rem;align-items:center;">
+        <button class="btn btn-open" type="submit">Yes, make me Platform Admin</button>
+        <a class="subtle" href="{% url 'dashboards:index' %}">Not now</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}

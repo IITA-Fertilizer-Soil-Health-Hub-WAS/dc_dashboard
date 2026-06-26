@@ -271,6 +271,16 @@
         </nav>
         <span class="spacer"></span>
       </header>
+      {% if show_claim_admin %}
+        <div style="margin:1rem 1.4rem 0;padding:.9rem 1.1rem;border:1px solid var(--gold);
+                    background:#fff8e6;border-radius:10px;display:flex;align-items:center;gap:1rem;">
+          <span class="msym" style="color:#8a5a00;">shield_person</span>
+          <div style="flex:1;">
+            <b>Finish setup</b> — no Platform Admin exists yet. As the first user you can claim it.
+          </div>
+          <a class="btn btn-open" style="text-decoration:none;" href="{% url 'claim_admin' %}">Claim Platform Admin</a>
+        </div>
+      {% endif %}
       <main class="content">{% block content %}{% endblock %}</main>
     </div>
   </div>
