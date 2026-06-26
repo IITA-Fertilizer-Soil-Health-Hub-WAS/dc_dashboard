@@ -23,6 +23,7 @@ from apps.rbac.permissions import (
     grantable_roles,
     grantable_scopes,
     manageable_memberships,
+    organization_of,
     pending_users,
 )
 
@@ -71,12 +72,17 @@ def team(request):
     memberships = manageable_memberships(request.user).order_by(
         "user__email", "role"
     )
+    # Existing users you can grant to: only your own institution's people (a hub
+    # operator with no org spans all). Pending users have no org yet.
+    active = User.objects.filter(is_active=True)
+    if request.user.organization_id:
+        active = active.filter(organization_id=request.user.organization_id)
     ctx = {
         "pending": pending_users(),
         "memberships": memberships,
         "scope_options": _scope_options(request.user),
         "role_options": _role_options(request.user),
-        "active_users": User.objects.filter(is_active=True).order_by("email"),
+        "active_users": active.order_by("email"),
     }
     return render(request, "dashboards/team.html", ctx)
 
@@ -104,19 +110,34 @@ def team_grant(request):
     if not can_grant(request.user, scope_obj, role):
         raise PermissionDenied("That grant exceeds your authority.")
 
+    # Tenant boundary: the scope belongs to an organization, and a user belongs
+    # to exactly one. Never attach a user to another institution's data.
+    scope_org_id = organization_of(scope_obj)
+    if target.organization_id and scope_org_id and target.organization_id != scope_org_id:
+        raise PermissionDenied("That user belongs to a different institution.")
+
     field = _SCOPE_FIELD[request.POST["scope"].split(":", 1)[0]]
     _, created = UseCaseMembership.objects.get_or_create(
         user=target, role=role, **{field: scope_obj},
         defaults={"granted_by": request.user},
     )
 
+    # Bind the user to this institution on their first grant (approval).
+    if scope_org_id and not target.organization_id:
+        target.organization_id = scope_org_id
+
     newly_approved = False
     if not target.is_active:
         target.is_active = True
         target.approved_by = request.user
         target.approved_at = timezone.now()
-        target.save(update_fields=["is_active", "approved_by", "approved_at", "updated_at"])
+        target.save(update_fields=[
+            "is_active", "approved_by", "approved_at", "organization", "updated_at",
+        ])
         newly_approved = True
+    elif scope_org_id and target.organization_id == scope_org_id:
+        # Already active but org may have just been set above.
+        target.save(update_fields=["organization", "updated_at"])
 
     if newly_approved:
         messages.success(request, f"Approved {target.email} and granted {role} on {scope_obj}.")

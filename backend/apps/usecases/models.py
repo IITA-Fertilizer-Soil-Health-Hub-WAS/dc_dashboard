@@ -17,15 +17,42 @@ from apps.common.models import BaseModel
 # (prod, where JSONField is jsonb). These lists are read whole, not queried.
 
 
+class Organization(BaseModel):
+    """A tenant — one institution using the platform. The top of the ownership
+    tree: every region, use case, user, and (through them) every enumerator and
+    submission belongs to exactly one Organization. Data never crosses this
+    boundary — the scoping facade filters by it so one institution can never see
+    another's data (see apps.rbac.permissions). On a self-hosted single-tenant
+    deployment there is just one Organization and everything joins it implicitly.
+    """
+
+    code = models.SlugField(max_length=32, unique=True)
+    name = models.CharField(max_length=255)
+    is_active = models.BooleanField(default=True)
+    # Reserved for the database-per-tenant promotion path: the alias of the
+    # Django database this org's data lives in ("default" = the shared DB).
+    database_alias = models.CharField(max_length=64, default="default")
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class Region(BaseModel):
     """A geographic region grouping countries (e.g. West Africa). Drives the
     coordinator hierarchy: a Regional Coordinator oversees all its countries."""
 
-    code = models.SlugField(max_length=32, unique=True)
+    organization = models.ForeignKey(
+        Organization, null=True, blank=True, on_delete=models.CASCADE, related_name="regions"
+    )
+    code = models.SlugField(max_length=32)
     name = models.CharField(max_length=128)
 
     class Meta:
         ordering = ["name"]
+        unique_together = ("organization", "code")
 
     def __str__(self) -> str:
         return self.name
@@ -51,6 +78,12 @@ class UseCase(BaseModel):
     """An independent project implementation (e.g. SNS-RWANDA, KALRO, BioSSA)."""
 
     code = models.SlugField(max_length=64, unique=True)  # "SNS-RWANDA"
+    # The tenant this project belongs to. Authoritative even when country is
+    # unset, so isolation never depends on the geo hierarchy being filled in.
+    organization = models.ForeignKey(
+        "Organization", null=True, blank=True, on_delete=models.CASCADE,
+        related_name="use_cases",
+    )
     country = models.ForeignKey(
         "Country", null=True, blank=True, on_delete=models.SET_NULL, related_name="use_cases"
     )

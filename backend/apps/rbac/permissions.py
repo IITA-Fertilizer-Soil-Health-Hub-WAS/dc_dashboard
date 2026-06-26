@@ -96,14 +96,32 @@ def visible_use_cases(user):
     if not getattr(user, "is_authenticated", False):
         return UseCase.objects.none()
     if getattr(user, "is_platform_admin", False):
-        return UseCase.objects.filter(is_active=True)
+        return UseCase.objects.filter(is_active=True)  # hub operator spans tenants
     # A membership at any scope level grants visibility to the use cases beneath it.
-    return UseCase.objects.filter(
+    qs = UseCase.objects.filter(
         Q(memberships__user=user)
         | Q(country__memberships__user=user)
         | Q(country__region__memberships__user=user),
         is_active=True,
     ).distinct()
+    # Tenant guard: never return another institution's use cases, even if a
+    # membership somehow pointed across the boundary.
+    if getattr(user, "organization_id", None):
+        qs = qs.filter(organization_id=user.organization_id)
+    return qs
+
+
+def organization_of(scope_obj):
+    """The Organization id that owns a scope object (Region / Country / UseCase)."""
+    from apps.usecases.models import Country, Region, UseCase
+
+    if isinstance(scope_obj, Region):
+        return scope_obj.organization_id
+    if isinstance(scope_obj, Country):
+        return scope_obj.region.organization_id
+    if isinstance(scope_obj, UseCase):
+        return scope_obj.organization_id
+    return None
 
 
 # ---------------------------------------------------------------------------

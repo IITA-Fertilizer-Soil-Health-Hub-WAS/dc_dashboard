@@ -83,6 +83,13 @@ def import_config(data: dict[str, Any]) -> UseCase:
         raise ConfigError("use_case.code is required")
 
     uc, created = UseCase.objects.get_or_create(code=code, defaults={"name": meta.get("name", code)})
+    # Every use case belongs to a tenant: honour an explicit organization code,
+    # else fall back to the default org (single-tenant deployments).
+    from apps.usecases.tenancy import resolve_organization
+
+    org = resolve_organization(meta.get("organization"))
+    if org is not None and uc.organization_id is None:
+        uc.organization = org
     uc.name = meta.get("name", uc.name)
     uc.is_active = meta.get("is_active", True)
     uc.countries = meta.get("countries", [])

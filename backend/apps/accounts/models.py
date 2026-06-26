@@ -47,6 +47,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     # Stable, human-readable platform identity. The mobile app stamps this on each
     # submission so a collector's data links to their account (see collected_by).
     user_id = models.CharField(max_length=16, unique=True, blank=True)
+    # The institution this user belongs to (one user → one organization). A hub
+    # operator (superuser) has none and spans all tenants. Set when the user is
+    # first granted access (their first membership's scope determines the org).
+    organization = models.ForeignKey(
+        "usecases.Organization", null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="users",
+    )
     email = models.EmailField(unique=True)
     full_name = models.CharField(max_length=255, blank=True)
     phone = models.CharField(max_length=32, blank=True)
