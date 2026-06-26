@@ -15,6 +15,48 @@
 
   {% if messages %}{% for msg in messages %}<div class="banner info" style="margin-bottom:.8rem;"><span class="msym">info</span><div class="bx">{{ msg }}</div></div>{% endfor %}{% endif %}
 
+  {# ---- Self-service access requests ---- #}
+  {% if access_requests %}
+    {% for r in access_requests %}
+      <form id="req-{{ r.pk }}" method="post" action="{% url 'dashboards:team_request_decision' %}">
+        {% csrf_token %}<input type="hidden" name="request" value="{{ r.pk }}">
+      </form>
+    {% endfor %}
+    <div class="section">
+      <div class="st">
+        <h3><span class="msym">pending_actions</span>Access requests</h3>
+        <div class="desc">People asking to join a project you administer. Approve with a role, or decline.</div>
+      </div>
+    </div>
+    <div class="card" style="padding:0; overflow:hidden; margin-bottom:1.6rem;">
+      <table>
+        <thead><tr><th>Person</th><th>Project</th><th>Role</th><th></th></tr></thead>
+        <tbody>
+          {% for r in access_requests %}
+            <tr>
+              <td>
+                <div class="idcell">
+                  <span class="av">{{ r.user.full_name|default:r.user.email|slice:":1"|upper }}</span>
+                  <div><div class="nm">{{ r.user.full_name|default:r.user.email }}</div><div class="sub">{{ r.user.email }}</div></div>
+                </div>
+              </td>
+              <td><span class="chip scope"><span class="msym">category</span>{{ r.use_case.code }}</span></td>
+              <td>
+                <select name="role" form="req-{{ r.pk }}" class="input" style="max-width:190px;">
+                  {% for o in role_options %}<option value="{{ o.value }}" {% if o.value == 'VIEWER' %}selected{% endif %}>{{ o.label }}</option>{% endfor %}
+                </select>
+              </td>
+              <td style="text-align:right; white-space:nowrap;">
+                <button class="btn btn-approve" type="submit" form="req-{{ r.pk }}" name="decision" value="approve">Approve</button>
+                <button class="btn btn-decline" type="submit" form="req-{{ r.pk }}" name="decision" value="decline" style="margin-left:.3rem;">Decline</button>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+
   {# ---- Pending approvals ---- #}
   {% for u in pending %}
     <form id="approve-{{ u.pk }}" method="post" action="{% url 'dashboards:team_grant' %}">

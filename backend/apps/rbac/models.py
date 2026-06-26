@@ -92,3 +92,45 @@ class UseCaseMembership(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.user} @ {self.scope} = {self.role}"
+
+
+class UseCaseAccessRequest(BaseModel):
+    """A user's self-service request to join a use case they can see in their
+    institution. A coordinator with authority over that use case approves (which
+    creates the membership) or declines it from Team & access."""
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        APPROVED = "APPROVED", "Approved"
+        DECLINED = "DECLINED", "Declined"
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="access_requests"
+    )
+    use_case = models.ForeignKey(
+        UseCase, on_delete=models.CASCADE, related_name="access_requests"
+    )
+    note = models.TextField(blank=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="decided_access_requests",
+    )
+    decided_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            # At most one open request per user per use case.
+            models.UniqueConstraint(
+                fields=["user", "use_case"],
+                condition=Q(status="PENDING"),
+                name="uniq_pending_access_request",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.user} -> {self.use_case} ({self.status})"

@@ -213,6 +213,14 @@
     .banner.gold .msym{color:#9a7a1c;}
     .banner.warn{background:#fff4dd; border-color:rgba(200,140,20,.34); color:#7a5200;}
 
+    /* ---------- Segmented control (link tabs) ---------- */
+    .tabs{display:inline-flex; gap:.2rem; padding:.25rem; background:var(--surface-2);
+      border:1px solid var(--line); border-radius:10px;}
+    .tabs .seg{padding:.4rem .85rem; border-radius:7px; font-size:.84rem; font-weight:600;
+      color:var(--muted); text-decoration:none;}
+    .tabs .seg:hover{color:var(--ink);}
+    .tabs .seg.on{color:var(--brand); background:var(--surface); box-shadow:var(--shadow-sm);}
+
     /* ---------- Inline form controls ---------- */
     .input{padding:.5rem .68rem; border:1px solid var(--line); border-radius:8px; font-family:var(--sans);
       font-size:.88rem; background:var(--surface); color:var(--ink); max-width:100%;}
@@ -279,6 +287,11 @@
           </a>
         {% endif %}
         <div class="lbl">Monitor</div>
+        <a href="{% url 'dashboards:projects' %}" title="Browse and search all projects"
+           class="{% if request.resolver_match.url_name == 'projects' or request.resolver_match.url_name == 'index' %}active{% endif %}">
+          <span class="msym">grid_view</span>Projects
+          {% if nav_use_cases_total %}<span class="pill neutral" style="margin-left:auto;font-size:.66rem;">{{ nav_use_cases_total }}</span>{% endif %}
+        </a>
         {% for uc in nav_use_cases %}
           <a href="{% url 'dashboards:usecase' uc.code %}"
              title="Review submissions for {{ uc.name }}"
@@ -286,8 +299,13 @@
             <span class="msym">monitoring</span>{{ uc.name }}
           </a>
         {% empty %}
-          <div class="muted-note">No use cases assigned yet.</div>
+          <div class="muted-note">No projects yet — <a href="{% url 'dashboards:projects' %}?scope=all" style="color:#cfe2d6;text-decoration:underline;">browse to request access</a>.</div>
         {% endfor %}
+        {% if nav_use_cases_total > 7 %}
+          <a href="{% url 'dashboards:projects' %}" class="nav-back" style="font-size:.82rem;">
+            <span class="msym">more_horiz</span>All {{ nav_use_cases_total }} projects →
+          </a>
+        {% endif %}
         {% if user.is_staff %}
           {% comment %}Management folds into collapsed groups so the rail stays focused on monitoring; only the group you're in auto-expands.{% endcomment %}
           <div class="lbl" style="margin-top:.5rem;">Administration</div>

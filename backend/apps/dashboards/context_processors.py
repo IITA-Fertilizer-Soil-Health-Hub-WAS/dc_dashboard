@@ -36,9 +36,24 @@ def navigation(request):
     from apps.accounts.services import claim_admin_available
 
     manages_access = can_manage_access(user)
-    pending_count = pending_users().count() if manages_access else 0
+    pending_count = 0
+    if manages_access:
+        from apps.rbac.models import UseCaseAccessRequest
+        from apps.rbac.permissions import grantable_scopes
+
+        grant_uc = grantable_scopes(user)["use_cases"].values_list("id", flat=True)
+        pending_count = pending_users().count() + UseCaseAccessRequest.objects.filter(
+            status=UseCaseAccessRequest.Status.PENDING, use_case_id__in=list(grant_uc)
+        ).count()
+
+    # The sidebar shows a handful of the user's projects; the Projects page is the
+    # scalable directory (search / filter / paginate) for the rest.
+    visible = visible_use_cases(user)
+    nav_use_cases = list(visible[:7])
+    nav_use_cases_total = visible.count()
     return {
-        "nav_use_cases": visible_use_cases(user),
+        "nav_use_cases": nav_use_cases,
+        "nav_use_cases_total": nav_use_cases_total,
         "console_groups": console_groups,
         "console_active_group": active_group,
         "my_queue_count": my_queue_count,

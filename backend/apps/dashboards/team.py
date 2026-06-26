@@ -16,7 +16,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.accounts.models import User
-from apps.rbac.models import Role, UseCaseMembership
+from apps.rbac.models import Role, UseCaseAccessRequest, UseCaseMembership
 from apps.rbac.permissions import (
     can_grant,
     can_manage_access,
@@ -86,15 +86,64 @@ def team(request):
     active = User.objects.filter(is_active=True)
     if request.user.organization_id:
         active = active.filter(organization_id=request.user.organization_id)
+    # Self-service join requests on the use cases this person administers.
+    grantable_uc_ids = grantable_scopes(request.user)["use_cases"].values_list("id", flat=True)
+    access_requests = (
+        UseCaseAccessRequest.objects.filter(
+            status=UseCaseAccessRequest.Status.PENDING, use_case_id__in=list(grantable_uc_ids)
+        )
+        .select_related("user", "use_case")
+        .order_by("created_at")
+    )
     ctx = {
         "pending": pending_users(),
         "memberships": memberships,
+        "access_requests": access_requests,
         "scope_options": _scope_options(request.user),
         "role_options": _role_options(request.user),
         "use_case_options": _use_case_options(request.user),
         "active_users": active.order_by("email"),
     }
     return render(request, "dashboards/team.html", ctx)
+
+
+@require_POST
+@login_required
+def team_request_decision(request):
+    """Approve (grant a role) or decline a self-service access request."""
+    _require_access(request.user)
+    req = get_object_or_404(
+        UseCaseAccessRequest, pk=request.POST.get("request"),
+        status=UseCaseAccessRequest.Status.PENDING,
+    )
+    decision = request.POST.get("decision")
+
+    if decision == "approve":
+        role = request.POST.get("role") or Role.VIEWER
+        if role not in dict(Role.choices) or not can_grant(request.user, req.use_case, role):
+            raise PermissionDenied("That grant exceeds your authority.")
+        UseCaseMembership.objects.get_or_create(
+            user=req.user, use_case=req.use_case, role=role,
+            defaults={"granted_by": request.user},
+        )
+        if not req.user.organization_id and req.use_case.organization_id:
+            req.user.organization_id = req.use_case.organization_id
+            req.user.save(update_fields=["organization", "updated_at"])
+        req.status = UseCaseAccessRequest.Status.APPROVED
+        messages.success(request, f"Granted {req.user.email} {role} on {req.use_case.code}.")
+    elif decision == "decline":
+        # Only someone with authority over the use case may decline it.
+        if not can_grant(request.user, req.use_case, Role.VIEWER):
+            raise PermissionDenied("Outside your authority.")
+        req.status = UseCaseAccessRequest.Status.DECLINED
+        messages.info(request, f"Declined {req.user.email}'s request for {req.use_case.code}.")
+    else:
+        return redirect("dashboards:team")
+
+    req.decided_by = request.user
+    req.decided_at = timezone.now()
+    req.save(update_fields=["status", "decided_by", "decided_at", "updated_at"])
+    return redirect("dashboards:team")
 
 
 @require_POST

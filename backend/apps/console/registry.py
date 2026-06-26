@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from apps.accounts.models import User
-from apps.rbac.models import UseCaseMembership
+from apps.rbac.models import UseCaseAccessRequest, UseCaseMembership
 from apps.submissions.models import Enumerator, Household, Submission
 from apps.usecases.models import (
     Country,
@@ -128,6 +128,11 @@ _ENTRIES: list[Managed] = [
             form_fields=["user", "use_case", "country", "region", "role"],
             search_fields=["user__email", "use_case__code"], icon="group",
             description="Who can access which use case / country / region, and their role."),
+    Managed("access-requests", UseCaseAccessRequest, "Access requests", "Access",
+            list_display=["user", "use_case", "status", "decided_by", "decided_at",
+                          "created_at"],
+            search_fields=["user__email", "use_case__code"], readonly=True, icon="pending_actions",
+            description="Self-service requests to join a project (read-only)."),
     # ---- Field data: the records being monitored ----
     Managed("enumerators", Enumerator, "Enumerators", "Field data",
             list_display=["use_case", "enid", "first_name", "surname", "user", "is_test"],
@@ -173,6 +178,7 @@ ORG_FILTER_PATHS: dict[str, str] = {
     "households": "use_case__organization",
     "submissions": "use_case__organization",
     "validation-flags": "submission__use_case__organization",
+    "access-requests": "use_case__organization",
 }
 
 # Group order for sidebar rendering.
