@@ -20,6 +20,7 @@ _SERVICE = {
     ReviewAction.OPEN_REVIEW: services.open_review,
     ReviewAction.REQUEST_EDIT: services.request_edit,
     ReviewAction.DECLINE: services.decline,
+    ReviewAction.ENDORSE: services.endorse,
     ReviewAction.QC_APPROVE: services.qc_approve,
     ReviewAction.REOPEN: services.reopen,
     ReviewAction.COMMENT: services.comment,

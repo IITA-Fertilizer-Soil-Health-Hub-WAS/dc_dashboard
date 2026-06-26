@@ -60,6 +60,9 @@ def _transition(
 
     if transition.to_state is not None:
         review.state = to_state
+    if action == ReviewAction.ENDORSE:
+        review.endorsed_by = user
+        review.endorsed_at = timezone.now()
     if action == ReviewAction.QC_APPROVE:
         review.qc_signed_by = user
         review.qc_signed_at = timezone.now()
@@ -83,7 +86,23 @@ def decline(user, submission, note: str = "") -> Review:
     return _transition(user=user, submission=submission, action=ReviewAction.DECLINE, note=note)
 
 
+def endorse(user, submission, note: str = "") -> Review:
+    """Gate 1: a Trial/Country Coordinator endorses, sending the submission on for
+    final validation (QC_PENDING)."""
+    return _transition(user=user, submission=submission, action=ReviewAction.ENDORSE, note=note)
+
+
 def qc_approve(user, submission, note: str = "") -> Review:
+    """Gate 2: a Regional Coordinator gives final validation -> APPROVED.
+
+    Two-person rule: the validator may not be the same person who endorsed at
+    Gate 1 (a Platform Admin break-glass aside)."""
+    review = get_or_create_review(submission)
+    same_person = review.endorsed_by_id and review.endorsed_by_id == getattr(user, "id", None)
+    if same_person and not getattr(user, "is_superuser", False):
+        raise ReviewPermissionDenied(
+            "The final validator must be different from the coordinator who endorsed."
+        )
     review = _transition(
         user=user, submission=submission, action=ReviewAction.QC_APPROVE, note=note
     )

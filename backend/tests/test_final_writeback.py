@@ -13,6 +13,12 @@ from apps.usecases.models import FormDefinition, UseCase
 pytestmark = pytest.mark.django_db
 
 
+def _approve(user, submission):
+    """Take a submission through both review gates (a superuser may do both)."""
+    services.endorse(user, submission)
+    return services.qc_approve(user, submission)
+
+
 @pytest.fixture
 def coordinator(django_user_model):
     return django_user_model.objects.create_superuser("c@x.org", "pw")
@@ -33,21 +39,21 @@ def submission():
 def test_only_approved_in_final_dataset(submission, coordinator):
     uc = submission.use_case
     assert approved_submissions(uc).count() == 0  # not yet approved
-    services.qc_approve(coordinator, submission)
+    _approve(coordinator, submission)
     assert approved_submissions(uc).count() == 1
 
 
 def test_final_rows_use_authoritative_values(submission, coordinator):
     # Edit a value, then approve — final data must reflect the edited value.
     services.edit_value(coordinator, submission, field_key="ENID", new_value="EN1-FIXED")
-    services.qc_approve(coordinator, submission)
+    _approve(coordinator, submission)
     _, keys, rows = final_rows(submission.use_case)
     assert rows[0]["values"]["ENID"] == "EN1-FIXED"
     assert rows[0]["edited"] == 1
 
 
 def test_export_final_csv(client, coordinator, submission):
-    services.qc_approve(coordinator, submission)
+    _approve(coordinator, submission)
     client.force_login(coordinator)
     resp = client.get(f"/usecase/{submission.use_case.code}/final.csv")
     assert resp.status_code == 200
@@ -122,6 +128,6 @@ def test_approve_triggers_writeback(submission, coordinator, settings, monkeypat
             return WriteResult(ok=True, message="ok")
 
     monkeypatch.setattr(writeback, "get_backend_for", lambda uc: WritableBackend())
-    services.qc_approve(coordinator, submission)
+    _approve(coordinator, submission)
     submission.refresh_from_db()
     assert submission.writeback_status == Submission.WriteBackStatus.SENT

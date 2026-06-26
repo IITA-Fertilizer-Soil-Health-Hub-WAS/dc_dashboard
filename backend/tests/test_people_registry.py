@@ -78,7 +78,8 @@ def test_country_coordinator_has_coordinator_powers(django_user_model, use_case)
     UseCaseMembership.objects.create(user=u, use_case=use_case, role=Role.COUNTRY_COORDINATOR)
     assert user_can(u, "decline", use_case)
     assert user_can(u, "edit", use_case)
-    assert user_can(u, "qc_approve", use_case)  # coordinators can approve too
+    assert user_can(u, "endorse", use_case)  # Gate 1
+    assert not user_can(u, "final_approve", use_case)  # Gate 2 is Regional's
 
 
 def test_regional_coordinator_has_coordinator_powers(django_user_model, use_case):
@@ -88,12 +89,20 @@ def test_regional_coordinator_has_coordinator_powers(django_user_model, use_case
     assert user_can(u, "request_edit", use_case)
 
 
-def test_trial_coordinator_is_full_reviewer(django_user_model, use_case):
+def test_trial_coordinator_is_gate1_reviewer(django_user_model, use_case):
     u = django_user_model.objects.create_user("tc@x.org", "pw", is_active=True)
     UseCaseMembership.objects.create(user=u, use_case=use_case, role=Role.TRIAL_COORDINATOR)
-    # Coordinators are the reviewers — full workflow including sync.
-    for action in ("view", "open_review", "request_edit", "edit", "decline", "qc_approve", "sync"):
+    # Gate 1 reviewer: full workflow + endorse + sync, but not final validation.
+    for action in ("view", "open_review", "request_edit", "edit", "decline", "endorse", "sync"):
         assert user_can(u, action, use_case), action
+    assert not user_can(u, "final_approve", use_case)
+
+
+def test_regional_coordinator_is_gate2_validator(django_user_model, use_case):
+    u = django_user_model.objects.create_user("rc2@x.org", "pw", is_active=True)
+    UseCaseMembership.objects.create(user=u, use_case=use_case, role=Role.REGIONAL_COORDINATOR)
+    assert user_can(u, "final_approve", use_case)  # Gate 2
+    assert not user_can(u, "endorse", use_case)    # not Gate 1
 
 
 def test_enumerator_is_read_only(django_user_model, use_case):
@@ -101,7 +110,8 @@ def test_enumerator_is_read_only(django_user_model, use_case):
     UseCaseMembership.objects.create(user=u, use_case=use_case, role=Role.ENUMERATOR)
     assert user_can(u, "view", use_case)
     assert not user_can(u, "edit", use_case)
-    assert not user_can(u, "qc_approve", use_case)
+    assert not user_can(u, "endorse", use_case)
+    assert not user_can(u, "final_approve", use_case)
 
 
 # --- Hierarchical membership scoping (Stage 2) ---

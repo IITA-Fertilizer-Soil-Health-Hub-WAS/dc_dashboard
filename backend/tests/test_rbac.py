@@ -41,22 +41,32 @@ def test_coordinator_scoped_to_their_use_case(users, use_cases):
     assert not user_can(coord, "view", kalro)
 
 
-def test_coordinator_is_full_reviewer(users, use_cases):
-    """Coordinators run the whole review workflow, including final QC approval."""
+def test_gate1_coordinator_endorses_not_validates(users, use_cases):
+    """Trial Coordinator = Gate 1: reviews and endorses, but cannot finally validate."""
     coord, _, _, _ = users
     rwanda, _ = use_cases
     UseCaseMembership.objects.create(user=coord, use_case=rwanda, role=Role.TRIAL_COORDINATOR)
-    assert user_can(coord, "qc_approve", rwanda)
-    assert user_can(coord, "sync", rwanda)  # ops stays with coordinators
+    for action in ("view", "open_review", "request_edit", "edit", "decline", "endorse", "sync"):
+        assert user_can(coord, action, rwanda), action
+    assert not user_can(coord, "final_approve", rwanda)  # Gate 2 is Regional's
 
 
-def test_all_coordinator_tiers_review(users, use_cases):
-    """Every coordinator tier reviews end to end — open, edit, decline, approve."""
+def test_country_coordinator_is_gate1(users, use_cases):
     _, person, _, _ = users
     rwanda, _ = use_cases
     UseCaseMembership.objects.create(user=person, use_case=rwanda, role=Role.COUNTRY_COORDINATOR)
-    for action in ("view", "open_review", "request_edit", "edit", "decline", "qc_approve", "sync"):
-        assert user_can(person, action, rwanda), action
+    assert user_can(person, "endorse", rwanda)
+    assert not user_can(person, "final_approve", rwanda)
+
+
+def test_regional_coordinator_is_gate2(users, use_cases):
+    """Regional Coordinator = Gate 2: the final validation, and not a Gate-1 endorser."""
+    _, _, _, person = users
+    rwanda, _ = use_cases
+    UseCaseMembership.objects.create(user=person, use_case=rwanda, role=Role.REGIONAL_COORDINATOR)
+    assert user_can(person, "final_approve", rwanda)
+    assert user_can(person, "decline", rwanda)  # can still send back / decline
+    assert not user_can(person, "endorse", rwanda)  # endorsement is Gate 1's
 
 
 def test_viewer_is_read_only(users, use_cases):
@@ -65,7 +75,8 @@ def test_viewer_is_read_only(users, use_cases):
     UseCaseMembership.objects.create(user=viewer, use_case=rwanda, role=Role.VIEWER)
     assert user_can(viewer, "view", rwanda)
     assert not user_can(viewer, "decline", rwanda)
-    assert not user_can(viewer, "qc_approve", rwanda)
+    assert not user_can(viewer, "endorse", rwanda)
+    assert not user_can(viewer, "final_approve", rwanda)
 
 
 def test_platform_admin_can_do_everything(users, use_cases):
@@ -73,7 +84,8 @@ def test_platform_admin_can_do_everything(users, use_cases):
     rwanda, kalro = use_cases
     for uc in (rwanda, kalro):
         assert user_can(admin, "decline", uc)
-        assert user_can(admin, "qc_approve", uc)
+        assert user_can(admin, "endorse", uc)
+        assert user_can(admin, "final_approve", uc)
         assert user_can(admin, "view", uc)
     assert user_can(admin, "manage_config")
     assert user_can(admin, "manage_users")

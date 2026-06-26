@@ -27,13 +27,15 @@ def synced(django_user_model):
     submission = Submission.objects.get(ona_uuid="uuid-aaa")
 
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True)
-    # A second reviewer (coordinators are the reviewers now).
     qc = django_user_model.objects.create_user("q@x.org", "pw", is_active=True)
     viewer = django_user_model.objects.create_user("v@x.org", "pw", is_active=True)
+    regional = django_user_model.objects.create_user("r@x.org", "pw", is_active=True)
     UseCaseMembership.objects.create(user=coord, use_case=uc, role=Role.TRIAL_COORDINATOR)
     UseCaseMembership.objects.create(user=qc, use_case=uc, role=Role.COUNTRY_COORDINATOR)
     UseCaseMembership.objects.create(user=viewer, use_case=uc, role=Role.VIEWER)
-    return uc, submission, coord, qc, viewer
+    UseCaseMembership.objects.create(user=regional, use_case=uc, role=Role.REGIONAL_COORDINATOR)
+    # coord/qc = Gate 1 (endorse); regional = Gate 2 (final validation).
+    return uc, submission, coord, qc, viewer, regional
 
 
 def test_review_created_on_ingest(synced):
@@ -54,7 +56,7 @@ def test_coordinator_can_decline_and_audit_logged(synced):
 
 
 def test_viewer_cannot_decline(synced):
-    _, submission, _, _, viewer = synced
+    _, submission, _, _, viewer, _ = synced
     with pytest.raises(ReviewPermissionDenied):
         services.decline(viewer, submission)
     # No state change, no audit entry written.
@@ -62,17 +64,49 @@ def test_viewer_cannot_decline(synced):
     assert not ReviewActionLog.objects.filter(submission=submission).exists()
 
 
-def test_coordinator_and_domain_expert_are_full_reviewers(synced):
-    """Both run the workflow end to end: a coordinator approves, a quality
-    reviewer declines — neither is blocked from a review action."""
-    _, submission, coord, qc, _ = synced
-    # Coordinator can give the final QC approval.
-    services.open_review(coord, submission)
-    assert services.qc_approve(coord, submission).state == ReviewState.APPROVED
+def test_two_gate_review(synced):
+    """Gate 1 (Trial/Country) endorses; only Gate 2 (Regional) gives final validation."""
+    _, submission, coord, qc, _, regional = synced
 
-    # A quality reviewer can decline (a fresh submission).
-    other = Submission.objects.exclude(pk=submission.pk).first()
-    assert services.decline(qc, other).state == ReviewState.DECLINED
+    # Gate 1: a Trial Coordinator endorses -> QC_PENDING.
+    services.open_review(coord, submission)
+    review = services.endorse(coord, submission, note="looks good, level 1")
+    assert review.state == ReviewState.QC_PENDING
+    assert review.endorsed_by == coord
+
+    # A Gate-1 coordinator cannot give final validation.
+    with pytest.raises(ReviewPermissionDenied):
+        services.qc_approve(qc, submission)
+
+    # Gate 2: the Regional Coordinator validates -> APPROVED.
+    review = services.qc_approve(regional, submission, note="final ok")
+    assert review.state == ReviewState.APPROVED
+    assert review.qc_signed_by == regional
+
+
+def test_regional_cannot_endorse_at_gate1(synced):
+    """The final validator is not a Gate-1 endorser."""
+    _, submission, _, _, _, regional = synced
+    with pytest.raises(ReviewPermissionDenied):
+        services.endorse(regional, submission)
+
+
+def test_final_validation_requires_endorsement_first(synced):
+    """A Regional Coordinator cannot validate a submission that skipped Gate 1."""
+    _, submission, _, _, _, regional = synced
+    with pytest.raises(TransitionError):
+        services.qc_approve(regional, submission)  # still INGESTED, not QC_PENDING
+
+
+def test_same_person_cannot_endorse_and_validate(synced, django_user_model):
+    """Two-person rule: holding both roles still can't self-approve both gates."""
+    uc, submission, *_ = synced
+    both = django_user_model.objects.create_user("both@x.org", "pw", is_active=True)
+    UseCaseMembership.objects.create(user=both, use_case=uc, role=Role.COUNTRY_COORDINATOR)
+    UseCaseMembership.objects.create(user=both, use_case=uc, role=Role.REGIONAL_COORDINATOR)
+    services.endorse(both, submission)
+    with pytest.raises(ReviewPermissionDenied):
+        services.qc_approve(both, submission)
 
 
 def test_edit_value_updates_current_only_and_moves_to_edited(synced):
@@ -94,26 +128,28 @@ def test_edit_value_updates_current_only_and_moves_to_edited(synced):
 
 
 def test_full_happy_path_to_approved(synced):
-    _, submission, coord, qc, _ = synced
+    _, submission, coord, _, _, regional = synced
     services.open_review(coord, submission)
     services.edit_value(coord, submission, "Country", "Rwanda-fixed")
-    review = services.qc_approve(qc, submission, note="looks good")
+    services.endorse(coord, submission)  # Gate 1
+    review = services.qc_approve(regional, submission, note="looks good")  # Gate 2
     assert review.state == ReviewState.APPROVED
-    assert review.qc_signed_by == qc
+    assert review.endorsed_by == coord
+    assert review.qc_signed_by == regional
     assert review.qc_signed_at is not None
     # Audit trail captured every step in order.
     actions = list(
         ReviewActionLog.objects.filter(submission=submission).values_list("action", flat=True)
     )
-    assert actions == ["OPEN_REVIEW", "EDIT_VALUE", "QC_APPROVE"]
+    assert actions == ["OPEN_REVIEW", "EDIT_VALUE", "ENDORSE", "QC_APPROVE"]
 
 
 def test_illegal_transition_rejected(synced):
-    _, submission, coord, qc, _ = synced
+    _, submission, coord, _, _, regional = synced
     services.decline(coord, submission)  # -> DECLINED
-    # Cannot QC-approve a declined submission without reopening.
+    # Cannot validate a declined submission without reopening.
     with pytest.raises(TransitionError):
-        services.qc_approve(qc, submission)
+        services.qc_approve(regional, submission)
     # Reopen path works.
     services.reopen(coord, submission)
     assert submission.review.state == ReviewState.IN_REVIEW

@@ -90,7 +90,8 @@
           {% if can.open_review %}{% include "dashboards/_action_btn.html" with action="OPEN_REVIEW" label="Open review" cls="btn-open" %}{% endif %}
           {% if can.request_edit %}{% include "dashboards/_action_btn.html" with action="REQUEST_EDIT" label="Request edit" cls="btn-request" %}{% endif %}
           {% if can.decline %}{% include "dashboards/_action_btn.html" with action="DECLINE" label="Decline" cls="btn-decline" %}{% endif %}
-          {% if can.qc_approve %}{% include "dashboards/_action_btn.html" with action="QC_APPROVE" label="QC approve" cls="btn-approve" %}{% endif %}
+          {% if can.endorse %}{% include "dashboards/_action_btn.html" with action="ENDORSE" label="Endorse (Gate 1)" cls="btn-edit" %}{% endif %}
+          {% if can.final_approve %}{% include "dashboards/_action_btn.html" with action="QC_APPROVE" label="Validate (Gate 2)" cls="btn-approve" %}{% endif %}
           {% if can.open_review %}{% include "dashboards/_action_btn.html" with action="REOPEN" label="Reopen" cls="btn-request" %}{% endif %}
         </div>
       </div>

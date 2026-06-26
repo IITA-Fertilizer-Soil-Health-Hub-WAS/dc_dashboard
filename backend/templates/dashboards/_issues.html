@@ -42,10 +42,14 @@
         <button class="btn btn-decline" type="button" hx-post="{% url 'dashboards:bulk_action' uc.code %}"
           hx-include="#bulk-form" hx-target="#issues-panel" hx-swap="outerHTML"
           hx-confirm="Decline all selected submissions?" hx-vals='{"action":"DECLINE"}'>Decline</button>{% endif %}
-      {% if can.qc_approve %}
+      {% if can.endorse %}
+        <button class="btn btn-edit" type="button" hx-post="{% url 'dashboards:bulk_action' uc.code %}"
+          hx-include="#bulk-form" hx-target="#issues-panel" hx-swap="outerHTML"
+          hx-confirm="Endorse all selected submissions (Gate 1)?" hx-vals='{"action":"ENDORSE"}'>Endorse</button>{% endif %}
+      {% if can.final_approve %}
         <button class="btn btn-approve" type="button" hx-post="{% url 'dashboards:bulk_action' uc.code %}"
           hx-include="#bulk-form" hx-target="#issues-panel" hx-swap="outerHTML"
-          hx-confirm="Approve all selected submissions?" hx-vals='{"action":"QC_APPROVE"}'>QC approve</button>{% endif %}
+          hx-confirm="Validate all selected endorsed submissions (Gate 2)?" hx-vals='{"action":"QC_APPROVE"}'>Validate</button>{% endif %}
     </div>
     <table>
       <thead>

@@ -31,7 +31,8 @@ class ReviewAction(models.TextChoices):
     REQUEST_EDIT = "REQUEST_EDIT", "Request edit"
     EDIT_VALUE = "EDIT_VALUE", "Edit value"
     DECLINE = "DECLINE", "Decline"
-    QC_APPROVE = "QC_APPROVE", "QC approve"
+    ENDORSE = "ENDORSE", "Endorse (level 1)"
+    QC_APPROVE = "QC_APPROVE", "Validate (final)"
     REOPEN = "REOPEN", "Reopen"
     COMMENT = "COMMENT", "Comment"
     SUPERSEDE = "SUPERSEDE", "Supersede"
@@ -55,6 +56,16 @@ class Review(BaseModel):
         on_delete=models.SET_NULL,
         related_name="assigned_reviews",
     )
+    # Gate 1: the Trial/Country Coordinator who endorsed (first-level sign-off).
+    endorsed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="endorsed_reviews",
+    )
+    endorsed_at = models.DateTimeField(null=True, blank=True)
+    # Gate 2: the Regional Coordinator who gave final validation.
     qc_signed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,

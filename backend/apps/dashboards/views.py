@@ -31,6 +31,7 @@ ACTION_SERVICES = {
     ReviewAction.OPEN_REVIEW: services.open_review,
     ReviewAction.REQUEST_EDIT: services.request_edit,
     ReviewAction.DECLINE: services.decline,
+    ReviewAction.ENDORSE: services.endorse,
     ReviewAction.QC_APPROVE: services.qc_approve,
     ReviewAction.REOPEN: services.reopen,
 }
@@ -352,7 +353,8 @@ def submission_review(request, code, submission_id):
         "edit": user_can(request.user, "edit", uc),
         "decline": user_can(request.user, "decline", uc),
         "request_edit": user_can(request.user, "request_edit", uc),
-        "qc_approve": user_can(request.user, "qc_approve", uc),
+        "endorse": user_can(request.user, "endorse", uc),
+        "final_approve": user_can(request.user, "final_approve", uc),
         "open_review": user_can(request.user, "open_review", uc),
     }
     return render(request, "dashboards/submission_review.html", {
@@ -440,7 +442,8 @@ def _issues_context(request, uc) -> dict:
         "decline": user_can(request.user, "decline", uc),
         "request_edit": user_can(request.user, "request_edit", uc),
         "edit": user_can(request.user, "edit", uc),
-        "qc_approve": user_can(request.user, "qc_approve", uc),
+        "endorse": user_can(request.user, "endorse", uc),
+        "final_approve": user_can(request.user, "final_approve", uc),
         "open_review": user_can(request.user, "open_review", uc),
     }
     return {

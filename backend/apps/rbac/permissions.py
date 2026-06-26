@@ -21,6 +21,10 @@ if TYPE_CHECKING:
 # Coordinator roles share the trial-coordinator powers, just at a wider scope
 # (region/country grants cascade to use cases — see roles_for).
 COORDINATORS = {Role.TRIAL_COORDINATOR, Role.COUNTRY_COORDINATOR, Role.REGIONAL_COORDINATOR}
+# Two-level review: Trial/Country coordinators do the first-level review and
+# endorsement (Gate 1); only a Regional Coordinator gives final validation (Gate 2).
+GATE1_REVIEWERS = {Role.TRIAL_COORDINATOR, Role.COUNTRY_COORDINATOR}
+GATE2_VALIDATOR = {Role.REGIONAL_COORDINATOR}
 
 # Platform Admin (superuser) bypasses this table entirely. Coordinators are the
 # reviewers — they hold the domain expertise and run the review workflow end to
@@ -28,14 +32,17 @@ COORDINATORS = {Role.TRIAL_COORDINATOR, Role.COUNTRY_COORDINATOR, Role.REGIONAL_
 ACTION_ROLES: dict[str, set[str]] = {
     # Read access to a use case's data/dashboards.
     "view": {Role.VIEWER, Role.ENUMERATOR} | COORDINATORS,
-    # Review workflow.
+    # Review workflow — open / triage / correct is shared by all coordinators.
     "open_review": COORDINATORS,
     "decline": COORDINATORS,
     "request_edit": COORDINATORS,
     "edit": COORDINATORS,
-    "qc_approve": COORDINATORS,
     "reopen": COORDINATORS,
     "resolve_flag": COORDINATORS,
+    # Gate 1: first-level endorsement by Trial/Country coordinators.
+    "endorse": GATE1_REVIEWERS,
+    # Gate 2: final validation reserved for the Regional Coordinator.
+    "final_approve": GATE2_VALIDATOR,
     # Operations — pulling from the collection server.
     "sync": COORDINATORS,
 }

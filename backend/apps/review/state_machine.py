@@ -33,8 +33,11 @@ TRANSITIONS: dict[str, Transition] = {
     A.OPEN_REVIEW: Transition(
         frozenset({S.INGESTED, S.FLAGGED, S.EDIT_REQUESTED}), S.IN_REVIEW, "open_review"
     ),
+    # Gate 2 (Regional) may send an endorsed submission back for more edits.
     A.REQUEST_EDIT: Transition(
-        frozenset({S.IN_REVIEW, S.FLAGGED, S.INGESTED}), S.EDIT_REQUESTED, "request_edit"
+        frozenset({S.IN_REVIEW, S.FLAGGED, S.INGESTED, S.QC_PENDING}),
+        S.EDIT_REQUESTED,
+        "request_edit",
     ),
     A.EDIT_VALUE: Transition(
         frozenset({S.IN_REVIEW, S.FLAGGED, S.INGESTED, S.EDIT_REQUESTED, S.EDITED}),
@@ -42,15 +45,19 @@ TRANSITIONS: dict[str, Transition] = {
         "edit",
     ),
     A.DECLINE: Transition(
-        frozenset({S.IN_REVIEW, S.FLAGGED, S.INGESTED, S.EDIT_REQUESTED, S.EDITED}),
+        frozenset({S.IN_REVIEW, S.FLAGGED, S.INGESTED, S.EDIT_REQUESTED, S.EDITED, S.QC_PENDING}),
         S.DECLINED,
         "decline",
     ),
-    A.QC_APPROVE: Transition(
-        frozenset({S.IN_REVIEW, S.EDITED, S.FLAGGED, S.QC_PENDING, S.INGESTED}),
-        S.APPROVED,
-        "qc_approve",
+    # Gate 1 — Trial/Country Coordinator endorses; awaits Gate 2 validation.
+    A.ENDORSE: Transition(
+        frozenset({S.IN_REVIEW, S.EDITED, S.FLAGGED, S.INGESTED, S.EDIT_REQUESTED}),
+        S.QC_PENDING,
+        "endorse",
     ),
+    # Gate 2 — only a Regional Coordinator gives the final validation, and only
+    # on a submission that has cleared Gate 1 (QC_PENDING).
+    A.QC_APPROVE: Transition(frozenset({S.QC_PENDING}), S.APPROVED, "final_approve"),
     A.REOPEN: Transition(
         frozenset({S.APPROVED, S.DECLINED, S.SUPERSEDED}), S.IN_REVIEW, "reopen"
     ),
