@@ -32,7 +32,7 @@ def sync_memberships_from_eia_apps(user) -> int:
 
     Idempotent. Returns the number of memberships created. Unknown use-case codes
     are ignored (a Platform Admin can grant access explicitly later). Higher roles
-    (Coordinator / Quality Check) are always admin-assigned, never inferred.
+    (Coordinator) are always admin-assigned, never inferred.
     """
     apps = user.legacy_eia_apps or {}
     codes = apps.keys() if isinstance(apps, dict) else apps

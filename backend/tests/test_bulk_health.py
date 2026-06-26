@@ -30,8 +30,9 @@ def _sub(uc, form, n):
 
 @pytest.fixture
 def qc(django_user_model, uc):
+    # Coordinators are the reviewers; they can QC-approve.
     user = django_user_model.objects.create_user("qc@x.org", "pw", is_active=True)
-    UseCaseMembership.objects.create(user=user, use_case=uc, role=Role.QUALITY_CHECK)
+    UseCaseMembership.objects.create(user=user, use_case=uc, role=Role.COUNTRY_COORDINATOR)
     return user
 
 

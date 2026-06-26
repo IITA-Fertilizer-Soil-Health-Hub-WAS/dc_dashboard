@@ -3,7 +3,7 @@
 The R app had no roles — Auth0 metadata `eia_apps` simply listed the use cases a
 user could see. On first OIDC login we snapshot that claim into
 `User.legacy_eia_apps`; this command turns each entry into a VIEWER membership.
-Admins then upgrade specific users to Trial Coordinator / Quality Check.
+Admins then upgrade specific users to Trial Coordinator.
 
     python manage.py migrate_eia_apps            # all users with a snapshot
     python manage.py migrate_eia_apps --email x  # one user

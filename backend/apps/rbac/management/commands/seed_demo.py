@@ -41,8 +41,8 @@ class Command(BaseCommand):
             admin.save()
 
         role_users = {
+            Role.COUNTRY_COORDINATOR: "country-coordinator@eia.local",
             Role.TRIAL_COORDINATOR: "coordinator@eia.local",
-            Role.QUALITY_CHECK: "agronomist@eia.local",
             Role.VIEWER: "viewer@eia.local",
         }
         for role, email in role_users.items():

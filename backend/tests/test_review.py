@@ -27,10 +27,11 @@ def synced(django_user_model):
     submission = Submission.objects.get(ona_uuid="uuid-aaa")
 
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True)
+    # A second reviewer (coordinators are the reviewers now).
     qc = django_user_model.objects.create_user("q@x.org", "pw", is_active=True)
     viewer = django_user_model.objects.create_user("v@x.org", "pw", is_active=True)
     UseCaseMembership.objects.create(user=coord, use_case=uc, role=Role.TRIAL_COORDINATOR)
-    UseCaseMembership.objects.create(user=qc, use_case=uc, role=Role.QUALITY_CHECK)
+    UseCaseMembership.objects.create(user=qc, use_case=uc, role=Role.COUNTRY_COORDINATOR)
     UseCaseMembership.objects.create(user=viewer, use_case=uc, role=Role.VIEWER)
     return uc, submission, coord, qc, viewer
 

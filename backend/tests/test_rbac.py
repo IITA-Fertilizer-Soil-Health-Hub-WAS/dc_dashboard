@@ -50,15 +50,13 @@ def test_coordinator_is_full_reviewer(users, use_cases):
     assert user_can(coord, "sync", rwanda)  # ops stays with coordinators
 
 
-def test_quality_is_full_reviewer(users, use_cases):
-    """Domain experts / QC review end to end — open, request edit, edit, decline, approve."""
-    _, qc, _, _ = users
+def test_all_coordinator_tiers_review(users, use_cases):
+    """Every coordinator tier reviews end to end — open, edit, decline, approve."""
+    _, person, _, _ = users
     rwanda, _ = use_cases
-    UseCaseMembership.objects.create(user=qc, use_case=rwanda, role=Role.QUALITY_CHECK)
-    for action in ("view", "open_review", "request_edit", "edit", "decline", "qc_approve"):
-        assert user_can(qc, action, rwanda), action
-    # ...but pulling from the collection server stays a coordinator task.
-    assert not user_can(qc, "sync", rwanda)
+    UseCaseMembership.objects.create(user=person, use_case=rwanda, role=Role.COUNTRY_COORDINATOR)
+    for action in ("view", "open_review", "request_edit", "edit", "decline", "qc_approve", "sync"):
+        assert user_can(person, action, rwanda), action
 
 
 def test_viewer_is_read_only(users, use_cases):

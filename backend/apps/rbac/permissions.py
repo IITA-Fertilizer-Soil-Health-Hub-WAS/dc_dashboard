@@ -21,25 +21,22 @@ if TYPE_CHECKING:
 # Coordinator roles share the trial-coordinator powers, just at a wider scope
 # (region/country grants cascade to use cases — see roles_for).
 COORDINATORS = {Role.TRIAL_COORDINATOR, Role.COUNTRY_COORDINATOR, Role.REGIONAL_COORDINATOR}
-# Quality sign-off: the agronomist / survey domain expert.
-QUALITY = {Role.QUALITY_CHECK, Role.SURVEY_DOMAIN_EXPERT}
-# Full reviewers: both coordinators and domain experts run the review workflow
-# end to end — triage, request edit, edit, decline, and the final QC approval.
-REVIEWERS = COORDINATORS | QUALITY
 
-# Platform Admin (superuser) bypasses this table entirely.
+# Platform Admin (superuser) bypasses this table entirely. Coordinators are the
+# reviewers — they hold the domain expertise and run the review workflow end to
+# end (there is no separate domain-expert / quality role).
 ACTION_ROLES: dict[str, set[str]] = {
     # Read access to a use case's data/dashboards.
-    "view": {Role.VIEWER, Role.ENUMERATOR} | REVIEWERS,
-    # Review workflow — coordinators and domain experts alike.
-    "open_review": REVIEWERS,
-    "decline": REVIEWERS,
-    "request_edit": REVIEWERS,
-    "edit": REVIEWERS,
-    "qc_approve": REVIEWERS,
-    "reopen": REVIEWERS,
-    "resolve_flag": REVIEWERS,
-    # Operations — pulling from the collection server stays a coordinator task.
+    "view": {Role.VIEWER, Role.ENUMERATOR} | COORDINATORS,
+    # Review workflow.
+    "open_review": COORDINATORS,
+    "decline": COORDINATORS,
+    "request_edit": COORDINATORS,
+    "edit": COORDINATORS,
+    "qc_approve": COORDINATORS,
+    "reopen": COORDINATORS,
+    "resolve_flag": COORDINATORS,
+    # Operations — pulling from the collection server.
     "sync": COORDINATORS,
 }
 
@@ -145,8 +142,6 @@ ROLE_RANK: dict[str, int] = {
     Role.REGIONAL_COORDINATOR: 80,
     Role.COUNTRY_COORDINATOR: 70,
     Role.TRIAL_COORDINATOR: 60,
-    Role.QUALITY_CHECK: 40,
-    Role.SURVEY_DOMAIN_EXPERT: 40,
     Role.ENUMERATOR: 20,
     Role.VIEWER: 10,
 }

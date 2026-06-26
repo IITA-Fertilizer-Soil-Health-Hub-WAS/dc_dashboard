@@ -19,8 +19,6 @@ class Role(models.TextChoices):
     REGIONAL_COORDINATOR = "REGIONAL_COORDINATOR", "Regional Coordinator"
     COUNTRY_COORDINATOR = "COUNTRY_COORDINATOR", "Country Coordinator"
     TRIAL_COORDINATOR = "TRIAL_COORDINATOR", "Trial / Survey Coordinator"
-    SURVEY_DOMAIN_EXPERT = "SURVEY_DOMAIN_EXPERT", "Survey Domain Expert"
-    QUALITY_CHECK = "QUALITY_CHECK", "Quality Check / Agronomist"
     ENUMERATOR = "ENUMERATOR", "Enumerator"
     VIEWER = "VIEWER", "Viewer"
 

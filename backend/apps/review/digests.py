@@ -16,7 +16,12 @@ from .models import ReviewState
 logger = logging.getLogger(__name__)
 
 CLOSED = [ReviewState.APPROVED, ReviewState.DECLINED]
-REVIEWER_ROLES = [Role.TRIAL_COORDINATOR, Role.QUALITY_CHECK]
+# Who gets the pending-review digest: the coordinators (the reviewers).
+REVIEWER_ROLES = [
+    Role.TRIAL_COORDINATOR,
+    Role.COUNTRY_COORDINATOR,
+    Role.REGIONAL_COORDINATOR,
+]
 
 
 def pending_summary(use_case) -> dict:
