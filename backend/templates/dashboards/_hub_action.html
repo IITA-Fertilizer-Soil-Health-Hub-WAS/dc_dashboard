@@ -1,7 +1,0 @@
-<form method="post" action="{% url 'dashboards:review_hub_action' %}" style="display:inline;"
-      {% if confirm %}onsubmit="return confirm('{{ confirm }}');"{% endif %}>
-  {% csrf_token %}
-  <input type="hidden" name="submission" value="{{ sub.id }}">
-  <input type="hidden" name="action" value="{{ action }}">
-  <button class="btn {{ cls }}" type="submit" style="padding:.3rem .65rem; font-size:.78rem; margin-left:.25rem;">{{ label }}</button>
-</form>

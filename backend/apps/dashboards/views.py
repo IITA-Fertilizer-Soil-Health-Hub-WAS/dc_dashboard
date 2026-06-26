@@ -185,6 +185,56 @@ def _health_counts(uc) -> dict:
     }
 
 
+GATE1_STATES = [
+    ReviewState.INGESTED, ReviewState.FLAGGED, ReviewState.IN_REVIEW,
+    ReviewState.EDIT_REQUESTED, ReviewState.EDITED,
+]
+
+
+@login_required
+def tab_review(request, code):
+    """This project's review queue, split by gate, with inline actions."""
+    uc = get_scoped_use_case(request, code)
+    can_endorse = user_can(request.user, "endorse", uc)
+    can_validate = user_can(request.user, "final_approve", uc)
+    sel = ("enumerator", "household", "review", "review__endorsed_by", "review__assigned_to")
+
+    to_validate = list(
+        Submission.objects.filter(use_case=uc, review__state=ReviewState.QC_PENDING)
+        .select_related(*sel).order_by("-updated_at")[:300]
+    ) if can_validate else []
+    to_endorse = list(
+        Submission.objects.filter(use_case=uc, review__state__in=GATE1_STATES)
+        .select_related(*sel).order_by("review__state", "-ingested_at")[:300]
+    ) if can_endorse else []
+    approved = Submission.objects.filter(use_case=uc, review__state=ReviewState.APPROVED).count()
+
+    return render(request, "dashboards/_review.html", {
+        "uc": uc, "to_validate": to_validate, "to_endorse": to_endorse,
+        "can_endorse": can_endorse, "can_validate": can_validate,
+        "approved_count": approved,
+    })
+
+
+@login_required
+@require_POST
+def tab_review_action(request, code):
+    """Endorse / validate / decline a submission from the Review tab, then refresh it."""
+    uc = get_scoped_use_case(request, code)
+    submission = Submission.objects.filter(use_case=uc, pk=request.POST.get("submission")).first()
+    fn = {
+        ReviewAction.ENDORSE: services.endorse,
+        ReviewAction.QC_APPROVE: services.qc_approve,
+        ReviewAction.DECLINE: services.decline,
+    }.get(request.POST.get("action"))
+    if submission is not None and fn is not None:
+        try:
+            fn(request.user, submission, note=(request.POST.get("note") or "").strip())
+        except (ReviewPermissionDenied, TransitionError):
+            pass
+    return tab_review(request, code)
+
+
 @login_required
 def tab_enumerators(request, code):
     uc = get_scoped_use_case(request, code)

@@ -1,0 +1,6 @@
+<button class="btn {{ cls }}" type="button"
+        style="padding:.3rem .65rem; font-size:.78rem; margin-left:.25rem;"
+        hx-post="{% url 'dashboards:tab_review_action' uc.code %}"
+        hx-target="#tabbody" hx-swap="innerHTML"
+        hx-vals='{"submission": "{{ sub.id }}", "action": "{{ action }}"}'
+        {% if confirm %}hx-confirm="{{ confirm }}"{% endif %}>{{ label }}</button>

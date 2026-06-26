@@ -16,6 +16,8 @@
   <nav class="tabs" id="tabs">
     <button class="active" hx-get="{% url 'dashboards:tab_summary' uc.code %}"
             hx-target="#tabbody" hx-on::after-request="setActive(this)">Summary</button>
+    <button hx-get="{% url 'dashboards:tab_review' uc.code %}"
+            hx-target="#tabbody" hx-on::after-request="setActive(this)">Review</button>
     <button hx-get="{% url 'dashboards:tab_enumerators' uc.code %}"
             hx-target="#tabbody" hx-on::after-request="setActive(this)">Enumerators</button>
     <button hx-get="{% url 'dashboards:tab_issues' uc.code %}"

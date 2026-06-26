@@ -274,11 +274,6 @@
            class="{% if request.resolver_match.url_name == 'overview' %}active{% endif %}">
           <span class="msym">dashboard</span>Overview
         </a>
-        <a href="{% url 'dashboards:review_hub' %}" title="Everything awaiting your review, across all your projects"
-           class="{% if request.resolver_match.url_name == 'review_hub' %}active{% endif %}">
-          <span class="msym">fact_check</span>Review
-          {% if review_todo_count %}<span class="pill gold" style="margin-left:auto;font-size:.66rem;">{{ review_todo_count }}</span>{% endif %}
-        </a>
         <a href="{% url 'dashboards:my_queue' %}" title="Submissions assigned to me"
            class="{% if request.resolver_match.url_name == 'my_queue' %}active{% endif %}">
           <span class="msym">assignment_ind</span>My queue

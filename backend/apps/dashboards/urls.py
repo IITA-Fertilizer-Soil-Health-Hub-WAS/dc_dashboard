@@ -3,7 +3,6 @@ from __future__ import annotations
 from django.urls import path
 
 from . import projects as projects_views
-from . import review_hub as review_hub_views
 from . import team, views
 
 app_name = "dashboards"
@@ -12,8 +11,6 @@ urlpatterns = [
     path("", projects_views.projects, name="index"),
     path("projects/", projects_views.projects, name="projects"),
     path("projects/<slug:code>/request/", projects_views.project_request, name="project_request"),
-    path("review/", review_hub_views.review_hub, name="review_hub"),
-    path("review/action/", review_hub_views.review_hub_action, name="review_hub_action"),
     path("style-preview/", views.style_preview, name="style_preview"),
     path("overview/", views.overview, name="overview"),
     path("my-queue/", views.my_queue, name="my_queue"),
@@ -25,6 +22,8 @@ urlpatterns = [
     path("usecase/<slug:code>/", views.usecase_detail, name="usecase"),
     path("usecase/<slug:code>/audit.csv", views.export_audit, name="export_audit"),
     path("usecase/<slug:code>/tab/summary/", views.tab_summary, name="tab_summary"),
+    path("usecase/<slug:code>/tab/review/", views.tab_review, name="tab_review"),
+    path("usecase/<slug:code>/tab/review/action/", views.tab_review_action, name="tab_review_action"),
     path("usecase/<slug:code>/tab/enumerators/", views.tab_enumerators, name="tab_enumerators"),
     path("usecase/<slug:code>/tab/issues/", views.tab_issues, name="tab_issues"),
     path("usecase/<slug:code>/tab/data/", views.tab_data, name="tab_data"),
