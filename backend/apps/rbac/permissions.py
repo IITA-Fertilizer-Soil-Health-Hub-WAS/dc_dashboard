@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from django.db.models import Q
+
 from .models import Role, UseCaseMembership
 
 if TYPE_CHECKING:
@@ -43,13 +45,21 @@ GLOBAL_ADMIN_ACTIONS: set[str] = {"manage_config", "manage_users", "manage_useca
 
 
 def roles_for(user, use_case: UseCase) -> set[str]:
-    """All roles a user holds within a given use case."""
+    """All roles a user holds for a use case, including cascaded country/region grants.
+
+    A grant on the use case's country (or region) confers the same role as a direct
+    use-case grant — that's how a Country/Regional Coordinator gets coordinator
+    powers across every use case beneath them without per-use-case rows.
+    """
     if not user.is_authenticated:
         return set()
+    scope = Q(use_case=use_case)
+    if use_case.country_id:
+        scope |= Q(country_id=use_case.country_id)
+        if use_case.country.region_id:
+            scope |= Q(region_id=use_case.country.region_id)
     return set(
-        UseCaseMembership.objects.filter(user=user, use_case=use_case).values_list(
-            "role", flat=True
-        )
+        UseCaseMembership.objects.filter(scope, user=user).values_list("role", flat=True)
     )
 
 
@@ -87,4 +97,10 @@ def visible_use_cases(user):
         return UseCase.objects.none()
     if getattr(user, "is_platform_admin", False):
         return UseCase.objects.filter(is_active=True)
-    return UseCase.objects.filter(is_active=True, memberships__user=user).distinct()
+    # A membership at any scope level grants visibility to the use cases beneath it.
+    return UseCase.objects.filter(
+        Q(memberships__user=user)
+        | Q(country__memberships__user=user)
+        | Q(country__region__memberships__user=user),
+        is_active=True,
+    ).distinct()

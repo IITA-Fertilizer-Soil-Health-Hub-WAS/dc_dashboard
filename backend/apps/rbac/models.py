@@ -8,9 +8,10 @@ from __future__ import annotations
 
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 
 from apps.common.models import BaseModel
-from apps.usecases.models import UseCase
+from apps.usecases.models import Country, Region, UseCase
 
 
 class Role(models.TextChoices):
@@ -25,12 +26,28 @@ class Role(models.TextChoices):
 
 
 class UseCaseMembership(BaseModel):
-    """Grants a user a role within a single use case. The unit of authorization."""
+    """Grants a user a role at one scope level: a use case, a country, or a region.
+
+    The unit of authorization. A country grant cascades to every use case in that
+    country; a region grant cascades to every use case in the region. Exactly one
+    of ``use_case`` / ``country`` / ``region`` is set (enforced by a check
+    constraint). The cascade is resolved in ``permissions.roles_for`` /
+    ``visible_use_cases`` so views never special-case the scope level.
+    """
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="memberships"
     )
-    use_case = models.ForeignKey(UseCase, on_delete=models.CASCADE, related_name="memberships")
+    # Exactly one of these three scopes is non-null.
+    use_case = models.ForeignKey(
+        UseCase, null=True, blank=True, on_delete=models.CASCADE, related_name="memberships"
+    )
+    country = models.ForeignKey(
+        Country, null=True, blank=True, on_delete=models.CASCADE, related_name="memberships"
+    )
+    region = models.ForeignKey(
+        Region, null=True, blank=True, on_delete=models.CASCADE, related_name="memberships"
+    )
     role = models.CharField(max_length=32, choices=Role.choices)
     granted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -41,8 +58,39 @@ class UseCaseMembership(BaseModel):
     )
 
     class Meta:
-        unique_together = ("user", "use_case", "role")
-        ordering = ["use_case", "role"]
+        ordering = ["use_case", "country", "region", "role"]
+        constraints = [
+            # Exactly one scope level must be set.
+            models.CheckConstraint(
+                name="membership_exactly_one_scope",
+                check=(
+                    Q(use_case__isnull=False, country__isnull=True, region__isnull=True)
+                    | Q(use_case__isnull=True, country__isnull=False, region__isnull=True)
+                    | Q(use_case__isnull=True, country__isnull=True, region__isnull=False)
+                ),
+            ),
+            # One row per (user, role) at each scope level.
+            models.UniqueConstraint(
+                fields=["user", "use_case", "role"],
+                condition=Q(use_case__isnull=False),
+                name="uniq_membership_use_case",
+            ),
+            models.UniqueConstraint(
+                fields=["user", "country", "role"],
+                condition=Q(country__isnull=False),
+                name="uniq_membership_country",
+            ),
+            models.UniqueConstraint(
+                fields=["user", "region", "role"],
+                condition=Q(region__isnull=False),
+                name="uniq_membership_region",
+            ),
+        ]
+
+    @property
+    def scope(self):
+        """The object this membership is scoped to (use case, country, or region)."""
+        return self.use_case or self.country or self.region
 
     def __str__(self) -> str:
-        return f"{self.user} @ {self.use_case} = {self.role}"
+        return f"{self.user} @ {self.scope} = {self.role}"

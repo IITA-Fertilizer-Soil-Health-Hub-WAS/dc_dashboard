@@ -10,7 +10,7 @@ import pytest
 from django.db import IntegrityError
 
 from apps.rbac.models import Role, UseCaseMembership
-from apps.rbac.permissions import user_can
+from apps.rbac.permissions import user_can, visible_use_cases
 from apps.usecases.models import Country, Region, UseCase
 
 pytestmark = pytest.mark.django_db
@@ -102,3 +102,85 @@ def test_enumerator_is_read_only(django_user_model, use_case):
     assert user_can(u, "view", use_case)
     assert not user_can(u, "edit", use_case)
     assert not user_can(u, "qc_approve", use_case)
+
+
+# --- Hierarchical membership scoping (Stage 2) ---
+
+
+@pytest.fixture
+def geo_use_cases():
+    """Two countries in one region, each with a use case; plus an unrelated region."""
+    region = Region.objects.create(code="EA", name="East Africa")
+    rwanda = Country.objects.create(region=region, code="RW", name="Rwanda")
+    kenya = Country.objects.create(region=region, code="KE", name="Kenya")
+    other_region = Region.objects.create(code="WA", name="West Africa")
+    nigeria = Country.objects.create(region=other_region, code="NG", name="Nigeria")
+
+    uc_rw = UseCase.objects.create(code="SNS-RWANDA", name="SNS Rwanda", country=rwanda)
+    uc_ke = UseCase.objects.create(code="KALRO", name="KALRO", country=kenya)
+    uc_ng = UseCase.objects.create(code="BIOSSA", name="BioSSA", country=nigeria)
+    return {
+        "region": region, "other_region": other_region,
+        "rwanda": rwanda, "kenya": kenya, "nigeria": nigeria,
+        "uc_rw": uc_rw, "uc_ke": uc_ke, "uc_ng": uc_ng,
+    }
+
+
+def test_country_grant_cascades_to_its_use_cases(django_user_model, geo_use_cases):
+    cc = django_user_model.objects.create_user("cc2@x.org", "pw", is_active=True)
+    UseCaseMembership.objects.create(
+        user=cc, country=geo_use_cases["rwanda"], role=Role.COUNTRY_COORDINATOR
+    )
+    # Cascades to the Rwanda use case...
+    assert user_can(cc, "edit", geo_use_cases["uc_rw"])
+    # ...but not Kenya (same region, different country) or Nigeria.
+    assert not user_can(cc, "edit", geo_use_cases["uc_ke"])
+    assert not user_can(cc, "view", geo_use_cases["uc_ng"])
+
+    visible = set(visible_use_cases(cc).values_list("code", flat=True))
+    assert visible == {"SNS-RWANDA"}
+
+
+def test_region_grant_cascades_to_all_countries(django_user_model, geo_use_cases):
+    rc = django_user_model.objects.create_user("rc2@x.org", "pw", is_active=True)
+    UseCaseMembership.objects.create(
+        user=rc, region=geo_use_cases["region"], role=Role.REGIONAL_COORDINATOR
+    )
+    # Both use cases in the region are reachable...
+    assert user_can(rc, "sync", geo_use_cases["uc_rw"])
+    assert user_can(rc, "sync", geo_use_cases["uc_ke"])
+    # ...but the other region's use case is not.
+    assert not user_can(rc, "view", geo_use_cases["uc_ng"])
+
+    visible = set(visible_use_cases(rc).values_list("code", flat=True))
+    assert visible == {"SNS-RWANDA", "KALRO"}
+
+
+def test_direct_use_case_grant_still_works(django_user_model, geo_use_cases):
+    u = django_user_model.objects.create_user("d2@x.org", "pw", is_active=True)
+    UseCaseMembership.objects.create(
+        user=u, use_case=geo_use_cases["uc_ke"], role=Role.TRIAL_COORDINATOR
+    )
+    assert user_can(u, "edit", geo_use_cases["uc_ke"])
+    assert not user_can(u, "edit", geo_use_cases["uc_rw"])
+    assert set(visible_use_cases(u).values_list("code", flat=True)) == {"KALRO"}
+
+
+def test_membership_requires_exactly_one_scope(django_user_model, geo_use_cases):
+    from django.db import IntegrityError as IE
+
+    u = django_user_model.objects.create_user("bad@x.org", "pw", is_active=True)
+    # Two scopes set at once violates the check constraint.
+    with pytest.raises(IE):
+        UseCaseMembership.objects.create(
+            user=u, use_case=geo_use_cases["uc_rw"], country=geo_use_cases["rwanda"],
+            role=Role.VIEWER,
+        )
+
+
+def test_membership_no_scope_rejected(django_user_model):
+    from django.db import IntegrityError as IE
+
+    u = django_user_model.objects.create_user("bad2@x.org", "pw", is_active=True)
+    with pytest.raises(IE):
+        UseCaseMembership.objects.create(user=u, role=Role.VIEWER)
