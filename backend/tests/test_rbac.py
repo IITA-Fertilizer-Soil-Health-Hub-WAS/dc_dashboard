@@ -52,11 +52,22 @@ def test_gate1_coordinator_endorses_not_validates(users, use_cases):
 
 
 def test_country_coordinator_is_gate1(users, use_cases):
+    coord, person, _, regional = users
+    rwanda, _ = use_cases
+    UseCaseMembership.objects.create(user=person, use_case=rwanda, role=Role.COUNTRY_COORDINATOR)
+    UseCaseMembership.objects.create(user=regional, use_case=rwanda, role=Role.REGIONAL_COORDINATOR)
+    assert user_can(person, "endorse", rwanda)
+    # With a Regional present, the Country Coordinator does not validate.
+    assert not user_can(person, "final_approve", rwanda)
+
+
+def test_country_coordinator_validates_when_no_regional(users, use_cases):
+    """Fallback: with no Regional covering the use case, a Country Coordinator
+    may give the final validation so reviews don't stall."""
     _, person, _, _ = users
     rwanda, _ = use_cases
     UseCaseMembership.objects.create(user=person, use_case=rwanda, role=Role.COUNTRY_COORDINATOR)
-    assert user_can(person, "endorse", rwanda)
-    assert not user_can(person, "final_approve", rwanda)
+    assert user_can(person, "final_approve", rwanda)  # no Regional exists
 
 
 def test_regional_coordinator_is_gate2(users, use_cases):

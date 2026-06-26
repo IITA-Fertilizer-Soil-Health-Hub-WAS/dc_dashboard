@@ -98,6 +98,26 @@ def test_final_validation_requires_endorsement_first(synced):
         services.qc_approve(regional, submission)  # still INGESTED, not QC_PENDING
 
 
+def test_country_coordinator_fallback_validates_when_no_regional(django_user_model):
+    """With no Regional on the use case, a second Country Coordinator validates."""
+    from apps.usecases.models import FormDefinition, UseCase
+
+    uc = UseCase.objects.create(code="NOREG", name="No Regional")
+    form = FormDefinition.objects.create(
+        use_case=uc, ona_form_id=9, role=FormDefinition.Role.VALIDATION
+    )
+    sub = Submission.objects.create(use_case=uc, form=form, ona_uuid="nr", content_hash="h")
+    a = django_user_model.objects.create_user("a@x.org", "pw", is_active=True)
+    b = django_user_model.objects.create_user("b@x.org", "pw", is_active=True)
+    UseCaseMembership.objects.create(user=a, use_case=uc, role=Role.COUNTRY_COORDINATOR)
+    UseCaseMembership.objects.create(user=b, use_case=uc, role=Role.COUNTRY_COORDINATOR)
+
+    services.endorse(a, sub)  # Gate 1
+    review = services.qc_approve(b, sub)  # Gate 2 fallback (a different person)
+    assert review.state == ReviewState.APPROVED
+    assert review.qc_signed_by == b
+
+
 def test_same_person_cannot_endorse_and_validate(synced, django_user_model):
     """Two-person rule: holding both roles still can't self-approve both gates."""
     uc, submission, *_ = synced

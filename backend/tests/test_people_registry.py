@@ -76,10 +76,20 @@ def use_case():
 def test_country_coordinator_has_coordinator_powers(django_user_model, use_case):
     u = django_user_model.objects.create_user("cc@x.org", "pw", is_active=True)
     UseCaseMembership.objects.create(user=u, use_case=use_case, role=Role.COUNTRY_COORDINATOR)
+    # A Regional covers this use case, so Gate 2 belongs to them.
+    reg = django_user_model.objects.create_user("reg@x.org", "pw", is_active=True)
+    UseCaseMembership.objects.create(user=reg, use_case=use_case, role=Role.REGIONAL_COORDINATOR)
     assert user_can(u, "decline", use_case)
     assert user_can(u, "edit", use_case)
     assert user_can(u, "endorse", use_case)  # Gate 1
-    assert not user_can(u, "final_approve", use_case)  # Gate 2 is Regional's
+    assert not user_can(u, "final_approve", use_case)  # Gate 2 is the Regional's
+
+
+def test_country_coordinator_validates_when_no_regional(django_user_model, use_case):
+    u = django_user_model.objects.create_user("cc-solo@x.org", "pw", is_active=True)
+    UseCaseMembership.objects.create(user=u, use_case=use_case, role=Role.COUNTRY_COORDINATOR)
+    # No Regional assigned -> the Country Coordinator may validate (fallback).
+    assert user_can(u, "final_approve", use_case)
 
 
 def test_regional_coordinator_has_coordinator_powers(django_user_model, use_case):

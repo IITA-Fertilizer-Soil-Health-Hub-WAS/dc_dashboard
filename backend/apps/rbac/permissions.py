@@ -89,7 +89,31 @@ def user_can(user, action: str, use_case: UseCase | None = None) -> bool:
     if use_case is None:
         return False  # scoped actions require a use case
 
-    return bool(roles_for(user, use_case) & allowed_roles)
+    held = roles_for(user, use_case)
+
+    # Gate 2 fallback: a Country Coordinator may give final validation only when
+    # no Regional Coordinator covers this use case — so a use case without a
+    # Regional assigned doesn't stall, while a Regional always takes precedence.
+    if (
+        action == "final_approve"
+        and Role.COUNTRY_COORDINATOR in held
+        and not _regional_validator_exists(use_case)
+    ):
+        return True
+
+    return bool(held & allowed_roles)
+
+
+def _regional_validator_exists(use_case) -> bool:
+    """Whether any active Regional Coordinator has authority over this use case."""
+    scope = Q(use_case=use_case)
+    if use_case.country_id:
+        scope |= Q(country_id=use_case.country_id)
+        if use_case.country.region_id:
+            scope |= Q(region_id=use_case.country.region_id)
+    return UseCaseMembership.objects.filter(
+        scope, role=Role.REGIONAL_COORDINATOR, user__is_active=True
+    ).exists()
 
 
 def visible_use_cases(user):
