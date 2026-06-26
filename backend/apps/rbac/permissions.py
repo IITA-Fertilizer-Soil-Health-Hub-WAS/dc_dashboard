@@ -23,20 +23,23 @@ if TYPE_CHECKING:
 COORDINATORS = {Role.TRIAL_COORDINATOR, Role.COUNTRY_COORDINATOR, Role.REGIONAL_COORDINATOR}
 # Quality sign-off: the agronomist / survey domain expert.
 QUALITY = {Role.QUALITY_CHECK, Role.SURVEY_DOMAIN_EXPERT}
+# Full reviewers: both coordinators and domain experts run the review workflow
+# end to end — triage, request edit, edit, decline, and the final QC approval.
+REVIEWERS = COORDINATORS | QUALITY
 
 # Platform Admin (superuser) bypasses this table entirely.
 ACTION_ROLES: dict[str, set[str]] = {
     # Read access to a use case's data/dashboards.
-    "view": {Role.VIEWER, Role.ENUMERATOR} | COORDINATORS | QUALITY,
-    # Review workflow.
-    "open_review": COORDINATORS | QUALITY,
-    "decline": COORDINATORS,
-    "request_edit": COORDINATORS,
-    "edit": COORDINATORS,
-    "qc_approve": QUALITY,
-    "reopen": COORDINATORS | QUALITY,
-    "resolve_flag": COORDINATORS | QUALITY,
-    # Operations.
+    "view": {Role.VIEWER, Role.ENUMERATOR} | REVIEWERS,
+    # Review workflow — coordinators and domain experts alike.
+    "open_review": REVIEWERS,
+    "decline": REVIEWERS,
+    "request_edit": REVIEWERS,
+    "edit": REVIEWERS,
+    "qc_approve": REVIEWERS,
+    "reopen": REVIEWERS,
+    "resolve_flag": REVIEWERS,
+    # Operations — pulling from the collection server stays a coordinator task.
     "sync": COORDINATORS,
 }
 

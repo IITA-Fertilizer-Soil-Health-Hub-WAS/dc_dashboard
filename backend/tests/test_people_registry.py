@@ -78,7 +78,7 @@ def test_country_coordinator_has_coordinator_powers(django_user_model, use_case)
     UseCaseMembership.objects.create(user=u, use_case=use_case, role=Role.COUNTRY_COORDINATOR)
     assert user_can(u, "decline", use_case)
     assert user_can(u, "edit", use_case)
-    assert not user_can(u, "qc_approve", use_case)
+    assert user_can(u, "qc_approve", use_case)  # coordinators can approve too
 
 
 def test_regional_coordinator_has_coordinator_powers(django_user_model, use_case):
@@ -88,12 +88,13 @@ def test_regional_coordinator_has_coordinator_powers(django_user_model, use_case
     assert user_can(u, "request_edit", use_case)
 
 
-def test_survey_domain_expert_is_quality(django_user_model, use_case):
+def test_survey_domain_expert_is_full_reviewer(django_user_model, use_case):
     u = django_user_model.objects.create_user("sde@x.org", "pw", is_active=True)
     UseCaseMembership.objects.create(user=u, use_case=use_case, role=Role.SURVEY_DOMAIN_EXPERT)
-    assert user_can(u, "qc_approve", use_case)
-    assert user_can(u, "view", use_case)
-    assert not user_can(u, "decline", use_case)
+    # Domain experts review end to end now — open, request edit, edit, decline, approve.
+    for action in ("view", "open_review", "request_edit", "edit", "decline", "qc_approve"):
+        assert user_can(u, action, use_case), action
+    assert not user_can(u, "sync", use_case)  # ops stays with coordinators
 
 
 def test_enumerator_is_read_only(django_user_model, use_case):

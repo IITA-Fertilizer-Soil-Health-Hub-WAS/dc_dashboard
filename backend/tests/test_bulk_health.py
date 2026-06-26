@@ -53,13 +53,15 @@ def test_bulk_qc_approve_many(client, qc, uc, form):
         assert s.review.state == ReviewState.APPROVED
 
 
-def test_bulk_action_requires_permission(client, coordinator, uc, form):
-    # Coordinators can't QC-approve — bulk should change nothing.
+def test_bulk_action_requires_permission(client, django_user_model, uc, form):
+    # A viewer has no review permission — bulk QC-approve must change nothing.
+    viewer = django_user_model.objects.create_user("v@x.org", "pw", is_active=True)
+    UseCaseMembership.objects.create(user=viewer, use_case=uc, role=Role.VIEWER)
     sub = _sub(uc, form, 1)
-    client.force_login(coordinator)
+    client.force_login(viewer)
     resp = client.post(f"/usecase/{uc.code}/bulk-action/",
                        {"action": "QC_APPROVE", "ids": [str(sub.pk)]})
-    assert resp.status_code == 200
+    assert resp.status_code in (200, 403)
     sub.refresh_from_db()
     assert sub.review.state != ReviewState.APPROVED
 

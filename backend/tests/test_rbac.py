@@ -41,22 +41,24 @@ def test_coordinator_scoped_to_their_use_case(users, use_cases):
     assert not user_can(coord, "view", kalro)
 
 
-def test_coordinator_cannot_qc_approve(users, use_cases):
+def test_coordinator_is_full_reviewer(users, use_cases):
+    """Coordinators run the whole review workflow, including final QC approval."""
     coord, _, _, _ = users
     rwanda, _ = use_cases
     UseCaseMembership.objects.create(user=coord, use_case=rwanda, role=Role.TRIAL_COORDINATOR)
-    assert not user_can(coord, "qc_approve", rwanda)
+    assert user_can(coord, "qc_approve", rwanda)
+    assert user_can(coord, "sync", rwanda)  # ops stays with coordinators
 
 
-def test_quality_check_can_approve_only(users, use_cases):
+def test_quality_is_full_reviewer(users, use_cases):
+    """Domain experts / QC review end to end — open, request edit, edit, decline, approve."""
     _, qc, _, _ = users
     rwanda, _ = use_cases
     UseCaseMembership.objects.create(user=qc, use_case=rwanda, role=Role.QUALITY_CHECK)
-    assert user_can(qc, "qc_approve", rwanda)
-    assert user_can(qc, "view", rwanda)
-    # QC is not a coordinator: cannot decline or edit.
-    assert not user_can(qc, "decline", rwanda)
-    assert not user_can(qc, "edit", rwanda)
+    for action in ("view", "open_review", "request_edit", "edit", "decline", "qc_approve"):
+        assert user_can(qc, action, rwanda), action
+    # ...but pulling from the collection server stays a coordinator task.
+    assert not user_can(qc, "sync", rwanda)
 
 
 def test_viewer_is_read_only(users, use_cases):

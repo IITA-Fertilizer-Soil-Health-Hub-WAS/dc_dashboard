@@ -61,12 +61,17 @@ def test_viewer_cannot_decline(synced):
     assert not ReviewActionLog.objects.filter(submission=submission).exists()
 
 
-def test_qc_cannot_decline_coordinator_can_not_approve(synced):
+def test_coordinator_and_domain_expert_are_full_reviewers(synced):
+    """Both run the workflow end to end: a coordinator approves, a quality
+    reviewer declines — neither is blocked from a review action."""
     _, submission, coord, qc, _ = synced
-    with pytest.raises(ReviewPermissionDenied):
-        services.qc_approve(coord, submission)
-    with pytest.raises(ReviewPermissionDenied):
-        services.decline(qc, submission)
+    # Coordinator can give the final QC approval.
+    services.open_review(coord, submission)
+    assert services.qc_approve(coord, submission).state == ReviewState.APPROVED
+
+    # A quality reviewer can decline (a fresh submission).
+    other = Submission.objects.exclude(pk=submission.pk).first()
+    assert services.decline(qc, other).state == ReviewState.DECLINED
 
 
 def test_edit_value_updates_current_only_and_moves_to_edited(synced):
