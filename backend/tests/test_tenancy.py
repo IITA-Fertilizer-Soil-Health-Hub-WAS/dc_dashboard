@@ -98,6 +98,65 @@ def test_approval_binds_user_to_granter_org(client, django_user_model, two_orgs)
 # --- tenancy fallback helpers ---
 
 
+def test_invite_external_collaborator_to_one_project(client, two_orgs):
+    """An owner shares one project with another org's user; isolation otherwise holds."""
+    client.force_login(two_orgs["coord_a"])
+    resp = client.post(reverse("dashboards:team_invite"), {
+        "email": "b@x.org",  # coord_b belongs to Institution B
+        "scope": f"usecase:{two_orgs['uca'].pk}",
+        "role": Role.VIEWER,
+    })
+    assert resp.status_code == 302
+    b = two_orgs["coord_b"]
+    assert UseCaseMembership.objects.filter(
+        user=b, use_case=two_orgs["uca"], role=Role.VIEWER
+    ).exists()
+    # B's home institution is unchanged...
+    b.refresh_from_db()
+    assert b.organization_id == two_orgs["b"].id
+    # ...and B now sees the shared A project, but not A's other data.
+    visible = set(visible_use_cases(b).values_list("code", flat=True))
+    assert visible == {"B-BIO", "A-SNS"}
+
+
+def test_collaboration_only_on_use_case_not_region(client, two_orgs):
+    client.force_login(two_orgs["coord_a"])
+    resp = client.post(reverse("dashboards:team_invite"), {
+        "email": "b@x.org",
+        "scope": f"region:{two_orgs['ra'].pk}",  # not allowed
+        "role": Role.VIEWER,
+    })
+    assert resp.status_code == 302  # redirected with an error message
+    assert not UseCaseMembership.objects.filter(
+        user=two_orgs["coord_b"], region=two_orgs["ra"]
+    ).exists()
+
+
+def test_invite_unknown_email_does_nothing(client, two_orgs):
+    client.force_login(two_orgs["coord_a"])
+    before = UseCaseMembership.objects.count()
+    resp = client.post(reverse("dashboards:team_invite"), {
+        "email": "nobody@x.org",
+        "scope": f"usecase:{two_orgs['uca'].pk}",
+        "role": Role.VIEWER,
+    })
+    assert resp.status_code == 302
+    assert UseCaseMembership.objects.count() == before
+
+
+def test_invite_outside_authority_rejected(client, django_user_model, two_orgs):
+    """A can't invite to B's project — A has no authority over it."""
+    client.force_login(two_orgs["coord_a"])
+    outsider = django_user_model.objects.create_user("out@x.org", "pw", is_active=True)
+    resp = client.post(reverse("dashboards:team_invite"), {
+        "email": "out@x.org",
+        "scope": f"usecase:{two_orgs['ucb'].pk}",  # B's project
+        "role": Role.VIEWER,
+    })
+    assert resp.status_code == 403
+    assert not UseCaseMembership.objects.filter(user=outsider).exists()
+
+
 def test_default_organization_single_tenant():
     org = Organization.objects.create(code="solo", name="Solo Institution")
     assert default_organization() == org  # exactly one → it is the default

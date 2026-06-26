@@ -13,6 +13,15 @@
         <button class="btn btn-request" type="submit">Search</button>
       </form>
     {% else %}<span style="flex:1"></span>{% endif %}
+    {% if org_options %}
+      <form method="get" style="margin-left:.4rem;">
+        {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
+        <select class="search" name="org" onchange="this.form.submit()" style="max-width:220px;">
+          <option value="">All institutions</option>
+          {% for o in org_options %}<option value="{{ o.code }}" {% if org_filter == o.code %}selected{% endif %}>{{ o.name }}</option>{% endfor %}
+        </select>
+      </form>
+    {% endif %}
     {% if m.key == 'use-cases' %}
       <a class="btn-new" style="background:var(--gold);color:var(--brand-900);" href="{% url 'console:onboard' %}">Onboard project</a>
     {% endif %}

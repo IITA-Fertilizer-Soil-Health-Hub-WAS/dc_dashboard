@@ -154,6 +154,27 @@ _ENTRIES: list[Managed] = [
 
 REGISTRY: dict[str, Managed] = {m.key: m for m in _ENTRIES}
 
+# ORM lookup from each tenant-scoped section to its owning Organization, used by
+# the hub operator's per-institution filter on console lists. Sections not listed
+# here (e.g. Institutions themselves) are not filtered.
+ORG_FILTER_PATHS: dict[str, str] = {
+    "regions": "organization",
+    "countries": "region__organization",
+    "use-cases": "organization",
+    "forms": "use_case__organization",
+    "field-mappings": "form__use_case__organization",
+    "event-schedule": "use_case__organization",
+    "crops": "use_case__organization",
+    "trials": "use_case__organization",
+    "stages": "use_case__organization",
+    "validation-rules": "use_case__organization",
+    "users": "organization",
+    "enumerators": "use_case__organization",
+    "households": "use_case__organization",
+    "submissions": "use_case__organization",
+    "validation-flags": "submission__use_case__organization",
+}
+
 # Group order for sidebar rendering.
 GROUPS: list[str] = ["Tenancy", "Geography", "Configuration", "Access", "Field data"]
 

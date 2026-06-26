@@ -69,6 +69,19 @@ class ConsoleListView(StaffMixin, View):
             for f in m.search_fields:
                 cond |= Q(**{f"{f}__icontains": q})
             qs = qs.filter(cond)
+
+        # Hub operator's per-institution filter (only where the section is
+        # tenant-scoped and more than one institution exists).
+        from apps.usecases.models import Organization
+
+        from .registry import ORG_FILTER_PATHS
+
+        org_path = ORG_FILTER_PATHS.get(key)
+        orgs = list(Organization.objects.all()) if org_path else []
+        org_code = (request.GET.get("org") or "").strip()
+        if org_path and org_code:
+            qs = qs.filter(**{f"{org_path}__code": org_code})
+
         page = Paginator(qs, 30).get_page(request.GET.get("page"))
         rows = [
             {"pk": obj.pk, "cells": [_cell(obj, f) for f in m.list_display]}
@@ -80,6 +93,8 @@ class ConsoleListView(StaffMixin, View):
             "page": page,
             "q": q,
             "count": qs.count(),
+            "org_options": orgs if len(orgs) > 1 else [],
+            "org_filter": org_code,
         }
         return render(request, "console/list.html", ctx)
 
@@ -231,7 +246,7 @@ class WizardView(StaffMixin, View):
 
     def _ctx(self, request, **extra):
         from apps.ingestion.backends.registry import BACKEND_CHOICES
-        from apps.usecases.models import FormDefinition
+        from apps.usecases.models import FormDefinition, Organization
 
         from .onboarding import CANONICAL_TARGETS
 
@@ -243,6 +258,7 @@ class WizardView(StaffMixin, View):
             "roles": FormDefinition.Role.choices,
             "backends": BACKEND_CHOICES,
             "targets": CANONICAL_TARGETS,
+            "organizations": Organization.objects.filter(is_active=True),
         }
         ctx.update(extra)
         return ctx

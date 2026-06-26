@@ -62,6 +62,13 @@
       <div class="grid2" style="margin-top:.8rem;">
         <div class="fld"><label>Use-case code *</label><input name="code" id="f_code" required value="{{ posted.code }}" placeholder="SNS-RWANDA"></div>
         <div class="fld"><label>Name *</label><input name="name" id="f_name" required value="{{ posted.name }}" placeholder="SNS Rwanda"></div>
+        {% if organizations|length > 1 %}
+        <div class="fld"><label>Owning institution</label>
+          <select name="organization">
+            {% for o in organizations %}<option value="{{ o.code }}" {% if posted.organization == o.code %}selected{% endif %}>{{ o.name }}</option>{% endfor %}
+          </select>
+        </div>
+        {% endif %}
         <div class="fld"><label>Countries (comma)</label><input name="countries" value="{{ posted.countries }}" placeholder="Rwanda"></div>
         <div class="fld"><label>Crops (comma)</label><input name="crops" value="{{ posted.crops }}" placeholder="maize, potato"></div>
         <div class="fld"><label>Enumerator ID pattern(s)</label><input name="enid_patterns" value="{{ posted.enid_patterns }}" placeholder="^RSENRW"></div>

@@ -97,18 +97,18 @@ def visible_use_cases(user):
         return UseCase.objects.none()
     if getattr(user, "is_platform_admin", False):
         return UseCase.objects.filter(is_active=True)  # hub operator spans tenants
-    # A membership at any scope level grants visibility to the use cases beneath it.
-    qs = UseCase.objects.filter(
-        Q(memberships__user=user)
-        | Q(country__memberships__user=user)
-        | Q(country__region__memberships__user=user),
-        is_active=True,
+    own_org = getattr(user, "organization_id", None)
+    # Region/country grants cascade only within the user's own institution — a
+    # whole region of another org is never shared this way.
+    cascade = Q(country__memberships__user=user) | Q(country__region__memberships__user=user)
+    if own_org:
+        cascade &= Q(organization_id=own_org)
+    # A direct use-case membership grants visibility even across the org
+    # boundary: that is exactly how an owner shares one project with an outside
+    # collaborator (see team.team_invite). Everything else stays in-tenant.
+    return UseCase.objects.filter(
+        Q(memberships__user=user) | cascade, is_active=True
     ).distinct()
-    # Tenant guard: never return another institution's use cases, even if a
-    # membership somehow pointed across the boundary.
-    if getattr(user, "organization_id", None):
-        qs = qs.filter(organization_id=user.organization_id)
-    return qs
 
 
 def organization_of(scope_obj):

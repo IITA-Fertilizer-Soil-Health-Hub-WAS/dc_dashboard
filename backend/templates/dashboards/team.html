@@ -73,6 +73,31 @@
     </form>
   </div>
 
+  {# ---- Invite an external collaborator ---- #}
+  <h3 style="margin:.4rem 0 .6rem;">Invite a collaborator</h3>
+  <div class="card" style="margin-bottom:1.6rem;">
+    <p class="subtle" style="margin:0 0 .7rem;font-size:.82rem;max-width:64ch;">
+      Share a single project with someone from another institution. They keep their
+      own institution and only gain access to this one project — you can revoke it
+      anytime below. They must have signed in at least once.
+    </p>
+    <form method="post" action="{% url 'dashboards:team_invite' %}"
+          style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;">
+      {% csrf_token %}
+      <input type="email" name="email" required placeholder="collaborator@institution.org"
+             class="search" style="max-width:280px;">
+      <select name="scope" required class="search" style="max-width:220px;">
+        <option value="">Project…</option>
+        {% for o in use_case_options %}<option value="{{ o.value }}">{{ o.label }}</option>{% endfor %}
+      </select>
+      <select name="role" required class="search" style="max-width:200px;">
+        <option value="">Role…</option>
+        {% for o in role_options %}<option value="{{ o.value }}">{{ o.label }}</option>{% endfor %}
+      </select>
+      <button class="btn btn-open" type="submit">Invite</button>
+    </form>
+  </div>
+
   {# ---- Access you administer ---- #}
   <h3 style="margin:.4rem 0 .6rem;">Access you administer</h3>
   <div class="card" style="padding:0;overflow:hidden;">

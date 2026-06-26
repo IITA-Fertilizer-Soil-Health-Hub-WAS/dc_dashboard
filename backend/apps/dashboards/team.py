@@ -26,6 +26,7 @@ from apps.rbac.permissions import (
     organization_of,
     pending_users,
 )
+from apps.usecases.models import UseCase
 
 # Maps the scope <select> token prefix to the membership FK field.
 _SCOPE_FIELD = {"region": "region", "country": "country", "usecase": "use_case"}
@@ -52,6 +53,14 @@ def _scope_options(user) -> list[dict]:
 def _role_options(user) -> list[dict]:
     labels = dict(Role.choices)
     return [{"value": r, "label": labels[r]} for r in grantable_roles(user)]
+
+
+def _use_case_options(user) -> list[dict]:
+    """Only the use-case scopes (collaboration is shared per project, never wider)."""
+    return [
+        {"value": f"usecase:{uc.pk}", "label": uc.code}
+        for uc in grantable_scopes(user)["use_cases"]
+    ]
 
 
 def _resolve_scope(token: str):
@@ -82,6 +91,7 @@ def team(request):
         "memberships": memberships,
         "scope_options": _scope_options(request.user),
         "role_options": _role_options(request.user),
+        "use_case_options": _use_case_options(request.user),
         "active_users": active.order_by("email"),
     }
     return render(request, "dashboards/team.html", ctx)
@@ -145,6 +155,51 @@ def team_grant(request):
         messages.success(request, f"Granted {target.email} {role} on {scope_obj}.")
     else:
         messages.info(request, f"{target.email} already had that access.")
+    return redirect("dashboards:team")
+
+
+@require_POST
+@login_required
+def team_invite(request):
+    """Invite an external collaborator to one of your projects — opt-in, owner-led.
+
+    Cross-institution sharing, but only ever on a single use case (never a region
+    or country). The invitee must already be an active user of another
+    institution; they keep their home institution and simply gain access to this
+    one project until the owner revokes it. The owner alone administers the share
+    (their org has authority over the use case, the invitee's does not).
+    """
+    _require_access(request.user)
+    email = (request.POST.get("email") or "").strip().lower()
+    role = request.POST.get("role") or ""
+    scope_obj = _resolve_scope(request.POST.get("scope") or "")
+
+    if not isinstance(scope_obj, UseCase):
+        messages.error(request, "Collaboration can only be shared on a specific project.")
+        return redirect("dashboards:team")
+    if role not in dict(Role.choices):
+        messages.error(request, "Pick a valid role for the collaborator.")
+        return redirect("dashboards:team")
+    if not can_grant(request.user, scope_obj, role):
+        raise PermissionDenied("That grant exceeds your authority.")
+
+    target = User.objects.filter(email__iexact=email, is_active=True).first()
+    if target is None:
+        messages.error(
+            request, f"No active account found for {email}. They must sign in once first."
+        )
+        return redirect("dashboards:team")
+
+    _, created = UseCaseMembership.objects.get_or_create(
+        user=target, use_case=scope_obj, role=role,
+        defaults={"granted_by": request.user},
+    )
+    if created:
+        messages.success(
+            request, f"Invited {target.email} to collaborate on {scope_obj} as {role}."
+        )
+    else:
+        messages.info(request, f"{target.email} already has that access on {scope_obj}.")
     return redirect("dashboards:team")
 
 
