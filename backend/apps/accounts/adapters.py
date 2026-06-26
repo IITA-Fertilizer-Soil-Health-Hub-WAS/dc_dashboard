@@ -16,10 +16,11 @@ from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 
 from .services import sync_memberships_from_eia_apps
 
-# Require Platform Admin approval even for Auth0-authenticated users: a first-time
-# Auth0 login provisions the account but leaves it inactive (allauth shows the
-# "account inactive" page) until an admin approves it in /admin. Set to False to
-# trust the Auth0 identity and activate on first login instead.
+# Require approval even for Auth0-authenticated users: a first-time Auth0 login
+# provisions the account but leaves it inactive (allauth shows the "account
+# inactive" page) until it is approved in-app on the Team & access screen (any
+# coordinator can approve into a scope they own; see apps.dashboards.team). Set
+# to False to trust the Auth0 identity and activate on first login instead.
 REQUIRE_ADMIN_APPROVAL_FOR_AUTH0 = True
 
 
