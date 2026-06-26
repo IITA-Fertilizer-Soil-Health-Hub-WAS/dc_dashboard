@@ -219,6 +219,7 @@ def _upsert_submission(use_case, form, raw_rec, mapped, crop_by_name, test_ids, 
             use_case=use_case, hhid=hhid, defaults={"enumerator": enumerator}
         )
     crop = crop_by_name.get(mapped.get("Crop")) if mapped.get("Crop") else None
+    collected_by = _resolve_collector(mapped, enumerator)
 
     existing = Submission.objects.filter(use_case=use_case, ona_uuid=ona_uuid).first()
     if existing and existing.content_hash == content_hash:
@@ -235,6 +236,7 @@ def _upsert_submission(use_case, form, raw_rec, mapped, crop_by_name, test_ids, 
         "enumerator": enumerator,
         "household": household,
         "crop": crop,
+        "collected_by": collected_by,
         "event_key": mapped.get("event_key") or "",
         "event_date": _to_date(mapped.get("today")),
     }
@@ -246,6 +248,27 @@ def _upsert_submission(use_case, form, raw_rec, mapped, crop_by_name, test_ids, 
         stats.created += 1
     else:
         stats.updated += 1
+
+
+def _resolve_collector(mapped, enumerator):
+    """Resolve the platform User who collected a submission.
+
+    Two paths, in priority order:
+      1. The mobile app stamps the collector's platform UserID on the record
+         (canonical ``USERID``) — resolve it directly. This is the end state.
+      2. ONA-era bridge: the submission's enumerator is linked to a User account
+         (``Enumerator.user``), so attribute the submission to that account.
+    """
+    from apps.accounts.models import User
+
+    uid = mapped.get("USERID")
+    if uid:
+        user = User.objects.filter(user_id=uid).first()
+        if user:
+            return user
+    if enumerator and enumerator.user_id:  # FK id — enumerator linked to an account
+        return enumerator.user
+    return None
 
 
 def _sync_values(submission, mapped, *, is_new: bool) -> None:

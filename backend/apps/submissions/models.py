@@ -22,6 +22,16 @@ class Enumerator(BaseModel):
     surname = models.CharField(max_length=128, blank=True)
     phone = models.CharField(max_length=32, blank=True)
     is_test = models.BooleanField(default=False)  # excludes RSENRW000001-style accounts
+    # Bridges the ONA-era ENID to a platform account. Once collectors use the
+    # mobile app their UserID is stamped directly; until then, linking here lets
+    # ingestion resolve collected_by from the enumerator. Optional, set in admin.
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="enumerator_profiles",
+    )
 
     class Meta:
         unique_together = ("use_case", "enid")
@@ -79,6 +89,18 @@ class Submission(BaseModel):
     stage = models.ForeignKey(Stage, null=True, blank=True, on_delete=models.SET_NULL)
     event_key = models.CharField(max_length=32, blank=True)
     event_date = models.DateField(null=True, blank=True)
+
+    # The platform identity that collected this submission. Resolved at ingest
+    # from the mobile app's stamped UserID, or bridged via the enumerator's
+    # linked account during the ONA period. This is what makes the platform the
+    # identity registry: every submission traces to a registered user.
+    collected_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="collected_submissions",
+    )
 
     ingested_at = models.DateTimeField(auto_now_add=True)
 

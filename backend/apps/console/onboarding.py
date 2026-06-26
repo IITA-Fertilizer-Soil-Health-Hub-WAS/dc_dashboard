@@ -11,6 +11,8 @@ from typing import Any
 
 # Canonical fields the engine understands, shown as mapping rows in the wizard.
 CANONICAL_TARGETS = [
+    {"key": "USERID", "label": "Platform UserID (collector)", "transform": "DIRECT",
+     "required": False},
     {"key": "ENID", "label": "Enumerator ID", "transform": "DIRECT", "required": True},
     {"key": "HHID", "label": "Household / Plot ID", "transform": "DIRECT", "required": True},
     {"key": "event_key", "label": "Event", "transform": "DIRECT", "required": True},
@@ -28,6 +30,10 @@ def suggest_target(field_path: str) -> str | None:
     # Geopoint is checked before HHID so 'household_geopoint' maps to GEO, not HHID.
     if "geopoint" in f or "gps" in f or "geolocation" in f:
         return "GEO"
+    # Platform UserID stamped by the mobile app — checked before ENID so a
+    # 'user_id'/'collector_id' field doesn't get grabbed as the enumerator id.
+    if "userid" in f or "user_id" in f or f.endswith("/uid") or "collector_id" in f:
+        return "USERID"
     if "enumerator" in f or "enum_id" in f or f.endswith("/enid") or "enid" in f:
         return "ENID"
     if "household" in f or "barcode" in f or "hhid" in f or "plot" in f or "rep_id" in f:
