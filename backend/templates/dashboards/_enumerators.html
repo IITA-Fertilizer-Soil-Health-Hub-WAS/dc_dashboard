@@ -2,12 +2,20 @@
   <div class="card" style="flex:1; min-width:300px;">
     <h3>Enumerator ranking</h3>
     <table>
-      <thead><tr><th>Enumerator</th><th>Name</th><th>Submissions</th></tr></thead>
+      <thead><tr><th>Enumerator</th><th>Name</th><th>Account</th><th>Submissions</th></tr></thead>
       <tbody>
         {% for e in ranking %}
-          <tr><td>{{ e.enid }}</td><td>{{ e.first_name }} {{ e.surname }}</td><td>{{ e.n }}</td></tr>
+          <tr>
+            <td>{{ e.enid }}</td>
+            <td>{{ e.first_name }} {{ e.surname }}</td>
+            <td>
+              {% if e.user %}<span class="mono" title="{{ e.user.email }}">{{ e.user.user_id }}</span>
+              {% else %}<span class="subtle" title="Not linked to a platform account">unlinked</span>{% endif %}
+            </td>
+            <td>{{ e.n }}</td>
+          </tr>
         {% empty %}
-          <tr><td colspan="3">No enumerators yet.</td></tr>
+          <tr><td colspan="4">No enumerators yet.</td></tr>
         {% endfor %}
       </tbody>
     </table>

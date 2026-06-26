@@ -93,19 +93,21 @@ def export_audit(request, code):
     uc = get_scoped_use_case(request, code)
     logs = (
         ReviewActionLog.objects.filter(submission__use_case=uc)
-        .select_related("actor", "submission")
+        .select_related("actor", "submission", "submission__collected_by")
         .order_by("created_at")
     )
     response = HttpResponse(content_type="text/csv")
     response["Content-Disposition"] = f'attachment; filename="{uc.code.lower()}_audit.csv"'
     writer = csv.writer(response)
-    writer.writerow(["timestamp", "actor", "submission", "action", "from_state",
-                     "to_state", "field", "old_value", "new_value", "note"])
+    writer.writerow(["timestamp", "actor", "submission", "collected_by", "action",
+                     "from_state", "to_state", "field", "old_value", "new_value", "note"])
     for log in logs:
+        collector = log.submission.collected_by
         writer.writerow([
             log.created_at.isoformat(),
             log.actor.email if log.actor else "system",
             log.submission.ona_uuid,
+            collector.user_id if collector else "",
             log.action, log.from_state, log.to_state,
             log.field_key, log.old_value, log.new_value, log.note,
         ])
@@ -157,6 +159,7 @@ def tab_enumerators(request, code):
     uc = get_scoped_use_case(request, code)
     ranking = (
         Enumerator.objects.filter(use_case=uc, is_test=False)
+        .select_related("user")
         .annotate(n=Count("submissions"))
         .order_by("-n")
     )
@@ -179,7 +182,7 @@ def tab_data(request, code):
     uc = get_scoped_use_case(request, code)
     submissions = (
         Submission.objects.filter(use_case=uc)
-        .select_related("enumerator", "household", "crop")
+        .select_related("enumerator", "household", "crop", "collected_by")
         .order_by("-event_date")[:500]
     )
     return render(request, "dashboards/_data.html", {"uc": uc, "submissions": submissions})
@@ -198,7 +201,7 @@ def export_final(request, code):
     """Download the final (approved) dataset as CSV — authoritative values."""
     uc = get_scoped_use_case(request, code)
     subs, keys, rows = final_rows(uc)
-    base = ["ona_uuid", "ENID", "HHID", "event", "crop", "date", "state"]
+    base = ["ona_uuid", "ENID", "HHID", "collected_by", "event", "crop", "date", "state"]
     columns = base + [k for k in keys if k not in base]
 
     response = HttpResponse(content_type="text/csv")
@@ -211,6 +214,7 @@ def export_final(request, code):
             "ona_uuid": s.ona_uuid,
             "ENID": s.enumerator.enid if s.enumerator else "",
             "HHID": s.household.hhid if s.household else "",
+            "collected_by": s.collected_by.user_id if s.collected_by else "",
             "event": s.event_key,
             "crop": s.crop.name if s.crop else "",
             "date": s.event_date or "",

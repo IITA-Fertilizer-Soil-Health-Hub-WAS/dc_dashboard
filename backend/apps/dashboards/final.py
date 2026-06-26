@@ -11,7 +11,7 @@ from apps.submissions.models import Submission
 def approved_submissions(use_case):
     return (
         Submission.objects.filter(use_case=use_case, review__state=ReviewState.APPROVED)
-        .select_related("enumerator", "household", "crop", "review")
+        .select_related("enumerator", "household", "crop", "review", "collected_by")
         .prefetch_related("values")
         .order_by("-event_date", "-ona_submission_time")
     )
