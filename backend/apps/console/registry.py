@@ -13,10 +13,12 @@ from apps.accounts.models import User
 from apps.rbac.models import UseCaseMembership
 from apps.submissions.models import Enumerator, Household, Submission
 from apps.usecases.models import (
+    Country,
     Crop,
     EventScheduleItem,
     FieldMapping,
     FormDefinition,
+    Region,
     Stage,
     Trial,
     UseCase,
@@ -52,10 +54,20 @@ class Managed:
 
 # Order here defines sidebar order within each group.
 _ENTRIES: list[Managed] = [
+    # ---- Geography: the region → country hierarchy use cases hang off ----
+    Managed("regions", Region, "Regions", "Geography",
+            list_display=["code", "name"],
+            form_fields=["code", "name"], search_fields=["code", "name"], icon="public",
+            description="Geographic regions a Regional Coordinator oversees."),
+    Managed("countries", Country, "Countries", "Geography",
+            list_display=["name", "code", "region"],
+            form_fields=["region", "code", "name"], search_fields=["code", "name"],
+            icon="flag", description="Countries within a region."),
     # ---- Configuration: how a use case is defined & ingested ----
     Managed("use-cases", UseCase, "Use cases", "Configuration",
-            list_display=["code", "name", "is_active", "config_version", "plugin_path"],
-            form_fields=["code", "name", "is_active", "countries", "enid_patterns",
+            list_display=["code", "name", "country", "is_active", "config_version",
+                          "plugin_path"],
+            form_fields=["code", "name", "country", "is_active", "countries", "enid_patterns",
                          "hhid_patterns", "plugin_path", "timezone", "household_label"],
             search_fields=["code", "name"], icon="category", actions=USECASE_ACTIONS,
             description="Projects you monitor — ONA forms, ID patterns, sync."),
@@ -96,11 +108,11 @@ _ENTRIES: list[Managed] = [
             description="Checks that flag submissions for review."),
     # ---- Access: who can see & act ----
     Managed("users", User, "Users", "Access",
-            list_display=["email", "full_name", "is_active", "is_staff", "is_superuser",
-                          "approved_at"],
+            list_display=["user_id", "email", "full_name", "is_active", "is_staff",
+                          "is_superuser", "approved_at"],
             form_fields=["email", "full_name", "phone", "is_active", "email_verified",
                          "is_staff", "is_superuser"],
-            search_fields=["email", "full_name"], ordering=["email"], icon="person",
+            search_fields=["user_id", "email", "full_name"], ordering=["email"], icon="person",
             actions=USER_ACTIONS, description="People and account approval status."),
     Managed("memberships", UseCaseMembership, "Memberships", "Access",
             list_display=["user", "use_case", "role", "granted_by", "created_at"],
@@ -133,7 +145,7 @@ _ENTRIES: list[Managed] = [
 REGISTRY: dict[str, Managed] = {m.key: m for m in _ENTRIES}
 
 # Group order for sidebar rendering.
-GROUPS: list[str] = ["Configuration", "Access", "Field data"]
+GROUPS: list[str] = ["Geography", "Configuration", "Access", "Field data"]
 
 
 def grouped() -> list[tuple[str, list[Managed]]]:

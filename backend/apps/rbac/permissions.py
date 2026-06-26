@@ -16,20 +16,26 @@ if TYPE_CHECKING:
     from apps.usecases.models import UseCase
 
 # Action -> set of use-case-scoped roles that may perform it.
+# Coordinator roles share the trial-coordinator powers, just at a wider scope
+# (region/country grants cascade to use cases — see roles_for).
+COORDINATORS = {Role.TRIAL_COORDINATOR, Role.COUNTRY_COORDINATOR, Role.REGIONAL_COORDINATOR}
+# Quality sign-off: the agronomist / survey domain expert.
+QUALITY = {Role.QUALITY_CHECK, Role.SURVEY_DOMAIN_EXPERT}
+
 # Platform Admin (superuser) bypasses this table entirely.
 ACTION_ROLES: dict[str, set[str]] = {
     # Read access to a use case's data/dashboards.
-    "view": {Role.VIEWER, Role.ENUMERATOR, Role.TRIAL_COORDINATOR, Role.QUALITY_CHECK},
+    "view": {Role.VIEWER, Role.ENUMERATOR} | COORDINATORS | QUALITY,
     # Review workflow.
-    "open_review": {Role.TRIAL_COORDINATOR, Role.QUALITY_CHECK},
-    "decline": {Role.TRIAL_COORDINATOR},
-    "request_edit": {Role.TRIAL_COORDINATOR},
-    "edit": {Role.TRIAL_COORDINATOR},
-    "qc_approve": {Role.QUALITY_CHECK},
-    "reopen": {Role.TRIAL_COORDINATOR, Role.QUALITY_CHECK},
-    "resolve_flag": {Role.TRIAL_COORDINATOR, Role.QUALITY_CHECK},
+    "open_review": COORDINATORS | QUALITY,
+    "decline": COORDINATORS,
+    "request_edit": COORDINATORS,
+    "edit": COORDINATORS,
+    "qc_approve": QUALITY,
+    "reopen": COORDINATORS | QUALITY,
+    "resolve_flag": COORDINATORS | QUALITY,
     # Operations.
-    "sync": {Role.TRIAL_COORDINATOR},
+    "sync": COORDINATORS,
 }
 
 # Actions only the Platform Admin may perform (no use-case scope).

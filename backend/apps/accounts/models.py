@@ -44,6 +44,9 @@ class UserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    # Stable, human-readable platform identity. The mobile app stamps this on each
+    # submission so a collector's data links to their account (see collected_by).
+    user_id = models.CharField(max_length=16, unique=True, blank=True)
     email = models.EmailField(unique=True)
     full_name = models.CharField(max_length=255, blank=True)
     phone = models.CharField(max_length=32, blank=True)
@@ -74,6 +77,15 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     class Meta:
         ordering = ["email"]
+
+    def save(self, *args, **kwargs):
+        if not self.user_id:
+            self.user_id = self._new_user_id()
+        super().save(*args, **kwargs)
+
+    @staticmethod
+    def _new_user_id() -> str:
+        return "U-" + uuid.uuid4().hex[:8].upper()
 
     def __str__(self) -> str:
         return self.email

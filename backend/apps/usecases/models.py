@@ -17,10 +17,43 @@ from apps.common.models import BaseModel
 # (prod, where JSONField is jsonb). These lists are read whole, not queried.
 
 
+class Region(BaseModel):
+    """A geographic region grouping countries (e.g. West Africa). Drives the
+    coordinator hierarchy: a Regional Coordinator oversees all its countries."""
+
+    code = models.SlugField(max_length=32, unique=True)
+    name = models.CharField(max_length=128)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Country(BaseModel):
+    """A country within a region. A Country Coordinator oversees its use cases."""
+
+    region = models.ForeignKey(Region, on_delete=models.CASCADE, related_name="countries")
+    code = models.CharField(max_length=8)  # ISO-ish
+    name = models.CharField(max_length=128)
+
+    class Meta:
+        ordering = ["name"]
+        unique_together = ("region", "code")
+        verbose_name_plural = "countries"
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class UseCase(BaseModel):
     """An independent project implementation (e.g. SNS-RWANDA, KALRO, BioSSA)."""
 
     code = models.SlugField(max_length=64, unique=True)  # "SNS-RWANDA"
+    country = models.ForeignKey(
+        "Country", null=True, blank=True, on_delete=models.SET_NULL, related_name="use_cases"
+    )
     name = models.CharField(max_length=255)
     is_active = models.BooleanField(default=True)  # replaces active_use_case_list
     countries = models.JSONField(default=list, blank=True)

@@ -10,3 +10,8 @@ get_users.R
 .RData 
 .Renviron
 data
+
+# IDE / OS / local tooling
+.idea/
+.DS_Store
+.claude/
