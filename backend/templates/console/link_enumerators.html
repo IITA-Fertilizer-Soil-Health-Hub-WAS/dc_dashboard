@@ -4,8 +4,8 @@
 {% block console_main %}
   <div class="page-head">
     <h2>Link enumerators to accounts</h2>
-    <span class="pill">{{ report.matched }} match{{ report.matched|pluralize:"es" }}</span>
-    {% if report.ambiguous %}<span class="pill" style="background:#fff5e0;color:#8a5a00;">{{ report.ambiguous }} ambiguous</span>{% endif %}
+    <span class="pill ok">{{ report.matched }} match{{ report.matched|pluralize:"es" }}</span>
+    {% if report.ambiguous %}<span class="pill warn">{{ report.ambiguous }} ambiguous</span>{% endif %}
   </div>
   <p class="subtle" style="margin:.1rem 0 1rem;max-width:60ch;">
     Matches each enumerator (ENID) to a registered platform account by shared
@@ -46,8 +46,8 @@
             </td>
             <td class="subtle">{{ p.reason|default:"—" }}</td>
             <td>
-              {% if p.status == 'match' %}<span class="pill" style="background:#e8f5ec;color:#0a4630;">will link</span>
-              {% else %}<span class="pill" style="background:#fff5e0;color:#8a5a00;">ambiguous</span>{% endif %}
+              {% if p.status == 'match' %}<span class="pill ok">will link</span>
+              {% else %}<span class="pill warn">ambiguous</span>{% endif %}
             </td>
           </tr>
         {% empty %}

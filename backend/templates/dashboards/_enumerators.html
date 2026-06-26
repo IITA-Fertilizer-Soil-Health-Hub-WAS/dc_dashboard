@@ -9,8 +9,8 @@
             <td>{{ e.enid }}</td>
             <td>{{ e.first_name }} {{ e.surname }}</td>
             <td>
-              {% if e.user %}<span class="mono" title="{{ e.user.email }}">{{ e.user.user_id }}</span>
-              {% else %}<span class="subtle" title="Not linked to a platform account">unlinked</span>{% endif %}
+              {% if e.user %}<span class="uid" title="{{ e.user.email }}">{{ e.user.user_id }}</span>
+              {% else %}<span class="pill neutral" title="Not linked to a platform account">unlinked</span>{% endif %}
             </td>
             <td>{{ e.n }}</td>
           </tr>
@@ -28,7 +28,7 @@
       <tbody>
         {% for c in collectors %}
           <tr>
-            <td class="mono" title="{{ c.email }}">{{ c.user_id }}</td>
+            <td><span class="uid" title="{{ c.email }}">{{ c.user_id }}</span></td>
             <td>{{ c.full_name|default:c.email }}</td>
             <td>{{ c.n }}</td>
           </tr>

@@ -8,15 +8,14 @@
 </div>
 
 <div class="card" style="margin-top:1rem;">
-  <h3 style="margin-bottom:.5rem;">Identity coverage</h3>
-  <p class="subtle" style="margin:0 0 .7rem;font-size:.82rem;">
-    {{ attribution.attributed }} of {{ attribution.total }} submissions trace to a
-    registered platform account
-    {% if attribution.unattributed %}· {{ attribution.unattributed }} still need a linked collector{% endif %}.
+  <h3 style="margin-bottom:.6rem; display:flex; align-items:center; gap:.5rem;">
+    <span class="msym" style="color:var(--brand);">verified_user</span>Identity coverage
+    <span class="pill {% if attribution.pct == 100 %}ok{% elif attribution.pct >= 50 %}info{% else %}warn{% endif %}" style="margin-left:auto;">{{ attribution.pct }}%</span>
+  </h3>
+  <div class="meter" style="margin-bottom:.5rem;"><i style="width:{{ attribution.pct }}%;"></i></div>
+  <p class="subtle" style="margin:0; font-size:.82rem;">
+    {{ attribution.attributed }} of {{ attribution.total }} submissions trace to a registered account{% if attribution.unattributed %} · {{ attribution.unattributed }} still need a linked collector{% endif %}.
   </p>
-  <div style="height:12px;border-radius:7px;background:var(--line);overflow:hidden;">
-    <div style="height:100%;width:{{ attribution.pct }}%;background:#3f9142;"></div>
-  </div>
 </div>
 
 <div class="card" style="margin-top:1rem;">

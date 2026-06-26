@@ -4,68 +4,83 @@
 {% block content %}
   <div class="page-head">
     <h2>Team &amp; access</h2>
-    {% if pending %}<span class="pill" style="background:#fff5e0;color:#8a5a00;">{{ pending|length }} pending</span>{% endif %}
+    {% if pending %}<span class="pill warn">{{ pending|length }} pending</span>{% endif %}
+    {% if user.organization %}<span class="pill neutral"><span class="msym" style="font-size:14px;">domain</span>{{ user.organization.name }}</span>{% endif %}
   </div>
-  <p class="subtle" style="margin:.1rem 0 1.2rem;max-width:64ch;">
-    Approve new users and grant access. You can only grant within your own scope
-    and up to your own role — a tampered request is rejected, never downgraded.
+  <p class="lede">
+    Approve new people and grant access. You can only grant within your own scope
+    and up to your own role — a request beyond your authority is refused, never
+    quietly downgraded.
   </p>
 
-  {% if messages %}{% for msg in messages %}<div class="pill" style="margin-bottom:.7rem;">{{ msg }}</div>{% endfor %}{% endif %}
+  {% if messages %}{% for msg in messages %}<div class="banner info" style="margin-bottom:.8rem;"><span class="msym">info</span><div class="bx">{{ msg }}</div></div>{% endfor %}{% endif %}
 
   {# ---- Pending approvals ---- #}
-  {# Forms live outside the table; cells reference them via the HTML5 form= attribute. #}
   {% for u in pending %}
     <form id="approve-{{ u.pk }}" method="post" action="{% url 'dashboards:team_grant' %}">
       {% csrf_token %}<input type="hidden" name="user" value="{{ u.pk }}">
     </form>
   {% endfor %}
-  <h3 style="margin:.4rem 0 .6rem;">Pending approval</h3>
-  <div class="card" style="padding:0;overflow:hidden;margin-bottom:1.6rem;">
+  <div class="section">
+    <div class="st">
+      <h3><span class="msym">how_to_reg</span>Pending approval</h3>
+      <div class="desc">People who signed in and are waiting for access. Approving sets their role and home institution in one step.</div>
+    </div>
+  </div>
+  <div class="card" style="padding:0; overflow:hidden;">
     <table>
-      <thead><tr><th>User</th><th>Grant scope</th><th>Role</th><th></th></tr></thead>
+      <thead><tr><th>Person</th><th>Grant scope</th><th>Role</th><th></th></tr></thead>
       <tbody>
         {% for u in pending %}
           <tr>
-            <td><b>{{ u.full_name|default:u.email }}</b><br><span class="subtle mono">{{ u.email }}</span></td>
             <td>
-              <select name="scope" form="approve-{{ u.pk }}" required class="search" style="max-width:260px;">
+              <div class="idcell">
+                <span class="av">{{ u.full_name|default:u.email|slice:":1"|upper }}</span>
+                <div><div class="nm">{{ u.full_name|default:u.email }}</div><div class="sub">{{ u.email }}</div></div>
+              </div>
+            </td>
+            <td>
+              <select name="scope" form="approve-{{ u.pk }}" required class="input" style="max-width:260px;">
                 <option value="">Choose scope…</option>
                 {% for o in scope_options %}<option value="{{ o.value }}">{{ o.label }}</option>{% endfor %}
               </select>
             </td>
             <td>
-              <select name="role" form="approve-{{ u.pk }}" required class="search" style="max-width:200px;">
+              <select name="role" form="approve-{{ u.pk }}" required class="input" style="max-width:200px;">
                 <option value="">Choose role…</option>
                 {% for o in role_options %}<option value="{{ o.value }}">{{ o.label }}</option>{% endfor %}
               </select>
             </td>
             <td style="text-align:right;">
-              <button class="btn btn-open" type="submit" form="approve-{{ u.pk }}">Approve &amp; grant</button>
+              <button class="btn btn-approve" type="submit" form="approve-{{ u.pk }}">Approve &amp; grant</button>
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="4"><div class="empty" style="border:none;">No one is waiting for approval. 🎉</div></td></tr>
+          <tr><td colspan="4"><div class="empty" style="border:none; padding:1.6rem;">No one is waiting for approval. 🎉</div></td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 
   {# ---- Grant access to an existing user ---- #}
-  <h3 style="margin:.4rem 0 .6rem;">Grant access to an existing user</h3>
-  <div class="card" style="margin-bottom:1.6rem;">
-    <form method="post" action="{% url 'dashboards:team_grant' %}"
-          style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;">
+  <div class="section">
+    <div class="st">
+      <h3><span class="msym">person_add</span>Grant access to a teammate</h3>
+      <div class="desc">Give someone already in your institution access to one of your scopes.</div>
+    </div>
+  </div>
+  <div class="card">
+    <form method="post" action="{% url 'dashboards:team_grant' %}" class="formrow">
       {% csrf_token %}
-      <select name="user" required class="search" style="max-width:260px;">
-        <option value="">User…</option>
-        {% for u in active_users %}<option value="{{ u.pk }}">{{ u.email }}</option>{% endfor %}
+      <select name="user" required class="input" style="min-width:240px;">
+        <option value="">Teammate…</option>
+        {% for u in active_users %}<option value="{{ u.pk }}">{{ u.full_name|default:u.email }} · {{ u.email }}</option>{% endfor %}
       </select>
-      <select name="scope" required class="search" style="max-width:260px;">
+      <select name="scope" required class="input" style="min-width:240px;">
         <option value="">Scope…</option>
         {% for o in scope_options %}<option value="{{ o.value }}">{{ o.label }}</option>{% endfor %}
       </select>
-      <select name="role" required class="search" style="max-width:200px;">
+      <select name="role" required class="input" style="min-width:180px;">
         <option value="">Role…</option>
         {% for o in role_options %}<option value="{{ o.value }}">{{ o.label }}</option>{% endfor %}
       </select>
@@ -74,54 +89,74 @@
   </div>
 
   {# ---- Invite an external collaborator ---- #}
-  <h3 style="margin:.4rem 0 .6rem;">Invite a collaborator</h3>
-  <div class="card" style="margin-bottom:1.6rem;">
-    <p class="subtle" style="margin:0 0 .7rem;font-size:.82rem;max-width:64ch;">
-      Share a single project with someone from another institution. They keep their
-      own institution and only gain access to this one project — you can revoke it
-      anytime below. They must have signed in at least once.
-    </p>
-    <form method="post" action="{% url 'dashboards:team_invite' %}"
-          style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;">
+  <div class="section">
+    <div class="st">
+      <h3><span class="msym">handshake</span>Invite a collaborator</h3>
+      <div class="desc">Share a single project with someone from another institution.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="banner gold" style="margin-bottom:.9rem;">
+      <span class="msym">shield_lock</span>
+      <div class="bx">They keep their own institution and only gain access to this one project — never your other data. You can revoke it anytime below. They must have signed in at least once.</div>
+    </div>
+    <form method="post" action="{% url 'dashboards:team_invite' %}" class="formrow">
       {% csrf_token %}
       <input type="email" name="email" required placeholder="collaborator@institution.org"
-             class="search" style="max-width:280px;">
-      <select name="scope" required class="search" style="max-width:220px;">
+             class="input" style="min-width:280px;">
+      <select name="scope" required class="input" style="min-width:200px;">
         <option value="">Project…</option>
         {% for o in use_case_options %}<option value="{{ o.value }}">{{ o.label }}</option>{% endfor %}
       </select>
-      <select name="role" required class="search" style="max-width:200px;">
+      <select name="role" required class="input" style="min-width:180px;">
         <option value="">Role…</option>
         {% for o in role_options %}<option value="{{ o.value }}">{{ o.label }}</option>{% endfor %}
       </select>
-      <button class="btn btn-open" type="submit">Invite</button>
+      <button class="btn btn-edit" type="submit">Invite</button>
     </form>
   </div>
 
   {# ---- Access you administer ---- #}
-  <h3 style="margin:.4rem 0 .6rem;">Access you administer</h3>
-  <div class="card" style="padding:0;overflow:hidden;">
+  <div class="section">
+    <div class="st">
+      <h3><span class="msym">manage_accounts</span>Access you administer</h3>
+      <div class="desc">Every grant within your authority. <span class="chip ext" style="vertical-align:middle;"><span class="msym">public</span>external</span> marks a collaborator from another institution.</div>
+    </div>
+  </div>
+  <div class="card" style="padding:0; overflow:hidden;">
     <table>
-      <thead><tr><th>User</th><th>Scope</th><th>Role</th><th>Granted by</th><th></th></tr></thead>
+      <thead><tr><th>Person</th><th>Scope</th><th>Role</th><th>Granted by</th><th></th></tr></thead>
       <tbody>
         {% for m in memberships %}
           <tr>
-            <td>{{ m.user.email }}</td>
-            <td>{{ m.scope }}</td>
-            <td><span class="pill">{{ m.get_role_display }}</span></td>
+            <td>
+              <div class="idcell">
+                <span class="av">{{ m.user.full_name|default:m.user.email|slice:":1"|upper }}</span>
+                <div>
+                  <div class="nm">{{ m.user.full_name|default:m.user.email }}</div>
+                  <div class="sub">{{ m.user.email }}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              {% if m.use_case %}<span class="chip scope"><span class="msym">category</span>{{ m.use_case.code }}</span>
+                {% if m.user.organization_id and m.user.organization_id != m.use_case.organization_id %}<span class="chip ext"><span class="msym">public</span>external</span>{% endif %}
+              {% elif m.country %}<span class="chip scope"><span class="msym">flag</span>{{ m.country.name }}</span>
+              {% else %}<span class="chip scope"><span class="msym">public</span>{{ m.region.name }}</span>{% endif %}
+            </td>
+            <td><span class="chip role">{{ m.get_role_display }}</span></td>
             <td class="subtle">{{ m.granted_by.email|default:"—" }}</td>
             <td style="text-align:right;">
               <form method="post" action="{% url 'dashboards:team_revoke' %}"
                     onsubmit="return confirm('Revoke {{ m.user.email }}: {{ m.get_role_display }} on {{ m.scope }}?');">
                 {% csrf_token %}
                 <input type="hidden" name="membership" value="{{ m.pk }}">
-                <button class="btn btn-request" type="submit"
-                        style="padding:.25rem .6rem;font-size:.76rem;">Revoke</button>
+                <button class="btn btn-decline" type="submit" style="padding:.25rem .6rem; font-size:.76rem;">Revoke</button>
               </form>
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="5"><div class="empty" style="border:none;">No memberships within your scope yet.</div></td></tr>
+          <tr><td colspan="5"><div class="empty" style="border:none; padding:1.6rem;">No grants within your scope yet.</div></td></tr>
         {% endfor %}
       </tbody>
     </table>

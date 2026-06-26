@@ -10,7 +10,7 @@
         <tr>
           <td>{{ s.enumerator.enid|default:"—" }}</td>
           <td>
-            {% if s.collected_by %}<span class="mono" title="{{ s.collected_by.email }}">{{ s.collected_by.user_id }}</span>
+            {% if s.collected_by %}<span class="uid" title="{{ s.collected_by.email }}">{{ s.collected_by.user_id }}</span>
             {% else %}<span class="subtle">—</span>{% endif %}
           </td>
           <td>{{ s.household.hhid|default:"—" }}</td>

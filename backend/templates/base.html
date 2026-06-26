@@ -87,6 +87,9 @@
       display:grid;place-items:center;font-weight:700;font-size:.85rem;flex-shrink:0;font-family:var(--sans);}
     .userbox .who{flex:1;min-width:0;}
     .userbox .who b{display:block;color:#fff;font-size:.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .userbox .who .org{display:flex;align-items:center;gap:.3rem;color:#c8a23a;font-size:.72rem;font-weight:600;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:1px 0 2px;}
+    .userbox .who .org .msym{font-size:13px;opacity:.9;}
     .userbox .who a{color:#9fc2b0;font-size:.74rem;}
     .userbox .who a:hover{color:#fff;}
 
@@ -172,6 +175,65 @@
       border:1px dashed var(--line); border-radius:var(--r);}
     .page-head{display:flex; align-items:center; gap:.7rem; flex-wrap:wrap; margin-bottom:.3rem;}
     .subtle{color:var(--muted); font-size:.86rem;}
+    .lede{color:var(--muted); font-size:.92rem; margin:.15rem 0 1.3rem; max-width:66ch;}
+
+    /* ---------- Pills (semantic variants) ---------- */
+    .pill.gold{background:var(--gold-soft); color:#7a5c12; border-color:rgba(200,162,58,.34);}
+    .pill.warn{background:#fff4dd; color:#8a5a00; border-color:rgba(200,140,20,.28);}
+    .pill.danger{background:#fdecea; color:#a33617; border-color:rgba(195,83,31,.22);}
+    .pill.neutral{background:var(--surface-2); color:var(--muted); border-color:var(--line);}
+    .pill.info{background:#eaf1f6; color:#2c5566; border-color:rgba(44,85,102,.18);}
+    .pill.ok{background:#e7f3e9; color:#2f7a3a; border-color:rgba(63,145,66,.22);}
+
+    /* ---------- Chips (role / scope / tag) ---------- */
+    .chip{display:inline-flex; align-items:center; gap:.32rem; padding:.18rem .55rem; border-radius:7px;
+      font-size:.74rem; font-weight:600; background:var(--surface-2); color:var(--ink); border:1px solid var(--line);
+      white-space:nowrap;}
+    .chip .msym{font-size:15px; opacity:.75;}
+    .chip.scope{color:var(--brand-700); background:var(--brand-50); border-color:rgba(13,92,63,.16);}
+    .chip.role{color:#5a4a8a; background:#f1ecfb; border-color:rgba(120,90,180,.22);}
+    .chip.ext{color:#7a5c12; background:var(--gold-soft); border-color:rgba(200,162,58,.32);}
+
+    /* ---------- Section headers ---------- */
+    .section{margin:1.8rem 0 .8rem; display:flex; align-items:flex-end; gap:.7rem; flex-wrap:wrap;}
+    .section .st{flex:1; min-width:200px;}
+    .section h3{display:flex; align-items:center; gap:.5rem;}
+    .section h3 .msym{color:var(--brand); font-size:20px; opacity:1;}
+    .section .desc{color:var(--muted); font-size:.83rem; margin-top:.15rem; max-width:64ch;}
+
+    /* ---------- Banners (inline notices) ---------- */
+    .banner{display:flex; align-items:flex-start; gap:.8rem; padding:.85rem 1.05rem; border-radius:var(--r-sm);
+      border:1px solid var(--line); background:var(--surface); font-size:.88rem; color:var(--ink);}
+    .banner .msym{flex-shrink:0; margin-top:1px;}
+    .banner .bx{flex:1; min-width:0;}
+    .banner .ba{flex-shrink:0; align-self:center;}
+    .banner.info{background:#eef4f1; border-color:rgba(13,92,63,.2); color:var(--brand-900);}
+    .banner.info .msym{color:var(--brand);}
+    .banner.gold{background:#fff8e6; border-color:var(--gold);}
+    .banner.gold .msym{color:#9a7a1c;}
+    .banner.warn{background:#fff4dd; border-color:rgba(200,140,20,.34); color:#7a5200;}
+
+    /* ---------- Inline form controls ---------- */
+    .input{padding:.5rem .68rem; border:1px solid var(--line); border-radius:8px; font-family:var(--sans);
+      font-size:.88rem; background:var(--surface); color:var(--ink); max-width:100%;}
+    .input:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-50);}
+    select.input{cursor:pointer;}
+    .formrow{display:flex; gap:.55rem; flex-wrap:wrap; align-items:center;}
+
+    /* ---------- Compact user identity cell ---------- */
+    .idcell{display:flex; align-items:center; gap:.6rem;}
+    .idcell .av{width:30px; height:30px; border-radius:50%; flex-shrink:0; display:grid; place-items:center;
+      background:var(--brand-50); color:var(--brand); font-weight:700; font-size:.78rem;}
+    .idcell .nm{font-weight:600; line-height:1.15;}
+    .idcell .sub{color:var(--faint); font-size:.74rem;}
+
+    /* ---------- UserID token ---------- */
+    .uid{font-family:var(--mono); font-size:.78rem; background:var(--brand-50); color:var(--brand-700);
+      padding:.08rem .42rem; border-radius:5px; border:1px solid rgba(13,92,63,.12); white-space:nowrap;}
+
+    /* ---------- Meter bar (coverage) ---------- */
+    .meter{height:11px; border-radius:7px; background:var(--line); overflow:hidden;}
+    .meter > i{display:block; height:100%; background:linear-gradient(90deg,var(--brand),#3f9142); border-radius:7px;}
 
     @media (max-width:820px){
       .sidebar{display:none;}
@@ -256,9 +318,14 @@
         {% endif %}
       </nav>
       <div class="userbox">
-        <div class="avatar">{{ user.email|slice:":1"|upper }}</div>
+        <div class="avatar">{{ user.full_name|default:user.email|slice:":1"|upper }}</div>
         <div class="who">
-          <b>{{ user.full_name|default:user.email }}</b>
+          <b title="{{ user.email }}{% if user.user_id %} · {{ user.user_id }}{% endif %}">{{ user.full_name|default:user.email }}</b>
+          {% if user.organization %}
+            <span class="org"><span class="msym">domain</span>{{ user.organization.name }}</span>
+          {% elif user.is_superuser %}
+            <span class="org"><span class="msym">hub</span>All institutions</span>
+          {% endif %}
           <a href="/accounts/logout/">Sign out</a>
         </div>
       </div>
@@ -272,13 +339,10 @@
         <span class="spacer"></span>
       </header>
       {% if show_claim_admin %}
-        <div style="margin:1rem 1.4rem 0;padding:.9rem 1.1rem;border:1px solid var(--gold);
-                    background:#fff8e6;border-radius:10px;display:flex;align-items:center;gap:1rem;">
-          <span class="msym" style="color:#8a5a00;">shield_person</span>
-          <div style="flex:1;">
-            <b>Finish setup</b> — no Platform Admin exists yet. As the first user you can claim it.
-          </div>
-          <a class="btn btn-open" style="text-decoration:none;" href="{% url 'claim_admin' %}">Claim Platform Admin</a>
+        <div class="banner gold" style="margin:1rem 1.8rem 0;">
+          <span class="msym">shield_person</span>
+          <div class="bx"><b>Finish setup</b> — no Platform Admin exists yet. As the first signed-in user you can claim it.</div>
+          <a class="btn btn-open ba" style="text-decoration:none;" href="{% url 'claim_admin' %}">Claim Platform Admin</a>
         </div>
       {% endif %}
       <main class="content">{% block content %}{% endblock %}</main>
