@@ -15,8 +15,31 @@ from django.utils import timezone
 from apps.config_admin.loader import import_config, load_yaml
 from apps.ingestion.sync import sync_use_case
 from apps.submissions.models import Enumerator, Household, Submission, SubmissionValue
+from apps.usecases.models import FormDefinition, UseCase
 
 pytestmark = pytest.mark.django_db
+
+
+def test_auto_map_on_sync_populates_unmapped_form():
+    """A form onboarded with NO field mappings auto-maps from the first record on
+    first sync, so submissions + enumerators populate without manual mapping."""
+    uc = UseCase.objects.create(code="AM", name="AM")
+    FormDefinition.objects.create(use_case=uc, ona_form_id=7,
+                                  role=FormDefinition.Role.VALIDATION)  # no mappings
+
+    class Fake:
+        def get_data(self, fid):
+            return [{"_uuid": "u1", "enumerator_id": "EN1", "hhid": "HH1",
+                     "intro/event": "Event1", "crop": "maize"}]
+
+    sync_use_case(uc, client=Fake())
+    form = uc.forms.first()
+    assert form.mappings.exists()  # auto-created
+    targets = set(form.mappings.values_list("target_field", flat=True))
+    assert {"ENID", "HHID"} <= targets
+    sub = Submission.objects.get(use_case=uc, ona_uuid="u1")
+    assert sub.enumerator.enid == "EN1"
+    assert sub.household.hhid == "HH1"
 
 SNS_PATH = Path(settings.USECASE_CONFIG_DIR) / "sns-rwanda.yaml"
 

@@ -79,6 +79,28 @@ def _fetch(source, form_id):
     return fetch(form_id)
 
 
+def auto_map_form(form, sample_record: dict) -> int:
+    """If a form has no field mappings yet, derive them from a sample submission
+    using the onboarding heuristic, and persist them. Returns the count created.
+    This makes "onboard -> sync" populate data without manual per-form mapping;
+    the mappings can then be refined under Manage -> Forms -> Mappings."""
+    from apps.console.onboarding import CANONICAL_TARGETS, suggest_mappings
+    from apps.usecases.models import FieldMapping
+
+    by_key = {t["key"]: t for t in CANONICAL_TARGETS}
+    chosen = suggest_mappings(sorted(sample_record.keys()))
+    created = 0
+    for order, (key, path) in enumerate(chosen.items()):
+        target = by_key[key]
+        args = {"into": ["LAT", "LON", "ALT", "ERR"]} if key == "GEO" else {}
+        FieldMapping.objects.create(
+            form=form, target_field=key, source_paths=[path],
+            transform=target["transform"], transform_args=args, order=order,
+        )
+        created += 1
+    return created
+
+
 def sync_use_case(use_case: UseCase, backend=None, client=None) -> SyncStats:
     """Sync all of a use case's forms via its data-collection backend.
 
@@ -92,12 +114,16 @@ def sync_use_case(use_case: UseCase, backend=None, client=None) -> SyncStats:
     crop_by_name = {c.name: c for c in use_case.crops.all()}
     test_ids = set(use_case.test_ids or [])
 
-    forms = list(use_case.forms.all().prefetch_related("mappings"))
+    # Not prefetching mappings: auto_map_form may create them mid-loop, and a
+    # prefetch cache would hide the new rows.
+    forms = list(use_case.forms.all())
 
     # 1) Registration forms first (enumerators + households are FKs for submissions).
     for form in [f for f in forms if f.role in REGISTRATION_ROLES]:
         records = plugin.pre_ingest(form, _fetch(source, form.ona_form_id))
-        mappings = list(form.mappings.all())
+        if not form.mappings.exists() and records:
+            auto_map_form(form, records[0])
+        mappings = list(form.mappings.order_by("order", "target_field"))
         for rec in records:
             mapped = normalize_record(mappings, rec, alias_map)
             if form.role == FormDefinition.Role.ENUM_REG:
@@ -108,7 +134,9 @@ def sync_use_case(use_case: UseCase, backend=None, client=None) -> SyncStats:
     # 2) Validation forms -> immutable Submissions + authoritative values.
     for form in [f for f in forms if f.role in VALIDATION_ROLES]:
         records = plugin.pre_ingest(form, _fetch(source, form.ona_form_id))
-        mappings = list(form.mappings.all())
+        if not form.mappings.exists() and records:
+            auto_map_form(form, records[0])
+        mappings = list(form.mappings.order_by("order", "target_field"))
         for rec in records:
             mapped = normalize_record(mappings, rec, alias_map)
             # Plugins may explode one nested record into multiple normalized rows.
