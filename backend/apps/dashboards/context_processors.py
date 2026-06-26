@@ -46,6 +46,8 @@ def navigation(request):
             status=UseCaseAccessRequest.Status.PENDING, use_case_id__in=list(grant_uc)
         ).count()
 
+    from apps.dashboards.review_hub import review_todo_count
+
     # The sidebar shows a handful of the user's projects; the Projects page is the
     # scalable directory (search / filter / paginate) for the rest.
     visible = visible_use_cases(user)
@@ -57,6 +59,7 @@ def navigation(request):
         "console_groups": console_groups,
         "console_active_group": active_group,
         "my_queue_count": my_queue_count,
+        "review_todo_count": review_todo_count(user),
         "can_manage_access": manages_access,
         "pending_approvals_count": pending_count,
         "show_claim_admin": claim_admin_available(user),

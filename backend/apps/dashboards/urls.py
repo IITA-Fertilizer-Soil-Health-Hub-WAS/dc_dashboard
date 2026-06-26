@@ -3,6 +3,7 @@ from __future__ import annotations
 from django.urls import path
 
 from . import projects as projects_views
+from . import review_hub as review_hub_views
 from . import team, views
 
 app_name = "dashboards"
@@ -11,6 +12,8 @@ urlpatterns = [
     path("", projects_views.projects, name="index"),
     path("projects/", projects_views.projects, name="projects"),
     path("projects/<slug:code>/request/", projects_views.project_request, name="project_request"),
+    path("review/", review_hub_views.review_hub, name="review_hub"),
+    path("review/action/", review_hub_views.review_hub_action, name="review_hub_action"),
     path("style-preview/", views.style_preview, name="style_preview"),
     path("overview/", views.overview, name="overview"),
     path("my-queue/", views.my_queue, name="my_queue"),
