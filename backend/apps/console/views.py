@@ -411,6 +411,43 @@ class WriteBackQueueView(StaffMixin, View):
         return redirect("console:writeback")
 
 
+class EnumeratorLinkView(StaffMixin, View):
+    """Bulk-link Enumerators to platform accounts by phone/name.
+
+    GET shows a dry-run preview (matches + ambiguous); POST applies the confident
+    matches. After applying, the next sync populates Submission.collected_by.
+    """
+
+    def get(self, request):
+        from apps.submissions.linking import link_enumerators
+
+        report = link_enumerators(apply=False)
+        ctx = _console_page_ctx("link-enumerators") | {
+            "report": report,
+            "rows": report.actionable[:300],
+        }
+        return render(request, "console/link_enumerators.html", ctx)
+
+    def post(self, request):
+        from apps.submissions.linking import link_enumerators
+
+        overwrite = request.POST.get("overwrite") == "1"
+        report = link_enumerators(apply=True, overwrite=overwrite)
+        if report.matched:
+            messages.success(
+                request, f"Linked {report.matched} enumerator(s) to accounts. "
+                f"collected_by will populate on the next sync."
+            )
+        else:
+            messages.info(request, "No confident matches to link.")
+        if report.ambiguous:
+            messages.warning(
+                request, f"{report.ambiguous} enumerator(s) matched more than one "
+                "account — link those manually under Enumerators."
+            )
+        return redirect("console:link_enumerators")
+
+
 def _csv_list(value: str | None) -> list[str]:
     return [p.strip() for p in (value or "").split(",") if p.strip()]
 

@@ -239,6 +239,10 @@
              class="{% if request.resolver_match.url_name == 'writeback' %}active{% endif %}">
             <span class="msym">sync</span>Write-back queue
           </a>
+          <a href="{% url 'console:link_enumerators' %}" title="Link enumerators to platform accounts so submissions trace to a user"
+             class="{% if request.resolver_match.url_name == 'link_enumerators' %}active{% endif %}">
+            <span class="msym">link</span>Link enumerators
+          </a>
           <a href="/admin/" class="nav-sys" title="System settings: review audit, groups, scheduled tasks">
             <span class="msym">settings</span>Admin console
           </a>

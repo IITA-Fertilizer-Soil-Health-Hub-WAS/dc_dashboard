@@ -1,0 +1,59 @@
+{% extends "console/base.html" %}
+{% block title %}Link enumerators · Manage · EiA2030 DCMT{% endblock %}
+{% block crumbs %}<span class="sep">/</span><span class="cur">Manage</span><span class="sep">/</span><span class="cur">Link enumerators</span>{% endblock %}
+{% block console_main %}
+  <div class="page-head">
+    <h2>Link enumerators to accounts</h2>
+    <span class="pill">{{ report.matched }} match{{ report.matched|pluralize:"es" }}</span>
+    {% if report.ambiguous %}<span class="pill" style="background:#fff5e0;color:#8a5a00;">{{ report.ambiguous }} ambiguous</span>{% endif %}
+  </div>
+  <p class="subtle" style="margin:.1rem 0 1rem;max-width:60ch;">
+    Matches each enumerator (ENID) to a registered platform account by shared
+    <strong>phone</strong> or <strong>name</strong>, so historical submissions trace to a user.
+    Once linked, <code>collected_by</code> populates on the next sync. This is a
+    <strong>preview</strong> — nothing is written until you apply. Only one-to-one matches
+    are linked; ambiguous ones are left for you to resolve under
+    <a href="{% url 'console:list' 'enumerators' %}">Enumerators</a>.
+  </p>
+
+  {% if messages %}{% for msg in messages %}<div class="pill" style="margin-bottom:.7rem;">{{ msg }}</div>{% endfor %}{% endif %}
+
+  <div class="toolbar">
+    <span class="subtle" style="flex:1;font-size:.82rem;">
+      unmatched {{ report.unmatched }} · already linked {{ report.already }}
+    </span>
+    {% if report.matched %}
+      <form method="post" onsubmit="return confirm('Link {{ report.matched }} enumerator(s) to their matched accounts?');">
+        {% csrf_token %}
+        <button class="btn btn-open" type="submit">Apply {{ report.matched }} link{{ report.matched|pluralize }}</button>
+      </form>
+    {% endif %}
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <table>
+      <thead>
+        <tr><th>Use case</th><th>Enumerator</th><th>Matched account</th><th>By</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        {% for p in rows %}
+          <tr>
+            <td>{{ p.use_case }}</td>
+            <td class="mono">{{ p.enid }}</td>
+            <td>
+              {% if p.user_id %}<span class="mono">{{ p.user_id }}</span> <span class="subtle">{{ p.user_email }}</span>
+              {% else %}—{% endif %}
+            </td>
+            <td class="subtle">{{ p.reason|default:"—" }}</td>
+            <td>
+              {% if p.status == 'match' %}<span class="pill" style="background:#e8f5ec;color:#0a4630;">will link</span>
+              {% else %}<span class="pill" style="background:#fff5e0;color:#8a5a00;">ambiguous</span>{% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5"><div class="empty" style="border:none;">No phone/name matches found between enumerators and accounts.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}
