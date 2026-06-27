@@ -22,6 +22,24 @@ def sync_use_case_task(code: str) -> dict:
     return stats.as_dict()
 
 
+@shared_task(name="ingestion.webhook_ingest")
+def webhook_ingest_task(code: str) -> dict:
+    """Triggered by a collection-server webhook: re-pull the project, validate,
+    then refresh its M&E aggregates so the real-time cards update at once.
+
+    We re-pull rather than trust the webhook body — keeps it server-agnostic and
+    reuses the idempotent ingest (no duplicates on repeated hits)."""
+    from apps.kpi.aggregate import rebuild_use_case_kpis
+
+    uc = UseCase.objects.filter(code=code).first()
+    if uc is None:
+        return {"code": code, "status": "unknown_use_case"}
+    stats = sync_use_case(uc)
+    run_for_use_case(uc)
+    rebuild_use_case_kpis(uc)
+    return stats.as_dict()
+
+
 @shared_task(name="ingestion.sync_all_use_cases")
 def sync_all_use_cases() -> list[dict]:
     results = []

@@ -111,8 +111,10 @@ live verification, committed to `fork/redesign/python`.
 
 ## Cross-cutting
 
-- **Real-time:** add submission **webhooks** (ODK Central / ONA) → instant
-  ingest, alongside the periodic sync.
+- **Real-time:** submission **webhooks** shipped ✓ —
+  `POST /api/webhooks/collection/<code>/` (secret-guarded, debounced) enqueues an
+  idempotent re-pull + validate + KPI refresh, alongside the periodic Beat sync.
+  Treated as a trigger, not a data source, so it stays server-agnostic.
 - **Auth (Entra ID):** Auth0 stays the **primary** provider — most enumerators
   are field staff outside CGIAR and rely on it. Microsoft Entra ID is shipped as
   an **optional fallback** OIDC provider (CGIAR/IITA staff), env-gated

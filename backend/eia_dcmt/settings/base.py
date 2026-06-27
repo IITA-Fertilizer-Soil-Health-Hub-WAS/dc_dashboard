@@ -255,6 +255,13 @@ ONA_TOKEN = env("ONA_TOKEN", default="")
 # live records). Enable per environment once validated against a sandbox.
 WRITEBACK_ENABLED = env.bool("WRITEBACK_ENABLED", default=False)
 IPINFO_BASE_URL = env("IPINFO_BASE_URL", default="https://ipinfo.io")
+# Shared secret guarding the collection-server webhook (ODK Central / ONA →
+# instant re-sync). Empty = webhooks disabled (endpoint returns 503). The server
+# must send it as the X-Webhook-Token header or a ?token= query param.
+COLLECTION_WEBHOOK_SECRET = env("COLLECTION_WEBHOOK_SECRET", default="")
+# Debounce window (seconds): collapse a burst of webhook hits for one project
+# into a single re-sync to avoid sync storms.
+COLLECTION_WEBHOOK_DEBOUNCE_SECONDS = env.int("COLLECTION_WEBHOOK_DEBOUNCE_SECONDS", default=30)
 
 # --- i18n / tz --------------------------------------------------------------
 LANGUAGE_CODE = "en-us"
