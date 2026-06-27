@@ -75,6 +75,27 @@ def my_assignments(request):
 
 
 @login_required
+def my_submissions(request):
+    """An enumerator's own collected submissions and the open flags they need to
+    fix — scoped strictly to records attributed to this user (no one else's)."""
+    user = request.user
+    subs = (
+        Submission.objects.filter(
+            Q(collected_by=user) | Q(enumerator__user=user)
+        )
+        .select_related("use_case", "form", "enumerator", "household", "review")
+        .annotate(open_flags=Count("flags", filter=Q(flags__status=ValidationFlag.Status.OPEN)))
+        .order_by("-event_date", "-ona_submission_time")
+    )
+    to_fix = sum(1 for s in subs if s.open_flags)
+    return render(request, "dashboards/my_submissions.html", {
+        "submissions": subs[:300],
+        "total": subs.count(),
+        "to_fix": to_fix,
+    })
+
+
+@login_required
 def overview(request):
     """Cross-use-case overview: key metrics for every use case I can see."""
     from apps.validation.models import ValidationFlag

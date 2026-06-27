@@ -13,6 +13,7 @@ urlpatterns = [
     path("projects/search/", projects_views.project_nav_search, name="project_nav_search"),
     path("projects/<slug:code>/request/", projects_views.project_request, name="project_request"),
     path("my-assignments/", views.my_assignments, name="my_assignments"),
+    path("my-submissions/", views.my_submissions, name="my_submissions"),
     path("style-preview/", views.style_preview, name="style_preview"),
     path("overview/", views.overview, name="overview"),
     path("team/", team.team, name="team"),

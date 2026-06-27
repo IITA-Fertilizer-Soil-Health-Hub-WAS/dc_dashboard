@@ -351,6 +351,10 @@
                class="{% if request.resolver_match.url_name == 'my_assignments' %}active{% endif %}">
               <span class="msym">assignment_turned_in</span>My assignments
             </a>
+            <a href="{% url 'dashboards:my_submissions' %}" title="The records you collected and any flags to fix"
+               class="{% if request.resolver_match.url_name == 'my_submissions' %}active{% endif %}">
+              <span class="msym">fact_check</span>My submissions
+            </a>
           {% endif %}
           {% if can_manage_access %}
             <a href="{% url 'console:list' 'jobs' %}" title="Create collection jobs (plots / farmers) and assign enumerators"
