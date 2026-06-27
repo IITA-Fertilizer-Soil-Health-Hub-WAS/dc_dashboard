@@ -83,3 +83,63 @@ def test_export_nonmember_404(client, world):
     assert client.get(
         reverse("kpi:export", args=["PROJ-B", "kpi-summary"])
     ).status_code == 404
+
+
+# --- Stage C5b: XLSX + STATA/SPSS formats and the approved dataset -----------
+
+def test_kpi_summary_xlsx(client, world):
+    client.force_login(world["coord"])
+    resp = client.get(reverse("kpi:export", args=["PROJ-A", "kpi-summary"]) + "?fmt=xlsx")
+    assert resp.status_code == 200
+    assert "spreadsheetml" in resp["Content-Type"]
+    assert resp.content[:2] == b"PK"            # xlsx is a zip
+    assert resp["Content-Disposition"].endswith('.xlsx"')
+
+
+def test_enumerators_xlsx(client, world):
+    client.force_login(world["coord"])
+    resp = client.get(reverse("kpi:export", args=["PROJ-A", "enumerators"]) + "?fmt=xlsx")
+    assert resp.status_code == 200
+    assert resp.content[:2] == b"PK"
+
+
+def test_approved_dataset_csv(client, world):
+    client.force_login(world["coord"])
+    resp = client.get(reverse("kpi:export", args=["PROJ-A", "approved"]))
+    assert resp.status_code == 200
+    assert "ona_uuid" in resp.content.decode()
+
+
+def test_stata_export(client, world):
+    pytest.importorskip("pyreadstat")
+    client.force_login(world["coord"])
+    resp = client.get(reverse("kpi:export", args=["PROJ-A", "kpi-summary"]) + "?fmt=dta")
+    assert resp.status_code == 200
+    assert resp["Content-Disposition"].endswith('.dta"')
+    assert len(resp.content) > 0
+
+
+def test_spss_export(client, world):
+    pytest.importorskip("pyreadstat")
+    client.force_login(world["coord"])
+    resp = client.get(reverse("kpi:export", args=["PROJ-A", "enumerators"]) + "?fmt=sav")
+    assert resp.status_code == 200
+    assert resp["Content-Disposition"].endswith('.sav"')
+    assert len(resp.content) > 0
+
+
+def test_unknown_format_404(client, world):
+    client.force_login(world["coord"])
+    assert client.get(
+        reverse("kpi:export", args=["PROJ-A", "kpi-summary"]) + "?fmt=bogus"
+    ).status_code == 404
+
+
+def test_sanitize_columns_makes_valid_stata_names():
+    from apps.kpi.exports import _sanitize_columns
+    out = _sanitize_columns(["ona_uuid", "grp/field.name", "123start", "dup", "dup"])
+    # All start with a letter and are alnum/underscore only.
+    assert all(c[0].isalpha() for c in out)
+    assert all(all(ch.isalnum() or ch == "_" for ch in c) for c in out)
+    # Duplicates are disambiguated.
+    assert len(set(out)) == len(out)

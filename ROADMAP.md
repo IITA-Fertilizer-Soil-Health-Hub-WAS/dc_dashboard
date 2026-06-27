@@ -97,8 +97,10 @@ real-time cards.
   - **Timeliness** — sync lag; 7/30-day trend; pace vs target; overdue.
 - UI (role-scoped): Overview · Project · Data Quality (heatmap + drilldown) ·
   Enumerator leaderboard + map · Coverage map + gap · Alerts (in-app + email).
-- Exports: CSV + GeoJSON shipped (KPI summary, enumerators, units FeatureCollection,
-  approved dataset); XLSX + SPSS/STATA (`openpyxl` / `pyreadstat`) optional follow-up.
+- Exports shipped ✓: each tabular dataset (KPI summary, enumerator performance,
+  approved dataset) in CSV / XLSX / STATA `.dta` / SPSS `.sav` (`?fmt=`), plus the
+  collection-units GeoJSON. Stats formats (openpyxl / pandas / pyreadstat) degrade
+  gracefully to 501 + hidden buttons if the libs are absent.
 - Stages (all shipped ✓): C1 models + Beat aggregation · C2 Overview + Project ·
   C3 Quality + Enumerator + Coverage · C4 Alerts (in-app + email, hourly Beat) ·
   C5 exports (CSV + GeoJSON) · C6 tests (written per-stage).

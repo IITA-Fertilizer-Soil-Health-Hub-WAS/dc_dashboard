@@ -31,7 +31,11 @@ def kpi_overview(request):
 @login_required
 def kpi_project(request, code):
     uc = get_scoped_use_case(request, code)  # 404 if not visible to the user
-    ctx = project_metrics(uc, _days(request)) | {"uc": uc, "periods": PERIODS}
+    from .exports import export_options
+
+    ctx = project_metrics(uc, _days(request)) | {
+        "uc": uc, "periods": PERIODS, "exports": export_options(),
+    }
     return render(request, "kpi/project.html", ctx)
 
 
@@ -60,13 +64,17 @@ def kpi_coverage(request, code):
 
 @login_required
 def kpi_export(request, code, kind):
-    """Download an M&E export (KPI summary / enumerators CSV, units GeoJSON)."""
+    """Download an M&E export. `units-geojson` is the spatial layer; the other
+    kinds are tabular datasets serialised in ?fmt= (csv default, xlsx/dta/sav)."""
     from django.http import Http404
 
-    from .exports import build_export
+    from .exports import render_dataset, units_geojson
 
     uc = get_scoped_use_case(request, code)
-    response = build_export(kind, uc)
+    if kind == "units-geojson":
+        return units_geojson(uc)
+    fmt = request.GET.get("fmt", "csv")
+    response = render_dataset(kind, fmt, uc, _days(request))
     if response is None:
         raise Http404("Unknown export type")
     return response

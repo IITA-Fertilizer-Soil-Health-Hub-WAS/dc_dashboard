@@ -23,6 +23,9 @@ dependencies = [
     "gunicorn>=21.2",
     "whitenoise>=6.6",
     "django-unfold==0.96.0",  # pinned: newer releases require Django >= 5.2
+    "openpyxl>=3.1",          # XLSX exports
+    "pandas>=2.2",            # tabular frame for the stats exports
+    "pyreadstat>=1.2",        # SPSS (.sav) + STATA (.dta) exports
 ]
 
 [project.optional-dependencies]
