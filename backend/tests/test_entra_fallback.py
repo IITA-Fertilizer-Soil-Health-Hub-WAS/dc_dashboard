@@ -10,11 +10,12 @@ pytestmark = pytest.mark.django_db
 
 
 @override_settings(AUTH0_CONFIGURED=True)
-def test_login_shows_auth0_always(client):
+def test_login_shows_auth0_signin_and_signup(client):
     resp = client.get(reverse("login"))
     assert resp.status_code == 200
-    # Auth0 is the primary path; its button text is present.
-    assert b"Continue with Auth0" in resp.content
+    # Auth0 is the primary path, offering both sign-in and sign-up.
+    assert b"Sign in" in resp.content
+    assert b"Create an account" in resp.content
 
 
 @override_settings(AUTH0_CONFIGURED=True, ENTRA_CONFIGURED=False)
@@ -33,7 +34,7 @@ def test_entra_button_shown_as_fallback_when_configured(client):
     resp = client.get(reverse("login"))
     assert resp.status_code == 200
     # Auth0 still primary…
-    assert b"Continue with Auth0" in resp.content
+    assert b"Create an account" in resp.content
     # …and Entra offered as a CGIAR-staff fallback.
     assert b"continue with Microsoft" in resp.content
     assert b"/accounts/oidc/entra/login/" in resp.content

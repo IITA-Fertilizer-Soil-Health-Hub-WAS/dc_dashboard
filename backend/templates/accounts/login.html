@@ -17,10 +17,16 @@
     {% if auth0_configured %}
       <a class="btn btn-open" style="display:block;font-size:.95rem;padding:.7rem;text-align:center;text-decoration:none;"
          href="{{ auth0_login_url }}{% if next %}?next={{ next|urlencode }}{% endif %}">
-        Continue with Auth0
+        Sign in
+      </a>
+      <a style="display:block;font-size:.92rem;padding:.62rem;margin-top:.6rem;text-align:center;text-decoration:none;
+                border:1px solid var(--brand);color:var(--brand);border-radius:8px;font-weight:600;background:var(--surface);"
+         href="{{ auth0_login_url }}{% if next %}?next={{ next|urlencode }}{% endif %}">
+        Create an account
       </a>
       <p class="subtle" style="font-size:.78rem;margin:.9rem 0 0;text-align:center;line-height:1.5;">
-        First sign-in creates your account. A Platform Admin approves access and assigns your role.
+        Both use Auth0. New here? Signing in the first time creates your account —
+        a coordinator then approves access and assigns your role.
       </p>
       {% if entra_configured %}
         <a class="btn btn-request" style="display:block;font-size:.9rem;padding:.6rem;margin-top:.9rem;text-align:center;text-decoration:none;"

@@ -44,4 +44,5 @@ def test_login_page_shows_button_when_configured(client, settings):
     settings.AUTH0_CONFIGURED = True
     resp = client.get("/login/")
     assert resp.status_code == 200
-    assert b"Continue with Auth0" in resp.content
+    assert b"Sign in" in resp.content
+    assert b"Create an account" in resp.content
