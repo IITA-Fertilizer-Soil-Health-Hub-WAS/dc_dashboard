@@ -14,15 +14,6 @@ def navigation(request):
     if user is None or not user.is_authenticated:
         return {"nav_use_cases": [], "console_groups": []}
 
-    from apps.review.models import ReviewState
-    from apps.submissions.models import Submission
-
-    my_queue_count = (
-        Submission.objects.filter(review__assigned_to=user)
-        .exclude(review__state__in=[ReviewState.APPROVED, ReviewState.DECLINED])
-        .count()
-    )
-
     from apps.console.registry import REGISTRY, grouped_for
 
     # Staff see all console sections; coordinators see a read-only, scoped subset
@@ -57,7 +48,6 @@ def navigation(request):
         "nav_use_cases_total": nav_use_cases_total,
         "console_groups": console_groups,
         "console_active_group": active_group,
-        "my_queue_count": my_queue_count,
         "can_manage_access": manages_access,
         "pending_approvals_count": pending_count,
         "show_claim_admin": claim_admin_available(user),

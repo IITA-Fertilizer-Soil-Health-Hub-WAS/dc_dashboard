@@ -34,35 +34,6 @@ def staff(django_user_model):
     return django_user_model.objects.create_superuser("admin@x.org", "pw")
 
 
-# ---- My queue ----
-def test_my_queue_shows_only_my_assigned_open(client, uc, form, coordinator):
-    mine = Submission.objects.create(use_case=uc, form=form, ona_uuid="MINE", content_hash="h",
-                                     enumerator=None)
-    Submission.objects.create(use_case=uc, form=form, ona_uuid="OTHER", content_hash="h")  # unassigned
-    services.assign(coordinator, mine, coordinator)        # assigned to me
-    # 'other' unassigned; 'approved' assigned-to-me but closed shouldn't show
-    closed = Submission.objects.create(use_case=uc, form=form, ona_uuid="CLOSED", content_hash="h")
-    services.assign(coordinator, closed, coordinator)
-    services.decline(coordinator, closed)  # closed -> excluded from the queue
-
-    client.force_login(coordinator)
-    resp = client.get("/my-queue/")
-    assert resp.status_code == 200
-    assert b"MINE" not in resp.content  # ona_uuid not shown, but row exists
-    body = resp.content.decode()
-    assert "My queue" in body
-    # exactly one row in the queue (mine), not other/closed
-    assert body.count("Review &amp; edit") == 1
-
-
-def test_my_queue_count_in_rail(client, uc, form, coordinator):
-    s = Submission.objects.create(use_case=uc, form=form, ona_uuid="Q1", content_hash="h")
-    services.assign(coordinator, s, coordinator)
-    client.force_login(coordinator)
-    resp = client.get("/")
-    assert b"My queue" in resp.content
-
-
 # ---- CSV mapping import ----
 def test_csv_mapping_import(client, staff, form):
     client.force_login(staff)

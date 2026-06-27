@@ -67,7 +67,7 @@ class ConsoleListView(UserPassesTestMixin, View):
         return console_key_allowed(self.request.user, self.kwargs.get("key"))
 
     def get(self, request, key):
-        from .registry import ORG_FILTER_PATHS, USECASE_FILTER_PATHS
+        from .registry import ORG_FILTER_PATHS, USECASE_FILTER_PATHS, console_key_allowed
 
         m = _managed(key)
         is_staff = request.user.is_staff
@@ -111,13 +111,60 @@ class ConsoleListView(UserPassesTestMixin, View):
             "count": qs.count(),
             "org_options": orgs if len(orgs) > 1 else [],
             "org_filter": org_code,
-            # Coordinators get a read-only window; only staff may mutate.
-            "can_edit": is_staff and not m.readonly,
+            # Staff and coordinators may mutate (coordinators only their own,
+            # scoped projects); read-only sections are never editable.
+            "can_edit": console_key_allowed(request.user, key) and not m.readonly,
         }
         return render(request, "console/list.html", ctx)
 
 
-class ConsoleFormView(StaffMixin, View):
+def _coordinator_uc_ids(user):
+    from apps.rbac.permissions import grantable_scopes
+
+    return list(grantable_scopes(user)["use_cases"].values_list("id", flat=True))
+
+
+def _scoped_get(user, m, key, pk):
+    """Fetch an object — staff: any; coordinator: only within their projects."""
+    if user.is_staff:
+        return get_object_or_404(m.model, pk=pk)
+    from .registry import USECASE_FILTER_PATHS
+
+    path = USECASE_FILTER_PATHS.get(key)
+    if path is None:
+        raise Http404("Not available.")
+    return get_object_or_404(m.model, pk=pk, **{f"{path}__in": _coordinator_uc_ids(user)})
+
+
+def _restrict_form_to_scope(form, user):
+    """Limit a form's foreign-key choices to the coordinator's own projects, so
+    they can never attach a row to a project they don't coordinate."""
+    if user.is_staff:
+        return
+    from apps.usecases.models import UseCase
+
+    uc_ids = _coordinator_uc_ids(user)
+    for field in form.fields.values():
+        qs = getattr(field, "queryset", None)
+        if qs is None:
+            continue
+        model = qs.model
+        if model is UseCase:
+            field.queryset = qs.filter(id__in=uc_ids)
+        elif any(f.name == "use_case" for f in model._meta.fields):
+            field.queryset = qs.filter(use_case_id__in=uc_ids)
+
+
+class ConsoleFormView(UserPassesTestMixin, View):
+    """Create/edit — staff for any section; a coordinator for their own
+    projects' configuration & field data, scoped on both the object and the
+    foreign-key choices."""
+
+    def test_func(self) -> bool:
+        from .registry import console_key_allowed
+
+        return console_key_allowed(self.request.user, self.kwargs.get("key"))
+
     def _form_class(self, m: Managed):
         return modelform_factory(m.model, fields=m.form_fields or "__all__")
 
@@ -125,16 +172,18 @@ class ConsoleFormView(StaffMixin, View):
         m = _managed(key)
         if m.readonly:
             raise PermissionDenied("This section is read-only.")
-        instance = get_object_or_404(m.model, pk=pk) if pk else None
+        instance = _scoped_get(request.user, m, key, pk) if pk else None
         form = self._form_class(m)(instance=instance)
+        _restrict_form_to_scope(form, request.user)
         return render(request, "console/form.html", _base_ctx(m) | {"form": form, "instance": instance})
 
     def post(self, request, key, pk=None):
         m = _managed(key)
         if m.readonly:
             raise PermissionDenied("This section is read-only.")
-        instance = get_object_or_404(m.model, pk=pk) if pk else None
+        instance = _scoped_get(request.user, m, key, pk) if pk else None
         form = self._form_class(m)(request.POST, instance=instance)
+        _restrict_form_to_scope(form, request.user)
         if form.is_valid():
             obj = form.save(commit=False)
             # Stamp who granted a membership, when not already set.
@@ -383,19 +432,24 @@ class ConsoleActionView(StaffMixin, View):
         return redirect("console:list", key=key)
 
 
-class ConsoleDeleteView(StaffMixin, View):
+class ConsoleDeleteView(UserPassesTestMixin, View):
+    def test_func(self) -> bool:
+        from .registry import console_key_allowed
+
+        return console_key_allowed(self.request.user, self.kwargs.get("key"))
+
     def get(self, request, key, pk):
         m = _managed(key)
         if m.readonly:
             raise PermissionDenied("This section is read-only.")
-        obj = get_object_or_404(m.model, pk=pk)
+        obj = _scoped_get(request.user, m, key, pk)
         return render(request, "console/delete.html", _base_ctx(m) | {"obj": obj})
 
     def post(self, request, key, pk):
         m = _managed(key)
         if m.readonly:
             raise PermissionDenied("This section is read-only.")
-        obj = get_object_or_404(m.model, pk=pk)
+        obj = _scoped_get(request.user, m, key, pk)
         label = str(obj)
         obj.delete()
         messages.success(request, f"Deleted “{label}”.")

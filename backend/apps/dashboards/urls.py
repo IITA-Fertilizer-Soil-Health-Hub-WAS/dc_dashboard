@@ -14,7 +14,6 @@ urlpatterns = [
     path("projects/<slug:code>/request/", projects_views.project_request, name="project_request"),
     path("style-preview/", views.style_preview, name="style_preview"),
     path("overview/", views.overview, name="overview"),
-    path("my-queue/", views.my_queue, name="my_queue"),
     path("team/", team.team, name="team"),
     path("team/grant/", team.team_grant, name="team_grant"),
     path("team/invite/", team.team_invite, name="team_invite"),

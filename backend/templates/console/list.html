@@ -62,7 +62,7 @@
                   </form>
                 {% endfor %}
               {% endif %}
-              {% if m.key == 'forms' and can_edit %}
+              {% if m.key == 'forms' and user.is_staff %}
                 <a href="{% url 'console:form_mappings' row.pk %}">Mappings</a>
               {% endif %}
               {% if can_edit %}

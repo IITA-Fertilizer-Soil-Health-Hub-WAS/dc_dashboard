@@ -55,7 +55,6 @@ def test_coordinator_sees_only_their_projects_forms(client, world):
     client.force_login(world["coord"])
     resp = client.get(reverse("console:list", args=["forms"]))
     assert resp.status_code == 200
-    assert b"Read-only" in resp.content
     # Scoped: only the coordinator's use case appears.
     assert b"MINE" in resp.content
     assert b"OTHER" not in resp.content
@@ -69,11 +68,11 @@ def test_coordinator_field_data_scoped(client, world):
     assert b"EN-OTHER" not in resp.content
 
 
-def test_coordinator_no_create_edit_buttons(client, world):
+def test_coordinator_has_edit_buttons(client, world):
     client.force_login(world["coord"])
     resp = client.get(reverse("console:list", args=["forms"]))
-    assert b"+ New" not in resp.content
-    assert reverse("console:create", args=["forms"]).encode() not in resp.content
+    assert b"+ New" in resp.content
+    assert reverse("console:create", args=["forms"]).encode() in resp.content
 
 
 def test_coordinator_cannot_open_staff_only_section(client, world):
@@ -82,10 +81,50 @@ def test_coordinator_cannot_open_staff_only_section(client, world):
     assert client.get(reverse("console:list", args=["users"])).status_code == 403
 
 
-def test_coordinator_cannot_mutate(client, world):
-    """Create/edit/delete stay staff-only even for a coordinator's own section."""
+def test_coordinator_create_form_only_offers_own_use_case(client, world):
     client.force_login(world["coord"])
-    assert client.get(reverse("console:create", args=["forms"])).status_code == 403
+    resp = client.get(reverse("console:create", args=["forms"]))
+    assert resp.status_code == 200
+    # The use_case choices are scoped to their project, not OTHER.
+    assert b"MINE" in resp.content
+    assert b"OTHER" not in resp.content
+
+
+def test_coordinator_can_create_in_own_use_case(client, world):
+    client.force_login(world["coord"])
+    resp = client.post(reverse("console:create", args=["crops"]),
+                       {"use_case": str(world["mine"].pk), "name": "maize", "aliases": "[]"})
+    assert resp.status_code == 302
+    from apps.usecases.models import Crop
+    assert Crop.objects.filter(use_case=world["mine"], name="maize").exists()
+
+
+def test_coordinator_cannot_create_in_other_use_case(client, world):
+    client.force_login(world["coord"])
+    resp = client.post(reverse("console:create", args=["crops"]),
+                       {"use_case": str(world["other"].pk), "name": "rice", "aliases": "[]"})
+    assert resp.status_code == 200  # re-renders: use_case not an allowed choice
+    from apps.usecases.models import Crop
+    assert not Crop.objects.filter(use_case=world["other"]).exists()
+
+
+def test_coordinator_cannot_edit_other_project_object(client, world):
+    other_form = world["other"].forms.first()
+    client.force_login(world["coord"])
+    assert client.get(reverse("console:edit", args=["forms", other_form.pk])).status_code == 404
+    assert client.get(reverse("console:delete", args=["forms", other_form.pk])).status_code == 404
+
+
+def test_coordinator_can_edit_own_object(client, world):
+    my_form = world["mine"].forms.first()
+    client.force_login(world["coord"])
+    assert client.get(reverse("console:edit", args=["forms", my_form.pk])).status_code == 200
+
+
+def test_coordinator_cannot_mutate_readonly_section(client, world):
+    """Submissions stay read-only even though they're in a coordinator's scope."""
+    client.force_login(world["coord"])
+    assert client.get(reverse("console:create", args=["submissions"])).status_code == 403
 
 
 def test_viewer_has_no_console(client, world):

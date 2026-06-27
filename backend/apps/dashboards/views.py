@@ -84,20 +84,6 @@ def overview(request):
     return render(request, "dashboards/overview.html", {"rows": rows, "totals": totals})
 
 
-@login_required
-def my_queue(request):
-    """Submissions assigned to me that still need action, across my use cases."""
-    submissions = (
-        Submission.objects.filter(
-            use_case__in=visible_use_cases(request.user),
-            review__assigned_to=request.user,
-        )
-        .exclude(review__state__in=[ReviewState.APPROVED, ReviewState.DECLINED])
-        .select_related("use_case", "enumerator", "household", "review")
-        .order_by("review__state", "-updated_at")
-    )
-    return render(request, "dashboards/my_queue.html",
-                  {"submissions": submissions, "count": submissions.count()})
 
 
 @login_required

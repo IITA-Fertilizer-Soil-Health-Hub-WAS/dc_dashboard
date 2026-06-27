@@ -279,11 +279,6 @@
            class="{% if request.resolver_match.url_name == 'overview' %}active{% endif %}">
           <span class="msym">dashboard</span>Overview
         </a>
-        <a href="{% url 'dashboards:my_queue' %}" title="Submissions assigned to me"
-           class="{% if request.resolver_match.url_name == 'my_queue' %}active{% endif %}">
-          <span class="msym">assignment_ind</span>My queue
-          {% if my_queue_count %}<span class="pill" style="margin-left:auto;font-size:.66rem;">{{ my_queue_count }}</span>{% endif %}
-        </a>
         {% if can_manage_access %}
           <a href="{% url 'dashboards:team' %}" title="Approve users and grant access within your scope"
              class="{% if request.resolver_match.url_name == 'team' %}active{% endif %}">
