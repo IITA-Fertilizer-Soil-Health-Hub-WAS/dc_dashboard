@@ -217,6 +217,11 @@ CELERY_BEAT_SCHEDULE = {
         "task": "kpi.rebuild_all",
         "schedule": crontab(minute="*/15"),
     },
+    # M&E threshold alerts — evaluate rules hourly and notify watchers.
+    "kpi-run-alerts-hourly": {
+        "task": "kpi.run_alerts",
+        "schedule": crontab(minute=5),
+    },
 }
 
 # --- External integrations (parity with R .Renviron) ------------------------

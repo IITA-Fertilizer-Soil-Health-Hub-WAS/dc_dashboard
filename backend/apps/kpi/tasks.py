@@ -19,3 +19,10 @@ def rebuild_use_case_kpis_task(use_case_id: str) -> dict:
 
     uc = UseCase.objects.filter(pk=use_case_id).first()
     return rebuild_use_case_kpis(uc) if uc else {}
+
+
+@shared_task(name="kpi.run_alerts")
+def run_alerts_task() -> dict:
+    from .alerts import run_alerts
+
+    return run_alerts()

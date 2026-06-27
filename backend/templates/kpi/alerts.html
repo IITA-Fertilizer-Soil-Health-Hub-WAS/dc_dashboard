@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Alerts · M&E · EiA2030 DCMT{% endblock %}
+{% block crumbs %}<span class="sep">/</span><a href="{% url 'kpi:overview' %}">M&amp;E</a><span class="sep">/</span><span class="cur">Alerts</span>{% endblock %}
+{% block extrahead %}<style>
+  .sevtag{display:inline-block;min-width:64px;text-align:center;padding:.15rem .5rem;
+          border-radius:6px;font-size:.74rem;font-weight:700;color:#fff;}
+  .sev-INFO{background:#55b047;}
+  .sev-WARNING{background:#fdb415;color:#5a4300;}
+  .sev-CRITICAL{background:#c3531f;}
+</style>{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h2>M&amp;E alerts</h2>
+    <span style="flex:1"></span>
+    <span class="pill">{{ active_rules }} active rule{{ active_rules|pluralize }}</span>
+  </div>
+  <p class="lede">Threshold alerts raised across your projects. Manage rules under
+    <a href="{% url 'console:list' 'alert-rules' %}">Monitoring → Alert rules</a>.</p>
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <table>
+      <thead><tr><th>When</th><th>Severity</th><th>Project</th><th>Rule</th><th>Message</th></tr></thead>
+      <tbody>
+        {% for e in events %}
+          <tr>
+            <td class="subtle" style="white-space:nowrap;">{{ e.created_at|date:"M j, H:i" }}</td>
+            <td><span class="sevtag sev-{{ e.severity }}">{{ e.severity }}</span></td>
+            <td>{% if e.use_case %}<a href="{% url 'kpi:project' e.use_case.code %}">{{ e.use_case.code }}</a>{% else %}<span class="subtle">—</span>{% endif %}</td>
+            <td>{{ e.rule.name }}</td>
+            <td>{{ e.message }}</td>
+          </tr>
+        {% empty %}<tr><td colspan="5"><div class="empty" style="border:none;">No alerts have fired — all projects within thresholds.</div></td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

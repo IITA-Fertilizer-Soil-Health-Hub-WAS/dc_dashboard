@@ -15,6 +15,7 @@
   <div class="page-head">
     <h2>M&amp;E dashboard</h2>
     <span style="flex:1"></span>
+    <a class="seg" href="{% url 'kpi:alerts' %}" style="margin-right:.6rem;display:inline-flex;align-items:center;gap:.3rem;"><span class="msym">notifications</span>Alerts</a>
     <div class="tabs">
       {% for k, label in periods.items %}
         <a class="seg {% if days == k %}on{% endif %}" href="?days={{ k }}">{{ label }}</a>

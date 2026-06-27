@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 
 from apps.accounts.models import User
 from apps.fieldwork.models import CollectionUnit, Job
+from apps.kpi.models import AlertEvent, AlertRule
 from apps.rbac.models import UseCaseAccessRequest, UseCaseMembership
 from apps.submissions.models import Enumerator, Household, Submission
 from apps.usecases.models import (
@@ -170,6 +171,18 @@ _ENTRIES: list[Managed] = [
             list_display=["submission", "rule", "message", "severity", "status"],
             search_fields=["message"], readonly=True, icon="flag",
             description="Open issues raised by validation rules (read-only)."),
+    # ---- Monitoring: M&E threshold alerts ----
+    Managed("alert-rules", AlertRule, "Alert rules", "Monitoring",
+            list_display=["use_case", "name", "metric", "comparator", "threshold",
+                          "consecutive_days", "severity", "is_enabled"],
+            form_fields=["use_case", "name", "metric", "comparator", "threshold",
+                         "consecutive_days", "severity", "notify_emails", "is_enabled"],
+            search_fields=["name"], icon="notifications_active",
+            description="Threshold rules that raise M&E alerts and email watchers."),
+    Managed("alert-events", AlertEvent, "Alert events", "Monitoring",
+            list_display=["created_at", "use_case", "rule", "severity", "observed_value"],
+            search_fields=["message"], readonly=True, ordering=["-created_at"],
+            icon="warning", description="Fired alerts — append-only log (read-only)."),
 ]
 
 REGISTRY: dict[str, Managed] = {m.key: m for m in _ENTRIES}
@@ -181,7 +194,7 @@ REGISTRY: dict[str, Managed] = {m.key: m for m in _ENTRIES}
 COORDINATOR_CONSOLE_KEYS: set[str] = {
     "forms", "field-mappings", "event-schedule", "crops", "trials", "stages",
     "validation-rules", "jobs", "collection-units", "enumerators", "households",
-    "submissions", "validation-flags",
+    "submissions", "validation-flags", "alert-rules", "alert-events",
 }
 
 # ORM lookup from each coordinator-visible section to its use case id, used to
@@ -200,6 +213,8 @@ USECASE_FILTER_PATHS: dict[str, str] = {
     "households": "use_case",
     "submissions": "use_case",
     "validation-flags": "submission__use_case",
+    "alert-rules": "use_case",
+    "alert-events": "use_case",
 }
 
 

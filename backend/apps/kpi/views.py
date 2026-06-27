@@ -56,3 +56,25 @@ def kpi_coverage(request, code):
     m = coverage_metrics(uc)
     ctx = m | {"uc": uc, "map_html": points_map_html(m["points"])}
     return render(request, "kpi/coverage.html", ctx)
+
+
+@login_required
+def kpi_alerts(request):
+    """Recent fired alerts and active rules, scoped to the user's projects."""
+    from apps.rbac.permissions import visible_use_cases
+
+    from .models import AlertEvent, AlertRule
+
+    uc_ids = list(visible_use_cases(request.user).values_list("id", flat=True))
+    events = list(
+        AlertEvent.objects.filter(use_case_id__in=uc_ids)
+        .select_related("rule", "use_case")[:100]
+    )
+    rules = (
+        AlertRule.objects.filter(use_case_id__in=uc_ids, is_enabled=True)
+        .select_related("use_case")
+    )
+    return render(request, "kpi/alerts.html", {
+        "events": events,
+        "active_rules": rules.count(),
+    })
