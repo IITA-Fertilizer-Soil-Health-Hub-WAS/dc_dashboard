@@ -64,8 +64,20 @@ def _org_use_cases(user):
 
 @login_required
 def projects(request):
-    """Directory of projects: 'mine' (default) or 'all' in my institution."""
+    """Directory of projects: 'mine' (default) or 'all' in my institution.
+
+    Project = workspace: on the bare landing, a user with exactly one project is
+    taken straight into it; several show this picker. Opening the directory also
+    clears any active workspace so the sidebar returns to the cross-project view.
+    """
     user = request.user
+    is_index = bool(request.resolver_match and request.resolver_match.url_name == "index")
+    if is_index and not request.GET.get("scope") and not request.GET.get("q"):
+        mine = visible_use_cases(user)
+        if mine.count() == 1:
+            return redirect("dashboards:usecase", code=mine.first().code)
+    request.session.pop("active_project", None)  # browsing the directory = leave the workspace
+
     scope = "all" if request.GET.get("scope") == "all" else "mine"
     q = (request.GET.get("q") or "").strip()
     country = (request.GET.get("country") or "").strip()

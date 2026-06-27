@@ -37,13 +37,14 @@ def setup(django_user_model):
     return uc, other, coord, viewer, s
 
 
-def test_index_lists_only_scoped_use_cases(client, setup):
+def test_index_lands_single_project_user_in_their_project(client, setup):
     uc, other, coord, _, _ = setup
     client.force_login(coord)
     resp = client.get(reverse("dashboards:index"))
-    assert resp.status_code == 200
-    assert b"SNS-RWANDA" in resp.content
-    assert b"KALRO" not in resp.content  # no membership
+    # Project = workspace: a user with exactly one project (SNS-RWANDA, not the
+    # unpermitted KALRO) is taken straight into it.
+    assert resp.status_code == 302
+    assert resp.url == reverse("dashboards:usecase", args=["SNS-RWANDA"])
 
 
 def test_cannot_open_unpermitted_use_case(client, setup):

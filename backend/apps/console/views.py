@@ -96,6 +96,7 @@ class ConsoleListView(UserPassesTestMixin, View):
                 cond |= Q(**{f"{f}__icontains": q})
             qs = qs.filter(cond)
 
+        path = USECASE_FILTER_PATHS.get(key)
         # Non-staff only ever see rows belonging to their own projects:
         # coordinators to the projects they coordinate, ordinary members to the
         # projects they belong to (read-only field data).
@@ -106,8 +107,13 @@ class ConsoleListView(UserPassesTestMixin, View):
                 uc_ids = _coordinator_uc_ids(request.user)
             else:
                 uc_ids = list(visible_use_cases(request.user).values_list("id", flat=True))
-            path = USECASE_FILTER_PATHS.get(key)
             qs = qs.filter(**{f"{path}__in": uc_ids}) if path else qs.none()
+
+        # Workspace scope: a ?use_case=<code> filter (within what's allowed above)
+        # narrows the list to one project — used by the project-workspace sidebar.
+        ws_code = (request.GET.get("use_case") or "").strip()
+        if ws_code and path:
+            qs = qs.filter(**{f"{path}__code": ws_code})
 
         # Hub operator's per-institution filter (staff only).
         from apps.usecases.models import Organization

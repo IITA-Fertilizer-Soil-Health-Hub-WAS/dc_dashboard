@@ -55,9 +55,18 @@ def navigation(request):
     visible = visible_use_cases(user)
     nav_use_cases = list(visible.order_by("code")[:200])
     nav_use_cases_total = visible.count()
+
+    # Project = workspace: the project the user is currently working in (sticky in
+    # session, validated against what they may still see). The sidebar scopes to it.
+    active_uc = None
+    code = request.session.get("active_project") if hasattr(request, "session") else None
+    if code:
+        active_uc = visible.filter(code=code).first()
+
     return {
         "nav_use_cases": nav_use_cases,
         "nav_use_cases_total": nav_use_cases_total,
+        "active_uc": active_uc,
         "console_groups": console_groups,
         "console_active_group": active_group,
         "can_manage_access": manages_access,

@@ -14,28 +14,33 @@
   </div>
 
   <nav class="tabs" id="tabs" role="tablist" aria-label="{{ uc.name }} sections">
-    <button class="active" role="tab" aria-selected="true" aria-controls="tabbody"
+    <button data-tab="summary" class="{% if active_tab == 'summary' %}active{% endif %}" role="tab"
+            aria-selected="{% if active_tab == 'summary' %}true{% else %}false{% endif %}" aria-controls="tabbody"
             hx-get="{% url 'dashboards:tab_summary' uc.code %}"
             hx-target="#tabbody" hx-on::after-request="setActive(this)">Summary</button>
-    <button role="tab" aria-selected="false" aria-controls="tabbody"
+    <button data-tab="review" class="{% if active_tab == 'review' %}active{% endif %}" role="tab"
+            aria-selected="{% if active_tab == 'review' %}true{% else %}false{% endif %}" aria-controls="tabbody"
             hx-get="{% url 'dashboards:tab_review' uc.code %}"
             hx-target="#tabbody" hx-on::after-request="setActive(this)">Review</button>
-    <button role="tab" aria-selected="false" aria-controls="tabbody"
+    <button data-tab="enumerators" class="{% if active_tab == 'enumerators' %}active{% endif %}" role="tab"
+            aria-selected="{% if active_tab == 'enumerators' %}true{% else %}false{% endif %}" aria-controls="tabbody"
             hx-get="{% url 'dashboards:tab_enumerators' uc.code %}"
             hx-target="#tabbody" hx-on::after-request="setActive(this)">Enumerators</button>
-    <button role="tab" aria-selected="false" aria-controls="tabbody"
+    <button data-tab="issues" class="{% if active_tab == 'issues' %}active{% endif %}" role="tab"
+            aria-selected="{% if active_tab == 'issues' %}true{% else %}false{% endif %}" aria-controls="tabbody"
             hx-get="{% url 'dashboards:tab_issues' uc.code %}"
             hx-target="#tabbody" hx-on::after-request="setActive(this)">Issues</button>
-    <button role="tab" aria-selected="false" aria-controls="tabbody"
+    <button data-tab="data" class="{% if active_tab == 'data' %}active{% endif %}" role="tab"
+            aria-selected="{% if active_tab == 'data' %}true{% else %}false{% endif %}" aria-controls="tabbody"
             hx-get="{% url 'dashboards:tab_data' uc.code %}"
             hx-target="#tabbody" hx-on::after-request="setActive(this)">Data Preview</button>
-    <button role="tab" aria-selected="false" aria-controls="tabbody"
+    <button data-tab="final" class="{% if active_tab == 'final' %}active{% endif %}" role="tab"
+            aria-selected="{% if active_tab == 'final' %}true{% else %}false{% endif %}" aria-controls="tabbody"
             hx-get="{% url 'dashboards:tab_final' uc.code %}"
             hx-target="#tabbody" hx-on::after-request="setActive(this)">Final data</button>
   </nav>
 
-  <div id="tabbody" role="tabpanel" tabindex="-1"
-       hx-get="{% url 'dashboards:tab_summary' uc.code %}" hx-trigger="load">
+  <div id="tabbody" role="tabpanel" tabindex="-1">
     <div class="subtle" style="padding:1.4rem 0;">Loading…</div>
   </div>
 
@@ -48,5 +53,10 @@
       btn.classList.add('active');
       btn.setAttribute('aria-selected', 'true');
     }
+    document.addEventListener('DOMContentLoaded', function(){
+      var btn = document.querySelector('#tabs button[data-tab="{{ active_tab }}"]')
+                || document.querySelector('#tabs button');
+      if (btn) btn.click();
+    });
   </script>
 {% endblock %}

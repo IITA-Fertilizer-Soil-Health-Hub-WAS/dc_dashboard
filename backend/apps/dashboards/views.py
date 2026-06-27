@@ -146,10 +146,19 @@ def export_audit(request, code):
     return response
 
 
+WORKSPACE_TABS = {"summary", "review", "enumerators", "issues", "data", "final"}
+
+
 @login_required
 def usecase_detail(request, code):
     uc = get_scoped_use_case(request, code)
-    return render(request, "dashboards/usecase.html", {"uc": uc, "active_tab": "summary"})
+    # The project is the workspace: remember it as the user's current context so
+    # the sidebar scopes to it until they switch.
+    request.session["active_project"] = uc.code
+    tab = request.GET.get("tab", "summary")
+    if tab not in WORKSPACE_TABS:
+        tab = "summary"
+    return render(request, "dashboards/usecase.html", {"uc": uc, "active_tab": tab})
 
 
 # --- Tab partials (HTMX) -----------------------------------------------------

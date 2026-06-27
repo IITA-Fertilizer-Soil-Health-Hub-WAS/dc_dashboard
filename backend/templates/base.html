@@ -89,6 +89,12 @@
       font-family:var(--sans); font-size:.84rem; cursor:pointer;}
     .nav .nav-proj-select:focus{outline:none; border-color:var(--gold); background:rgba(255,255,255,.12);}
     .nav .nav-proj-select option{color:var(--ink); background:#fff;}
+    .nav .ws-head{padding:.2rem .5rem .7rem; border-bottom:1px solid rgba(255,255,255,.12); margin-bottom:.5rem;}
+    .nav .ws-name{display:flex; align-items:center; gap:.45rem; color:#fff; font-family:var(--serif);
+      font-weight:600; font-size:1rem; margin-bottom:.5rem; line-height:1.15;}
+    .nav .ws-name span{white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .nav .ws-name .msym{color:var(--gold); opacity:1; flex-shrink:0;}
+    .nav .ws-head .nav-back{margin-top:.45rem; font-size:.8rem;}
     .nav a.nav-add{color:var(--gold); font-weight:600; margin-top:.2rem;}
     .nav a.nav-add:hover{background:rgba(200,162,58,.14); color:#f0e6c8;}
     .nav a.nav-add.active{background:rgba(200,162,58,.18); color:#fff; border-left-color:var(--gold);}
@@ -343,101 +349,167 @@
         <span class="txt"><b>EiA · DCMT</b><span>Data Collection Monitor</span></span>
       </div>
       <nav class="nav">
-        {% if user.is_staff %}
-          <a href="{% url 'console:onboard' %}" title="Add a new project to monitor"
-             class="nav-add {% if request.resolver_match.url_name == 'onboard' %}active{% endif %}">
-            <span class="msym">add_circle</span>Onboard project
+        {% if active_uc %}
+          {# ===================== Project workspace ===================== #}
+          <div class="ws-head">
+            <div class="ws-name"><span class="msym">folder_open</span><span title="{{ active_uc.name }}">{{ active_uc.name }}</span></div>
+            {% if nav_use_cases_total > 1 %}
+              <select class="nav-proj-select" aria-label="Switch project"
+                      onchange="if(this.value){window.location.href=this.value;}">
+                {% for uc in nav_use_cases %}
+                  <option value="{% url 'dashboards:usecase' uc.code %}" {% if uc.code == active_uc.code %}selected{% endif %}>{{ uc.name|default:uc.code }}</option>
+                {% endfor %}
+              </select>
+            {% endif %}
+            <a class="nav-back" href="{% url 'dashboards:projects' %}">
+              <span class="msym">grid_view</span>{% if user.is_staff %}All projects{% else %}Switch project{% endif %}
+            </a>
+          </div>
+
+          <a href="{% url 'dashboards:usecase' active_uc.code %}"
+             class="{% if request.resolver_match.url_name == 'usecase' and active_tab == 'summary' %}active{% endif %}">
+            <span class="msym">dashboard</span>Dashboard
           </a>
-        {% endif %}
-        {% if show_my_assignments or can_manage_access %}
-          <div class="lbl">Work</div>
+          <a href="{% url 'dashboards:usecase' active_uc.code %}?tab=review"
+             class="{% if active_tab == 'review' %}active{% endif %}">
+            <span class="msym">rate_review</span>Review
+          </a>
+          <a href="{% url 'dashboards:usecase' active_uc.code %}?tab=issues"
+             class="{% if active_tab == 'issues' %}active{% endif %}">
+            <span class="msym">flag</span>Issues
+          </a>
+          <a href="{% url 'dashboards:usecase' active_uc.code %}?tab=enumerators"
+             class="{% if active_tab == 'enumerators' %}active{% endif %}">
+            <span class="msym">badge</span>Enumerators
+          </a>
+          <a href="{% url 'dashboards:usecase' active_uc.code %}?tab=data"
+             class="{% if active_tab == 'data' %}active{% endif %}">
+            <span class="msym">table_rows</span>Data
+          </a>
+          <a href="{% url 'kpi:project' active_uc.code %}"
+             class="{% if request.resolver_match.app_name == 'kpi' %}active{% endif %}">
+            <span class="msym">insights</span>M&amp;E
+          </a>
+
           {% if show_my_assignments %}
-            <a href="{% url 'dashboards:my_assignments' %}" title="Plots / farmers assigned to me to collect on"
+            <div class="lbl">My work</div>
+            <a href="{% url 'dashboards:my_assignments' %}"
                class="{% if request.resolver_match.url_name == 'my_assignments' %}active{% endif %}">
               <span class="msym">assignment_turned_in</span>My assignments
             </a>
-            <a href="{% url 'dashboards:my_submissions' %}" title="The records you collected and any flags to fix"
+            <a href="{% url 'dashboards:my_submissions' %}"
                class="{% if request.resolver_match.url_name == 'my_submissions' %}active{% endif %}">
               <span class="msym">fact_check</span>My submissions
             </a>
           {% endif %}
+
           {% if can_manage_access %}
-            <a href="{% url 'console:list' 'jobs' %}" title="Create collection jobs (plots / farmers) and assign enumerators"
+            <div class="lbl">Manage</div>
+            <a href="{% url 'console:list' 'jobs' %}?use_case={{ active_uc.code }}"
                class="{% if request.resolver_match.kwargs.key == 'jobs' or request.resolver_match.url_name == 'job_assignments' %}active{% endif %}">
               <span class="msym">assignment</span>Jobs &amp; assignments
             </a>
-            <a href="{% url 'dashboards:team' %}" title="Approve users and grant access within your scope"
+            <a href="{% url 'dashboards:team' %}"
                class="{% if request.resolver_match.url_name == 'team' %}active{% endif %}">
               <span class="msym">groups</span>Team &amp; access
               {% if pending_approvals_count %}<span class="pill" style="margin-left:auto;font-size:.66rem;">{{ pending_approvals_count }}</span>{% endif %}
             </a>
+            {% if can_manage_access %}
+              <a href="{% url 'console:writeback' %}"
+                 class="{% if request.resolver_match.url_name == 'writeback' %}active{% endif %}">
+                <span class="msym">sync</span>Write-back queue
+              </a>
+            {% endif %}
           {% endif %}
-        {% endif %}
 
-        <div class="lbl">Monitor</div>
-        <a href="{% url 'dashboards:overview' %}" title="Cross-use-case overview"
-           class="{% if request.resolver_match.url_name == 'overview' %}active{% endif %}">
-          <span class="msym">dashboard</span>Overview
-        </a>
-        <a href="{% url 'kpi:overview' %}" title="M&amp;E KPI dashboard"
-           class="{% if request.resolver_match.app_name == 'kpi' %}active{% endif %}">
-          <span class="msym">insights</span>M&amp;E
-        </a>
-        <a href="{% url 'dashboards:projects' %}" title="Browse and search all projects"
-           class="{% if request.resolver_match.url_name == 'projects' or request.resolver_match.url_name == 'index' %}active{% endif %}">
-          <span class="msym">grid_view</span>Projects
-          {% if nav_use_cases_total %}<span class="pill neutral" style="margin-left:auto;font-size:.66rem;">{{ nav_use_cases_total }}</span>{% endif %}
-        </a>
-        {% if nav_use_cases %}
-          <select class="nav-proj-select" aria-label="Open a project"
-                  onchange="if(this.value){window.location.href=this.value;}">
-            <option value="">Open a project…</option>
-            {% for uc in nav_use_cases %}
-              <option value="{% url 'dashboards:usecase' uc.code %}"
-                {% if request.resolver_match.kwargs.code == uc.code %}selected{% endif %}>{{ uc.name|default:uc.code }}</option>
+          {% if console_groups %}
+            <div class="lbl">{% if user.is_staff %}Configuration{% elif can_manage_access %}Configure{% else %}Data{% endif %}</div>
+            {% for group, items in console_groups %}
+              <details class="nav-group" {% if group == console_active_group %}open{% endif %}>
+                <summary>{{ group }}<span class="msym chev">chevron_right</span></summary>
+                <div class="nav-sub">
+                  {% for it in items %}
+                    <a href="{% url 'console:list' it.key %}?use_case={{ active_uc.code }}" title="{{ it.description }}"
+                       class="{% if it.key == request.resolver_match.kwargs.key %}active{% endif %}">
+                      <span class="msym">{{ it.icon }}</span>{{ it.label }}
+                    </a>
+                  {% endfor %}
+                </div>
+              </details>
             {% endfor %}
-          </select>
-          {% if nav_use_cases_total > nav_use_cases|length %}
-            <a href="{% url 'dashboards:projects' %}" class="nav-back" style="font-size:.82rem;">
-              <span class="msym">more_horiz</span>All {{ nav_use_cases_total }} projects →
+          {% endif %}
+
+        {% else %}
+          {# ===================== All projects / picker ===================== #}
+          {% if user.is_staff %}
+            <a href="{% url 'console:onboard' %}" title="Add a new project to monitor"
+               class="nav-add {% if request.resolver_match.url_name == 'onboard' %}active{% endif %}">
+              <span class="msym">add_circle</span>Onboard project
+            </a>
+            <div class="lbl">All projects</div>
+            <a href="{% url 'dashboards:overview' %}" title="Cross-project overview"
+               class="{% if request.resolver_match.url_name == 'overview' %}active{% endif %}">
+              <span class="msym">dashboard</span>Overview
+            </a>
+            <a href="{% url 'kpi:overview' %}" title="Cross-project M&amp;E"
+               class="{% if request.resolver_match.app_name == 'kpi' %}active{% endif %}">
+              <span class="msym">insights</span>M&amp;E
             </a>
           {% endif %}
-        {% else %}
-          <div class="muted-note">No projects yet — <a href="{% url 'dashboards:projects' %}?scope=all" style="color:#cfe2d6;text-decoration:underline;">browse to request access</a>.</div>
-        {% endif %}
-        {% if console_groups %}
-          {% comment %}Staff get full Administration; coordinators get a read-only, scoped Manage view of their projects' config & field data. Only the group you're in auto-expands.{% endcomment %}
-          <div class="lbl" style="margin-top:.5rem;">{% if user.is_staff %}Administration{% elif can_manage_access %}Configure{% else %}Data{% endif %}</div>
-          {% for group, items in console_groups %}
-            <details class="nav-group" {% if group == console_active_group %}open{% endif %}>
-              <summary>{{ group }}<span class="msym chev">chevron_right</span></summary>
-              <div class="nav-sub">
-                {% for it in items %}
-                  <a href="{% url 'console:list' it.key %}" title="{{ it.description }}"
-                     class="{% if it.key == request.resolver_match.kwargs.key %}active{% endif %}">
-                    <span class="msym">{{ it.icon }}</span>{{ it.label }}
-                  </a>
-                {% endfor %}
-              </div>
-            </details>
-          {% endfor %}
-          {% if user.is_staff %}
-            <a href="{% url 'console:publish_form' %}" title="Upload an XLSForm and publish it to a project's server"
+
+          <div class="lbl">Projects</div>
+          <a href="{% url 'dashboards:projects' %}" title="Browse and search all projects"
+             class="{% if request.resolver_match.url_name == 'projects' or request.resolver_match.url_name == 'index' %}active{% endif %}">
+            <span class="msym">grid_view</span>{% if user.is_staff %}Browse projects{% else %}My projects{% endif %}
+            {% if nav_use_cases_total %}<span class="pill neutral" style="margin-left:auto;font-size:.66rem;">{{ nav_use_cases_total }}</span>{% endif %}
+          </a>
+          {% if nav_use_cases %}
+            <select class="nav-proj-select" aria-label="Open a project"
+                    onchange="if(this.value){window.location.href=this.value;}">
+              <option value="">Open a project…</option>
+              {% for uc in nav_use_cases %}
+                <option value="{% url 'dashboards:usecase' uc.code %}">{{ uc.name|default:uc.code }}</option>
+              {% endfor %}
+            </select>
+          {% else %}
+            <div class="muted-note">No projects yet — <a href="{% url 'dashboards:projects' %}?scope=all" style="color:#cfe2d6;text-decoration:underline;">browse to request access</a>.</div>
+          {% endif %}
+
+          {% if show_my_assignments %}
+            <div class="lbl">My work</div>
+            <a href="{% url 'dashboards:my_assignments' %}"
+               class="{% if request.resolver_match.url_name == 'my_assignments' %}active{% endif %}">
+              <span class="msym">assignment_turned_in</span>My assignments
+            </a>
+            <a href="{% url 'dashboards:my_submissions' %}"
+               class="{% if request.resolver_match.url_name == 'my_submissions' %}active{% endif %}">
+              <span class="msym">fact_check</span>My submissions
+            </a>
+          {% endif %}
+
+          {% if user.is_staff and console_groups %}
+            <div class="lbl">Administration</div>
+            {% for group, items in console_groups %}
+              <details class="nav-group" {% if group == console_active_group %}open{% endif %}>
+                <summary>{{ group }}<span class="msym chev">chevron_right</span></summary>
+                <div class="nav-sub">
+                  {% for it in items %}
+                    <a href="{% url 'console:list' it.key %}" title="{{ it.description }}"
+                       class="{% if it.key == request.resolver_match.kwargs.key %}active{% endif %}">
+                      <span class="msym">{{ it.icon }}</span>{{ it.label }}
+                    </a>
+                  {% endfor %}
+                </div>
+              </details>
+            {% endfor %}
+            <a href="{% url 'console:publish_form' %}"
                class="{% if request.resolver_match.url_name == 'publish_form' %}active{% endif %}">
               <span class="msym">upload_file</span>Publish form
             </a>
-          {% endif %}
-          {% if can_manage_access %}
-            <a href="{% url 'console:writeback' %}" title="Submissions whose edits still need to reach the source server"
-               class="{% if request.resolver_match.url_name == 'writeback' %}active{% endif %}">
-              <span class="msym">sync</span>Write-back queue
-            </a>
-            <a href="{% url 'console:link_enumerators' %}" title="Link enumerators to platform accounts so submissions trace to a user"
+            <a href="{% url 'console:link_enumerators' %}"
                class="{% if request.resolver_match.url_name == 'link_enumerators' %}active{% endif %}">
               <span class="msym">link</span>Link enumerators
             </a>
-          {% endif %}
-          {% if user.is_staff %}
             <a href="/admin/" class="nav-sys" title="System settings: review audit, groups, scheduled tasks">
               <span class="msym">settings</span>Admin console
             </a>
