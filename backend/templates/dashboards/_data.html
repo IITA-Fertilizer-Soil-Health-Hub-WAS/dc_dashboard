@@ -1,9 +1,10 @@
 <div class="card" style="margin-top:1rem;">
   <h3>Data preview <span class="pill">latest {{ submissions|length }}</span></h3>
+  <div class="table-wrap">
   <table>
     <thead>
-      <tr><th>Enumerator</th><th>Collected by</th><th>{{ uc.household_label }}</th><th>Event</th>
-        <th>Crop</th><th>Date</th><th>State</th><th></th></tr>
+      <tr><th scope="col">Enumerator</th><th scope="col">Collected by</th><th scope="col">{{ uc.household_label }}</th><th scope="col">Event</th>
+        <th scope="col">Crop</th><th scope="col">Date</th><th scope="col">State</th><th scope="col"></th></tr>
     </thead>
     <tbody>
       {% for s in submissions %}
@@ -17,7 +18,7 @@
           <td>{{ s.event_key }}</td>
           <td>{{ s.crop.name|default:"—" }}</td>
           <td>{{ s.event_date|default:"—" }}</td>
-          <td><span class="pill">{{ s.review.get_state_display }}</span></td>
+          <td><span class="pill neutral">{{ s.review.get_state_display }}</span></td>
           <td style="text-align:right;"><a href="{% url 'dashboards:submission_review' uc.code s.id %}">Review</a></td>
         </tr>
       {% empty %}
@@ -25,4 +26,5 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
 </div>

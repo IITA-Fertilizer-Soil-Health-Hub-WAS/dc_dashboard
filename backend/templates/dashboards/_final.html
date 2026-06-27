@@ -8,10 +8,11 @@
     Only submissions that passed review (approved) appear here, using their authoritative
     (reviewed/edited) values. This is the clean dataset.
   </p>
-  <table style="margin-top:.8rem;">
+  <div class="table-wrap" style="margin-top:.8rem;">
+  <table>
     <thead>
-      <tr><th>{{ uc.household_label }}</th><th>Enumerator</th><th>Event</th>
-        <th>Crop</th><th>Date</th><th>Edited fields</th><th>Write-back</th></tr>
+      <tr><th scope="col">{{ uc.household_label }}</th><th scope="col">Enumerator</th><th scope="col">Event</th>
+        <th scope="col">Crop</th><th scope="col">Date</th><th scope="col">Edited fields</th><th scope="col">Write-back</th></tr>
     </thead>
     <tbody>
       {% for row in rows %}
@@ -36,4 +37,5 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
 </div>

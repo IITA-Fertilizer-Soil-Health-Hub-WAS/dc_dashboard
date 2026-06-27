@@ -51,12 +51,14 @@
           hx-include="#bulk-form" hx-target="#issues-panel" hx-swap="outerHTML"
           hx-confirm="Validate all selected endorsed submissions (Gate 2)?" hx-vals='{"action":"QC_APPROVE"}'>Validate</button>{% endif %}
     </div>
+    <div class="table-wrap">
     <table>
       <thead>
         <tr>
-          <th style="width:28px;"><input type="checkbox" onclick="document.querySelectorAll('#bulk-form input[name=ids]').forEach(c=>c.checked=this.checked)"></th>
-          <th>Enumerator</th><th>{{ uc.household_label }}</th><th>Issue</th>
-          <th>Severity</th><th>State</th><th>Actions</th>
+          <th style="width:28px;"><input type="checkbox" aria-label="Select all"
+              onclick="document.querySelectorAll('#bulk-form input[name=ids]').forEach(c=>c.checked=this.checked)"></th>
+          <th scope="col">Enumerator</th><th scope="col">{{ uc.household_label }}</th><th scope="col">Issue</th>
+          <th scope="col">Severity</th><th scope="col">State</th><th scope="col">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -67,8 +69,8 @@
             <td>{{ flag.submission.enumerator.enid|default:"—" }}</td>
             <td>{{ flag.submission.household.hhid|default:"—" }}</td>
             <td>{{ flag.message }}{% if flag.field_key %} <span class="pill">{{ flag.field_key }}</span>{% endif %}</td>
-            <td>{{ flag.severity }}</td>
-            <td><span class="pill">{{ flag.submission.review.get_state_display }}</span></td>
+            <td><span class="pill {% if flag.severity == 'ERROR' %}danger{% elif flag.severity == 'WARNING' %}warn{% else %}info{% endif %}">{{ flag.severity|lower }}</span></td>
+            <td><span class="pill neutral">{{ flag.submission.review.get_state_display }}</span></td>
             <td style="white-space:nowrap;">
               <a class="btn btn-edit" href="{% url 'dashboards:submission_review' uc.code sid %}"
                  style="text-decoration:none;">Review &amp; edit</a>
@@ -78,8 +80,9 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
   {% else %}
-    <div class="empty" style="border:none;">No open issues match the filters. 🎉</div>
+    <div class="empty" style="border:none;">No open issues match the filters.</div>
   {% endif %}
   </form>
 </div>

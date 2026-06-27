@@ -284,6 +284,10 @@
     .table-wrap{width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch;}
     .table-wrap table{min-width:560px;}
 
+    /* ---------- Collapsing two-column split (main + aside) ---------- */
+    .grid-split{display:grid; gap:1.2rem; align-items:start; grid-template-columns:1.7fr 1fr;}
+    @media (max-width:860px){ .grid-split{grid-template-columns:1fr;} }
+
     /* ---------- Mobile nav drawer ---------- */
     .navburger{display:none; align-items:center; justify-content:center; width:38px; height:38px;
       border-radius:9px; border:1px solid var(--line); background:var(--surface); color:var(--ink);
@@ -305,6 +309,11 @@
       .topbar{padding:0 1rem;}
       h2{font-size:1.38rem;}
       .infobox .n{font-size:1.8rem;}
+      /* Tab strips become horizontally swipeable rather than overflowing. */
+      nav.tabs{display:flex; width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch;
+        scrollbar-width:none;}
+      nav.tabs::-webkit-scrollbar{display:none;}
+      nav.tabs button{flex:0 0 auto;}
     }
     @media (prefers-reduced-motion: reduce){
       *{transition:none !important; animation:none !important; scroll-behavior:auto !important;}

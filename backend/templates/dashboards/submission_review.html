@@ -22,19 +22,20 @@
   {% if ok %}<div class="pill" style="margin-bottom:.8rem;background:#e7f0ea;color:#0a4630;">{{ ok }}</div>{% endif %}
   {% if error %}<div class="err">{{ error }}</div>{% endif %}
 
-  <div style="display:grid;grid-template-columns:1.7fr 1fr;gap:1.2rem;align-items:start;">
+  <div class="grid-split">
     <div>
       <!-- Editable values -->
       <div class="card" style="padding:0;overflow:hidden;">
-        <div style="padding:.8rem 1.1rem;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:.6rem;">
+        <div style="padding:.8rem 1.1rem;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
           <h3 style="margin:0;">Field values</h3>
           <span class="subtle" style="font-size:.78rem;">edits change the authoritative value; raw stays intact</span>
         </div>
         <form method="post">
           {% csrf_token %}
           <input type="hidden" name="action" value="save_edits">
+          <div class="table-wrap">
           <table>
-            <thead><tr><th>Field</th><th>Raw (source)</th><th>Current (authoritative)</th></tr></thead>
+            <thead><tr><th scope="col">Field</th><th scope="col">Raw (source)</th><th scope="col">Current (authoritative)</th></tr></thead>
             <tbody>
               {% for v in values %}
                 <tr>
@@ -52,6 +53,7 @@
               {% endfor %}
             </tbody>
           </table>
+          </div>
           {% if can.edit and values %}
             <div style="padding:.8rem 1.1rem;border-top:1px solid var(--line);display:flex;gap:.6rem;align-items:center;">
               <input name="note" placeholder="Reason for edit (optional)"

@@ -13,29 +13,40 @@
     <a class="subtle" style="font-size:.82rem;" href="{% url 'dashboards:export_audit' uc.code %}">Audit log (CSV)</a>
   </div>
 
-  <nav class="tabs" id="tabs">
-    <button class="active" hx-get="{% url 'dashboards:tab_summary' uc.code %}"
+  <nav class="tabs" id="tabs" role="tablist" aria-label="{{ uc.name }} sections">
+    <button class="active" role="tab" aria-selected="true" aria-controls="tabbody"
+            hx-get="{% url 'dashboards:tab_summary' uc.code %}"
             hx-target="#tabbody" hx-on::after-request="setActive(this)">Summary</button>
-    <button hx-get="{% url 'dashboards:tab_review' uc.code %}"
+    <button role="tab" aria-selected="false" aria-controls="tabbody"
+            hx-get="{% url 'dashboards:tab_review' uc.code %}"
             hx-target="#tabbody" hx-on::after-request="setActive(this)">Review</button>
-    <button hx-get="{% url 'dashboards:tab_enumerators' uc.code %}"
+    <button role="tab" aria-selected="false" aria-controls="tabbody"
+            hx-get="{% url 'dashboards:tab_enumerators' uc.code %}"
             hx-target="#tabbody" hx-on::after-request="setActive(this)">Enumerators</button>
-    <button hx-get="{% url 'dashboards:tab_issues' uc.code %}"
+    <button role="tab" aria-selected="false" aria-controls="tabbody"
+            hx-get="{% url 'dashboards:tab_issues' uc.code %}"
             hx-target="#tabbody" hx-on::after-request="setActive(this)">Issues</button>
-    <button hx-get="{% url 'dashboards:tab_data' uc.code %}"
+    <button role="tab" aria-selected="false" aria-controls="tabbody"
+            hx-get="{% url 'dashboards:tab_data' uc.code %}"
             hx-target="#tabbody" hx-on::after-request="setActive(this)">Data Preview</button>
-    <button hx-get="{% url 'dashboards:tab_final' uc.code %}"
+    <button role="tab" aria-selected="false" aria-controls="tabbody"
+            hx-get="{% url 'dashboards:tab_final' uc.code %}"
             hx-target="#tabbody" hx-on::after-request="setActive(this)">Final data</button>
   </nav>
 
-  <div id="tabbody" hx-get="{% url 'dashboards:tab_summary' uc.code %}" hx-trigger="load">
+  <div id="tabbody" role="tabpanel" tabindex="-1"
+       hx-get="{% url 'dashboards:tab_summary' uc.code %}" hx-trigger="load">
     <div class="subtle" style="padding:1.4rem 0;">Loading…</div>
   </div>
 
   <script>
     function setActive(btn){
-      document.querySelectorAll('#tabs button').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('#tabs button').forEach(function(b){
+        b.classList.remove('active');
+        b.setAttribute('aria-selected', 'false');
+      });
       btn.classList.add('active');
+      btn.setAttribute('aria-selected', 'true');
     }
   </script>
 {% endblock %}

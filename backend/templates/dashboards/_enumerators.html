@@ -1,8 +1,9 @@
 <div class="cards" style="margin-top:1rem; align-items:flex-start;">
   <div class="card" style="flex:1; min-width:300px;">
     <h3>Enumerator ranking</h3>
+    <div class="table-wrap">
     <table>
-      <thead><tr><th>Enumerator</th><th>Name</th><th>Account</th><th>Submissions</th></tr></thead>
+      <thead><tr><th scope="col">Enumerator</th><th scope="col">Name</th><th scope="col">Account</th><th scope="col">Submissions</th></tr></thead>
       <tbody>
         {% for e in ranking %}
           <tr>
@@ -19,12 +20,14 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
   </div>
 
   <div class="card" style="flex:1; min-width:300px;">
     <h3>Collectors <span class="subtle" style="font-weight:400;font-size:.8rem;">by platform account</span></h3>
+    <div class="table-wrap">
     <table>
-      <thead><tr><th>UserID</th><th>Name</th><th>Submissions</th></tr></thead>
+      <thead><tr><th scope="col">UserID</th><th scope="col">Name</th><th scope="col">Submissions</th></tr></thead>
       <tbody>
         {% for c in collectors %}
           <tr>
@@ -37,6 +40,7 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
   </div>
 </div>
 
@@ -48,10 +52,11 @@
     <span><i class="swatch" style="background:#c3531f"></i>Overdue</span>
     <span><i class="swatch" style="background:#BE93D4"></i>Future</span>
   </div>
+  <div class="table-wrap">
   <table>
     <thead>
-      <tr><th>{{ uc.household_label }}</th><th>Enumerator</th>
-        {% for ek in grid.event_keys %}<th>{{ ek }}</th>{% endfor %}</tr>
+      <tr><th scope="col">{{ uc.household_label }}</th><th scope="col">Enumerator</th>
+        {% for ek in grid.event_keys %}<th scope="col">{{ ek }}</th>{% endfor %}</tr>
     </thead>
     <tbody>
       {% for row in grid.rows %}
@@ -68,4 +73,5 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
 </div>

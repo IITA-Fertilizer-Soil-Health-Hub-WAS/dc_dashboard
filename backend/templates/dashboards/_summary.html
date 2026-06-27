@@ -35,8 +35,9 @@
   <h3 style="display:flex;align-items:center;gap:.5rem;margin-bottom:.7rem;">
     <span class="msym" style="color:var(--brand);">assignment</span>Field-work progress
   </h3>
+  <div class="table-wrap">
   <table>
-    <thead><tr><th>Job</th><th>Form</th><th>Deadline</th><th>Collected</th><th style="width:160px;">Progress</th></tr></thead>
+    <thead><tr><th scope="col">Job</th><th scope="col">Form</th><th scope="col">Deadline</th><th scope="col">Collected</th><th scope="col" style="width:160px;">Progress</th></tr></thead>
     <tbody>
       {% for jp in jobs_progress %}
         <tr>
@@ -49,6 +50,7 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
 </div>
 {% endif %}
 
