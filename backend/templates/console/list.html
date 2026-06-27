@@ -79,7 +79,11 @@
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="{{ columns|length|add:1 }}"><div class="empty" style="border:none;">Nothing here yet.</div></td></tr>
+          <tr><td colspan="{{ columns|length|add:1 }}"><div class="empty" style="border:none;">
+            {% if m.key == 'jobs' %}No jobs yet — click <strong>+ New</strong> to define what to collect (a set of plots or farmers), then open the job to assign enumerators.
+            {% elif m.key == 'collection-units' %}No collection units yet — add them individually with <strong>+ New</strong>, or use <strong>Import CSV</strong>.
+            {% else %}Nothing here yet.{% endif %}
+          </div></td></tr>
         {% endfor %}
       </tbody>
     </table>

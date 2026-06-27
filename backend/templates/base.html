@@ -359,6 +359,12 @@
           </a>
         {% endif %}
         {% if can_manage_access %}
+          <a href="{% url 'console:list' 'jobs' %}" title="Create collection jobs (plots / farmers) and assign enumerators"
+             class="{% if request.resolver_match.kwargs.key == 'jobs' or request.resolver_match.url_name == 'job_assignments' %}active{% endif %}">
+            <span class="msym">assignment</span>Jobs &amp; assignments
+          </a>
+        {% endif %}
+        {% if can_manage_access %}
           <a href="{% url 'dashboards:team' %}" title="Approve users and grant access within your scope"
              class="{% if request.resolver_match.url_name == 'team' %}active{% endif %}">
             <span class="msym">groups</span>Team &amp; access
