@@ -124,6 +124,59 @@ def _coordinator_uc_ids(user):
     return list(grantable_scopes(user)["use_cases"].values_list("id", flat=True))
 
 
+def _editable_use_cases(user):
+    """Projects a user may load data into: all for staff, their own for a coordinator."""
+    from apps.usecases.models import UseCase
+
+    if user.is_staff:
+        return UseCase.objects.filter(is_active=True).order_by("code")
+    return UseCase.objects.filter(id__in=_coordinator_uc_ids(user)).order_by("code")
+
+
+class ImportCollectionUnitsView(UserPassesTestMixin, View):
+    """Bulk-import a project's collection units (plots / farmers-households) from
+    CSV. Staff for any project; a coordinator only for their own."""
+
+    def test_func(self) -> bool:
+        from .registry import console_key_allowed
+
+        return console_key_allowed(self.request.user, "collection-units")
+
+    def _ctx(self, request, **extra):
+        ctx = {"groups": grouped(), "console_key": "collection-units",
+               "use_cases": _editable_use_cases(request.user)}
+        ctx.update(extra)
+        return ctx
+
+    def get(self, request):
+        return render(request, "console/import_units.html", self._ctx(request))
+
+    def post(self, request):
+        from apps.fieldwork.imports import import_collection_units
+
+        uc = _editable_use_cases(request.user).filter(pk=request.POST.get("use_case")).first()
+        upload = request.FILES.get("csv")
+        if uc is None or upload is None:
+            return render(request, "console/import_units.html",
+                          self._ctx(request, error="Pick a project and choose a CSV file."))
+        try:
+            text = upload.read().decode("utf-8-sig")
+        except UnicodeDecodeError:
+            return render(request, "console/import_units.html",
+                          self._ctx(request, error="The file must be UTF-8 CSV."))
+
+        report = import_collection_units(uc, text)
+        if report.errors:
+            return render(request, "console/import_units.html",
+                          self._ctx(request, error=" ".join(report.errors)))
+        messages.success(
+            request,
+            f"Imported units into {uc.code}: {report.created} created, "
+            f"{report.updated} updated, {report.skipped} skipped.",
+        )
+        return redirect("console:list", key="collection-units")
+
+
 def _scoped_get(user, m, key, pk):
     """Fetch an object — staff: any; coordinator: only within their projects."""
     if user.is_staff:

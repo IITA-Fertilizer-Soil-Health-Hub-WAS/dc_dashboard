@@ -1,0 +1,35 @@
+{% extends "console/base.html" %}
+{% block title %}Import collection units · Manage · EiA2030 DCMT{% endblock %}
+{% block crumbs %}<span class="sep">/</span><span class="cur">Manage</span><span class="sep">/</span><span class="cur">Import units</span>{% endblock %}
+{% block console_main %}
+  <div class="page-head"><h2>Import collection units</h2></div>
+  <p class="subtle" style="margin:.1rem 0 1rem;max-width:64ch;">
+    Bulk-load the plots or farmers/households to collect on. The CSV needs a
+    <code>code</code> column (the unit id submissions match on); <code>name</code>,
+    <code>lat</code>, <code>lon</code>, <code>country</code>, <code>region</code>,
+    <code>district</code> are recognised — any other columns are kept as
+    attributes. Re-importing updates existing units by code.
+  </p>
+
+  {% if error %}<div class="err"><strong>Couldn't import:</strong> {{ error }}</div>{% endif %}
+  {% if messages %}{% for msg in messages %}<div class="pill" style="margin-bottom:.7rem;">{{ msg }}</div>{% endfor %}{% endif %}
+
+  <div class="card" style="max-width:620px;">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="field" style="margin-bottom:1rem;">
+        <label>Project</label>
+        <select name="use_case" required class="input" style="width:100%;">
+          <option value="">Choose a project…</option>
+          {% for uc in use_cases %}<option value="{{ uc.pk }}">{{ uc.code }} — {{ uc.name }} ({{ uc.get_unit_type_display }})</option>{% endfor %}
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:1.2rem;">
+        <label>Units CSV</label>
+        <input type="file" name="csv" accept=".csv,text/csv" required class="input" style="width:100%;">
+        <div class="helptext" style="font-size:.74rem;color:var(--faint);margin-top:.25rem;">e.g. <code>code,name,lat,lon,district</code></div>
+      </div>
+      <button class="btn btn-open" type="submit">Import units</button>
+    </form>
+  </div>
+{% endblock %}
