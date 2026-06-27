@@ -1,30 +1,32 @@
-<div class="card" style="margin-top:1rem;">
-  <h3>Data preview <span class="pill">latest {{ submissions|length }}</span></h3>
+<div class="card" style="margin-top:1rem;padding:0;overflow:hidden;">
+  <div style="padding:1.1rem 1.25rem .5rem;display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
+    <h3 style="margin:0;">Data preview</h3>
+    <span class="pill neutral">showing {{ showing }} of {{ total }}</span>
+    <span class="subtle" style="font-size:.78rem;">every submitted field, current values · open a row to review &amp; edit</span>
+  </div>
   <div class="table-wrap">
-  <table>
-    <thead>
-      <tr><th scope="col">Enumerator</th><th scope="col">Collected by</th><th scope="col">{{ uc.household_label }}</th><th scope="col">Event</th>
-        <th scope="col">Crop</th><th scope="col">Date</th><th scope="col">State</th><th scope="col"></th></tr>
-    </thead>
-    <tbody>
-      {% for s in submissions %}
+    <table style="font-size:.82rem;">
+      <thead>
         <tr>
-          <td>{{ s.enumerator.enid|default:"—" }}</td>
-          <td>
-            {% if s.collected_by %}<span class="uid" title="{{ s.collected_by.email }}">{{ s.collected_by.user_id }}</span>
-            {% else %}<span class="subtle">—</span>{% endif %}
-          </td>
-          <td>{{ s.household.hhid|default:"—" }}</td>
-          <td>{{ s.event_key }}</td>
-          <td>{{ s.crop.name|default:"—" }}</td>
-          <td>{{ s.event_date|default:"—" }}</td>
-          <td><span class="pill neutral">{{ s.review.get_state_display }}</span></td>
-          <td style="text-align:right;"><a href="{% url 'dashboards:submission_review' uc.code s.id %}">Review</a></td>
+          <th scope="col" style="white-space:nowrap;">Submission</th>
+          <th scope="col" style="white-space:nowrap;">Collected by</th>
+          {% for c in columns %}<th scope="col" class="mono" style="white-space:nowrap;font-size:.72rem;">{{ c }}</th>{% endfor %}
         </tr>
-      {% empty %}
-        <tr><td colspan="8">No submissions yet.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            <td style="white-space:nowrap;">
+              <a href="{% url 'dashboards:submission_review' uc.code row.s.id %}">{{ row.s.enumerator.enid|default:"—" }}</a>
+              <div class="subtle" style="font-size:.72rem;">{{ row.s.household.hhid|default:row.s.ona_uuid|truncatechars:12 }} · {{ row.s.event_date|default:"—" }}</div>
+            </td>
+            <td style="white-space:nowrap;">{% if row.s.collected_by %}<span class="uid" title="{{ row.s.collected_by.email }}">{{ row.s.collected_by.user_id }}</span>{% else %}<span class="subtle">—</span>{% endif %}</td>
+            {% for cell in row.cells %}<td class="mono" style="white-space:nowrap;max-width:240px;overflow:hidden;text-overflow:ellipsis;" title="{{ cell }}">{{ cell|default:"—" }}</td>{% endfor %}
+          </tr>
+        {% empty %}
+          <tr><td colspan="{{ columns|length|add:2 }}"><div class="empty" style="border:none;">No submissions yet.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 </div>

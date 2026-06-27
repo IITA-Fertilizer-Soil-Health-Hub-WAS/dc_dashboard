@@ -159,7 +159,7 @@ class SubmissionValue(BaseModel):
         PLUGIN = "PLUGIN", "Produced by plugin"
 
     submission = models.ForeignKey(Submission, on_delete=models.CASCADE, related_name="values")
-    field_key = models.CharField(max_length=64)
+    field_key = models.CharField(max_length=200)
     raw_value = models.JSONField(null=True, blank=True)  # never changes after ingest
     current_value = models.JSONField(null=True, blank=True)  # authoritative
     is_edited = models.BooleanField(default=False)

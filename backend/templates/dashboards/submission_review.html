@@ -24,12 +24,13 @@
 
   <div class="grid-split">
     <div>
-      <!-- Editable values -->
+      <!-- Field values — every submitted field, all editable -->
       <div class="card" style="padding:0;overflow:hidden;">
         <div style="padding:.8rem 1.1rem;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
           <h3 style="margin:0;">Field values</h3>
-          <span class="subtle" style="font-size:.78rem;">edits change the authoritative value; raw stays intact</span>
+          <span class="pill neutral" style="margin-left:auto;">{{ fields|length }} fields</span>
         </div>
+        {% if can.edit %}<p class="subtle" style="font-size:.78rem;margin:.6rem 1.1rem 0;">Every field is editable; edits change the authoritative value and queue a write-back. The raw source value stays intact.</p>{% endif %}
         <form method="post">
           {% csrf_token %}
           <input type="hidden" name="action" value="save_edits">
@@ -37,24 +38,24 @@
           <table>
             <thead><tr><th scope="col">Field</th><th scope="col">Raw (source)</th><th scope="col">Current (authoritative)</th></tr></thead>
             <tbody>
-              {% for v in values %}
+              {% for f in fields %}
                 <tr>
-                  <td class="mono">{{ v.field_key }}{% if v.is_edited %} <span class="pill" style="font-size:.66rem;">edited</span>{% endif %}</td>
-                  <td class="subtle">{{ v.raw_value|default:"—" }}</td>
+                  <td class="mono" style="white-space:nowrap;">{{ f.key }}{% if f.is_edited %} <span class="pill" style="font-size:.66rem;">edited</span>{% endif %}</td>
+                  <td class="subtle">{{ f.raw|default:"—" }}</td>
                   <td>
                     {% if can.edit %}
-                      <input name="val-{{ v.field_key }}" value="{{ v.current_value|default:'' }}"
+                      <input name="val-{{ f.key }}" value="{{ f.current|default:'' }}"
                              style="width:100%;padding:.35rem .5rem;border:1px solid var(--line);border-radius:6px;font-family:var(--mono);font-size:.82rem;">
-                    {% else %}{{ v.current_value|default:"—" }}{% endif %}
+                    {% else %}{{ f.current|default:"—" }}{% endif %}
                   </td>
                 </tr>
               {% empty %}
-                <tr><td colspan="3"><div class="empty" style="border:none;">No mapped values.</div></td></tr>
+                <tr><td colspan="3"><div class="empty" style="border:none;">No data stored for this submission.</div></td></tr>
               {% endfor %}
             </tbody>
           </table>
           </div>
-          {% if can.edit and values %}
+          {% if can.edit and fields %}
             <div style="padding:.8rem 1.1rem;border-top:1px solid var(--line);display:flex;gap:.6rem;align-items:center;">
               <input name="note" placeholder="Reason for edit (optional)"
                      style="flex:1;padding:.4rem .6rem;border:1px solid var(--line);border-radius:7px;font-size:.85rem;">
@@ -63,28 +64,6 @@
           {% endif %}
         </form>
       </div>
-
-      <!-- Full submission: every field the enumerator entered -->
-      <div class="card" style="margin-top:1rem;padding:0;overflow:hidden;">
-        <details {% if not values %}open{% endif %}>
-          <summary style="cursor:pointer;list-style:none;padding:.9rem 1.1rem;display:flex;align-items:center;gap:.6rem;">
-            <span class="msym">description</span><h3 style="margin:0;">All submitted fields</h3>
-            <span class="pill neutral" style="margin-left:auto;">{{ raw_fields|length }}</span>
-          </summary>
-          <div class="table-wrap" style="border-top:1px solid var(--line);">
-            <table>
-              <thead><tr><th scope="col">Field</th><th scope="col">Value</th></tr></thead>
-              <tbody>
-                {% for f in raw_fields %}
-                  <tr><td class="mono" style="white-space:nowrap;">{{ f.key }}</td>
-                      <td>{{ f.value|default:"—" }}</td></tr>
-                {% empty %}
-                  <tr><td colspan="2"><div class="empty" style="border:none;">No raw data stored.</div></td></tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </details>
       </div>
 
       <!-- Open issues -->

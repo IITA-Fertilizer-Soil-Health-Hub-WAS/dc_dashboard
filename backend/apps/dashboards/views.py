@@ -325,12 +325,39 @@ def tab_issues(request, code):
 @login_required
 def tab_data(request, code):
     uc = get_scoped_use_case(request, code)
-    submissions = (
+    submissions = list(
         Submission.objects.filter(use_case=uc)
-        .select_related("enumerator", "household", "crop", "collected_by")
-        .order_by("-event_date")[:500]
+        .select_related("enumerator", "household", "review", "collected_by")
+        .prefetch_related("values")
+        .order_by("-event_date", "-ona_submission_time")[:100]
     )
-    return render(request, "dashboards/_data.html", {"uc": uc, "submissions": submissions})
+    columns, rows = _data_grid(submissions)
+    total = Submission.objects.filter(use_case=uc).count()
+    return render(request, "dashboards/_data.html", {
+        "uc": uc, "columns": columns, "rows": rows,
+        "showing": len(submissions), "total": total,
+    })
+
+
+def _data_grid(submissions, max_cols: int = 60):
+    """A spreadsheet of submissions × their form fields, showing the current
+    (authoritative) value, with the column set = union of fields seen."""
+    col_order: list[str] = []
+    seen: set[str] = set()
+    built = []
+    for s in submissions:
+        fm = _raw_field_map(s.raw_payload)
+        for v in s.values.all():           # overlay reviewer edits
+            if v.field_key in fm:
+                fm[v.field_key] = v.current_value
+        for k in fm:
+            if k not in seen:
+                seen.add(k)
+                col_order.append(k)
+        built.append((s, fm))
+    columns = sorted(col_order)[:max_cols]
+    rows = [{"s": s, "cells": [fm.get(c, "") for c in columns]} for s, fm in built]
+    return columns, rows
 
 
 @login_required
@@ -423,13 +450,18 @@ def submission_review(request, code, submission_id):
             if action == "save_edits":
                 if not user_can(request.user, "edit", uc):
                     raise ReviewPermissionDenied("You may not edit submissions here.")
+                # Baseline a field shows: a reviewer's current value if one exists,
+                # else the raw value from the server record. Any field can be edited
+                # — edit_value creates a tracked value for it on first change.
                 current = {v.field_key: v.current_value for v in submission.values.all()}
+                raw_map = _raw_field_map(submission.raw_payload)
                 changed = 0
                 for key, new in request.POST.items():
                     if not key.startswith("val-"):
                         continue
                     fk = key[4:]
-                    if str(current.get(fk, "") or "") != new:
+                    baseline = current[fk] if fk in current else raw_map.get(fk)
+                    if str(baseline if baseline is not None else "") != new:
                         services.edit_value(request.user, submission, field_key=fk,
                                             new_value=new, note=note)
                         changed += 1
@@ -448,7 +480,6 @@ def submission_review(request, code, submission_id):
             error = str(exc)
         submission.refresh_from_db()
 
-    values = submission.values.all().order_by("field_key")
     flags = submission.flags.filter(status=ValidationFlag.Status.OPEN).select_related("rule")
     actions = submission.actions.select_related("actor").order_by("-created_at")[:15]
     review = getattr(submission, "review", None)
@@ -461,14 +492,13 @@ def submission_review(request, code, submission_id):
         "open_review": user_can(request.user, "open_review", uc),
     }
     return render(request, "dashboards/submission_review.html", {
-        "uc": uc, "submission": submission, "values": values, "flags": flags,
+        "uc": uc, "submission": submission, "flags": flags,
         "actions": actions, "review": review, "can": can, "ok": ok, "error": error,
-        "raw_fields": _raw_submission_fields(submission.raw_payload),
+        "fields": _merged_fields(submission),
     })
 
 
-# ODK / ONA system fields to hide from the full-submission view (keep the actual
-# answers, drop plumbing).
+# ODK / ONA system fields to hide (keep the actual answers, drop plumbing).
 _SYSTEM_FIELD_PREFIXES = ("_", "meta/", "formhub/")
 _SYSTEM_FIELD_KEYS = {
     "start", "end", "today", "deviceid", "username", "subscriberid", "simserial",
@@ -476,19 +506,42 @@ _SYSTEM_FIELD_KEYS = {
 }
 
 
-def _raw_submission_fields(payload: dict) -> list[dict]:
+def _raw_field_map(payload: dict) -> dict:
     """Every field the enumerator submitted (from the untouched server record),
-    minus ODK/ONA system plumbing — so the full form shows on the review screen."""
+    minus ODK/ONA system plumbing. Nested groups/repeats are serialised."""
     import json
 
-    out = []
+    out: dict = {}
     for key, value in (payload or {}).items():
         if key in _SYSTEM_FIELD_KEYS or key.startswith(_SYSTEM_FIELD_PREFIXES):
             continue
         if isinstance(value, (dict, list)):
             value = json.dumps(value, ensure_ascii=False)
-        out.append({"key": key, "value": "" if value is None else value})
-    return sorted(out, key=lambda r: r["key"])
+        out[key] = "" if value is None else value
+    return out
+
+
+def _merged_fields(submission) -> list[dict]:
+    """Every editable field: the raw server fields plus any engine/mapped values,
+    each showing its raw (source) value and current (authoritative) value."""
+    raw_map = _raw_field_map(submission.raw_payload)
+    svs = {v.field_key: v for v in submission.values.all()}
+    fields = []
+    for key in sorted(raw_map):
+        sv = svs.get(key)
+        fields.append({
+            "key": key,
+            "raw": raw_map[key],
+            "current": sv.current_value if sv else raw_map[key],
+            "is_edited": bool(sv and sv.is_edited),
+        })
+    for key in sorted(svs):
+        if key in raw_map:
+            continue
+        sv = svs[key]
+        fields.append({"key": key, "raw": sv.raw_value,
+                       "current": sv.current_value, "is_edited": sv.is_edited})
+    return fields
 
 
 @login_required
