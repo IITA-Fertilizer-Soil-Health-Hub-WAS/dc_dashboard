@@ -16,10 +16,39 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
 
 from apps.rbac.models import UseCaseAccessRequest
-from apps.rbac.permissions import visible_use_cases
+from apps.rbac.permissions import can_manage_access, visible_use_cases
 from apps.usecases.models import Country, UseCase
 
 PAGE_SIZE = 24
+
+
+def _home_summary(user, member_ids):
+    """Role-aware 'needs your attention' figures for the landing page: collection
+    progress for enumerators, the review/issue backlog for coordinators."""
+    from apps.fieldwork.models import UnitAssignment
+
+    out = {}
+    units = UnitAssignment.objects.filter(enumerator=user)
+    total = units.count()
+    if total:
+        collected = units.filter(unit__submissions__isnull=False).distinct().count()
+        pct = round(collected / total * 100) if total else 0
+        out["assignments"] = {"total": total, "collected": collected,
+                              "pending": total - collected, "pct": pct}
+    if can_manage_access(user) and member_ids:
+        from apps.review.models import ReviewState
+        from apps.submissions.models import Submission
+        from apps.validation.models import ValidationFlag
+
+        ids = list(member_ids)
+        out["awaiting_review"] = (
+            Submission.objects.filter(use_case_id__in=ids)
+            .exclude(review__state__in=[ReviewState.APPROVED, ReviewState.DECLINED]).count()
+        )
+        out["open_issues"] = ValidationFlag.objects.filter(
+            rule__use_case_id__in=ids, status=ValidationFlag.Status.OPEN
+        ).count()
+    return out
 
 
 def _org_use_cases(user):
@@ -70,10 +99,15 @@ def projects(request):
         use_cases__in=org_qs
     ).distinct().order_by("name")
 
+    # Personal 'attention' strip only on the default (your-projects) landing —
+    # not when browsing/searching the wider directory.
+    is_landing = scope == "mine" and not q and not country
+    home = _home_summary(user, member_ids) if is_landing else {}
+
     return render(request, "dashboards/projects.html", {
         "rows": rows, "page": page, "scope": scope, "q": q,
         "country": country, "countries": countries,
-        "mine_count": len(member_ids),
+        "mine_count": len(member_ids), "home": home, "is_landing": is_landing,
     })
 
 

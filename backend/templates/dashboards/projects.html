@@ -1,15 +1,43 @@
 {% extends "base.html" %}
 {% block title %}Projects · EiA2030 DCMT{% endblock %}
-{% block crumbs %}<span class="sep">/</span><span class="cur">Projects</span>{% endblock %}
+{% block crumbs %}{% if not is_landing %}<span class="sep">/</span><span class="cur">Projects</span>{% endif %}{% endblock %}
 {% block content %}
+  {% if is_landing %}<p class="subtle" style="margin:0 0 .25rem;font-size:.85rem;">Welcome back, {{ user.full_name|default:user.email }}</p>{% endif %}
   <div class="page-head">
-    <h2>Projects</h2>
+    <h2>{% if is_landing %}Home{% else %}Projects{% endif %}</h2>
     <span class="pill neutral">{{ page.paginator.count }}</span>
   </div>
   <p class="lede">
     {% if scope == 'all' %}Every project in your institution — open the ones you belong to, or request access to others.
     {% else %}The projects you have access to.{% endif %}
   </p>
+
+  {% if home %}
+    <div class="cards" style="margin-bottom:1.4rem;">
+      {% if home.assignments %}
+        <a class="card infobox" href="{% url 'dashboards:my_assignments' %}" style="text-decoration:none;flex:1;min-width:210px;">
+          <div class="n">{{ home.assignments.collected }}/{{ home.assignments.total }}</div>
+          <div class="l">Units collected</div>
+          <div class="meter" style="margin-top:.55rem;"><i style="width:{{ home.assignments.pct }}%;"></i></div>
+        </a>
+      {% endif %}
+      {% if pending_approvals_count %}
+        <a class="card infobox" href="{% url 'dashboards:team' %}" style="text-decoration:none;flex:1;min-width:210px;">
+          <div class="n">{{ pending_approvals_count }}</div><div class="l">Awaiting your approval</div>
+        </a>
+      {% endif %}
+      {% if home.awaiting_review %}
+        <a class="card infobox" href="{% url 'dashboards:overview' %}" style="text-decoration:none;flex:1;min-width:210px;">
+          <div class="n">{{ home.awaiting_review }}</div><div class="l">Submissions to review</div>
+        </a>
+      {% endif %}
+      {% if home.open_issues %}
+        <a class="card infobox" href="{% url 'kpi:overview' %}" style="text-decoration:none;flex:1;min-width:210px;">
+          <div class="n">{{ home.open_issues }}</div><div class="l">Open quality issues</div>
+        </a>
+      {% endif %}
+    </div>
+  {% endif %}
 
   {% if messages %}{% for msg in messages %}<div class="banner info" style="margin-bottom:.8rem;"><span class="msym">info</span><div class="bx">{{ msg }}</div></div>{% endfor %}{% endif %}
 
