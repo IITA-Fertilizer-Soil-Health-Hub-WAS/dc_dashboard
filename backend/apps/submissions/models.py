@@ -102,6 +102,16 @@ class Submission(BaseModel):
         related_name="collected_submissions",
     )
 
+    # The planned collection unit (plot / farmer-household) this submission is
+    # for, matched at ingest by its id field — drives expected-vs-actual coverage.
+    collection_unit = models.ForeignKey(
+        "fieldwork.CollectionUnit",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="submissions",
+    )
+
     ingested_at = models.DateTimeField(auto_now_add=True)
 
     # Write-back: propagating reviewer edits back to the source collection server.

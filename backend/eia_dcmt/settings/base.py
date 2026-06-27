@@ -74,6 +74,7 @@ LOCAL_APPS = [
     "apps.submissions",
     "apps.review",
     "apps.validation",
+    "apps.fieldwork",
     "apps.dashboards",
     "apps.console",
     "apps.api",

@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from apps.accounts.models import User
+from apps.fieldwork.models import CollectionUnit, Job
 from apps.rbac.models import UseCaseAccessRequest, UseCaseMembership
 from apps.submissions.models import Enumerator, Household, Submission
 from apps.usecases.models import (
@@ -74,9 +75,9 @@ _ENTRIES: list[Managed] = [
     Managed("use-cases", UseCase, "Use cases", "Configuration",
             list_display=["code", "name", "organization", "country", "is_active",
                           "config_version", "plugin_path"],
-            form_fields=["code", "name", "organization", "country", "is_active", "countries",
-                         "enid_patterns", "hhid_patterns", "plugin_path", "timezone",
-                         "household_label"],
+            form_fields=["code", "name", "organization", "country", "unit_type", "is_active",
+                         "countries", "enid_patterns", "hhid_patterns", "plugin_path",
+                         "timezone", "household_label"],
             search_fields=["code", "name"], icon="category", actions=USECASE_ACTIONS,
             description="Projects you monitor — ONA forms, ID patterns, sync."),
     Managed("forms", FormDefinition, "Forms", "Configuration",
@@ -136,6 +137,18 @@ _ENTRIES: list[Managed] = [
             search_fields=["user__email", "use_case__code"], readonly=True, icon="pending_actions",
             description="Self-service requests to join a project (read-only)."),
     # ---- Field data: the records being monitored ----
+    Managed("jobs", Job, "Jobs", "Field data",
+            list_display=["use_case", "name", "form", "status", "target_count", "deadline"],
+            form_fields=["use_case", "name", "form", "target_count", "start_date", "deadline",
+                         "status", "assigned_to"],
+            search_fields=["name"], icon="assignment",
+            description="Data-collection assignments — form, target, deadline, enumerators."),
+    Managed("collection-units", CollectionUnit, "Collection units", "Field data",
+            list_display=["use_case", "code", "name", "country", "region", "district"],
+            form_fields=["use_case", "code", "name", "lat", "lon", "country", "region",
+                         "district", "attributes"],
+            search_fields=["code", "name"], icon="place",
+            description="Plots / farmers-households planned for collection."),
     Managed("enumerators", Enumerator, "Enumerators", "Field data",
             list_display=["use_case", "enid", "first_name", "surname", "user", "is_test"],
             form_fields=["use_case", "enid", "first_name", "surname", "phone", "user",
@@ -167,7 +180,8 @@ REGISTRY: dict[str, Managed] = {m.key: m for m in _ENTRIES}
 # the in-app Team & access screen instead.
 COORDINATOR_CONSOLE_KEYS: set[str] = {
     "forms", "field-mappings", "event-schedule", "crops", "trials", "stages",
-    "validation-rules", "enumerators", "households", "submissions", "validation-flags",
+    "validation-rules", "jobs", "collection-units", "enumerators", "households",
+    "submissions", "validation-flags",
 }
 
 # ORM lookup from each coordinator-visible section to its use case id, used to
@@ -180,6 +194,8 @@ USECASE_FILTER_PATHS: dict[str, str] = {
     "trials": "use_case",
     "stages": "use_case",
     "validation-rules": "use_case",
+    "jobs": "use_case",
+    "collection-units": "use_case",
     "enumerators": "use_case",
     "households": "use_case",
     "submissions": "use_case",
@@ -228,6 +244,8 @@ ORG_FILTER_PATHS: dict[str, str] = {
     "trials": "use_case__organization",
     "stages": "use_case__organization",
     "validation-rules": "use_case__organization",
+    "jobs": "use_case__organization",
+    "collection-units": "use_case__organization",
     "users": "organization",
     "enumerators": "use_case__organization",
     "households": "use_case__organization",

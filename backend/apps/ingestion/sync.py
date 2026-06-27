@@ -220,6 +220,7 @@ def _upsert_submission(use_case, form, raw_rec, mapped, crop_by_name, test_ids, 
         )
     crop = crop_by_name.get(mapped.get("Crop")) if mapped.get("Crop") else None
     collected_by = _resolve_collector(mapped, enumerator)
+    collection_unit = _resolve_collection_unit(use_case, hhid)
 
     existing = Submission.objects.filter(use_case=use_case, ona_uuid=ona_uuid).first()
     if existing and existing.content_hash == content_hash:
@@ -237,6 +238,7 @@ def _upsert_submission(use_case, form, raw_rec, mapped, crop_by_name, test_ids, 
         "household": household,
         "crop": crop,
         "collected_by": collected_by,
+        "collection_unit": collection_unit,
         "event_key": mapped.get("event_key") or "",
         "event_date": _to_date(mapped.get("today")),
     }
@@ -248,6 +250,16 @@ def _upsert_submission(use_case, form, raw_rec, mapped, crop_by_name, test_ids, 
         stats.created += 1
     else:
         stats.updated += 1
+
+
+def _resolve_collection_unit(use_case, hhid):
+    """Match a submission to its planned collection unit by id (HHID / plot id).
+    Only matches existing units — jobs/units are planned ahead of collection."""
+    if not hhid:
+        return None
+    from apps.fieldwork.models import CollectionUnit
+
+    return CollectionUnit.objects.filter(use_case=use_case, code=hhid).first()
 
 
 def _resolve_collector(mapped, enumerator):

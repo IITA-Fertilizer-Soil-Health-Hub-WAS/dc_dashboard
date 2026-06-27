@@ -77,7 +77,15 @@ class Country(BaseModel):
 class UseCase(BaseModel):
     """An independent project implementation (e.g. SNS-RWANDA, KALRO, BioSSA)."""
 
+    class UnitType(models.TextChoices):
+        PLOT = "PLOT", "Plot"
+        FARMER_HOUSEHOLD = "FARMER_HOUSEHOLD", "Farmer / Household"
+
     code = models.SlugField(max_length=64, unique=True)  # "SNS-RWANDA"
+    # What this project collects data on — one type per project (drives jobs).
+    unit_type = models.CharField(
+        max_length=20, choices=UnitType.choices, default=UnitType.FARMER_HOUSEHOLD
+    )
     # The tenant this project belongs to. Authoritative even when country is
     # unset, so isolation never depends on the geo hierarchy being filled in.
     organization = models.ForeignKey(
