@@ -344,6 +344,28 @@
             <span class="msym">add_circle</span>Onboard project
           </a>
         {% endif %}
+        {% if show_my_assignments or can_manage_access %}
+          <div class="lbl">Work</div>
+          {% if show_my_assignments %}
+            <a href="{% url 'dashboards:my_assignments' %}" title="Plots / farmers assigned to me to collect on"
+               class="{% if request.resolver_match.url_name == 'my_assignments' %}active{% endif %}">
+              <span class="msym">assignment_turned_in</span>My assignments
+            </a>
+          {% endif %}
+          {% if can_manage_access %}
+            <a href="{% url 'console:list' 'jobs' %}" title="Create collection jobs (plots / farmers) and assign enumerators"
+               class="{% if request.resolver_match.kwargs.key == 'jobs' or request.resolver_match.url_name == 'job_assignments' %}active{% endif %}">
+              <span class="msym">assignment</span>Jobs &amp; assignments
+            </a>
+            <a href="{% url 'dashboards:team' %}" title="Approve users and grant access within your scope"
+               class="{% if request.resolver_match.url_name == 'team' %}active{% endif %}">
+              <span class="msym">groups</span>Team &amp; access
+              {% if pending_approvals_count %}<span class="pill" style="margin-left:auto;font-size:.66rem;">{{ pending_approvals_count }}</span>{% endif %}
+            </a>
+          {% endif %}
+        {% endif %}
+
+        <div class="lbl">Monitor</div>
         <a href="{% url 'dashboards:overview' %}" title="Cross-use-case overview"
            class="{% if request.resolver_match.url_name == 'overview' %}active{% endif %}">
           <span class="msym">dashboard</span>Overview
@@ -352,26 +374,6 @@
            class="{% if request.resolver_match.app_name == 'kpi' %}active{% endif %}">
           <span class="msym">insights</span>M&amp;E
         </a>
-        {% if show_my_assignments %}
-          <a href="{% url 'dashboards:my_assignments' %}" title="Plots / farmers assigned to me to collect on"
-             class="{% if request.resolver_match.url_name == 'my_assignments' %}active{% endif %}">
-            <span class="msym">assignment_turned_in</span>My assignments
-          </a>
-        {% endif %}
-        {% if can_manage_access %}
-          <a href="{% url 'console:list' 'jobs' %}" title="Create collection jobs (plots / farmers) and assign enumerators"
-             class="{% if request.resolver_match.kwargs.key == 'jobs' or request.resolver_match.url_name == 'job_assignments' %}active{% endif %}">
-            <span class="msym">assignment</span>Jobs &amp; assignments
-          </a>
-        {% endif %}
-        {% if can_manage_access %}
-          <a href="{% url 'dashboards:team' %}" title="Approve users and grant access within your scope"
-             class="{% if request.resolver_match.url_name == 'team' %}active{% endif %}">
-            <span class="msym">groups</span>Team &amp; access
-            {% if pending_approvals_count %}<span class="pill" style="margin-left:auto;font-size:.66rem;">{{ pending_approvals_count }}</span>{% endif %}
-          </a>
-        {% endif %}
-        <div class="lbl">Monitor</div>
         <a href="{% url 'dashboards:projects' %}" title="Browse and search all projects"
            class="{% if request.resolver_match.url_name == 'projects' or request.resolver_match.url_name == 'index' %}active{% endif %}">
           <span class="msym">grid_view</span>Projects
@@ -394,7 +396,7 @@
         {% endif %}
         {% if console_groups %}
           {% comment %}Staff get full Administration; coordinators get a read-only, scoped Manage view of their projects' config & field data. Only the group you're in auto-expands.{% endcomment %}
-          <div class="lbl" style="margin-top:.5rem;">{% if user.is_staff %}Administration{% else %}Manage{% endif %}</div>
+          <div class="lbl" style="margin-top:.5rem;">{% if user.is_staff %}Administration{% else %}Configure{% endif %}</div>
           {% for group, items in console_groups %}
             <details class="nav-group" {% if group == console_active_group %}open{% endif %}>
               <summary>{{ group }}<span class="msym chev">chevron_right</span></summary>
