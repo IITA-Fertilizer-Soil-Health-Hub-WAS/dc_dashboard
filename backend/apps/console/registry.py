@@ -47,10 +47,6 @@ class Managed:
     actions: tuple[Action, ...] = ()
 
     @property
-    def verbose_plural(self) -> str:
-        return self.label
-
-    @property
     def singular(self) -> str:
         return str(self.model._meta.verbose_name)
 

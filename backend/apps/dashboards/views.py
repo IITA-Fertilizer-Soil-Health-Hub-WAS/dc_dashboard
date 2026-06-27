@@ -19,7 +19,7 @@ from apps.rbac.permissions import user_can, visible_use_cases
 from apps.review import services
 from apps.review.models import ReviewAction, ReviewActionLog, ReviewState
 from apps.review.state_machine import ReviewPermissionDenied, TransitionError
-from apps.submissions.models import Enumerator, Submission, SubmissionValue
+from apps.submissions.models import Enumerator, Submission
 from apps.validation.models import ValidationFlag
 
 from .charts import submission_trend_html, trials_map_html
@@ -46,13 +46,6 @@ def style_preview(request):
     if not settings.DEBUG:
         raise Http404()
     return render(request, "dashboards/style_preview.html")
-
-
-@login_required
-def index(request):
-    """Landing page: the use cases this user may view."""
-    use_cases = visible_use_cases(request.user)
-    return render(request, "dashboards/index.html", {"use_cases": use_cases})
 
 
 @login_required
@@ -535,8 +528,3 @@ def _issues_context(request, uc) -> dict:
         "state_options": ReviewState.choices,
         "severity_options": ValidationRule.Severity.choices,
     }
-
-
-# Field values for an edit modal/inline form (optional helper used by templates).
-def submission_values(submission) -> list[SubmissionValue]:
-    return list(submission.values.all())

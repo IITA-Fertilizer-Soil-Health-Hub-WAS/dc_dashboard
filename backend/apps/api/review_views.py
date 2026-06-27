@@ -12,7 +12,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.review import services
-from apps.review.models import Review, ReviewAction
+from apps.review.models import ReviewAction
 from apps.review.state_machine import ReviewPermissionDenied, TransitionError
 from apps.submissions.models import Submission
 
@@ -68,9 +68,3 @@ class ReviewActionView(APIView):
         return Response(
             {"submission": str(submission.id), "state": review.state}, status=status.HTTP_200_OK
         )
-
-
-class ReviewDetailSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Review
-        fields = ["submission", "state", "assigned_to", "qc_signed_by", "qc_signed_at"]
