@@ -138,6 +138,8 @@ class UserProfile(models.Model):
     gender = models.CharField(max_length=8, choices=Gender.choices, blank=True)
     age = models.PositiveSmallIntegerField(null=True, blank=True)
     education_level = models.CharField(max_length=20, choices=Education.choices, blank=True)
+    # Relevant data-collection / fieldwork experience.
+    experience_years = models.PositiveSmallIntegerField(null=True, blank=True)
 
     phone_alt = models.CharField(max_length=32, blank=True)
     country = models.CharField(max_length=64, blank=True)

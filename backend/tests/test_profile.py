@@ -18,6 +18,7 @@ def _valid_post():
     return {
         "first_name": "Ama", "second_name": "", "family_name": "Mensah",
         "gender": "female", "age": "29", "education_level": "secondary",
+        "experience_years": "4",
         "phone": "+233200000000", "phone_alt": "", "country": "Ghana",
         "consent_personal_info": "on", "consent_followup": "on", "consent_photos": "",
     }
@@ -37,6 +38,7 @@ def test_submitting_profile_marks_complete_and_syncs(client, user):
     prof = UserProfile.objects.get(user=user)
     assert prof.is_complete
     assert prof.first_name == "Ama" and prof.family_name == "Mensah"
+    assert prof.experience_years == 4
     assert prof.consent_personal_info is True and prof.consent_photos is False
     user.refresh_from_db()
     assert user.full_name == "Ama Mensah"          # display name synced

@@ -85,7 +85,7 @@ class ProfileForm(forms.ModelForm):
         model = UserProfile
         fields = [
             "first_name", "second_name", "family_name", "gender", "age",
-            "education_level", "phone_alt", "country",
+            "education_level", "experience_years", "phone_alt", "country",
             "consent_personal_info", "consent_followup", "consent_photos",
         ]
 
