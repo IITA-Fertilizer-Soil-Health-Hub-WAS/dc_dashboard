@@ -42,6 +42,19 @@ class WriteResult:
     remote_id: str | None = None
 
 
+@dataclass
+class PublishResult:
+    """Outcome of pushing an XLSForm to a collection server."""
+
+    ok: bool
+    server_form_id: str | None = None
+    version: str = ""
+    title: str = ""
+    url: str = ""
+    message: str = ""
+    warnings: list[str] = field(default_factory=list)
+
+
 class CollectionBackend:
     """Abstract backend. Subclasses set `type`/`label` and implement the methods."""
 
@@ -49,6 +62,7 @@ class CollectionBackend:
     label: str = ""
     supports_discovery: bool = False
     supports_writeback: bool = False
+    supports_publish: bool = False
 
     def __init__(self, *, base_url: str = "", token: str = "", config: dict | None = None):
         self.base_url = base_url
@@ -78,3 +92,14 @@ class CollectionBackend:
     def push_edit(self, submission, changes: dict[str, Any]) -> WriteResult:
         """Push reviewer edits to the source record. Default: unsupported."""
         return WriteResult(ok=False, message=f"{self.label or self.type} does not support write-back")
+
+    # --- publish ---
+    def publish_form(self, xlsx: bytes, *, form_id: str = "", title: str = "") -> PublishResult:
+        """Push an XLSForm to the server so the collection app can download it.
+
+        Default: unsupported. Subclasses for ODK-family servers convert + publish
+        the form server-side and return its server form id / version.
+        """
+        return PublishResult(
+            ok=False, message=f"{self.label or self.type} does not support form publishing"
+        )

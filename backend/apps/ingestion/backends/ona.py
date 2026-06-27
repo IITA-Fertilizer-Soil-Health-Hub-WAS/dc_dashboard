@@ -13,7 +13,7 @@ import httpx
 from django.conf import settings
 
 from ..ona_client import OnaClient
-from .base import RemoteForm, RemoteProject
+from .base import PublishResult, RemoteForm, RemoteProject
 from .odk import OdkBackend
 
 
@@ -22,6 +22,7 @@ class OnaBackend(OdkBackend):
     label = "ONA / ODK"
     supports_discovery = True
     supports_writeback = True  # gated globally by settings.WRITEBACK_ENABLED
+    supports_publish = True
 
     def _client(self) -> OnaClient:
         return OnaClient(base_url=self.base_url or None, token=self.token or None)
@@ -77,3 +78,48 @@ class OnaBackend(OdkBackend):
             return str(resp.json().get("id") or resp.json().get("instanceID") or "")
         except Exception:
             return None
+
+    # --- publish ---
+    def publish_form(self, xlsx: bytes, *, form_id: str = "", title: str = "") -> PublishResult:
+        """Upload + publish an XLSForm: ``POST /api/v1/projects/{pid}/forms`` (or
+        ``/api/v1/forms``) with the .xlsx as ``xls_file``. ONA converts server-side."""
+        project_id = self.config.get("project_id")
+        if project_id:
+            url = f"{self._base()}/api/v1/projects/{project_id}/forms"
+        else:
+            url = f"{self._base()}/api/v1/forms"
+        files = {"xls_file": ("form.xlsx", xlsx, XLSX_MEDIA)}
+        try:
+            with httpx.Client(timeout=60.0) as client:
+                resp = client.post(url, headers=self._headers(), files=files)
+        except Exception as exc:
+            return PublishResult(ok=False, message=f"Could not reach ONA: {exc}")
+
+        if resp.status_code not in (200, 201):
+            return PublishResult(ok=False, message=_ona_error(resp))
+
+        data = resp.json()
+        formid = str(data.get("formid") or "")
+        return PublishResult(
+            ok=True,
+            server_form_id=formid,
+            version=str(data.get("version") or ""),
+            title=data.get("title") or title,
+            url=f"{self._base()}/{data.get('id_string', '')}".rstrip("/"),
+            message="Form published to ONA.",
+        )
+
+
+XLSX_MEDIA = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+def _ona_error(resp) -> str:
+    try:
+        body = resp.json()
+        if isinstance(body, dict):
+            msg = body.get("text") or body.get("detail") or body.get("xform") or str(body)
+        else:
+            msg = str(body)
+        return f"ONA rejected the form (HTTP {resp.status_code}): {msg}"[:400]
+    except Exception:
+        return f"ONA HTTP {resp.status_code}: {resp.text[:200]}"

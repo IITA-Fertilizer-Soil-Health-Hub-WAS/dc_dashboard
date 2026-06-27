@@ -16,8 +16,10 @@ from typing import Any
 
 import httpx
 
-from .base import BackendError, RemoteForm, RemoteProject
+from .base import BackendError, PublishResult, RemoteForm, RemoteProject
 from .odk import OdkBackend
+
+XLSX_MEDIA = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
 class OdkCentralBackend(OdkBackend):
@@ -25,6 +27,7 @@ class OdkCentralBackend(OdkBackend):
     label = "ODK Central"
     supports_discovery = True
     supports_writeback = True
+    supports_publish = True
 
     def _base(self) -> str:
         return (self.base_url or "").rstrip("/")
@@ -87,3 +90,45 @@ class OdkCentralBackend(OdkBackend):
         if resp.status_code not in (200, 201, 202):
             raise BackendError(f"Central submit edit HTTP {resp.status_code}: {resp.text[:200]}")
         return None
+
+    # --- publish ---
+    def publish_form(self, xlsx: bytes, *, form_id: str = "", title: str = "") -> PublishResult:
+        """Convert + publish an XLSForm in one call:
+        ``POST /v1/projects/{pid}/forms?publish=true`` with the .xlsx body.
+        Central runs pyxform server-side; a conversion error returns HTTP 400."""
+        pid = self._project_id()
+        path = f"/v1/projects/{pid}/forms?publish=true&ignoreWarnings=true"
+        headers = {"Authorization": f"Bearer {self.token}", "Content-Type": XLSX_MEDIA}
+        if form_id:
+            headers["X-XlsForm-FormId-Fallback"] = form_id
+        try:
+            with httpx.Client(timeout=60.0) as client:
+                resp = client.post(f"{self._base()}{path}", headers=headers, content=xlsx)
+        except Exception as exc:
+            return PublishResult(ok=False, message=f"Could not reach ODK Central: {exc}")
+
+        if resp.status_code not in (200, 201):
+            return PublishResult(ok=False, message=_central_error(resp))
+
+        data = resp.json()
+        xml_form_id = str(data.get("xmlFormId") or form_id)
+        return PublishResult(
+            ok=True,
+            server_form_id=xml_form_id,
+            version=str(data.get("version") or ""),
+            title=data.get("name") or title,
+            url=f"{self._base()}/#/projects/{pid}/forms/{xml_form_id}",
+            message="Form published to ODK Central.",
+        )
+
+
+def _central_error(resp) -> str:
+    """Best-effort human message from a Central error response."""
+    try:
+        body = resp.json()
+        msg = body.get("message") or ""
+        details = body.get("details") or {}
+        warnings = details.get("warnings") or details.get("error") or ""
+        return f"ODK Central rejected the form (HTTP {resp.status_code}): {msg} {warnings}".strip()
+    except Exception:
+        return f"ODK Central HTTP {resp.status_code}: {resp.text[:200]}"
