@@ -30,6 +30,28 @@
   </div>
 </div>
 
+{% if jobs_progress %}
+<div class="card" style="margin-top:1rem;">
+  <h3 style="display:flex;align-items:center;gap:.5rem;margin-bottom:.7rem;">
+    <span class="msym" style="color:var(--brand);">assignment</span>Field-work progress
+  </h3>
+  <table>
+    <thead><tr><th>Job</th><th>Form</th><th>Deadline</th><th>Collected</th><th style="width:160px;">Progress</th></tr></thead>
+    <tbody>
+      {% for jp in jobs_progress %}
+        <tr>
+          <td>{{ jp.job.name }}</td>
+          <td class="subtle">{% if jp.job.form %}{{ jp.job.form.title|default:jp.job.form.server_ref }}{% else %}—{% endif %}</td>
+          <td>{% if jp.job.deadline %}{{ jp.job.deadline }}{% if jp.progress.overdue %} <span class="pill danger">overdue</span>{% endif %}{% else %}<span class="subtle">—</span>{% endif %}</td>
+          <td>{{ jp.progress.collected }} / {{ jp.progress.target }}</td>
+          <td><div class="meter"><i style="width:{{ jp.progress.pct }}%;"></i></div></td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
 <div class="cards" style="margin-top:1rem; align-items:flex-start;">
   <div class="card" style="flex:1; min-width:340px;">
     <h3>Trials by location</h3>

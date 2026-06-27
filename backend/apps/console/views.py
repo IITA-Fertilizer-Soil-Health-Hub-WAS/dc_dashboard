@@ -752,15 +752,22 @@ class JobAssignmentsView(UserPassesTestMixin, View):
 
     def _ctx(self, job):
         from apps.fieldwork.models import CollectionUnit
-        from apps.fieldwork.services import project_enumerators
+        from apps.fieldwork.services import (
+            job_enumerator_progress,
+            job_progress,
+            project_enumerators,
+        )
 
         taken = job.assignments.values_list("unit_id", flat=True)
         return _console_page_ctx("jobs") | {
             "job": job,
-            "assignments": job.assignments.select_related("unit", "enumerator").all(),
+            "assignments": job.assignments.select_related("unit", "enumerator")
+            .prefetch_related("unit__submissions").all(),
             "available_units": CollectionUnit.objects.filter(use_case=job.use_case)
             .exclude(id__in=taken).order_by("code"),
             "enumerators": project_enumerators(job.use_case),
+            "progress": job_progress(job),
+            "enum_progress": job_enumerator_progress(job),
         }
 
     def get(self, request, pk):

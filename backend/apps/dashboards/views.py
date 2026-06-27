@@ -153,8 +153,15 @@ def tab_summary(request, code):
         "map_html": trials_map_html(households),
         "health": _health_counts(uc),
         "attribution": _attribution_stats(uc),
+        "jobs_progress": _jobs_progress(uc),
     }
     return render(request, "dashboards/_summary.html", ctx)
+
+
+def _jobs_progress(uc):
+    from apps.fieldwork.services import use_case_jobs_progress
+
+    return use_case_jobs_progress(uc)
 
 
 def _attribution_stats(uc) -> dict:
