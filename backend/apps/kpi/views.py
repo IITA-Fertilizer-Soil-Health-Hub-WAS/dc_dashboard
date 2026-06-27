@@ -59,6 +59,20 @@ def kpi_coverage(request, code):
 
 
 @login_required
+def kpi_export(request, code, kind):
+    """Download an M&E export (KPI summary / enumerators CSV, units GeoJSON)."""
+    from django.http import Http404
+
+    from .exports import build_export
+
+    uc = get_scoped_use_case(request, code)
+    response = build_export(kind, uc)
+    if response is None:
+        raise Http404("Unknown export type")
+    return response
+
+
+@login_required
 def kpi_alerts(request):
     """Recent fired alerts and active rules, scoped to the user's projects."""
     from apps.rbac.permissions import visible_use_cases

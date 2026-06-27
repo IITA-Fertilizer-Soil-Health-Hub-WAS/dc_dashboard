@@ -13,4 +13,5 @@ urlpatterns = [
     path("<slug:code>/quality/", views.kpi_quality, name="quality"),
     path("<slug:code>/enumerators/", views.kpi_enumerators, name="enumerators"),
     path("<slug:code>/coverage/", views.kpi_coverage, name="coverage"),
+    path("<slug:code>/export/<slug:kind>/", views.kpi_export, name="export"),
 ]

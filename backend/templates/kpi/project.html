@@ -22,6 +22,14 @@
   <p class="lede">M&amp;E for this project — {{ period_label|lower }}.</p>
   {% include "kpi/_subnav.html" %}
 
+  <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin:0 0 1rem;align-items:center;">
+    <span class="subtle" style="font-size:.84rem;margin-right:.2rem;">Export:</span>
+    <a class="seg" href="{% url 'kpi:export' uc.code 'kpi-summary' %}">KPI summary (CSV)</a>
+    <a class="seg" href="{% url 'kpi:export' uc.code 'enumerators' %}">Enumerators (CSV)</a>
+    <a class="seg" href="{% url 'kpi:export' uc.code 'units-geojson' %}">Units (GeoJSON)</a>
+    <a class="seg" href="{% url 'dashboards:export_final' uc.code %}">Approved dataset (CSV)</a>
+  </div>
+
   <div class="cards">
     <div class="card infobox"><div class="n">{{ total_submissions }}</div><div class="l">Submissions</div></div>
     <div class="card infobox" title="{{ total_submissions }} of target {{ target }}"><div class="n">{{ pct_of_target }}%</div><div class="l">of target ({{ target }})</div></div>

@@ -38,7 +38,10 @@
       {% empty %}<div class="empty" style="border:none;">No jobs defined for this project yet.</div>{% endfor %}
     </div>
     <div class="card" style="flex:1;min-width:340px;">
-      <h3 style="margin-bottom:.8rem;">Unit map</h3>
+      <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.8rem;">
+        <h3 style="margin:0;">Unit map</h3><span style="flex:1"></span>
+        <a class="seg" href="{% url 'kpi:export' uc.code 'units-geojson' %}">Download GeoJSON</a>
+      </div>
       {% if points %}
         <div class="kmap">{{ map_html|safe }}</div>
         <div class="legend">
