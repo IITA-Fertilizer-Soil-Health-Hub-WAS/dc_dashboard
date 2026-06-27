@@ -22,8 +22,9 @@
     <div class="meter" style="margin-bottom:.5rem;"><i style="width:{{ progress.pct }}%;"></i></div>
     <p class="subtle" style="margin:0;font-size:.82rem;">{{ progress.collected }} collected · {{ progress.pending }} pending · target {{ progress.target }}</p>
     {% if enum_progress %}
-      <table style="margin-top:.8rem;">
-        <thead><tr><th>Enumerator</th><th>Collected</th><th></th></tr></thead>
+      <div class="table-wrap" style="margin-top:.8rem;">
+      <table>
+        <thead><tr><th scope="col">Enumerator</th><th scope="col">Collected</th><th scope="col"></th></tr></thead>
         <tbody>
           {% for e in enum_progress %}
             <tr><td>{{ e.name }}</td><td>{{ e.collected }} / {{ e.total }}</td>
@@ -31,6 +32,7 @@
           {% endfor %}
         </tbody>
       </table>
+      </div>
     {% endif %}
   </div>
 
@@ -54,8 +56,9 @@
   </div>
 
   <div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-wrap">
     <table>
-      <thead><tr><th>Unit</th><th>Name</th><th>Enumerator</th><th></th></tr></thead>
+      <thead><tr><th scope="col">Unit</th><th scope="col">Name</th><th scope="col">Enumerator</th><th scope="col"></th></tr></thead>
       <tbody>
         {% for a in assignments %}
           <tr>
@@ -77,5 +80,6 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
   </div>
 {% endblock %}

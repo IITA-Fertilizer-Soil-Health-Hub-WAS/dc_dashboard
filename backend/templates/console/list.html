@@ -37,11 +37,12 @@
   {% if messages %}{% for msg in messages %}<div class="pill" style="margin-bottom:.7rem;">{{ msg }}</div>{% endfor %}{% endif %}
 
   <div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-wrap">
     <table>
       <thead>
         <tr>
-          {% for col in columns %}<th>{{ col }}</th>{% endfor %}
-          <th style="text-align:right;">{% if can_edit or m.key == 'forms' %}Actions{% endif %}</th>
+          {% for col in columns %}<th scope="col">{{ col }}</th>{% endfor %}
+          <th scope="col" style="text-align:right;">{% if can_edit or m.key == 'forms' %}Actions{% endif %}</th>
         </tr>
       </thead>
       <tbody>
@@ -82,6 +83,7 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
   </div>
 
   {% if page.has_other_pages %}

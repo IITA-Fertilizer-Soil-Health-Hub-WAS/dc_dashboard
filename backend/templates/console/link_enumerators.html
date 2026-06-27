@@ -31,9 +31,10 @@
   </div>
 
   <div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-wrap">
     <table>
       <thead>
-        <tr><th>Use case</th><th>Enumerator</th><th>Matched account</th><th>By</th><th>Status</th></tr>
+        <tr><th scope="col">Use case</th><th scope="col">Enumerator</th><th scope="col">Matched account</th><th scope="col">By</th><th scope="col">Status</th></tr>
       </thead>
       <tbody>
         {% for p in rows %}
@@ -55,5 +56,6 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
   </div>
 {% endblock %}

@@ -30,9 +30,10 @@
   </div>
 
   <div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-wrap">
     <table>
       <thead>
-        <tr><th>Use case</th><th>Submission</th><th>Enumerator</th><th>Status</th><th>Detail</th><th></th></tr>
+        <tr><th scope="col">Use case</th><th scope="col">Submission</th><th scope="col">Enumerator</th><th scope="col">Status</th><th scope="col">Detail</th><th scope="col"></th></tr>
       </thead>
       <tbody>
         {% for s in rows %}
@@ -55,9 +56,10 @@
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="6"><div class="empty" style="border:none;">Nothing pending — all reviewed edits are in sync. 🎉</div></td></tr>
+          <tr><td colspan="6"><div class="empty" style="border:none;">Nothing pending — all reviewed edits are in sync.</div></td></tr>
         {% endfor %}
       </tbody>
     </table>
+    </div>
   </div>
 {% endblock %}

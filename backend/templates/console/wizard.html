@@ -7,6 +7,8 @@
   .wz h3{display:flex;align-items:center;gap:.5rem;}
   .wz .num{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--brand);color:#fff;font-size:.76rem;font-weight:700;}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;}
+  @media (max-width:680px){.grid2,.maps{grid-template-columns:1fr;}
+    .formblock{grid-template-columns:1fr;}}
   .fld label{display:block;font-size:.78rem;font-weight:600;color:var(--muted);margin-bottom:.25rem;}
   .fld input,.fld select{width:100%;padding:.5rem .65rem;border:1px solid var(--line);border-radius:8px;font-family:var(--sans);font-size:.9rem;background:var(--surface);}
   .fld input:focus,.fld select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-50);}
