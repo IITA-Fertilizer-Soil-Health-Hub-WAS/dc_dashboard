@@ -107,3 +107,64 @@ class User(AbstractBaseUser, PermissionsMixin):
         self.approved_by = by
         self.approved_at = timezone.now()
         self.save(update_fields=["is_active", "approved_by", "approved_at", "updated_at"])
+
+
+class UserProfile(models.Model):
+    """The 'register once' identity captured in-app instead of via the ODK
+    00_RegisterEnumerator form in the field — demographics, contact and consents
+    a user provides a single time and the platform reuses everywhere.
+    """
+
+    class Gender(models.TextChoices):
+        FEMALE = "female", "Female"
+        MALE = "male", "Male"
+        OTHER = "other", "Other / prefer not to say"
+
+    class Education(models.TextChoices):
+        NO_SCHOOL = "no_school", "No school"
+        PRIMARY = "primary", "Primary"
+        SECONDARY = "secondary", "Secondary (high school or academy)"
+        POST_SECONDARY = "post_secondary", "Post-secondary (college / university)"
+        ADULT = "adult_education", "Adult education / literacy / religious school"
+        NO_ANSWER = "no_answer", "No answer / prefer not to say"
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
+
+    # Name parts (User.full_name stays the display name, kept in sync on save).
+    first_name = models.CharField(max_length=128, blank=True)
+    second_name = models.CharField(max_length=128, blank=True)
+    family_name = models.CharField(max_length=128, blank=True)
+
+    gender = models.CharField(max_length=8, choices=Gender.choices, blank=True)
+    age = models.PositiveSmallIntegerField(null=True, blank=True)
+    education_level = models.CharField(max_length=20, choices=Education.choices, blank=True)
+
+    phone_alt = models.CharField(max_length=32, blank=True)
+    country = models.CharField(max_length=64, blank=True)
+    # The physical Enumerator card barcode assigned in the field (13 chars), if any.
+    enumerator_card_id = models.CharField(max_length=32, blank=True)
+
+    consent_personal_info = models.BooleanField(default=False)
+    consent_followup = models.BooleanField(default=False)
+    consent_photos = models.BooleanField(default=False)
+
+    completed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self) -> str:
+        return f"Profile of {self.user.email}"
+
+    @property
+    def is_complete(self) -> bool:
+        return self.completed_at is not None
+
+    def mark_complete(self) -> None:
+        self.completed_at = timezone.now()
+        # Keep the account's display name in sync with the name parts.
+        parts = [self.first_name, self.second_name, self.family_name]
+        full = " ".join(p for p in parts if p).strip()
+        if full and full != self.user.full_name:
+            self.user.full_name = full
+            self.user.save(update_fields=["full_name", "updated_at"])
+        self.save()

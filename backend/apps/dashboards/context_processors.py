@@ -63,10 +63,17 @@ def navigation(request):
     if code:
         active_uc = visible.filter(code=code).first()
 
+    from apps.accounts.models import UserProfile
+
+    profile_complete = UserProfile.objects.filter(
+        user=user, completed_at__isnull=False
+    ).exists()
+
     return {
         "nav_use_cases": nav_use_cases,
         "nav_use_cases_total": nav_use_cases_total,
         "active_uc": active_uc,
+        "profile_incomplete": not profile_complete,
         "console_groups": console_groups,
         "console_active_group": active_group,
         "can_manage_access": manages_access,

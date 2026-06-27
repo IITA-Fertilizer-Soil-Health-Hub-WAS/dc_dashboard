@@ -525,6 +525,8 @@
           {% elif user.is_superuser %}
             <span class="org"><span class="msym">hub</span>All institutions</span>
           {% endif %}
+          <a href="{% url 'profile' %}">My profile</a>
+          <span style="color:#5e7d6c;">·</span>
           <a href="/accounts/logout/">Sign out</a>
         </div>
       </div>
@@ -547,6 +549,13 @@
           <span class="msym">shield_person</span>
           <div class="bx"><b>Finish setup</b> — no Platform Admin exists yet. As the first signed-in user you can claim it.</div>
           <a class="btn btn-open ba" style="text-decoration:none;" href="{% url 'claim_admin' %}">Claim Platform Admin</a>
+        </div>
+      {% endif %}
+      {% if profile_incomplete and request.resolver_match.url_name != 'profile' %}
+        <div class="banner info" style="margin:1rem 1.8rem 0;">
+          <span class="msym">badge</span>
+          <div class="bx"><b>Complete your profile</b> — provide your details once and you'll never re-register them in the field.</div>
+          <a class="btn btn-open ba" style="text-decoration:none;" href="{% url 'profile' %}">Complete profile</a>
         </div>
       {% endif %}
       <main class="content" id="main-content" tabindex="-1">{% block content %}{% endblock %}</main>

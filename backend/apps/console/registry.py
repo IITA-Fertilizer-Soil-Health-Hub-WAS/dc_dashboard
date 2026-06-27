@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from apps.accounts.models import User
+from apps.accounts.models import User, UserProfile
 from apps.fieldwork.models import CollectionUnit, Job
 from apps.kpi.models import AlertEvent, AlertRule
 from apps.rbac.models import UseCaseAccessRequest, UseCaseMembership
@@ -133,6 +133,11 @@ _ENTRIES: list[Managed] = [
                           "created_at"],
             search_fields=["user__email", "use_case__code"], readonly=True, icon="pending_actions",
             description="Self-service requests to join a project (read-only)."),
+    Managed("user-profiles", UserProfile, "User profiles", "Accounts & roles",
+            list_display=["user", "first_name", "family_name", "gender", "country",
+                          "completed_at"],
+            search_fields=["user__email", "first_name", "family_name"], readonly=True,
+            icon="badge", description="The register-once identity profiles (read-only)."),
     # ---- Field data: the records being monitored ----
     Managed("jobs", Job, "Jobs", "Field data",
             list_display=["use_case", "name", "form", "status", "target_count", "deadline"],

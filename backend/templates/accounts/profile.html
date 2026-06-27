@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}My profile · EiA2030 DCMT{% endblock %}
+{% block crumbs %}<span class="sep">/</span><span class="cur">My profile</span>{% endblock %}
+{% block extrahead %}<style>
+  .pf .field{margin-bottom:1rem;}
+  .pf label{display:block;font-size:.8rem;font-weight:600;color:var(--muted);margin-bottom:.3rem;}
+  .pf input[type=text],.pf input[type=number],.pf input[type=email],.pf select{
+    width:100%;padding:.55rem .68rem;border:1px solid var(--line);border-radius:8px;
+    font-family:var(--sans);font-size:.9rem;background:var(--surface);}
+  .pf input:focus,.pf select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-50);}
+  .pf .grid2{display:grid;grid-template-columns:1fr 1fr;gap:.9rem;}
+  .pf .chk{display:flex;align-items:flex-start;gap:.5rem;margin:.5rem 0;font-size:.88rem;}
+  .pf .chk input{margin-top:.2rem;}
+  .pf .errorlist{list-style:none;margin:.25rem 0 0;padding:0;color:var(--red);font-size:.8rem;}
+  @media (max-width:560px){.pf .grid2{grid-template-columns:1fr;}}
+</style>{% endblock %}
+{% block content %}
+  <div class="page-head"><h2>My profile</h2>
+    {% if profile.is_complete %}<span class="pill ok">complete</span>{% else %}<span class="pill warn">incomplete</span>{% endif %}
+  </div>
+  <p class="lede">Provide this once. The platform reuses it everywhere, so you never re-register in the field.</p>
+
+  {% if messages %}{% for m in messages %}<div class="banner info" style="margin-bottom:1rem;"><span class="msym">check_circle</span><div class="bx">{{ m }}</div></div>{% endfor %}{% endif %}
+
+  <form method="post" class="pf" style="max-width:640px;">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="err">{{ form.non_field_errors }}</div>{% endif %}
+
+    <div class="card" style="margin-bottom:1.1rem;">
+      <h3 style="margin-bottom:.8rem;">Personal details</h3>
+      <div class="grid2">
+        <div class="field"><label>First name *</label>{{ form.first_name }}{{ form.first_name.errors }}</div>
+        <div class="field"><label>Second name</label>{{ form.second_name }}</div>
+        <div class="field"><label>Family name *</label>{{ form.family_name }}{{ form.family_name.errors }}</div>
+        <div class="field"><label>Gender</label>{{ form.gender }}</div>
+        <div class="field"><label>Age</label>{{ form.age }}</div>
+        <div class="field"><label>Education level</label>{{ form.education_level }}</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:1.1rem;">
+      <h3 style="margin-bottom:.8rem;">Contact</h3>
+      <div class="field"><label>Email</label>
+        <input type="email" value="{{ user.email }}" disabled style="background:var(--surface-2);color:var(--muted);">
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Primary mobile phone *</label>{{ form.phone }}{{ form.phone.errors }}</div>
+        <div class="field"><label>Alternate phone</label>{{ form.phone_alt }}</div>
+        <div class="field"><label>Country *</label>{{ form.country }}{{ form.country.errors }}</div>
+        <div class="field"><label>Enumerator card ID <span class="subtle">(if assigned)</span></label>{{ form.enumerator_card_id }}</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:1.1rem;">
+      <h3 style="margin-bottom:.6rem;">Consent</h3>
+      <label class="chk">{{ form.consent_personal_info }}<span>I agree to provide my personal information for this programme.</span></label>
+      <label class="chk">{{ form.consent_followup }}<span>You may contact me for follow-up interviews.</span></label>
+      <label class="chk">{{ form.consent_photos }}<span>You may use my photographs for programme purposes.</span></label>
+    </div>
+
+    <button class="btn btn-open" type="submit" style="padding:.6rem 1.2rem;">Save profile</button>
+  </form>
+{% endblock %}
