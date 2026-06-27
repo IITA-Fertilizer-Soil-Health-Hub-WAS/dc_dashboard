@@ -47,10 +47,7 @@
           {% elif r.pending %}
             <span class="pill warn">Requested</span>
           {% else %}
-            <form method="post" action="{% url 'dashboards:project_request' r.uc.code %}">
-              {% csrf_token %}
-              <button class="btn btn-request" type="submit">Request access</button>
-            </form>
+            <a class="btn btn-request" style="text-decoration:none;" href="{% url 'dashboards:project_request' r.uc.code %}">Request access</a>
           {% endif %}
         </div>
       {% endfor %}

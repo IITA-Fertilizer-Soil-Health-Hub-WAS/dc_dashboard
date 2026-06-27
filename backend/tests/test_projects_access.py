@@ -43,14 +43,31 @@ def test_all_shows_directory_with_request_button(client, org_world):
     assert b"Request access" in resp.content  # for UC-B (non-member)
 
 
-def test_request_access_creates_pending(client, org_world):
+def test_request_form_renders(client, org_world):
     client.force_login(org_world["member"])
-    resp = client.post(reverse("dashboards:project_request", args=["UC-B"]))
+    resp = client.get(reverse("dashboards:project_request", args=["UC-B"]))
+    assert resp.status_code == 200
+    assert b"What do you intend to do" in resp.content
+
+
+def test_request_access_creates_pending_with_intent(client, org_world):
+    client.force_login(org_world["member"])
+    resp = client.post(reverse("dashboards:project_request", args=["UC-B"]),
+                       {"note": "Enumerator collecting data in Rwanda"})
     assert resp.status_code == 302
-    assert UseCaseAccessRequest.objects.filter(
+    req = UseCaseAccessRequest.objects.get(
         user=org_world["member"], use_case=org_world["uc_b"],
         status=UseCaseAccessRequest.Status.PENDING,
-    ).exists()
+    )
+    assert req.note == "Enumerator collecting data in Rwanda"
+
+
+def test_request_requires_intent(client, org_world):
+    client.force_login(org_world["member"])
+    resp = client.post(reverse("dashboards:project_request", args=["UC-B"]), {"note": ""})
+    assert resp.status_code == 200  # re-renders with an error, no request created
+    assert b"Please describe" in resp.content
+    assert not UseCaseAccessRequest.objects.filter(use_case=org_world["uc_b"]).exists()
 
 
 def test_request_existing_membership_is_noop(client, org_world):

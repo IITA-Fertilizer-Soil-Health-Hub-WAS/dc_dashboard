@@ -37,7 +37,11 @@
               <td>
                 <div class="idcell">
                   <span class="av">{{ r.user.full_name|default:r.user.email|slice:":1"|upper }}</span>
-                  <div><div class="nm">{{ r.user.full_name|default:r.user.email }}</div><div class="sub">{{ r.user.email }}</div></div>
+                  <div>
+                    <div class="nm">{{ r.user.full_name|default:r.user.email }}</div>
+                    <div class="sub">{{ r.user.email }}</div>
+                    {% if r.note %}<div class="subtle" style="margin-top:.25rem; font-style:italic; max-width:42ch;">“{{ r.note }}”</div>{% endif %}
+                  </div>
                 </div>
               </td>
               <td><span class="chip scope"><span class="msym">category</span>{{ r.use_case.code }}</span></td>

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Request access · {{ uc.code }} · EiA2030 DCMT{% endblock %}
+{% block crumbs %}<span class="sep">/</span><a href="{% url 'dashboards:projects' %}">Projects</a><span class="sep">/</span><span class="cur">Request access</span>{% endblock %}
+{% block content %}
+  <div class="page-head"><h2>Request access</h2><span class="pill neutral mono">{{ uc.code }}</span></div>
+  <p class="lede">{{ uc.name }}{% if uc.country %} · {{ uc.country.name }}{% endif %}</p>
+
+  {% if existing %}
+    <div class="banner warn" style="margin-bottom:1rem;">
+      <span class="msym">hourglass_top</span>
+      <div class="bx">You already have a pending request for this project. Submitting again updates your message.</div>
+    </div>
+  {% endif %}
+  {% if error %}<div class="banner warn" style="margin-bottom:1rem;"><span class="msym">error</span><div class="bx">{{ error }}</div></div>{% endif %}
+
+  <div class="card" style="max-width:640px;">
+    <form method="post" action="{% url 'dashboards:project_request' uc.code %}">
+      {% csrf_token %}
+      <label style="display:block; font-weight:600; font-size:.86rem; margin-bottom:.4rem;">
+        What do you intend to do on this project?
+      </label>
+      <p class="subtle" style="margin:0 0 .6rem; font-size:.82rem;">
+        Describe your role on the ground — a coordinator reads this and grants the
+        access that fits (e.g. “Enumerator collecting validation data in the
+        Northern sites”, or “Country coordinator reviewing submissions for Rwanda”).
+      </p>
+      <textarea name="note" required rows="4" class="input" style="width:100%;"
+                placeholder="What you'll be doing on this project…">{{ note }}</textarea>
+      <div style="display:flex; gap:.6rem; align-items:center; margin-top:1rem;">
+        <button class="btn btn-open" type="submit">Send request</button>
+        <a class="subtle" href="{% url 'dashboards:projects' %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}

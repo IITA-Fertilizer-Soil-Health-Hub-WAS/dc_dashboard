@@ -13,7 +13,7 @@ from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_http_methods
 
 from apps.rbac.models import UseCaseAccessRequest
 from apps.rbac.permissions import visible_use_cases
@@ -77,10 +77,11 @@ def projects(request):
     })
 
 
-@require_POST
+@require_http_methods(["GET", "POST"])
 @login_required
 def project_request(request, code):
-    """Request access to a project you can see but are not a member of."""
+    """Request access to a project: describe what you intend to do; a coordinator
+    reads that and grants the fitting role."""
     user = request.user
     uc = get_object_or_404(UseCase, code=code, is_active=True)
 
@@ -93,12 +94,24 @@ def project_request(request, code):
         messages.info(request, f"You already have access to {uc.code}.")
         return redirect("dashboards:projects")
 
-    _, created = UseCaseAccessRequest.objects.get_or_create(
-        user=user, use_case=uc, status=UseCaseAccessRequest.Status.PENDING,
-        defaults={"note": (request.POST.get("note") or "").strip()},
-    )
-    if created:
+    existing = UseCaseAccessRequest.objects.filter(
+        user=user, use_case=uc, status=UseCaseAccessRequest.Status.PENDING
+    ).first()
+
+    if request.method == "POST":
+        note = (request.POST.get("note") or "").strip()
+        if not note:
+            return render(request, "dashboards/project_request.html", {
+                "uc": uc, "existing": existing, "note": note,
+                "error": "Please describe what you intend to do on this project.",
+            })
+        UseCaseAccessRequest.objects.update_or_create(
+            user=user, use_case=uc, status=UseCaseAccessRequest.Status.PENDING,
+            defaults={"note": note},
+        )
         messages.success(request, f"Access requested for {uc.code}. A coordinator will review it.")
-    else:
-        messages.info(request, f"You already have a pending request for {uc.code}.")
-    return redirect("dashboards:projects")
+        return redirect("dashboards:projects")
+
+    return render(request, "dashboards/project_request.html", {
+        "uc": uc, "existing": existing, "note": existing.note if existing else "",
+    })
