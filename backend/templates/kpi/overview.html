@@ -1,16 +1,6 @@
 {% extends "base.html" %}
 {% block title %}M&E · EiA2030 DCMT{% endblock %}
 {% block crumbs %}<span class="sep">/</span><span class="cur">M&amp;E</span>{% endblock %}
-{% block extrahead %}<style>
-  .kbars{display:flex;align-items:flex-end;gap:3px;height:120px;}
-  .kbars .b{flex:1;background:var(--brand-50);border-radius:3px 3px 0 0;min-height:2px;position:relative;}
-  .kbars .b > i{display:block;width:100%;background:linear-gradient(180deg,var(--brand),#3f9142);border-radius:3px 3px 0 0;}
-  .krow{display:flex;align-items:center;gap:.6rem;margin:.35rem 0;}
-  .krow .nm{flex:0 0 200px;font-size:.86rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .krow .track{flex:1;height:14px;background:var(--line);border-radius:7px;overflow:hidden;}
-  .krow .track > i{display:block;height:100%;background:linear-gradient(90deg,var(--brand),#3f9142);}
-  .krow .v{flex:0 0 56px;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;}
-</style>{% endblock %}
 {% block content %}
   <div class="page-head">
     <h2>M&amp;E dashboard</h2>
@@ -37,12 +27,13 @@
     <div class="card" style="flex:2;min-width:360px;">
       <h3 style="margin-bottom:.8rem;">Daily submissions</h3>
       {% if trend %}
-        <div class="kbars">
+        <div class="kbars" role="img"
+             aria-label="Daily submissions trend, {{ total_submissions }} total over {{ period_label|lower }}, peak {{ trend_max }} in a day.">
           {% for t in trend %}
-            <div class="b" title="{{ t.date }}: {{ t.n }}"><i style="height:{% widthratio t.n trend_max 110 %}px;"></i></div>
+            <div class="b" title="{{ t.date }}: {{ t.n }}" aria-hidden="true"><i style="height:{% widthratio t.n trend_max 110 %}px;"></i></div>
           {% endfor %}
         </div>
-        <div class="subtle" style="font-size:.72rem;margin-top:.4rem;display:flex;justify-content:space-between;">
+        <div class="kaxis">
           <span>{{ trend.0.date }}</span>{% with trend|last as lastpt %}<span>{{ lastpt.date }}</span>{% endwith %}
         </div>
       {% else %}<div class="empty" style="border:none;">No submissions in this period.</div>{% endif %}

@@ -41,8 +41,9 @@
     </div>
     <div class="card" style="flex:2;min-width:380px;padding:0;overflow:hidden;">
       <div style="padding:1.15rem 1.25rem .4rem;"><h3>Open flags by rule</h3></div>
+      <div class="table-wrap">
       <table class="heat">
-        <thead><tr><th>Rule</th><th class="subtle">Type</th>{% for s in severities %}<th class="c">{{ s|lower }}</th>{% endfor %}<th class="c">Total</th></tr></thead>
+        <thead><tr><th scope="col">Rule</th><th scope="col" class="subtle">Type</th>{% for s in severities %}<th scope="col" class="c">{{ s|lower }}</th>{% endfor %}<th scope="col" class="c">Total</th></tr></thead>
         <tbody>
           {% for row in heatmap %}
             <tr>
