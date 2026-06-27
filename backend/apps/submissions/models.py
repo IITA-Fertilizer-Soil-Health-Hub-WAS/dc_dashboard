@@ -90,6 +90,11 @@ class Submission(BaseModel):
     event_key = models.CharField(max_length=32, blank=True)
     event_date = models.DateField(null=True, blank=True)
 
+    # The submission's own collected location (from the server's _geolocation or a
+    # mapped geopoint), so the actual points can be put on a map.
+    lat = models.DecimalField(max_digits=12, decimal_places=7, null=True, blank=True)
+    lon = models.DecimalField(max_digits=12, decimal_places=7, null=True, blank=True)
+
     # The platform identity that collected this submission. Resolved at ingest
     # from the mobile app's stamped UserID, or bridged via the enumerator's
     # linked account during the ONA period. This is what makes the platform the

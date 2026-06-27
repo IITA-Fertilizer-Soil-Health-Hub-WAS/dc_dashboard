@@ -221,6 +221,7 @@ def _upsert_submission(use_case, form, raw_rec, mapped, crop_by_name, test_ids, 
     crop = crop_by_name.get(mapped.get("Crop")) if mapped.get("Crop") else None
     collected_by = _resolve_collector(mapped, enumerator)
     collection_unit = _resolve_collection_unit(use_case, hhid)
+    lat, lon = _resolve_location(raw_rec, mapped, household)
 
     existing = Submission.objects.filter(use_case=use_case, ona_uuid=ona_uuid).first()
     if existing and existing.content_hash == content_hash:
@@ -241,6 +242,8 @@ def _upsert_submission(use_case, form, raw_rec, mapped, crop_by_name, test_ids, 
         "collection_unit": collection_unit,
         "event_key": mapped.get("event_key") or "",
         "event_date": _to_date(mapped.get("today")),
+        "lat": lat,
+        "lon": lon,
     }
     submission, created = Submission.objects.update_or_create(
         use_case=use_case, ona_uuid=ona_uuid, defaults=defaults
@@ -260,6 +263,29 @@ def _resolve_collection_unit(use_case, hhid):
     from apps.fieldwork.models import CollectionUnit
 
     return CollectionUnit.objects.filter(use_case=use_case, code=hhid).first()
+
+
+def submission_location(raw_rec: dict, mapped: dict):
+    """The submission's collected (lat, lon), or (None, None).
+
+    Priority: ONA's config-free ``_geolocation`` ([lat, lon] on every geo
+    submission), then a mapped geopoint split into LAT/LON. Re-used by the
+    backfill migration, hence module-level."""
+    geo = raw_rec.get("_geolocation")
+    if isinstance(geo, (list, tuple)) and len(geo) >= 2:
+        lat, lon = _num(geo[0]), _num(geo[1])
+        if lat is not None and lon is not None:
+            return lat, lon
+    return _num(mapped.get("LAT")), _num(mapped.get("LON"))
+
+
+def _resolve_location(raw_rec, mapped, household):
+    """The submission's own location, falling back to its household's so older
+    household-anchored forms still map."""
+    lat, lon = submission_location(raw_rec, mapped)
+    if lat is None and household is not None and household.lat is not None:
+        return household.lat, household.lon
+    return lat, lon
 
 
 def _resolve_collector(mapped, enumerator):

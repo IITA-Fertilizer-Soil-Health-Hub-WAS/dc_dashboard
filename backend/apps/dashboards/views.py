@@ -22,7 +22,7 @@ from apps.review.state_machine import ReviewPermissionDenied, TransitionError
 from apps.submissions.models import Enumerator, Submission
 from apps.validation.models import ValidationFlag
 
-from .charts import submission_trend_html, trials_map_html
+from .charts import points_map_html, submission_trend_html, trials_map_html
 from .final import final_rows
 from .grid import build_event_grid
 from .scoping import get_scoped_use_case
@@ -166,14 +166,30 @@ def usecase_detail(request, code):
 @login_required
 def tab_summary(request, code):
     uc = get_scoped_use_case(request, code)
-    submissions = list(Submission.objects.filter(use_case=uc).select_related("household"))
-    households = list(uc.households.all())
+    submissions = list(
+        Submission.objects.filter(use_case=uc).select_related("household", "enumerator")
+    )
+    # Plot the submissions' own collected locations; fall back to household points
+    # for projects whose data predates geo capture.
+    points = [
+        {"lat": s.lat, "lon": s.lon, "color": "#0d5c3f",
+         "label": " · ".join(p for p in [
+             s.enumerator.enid if s.enumerator else "",
+             s.household.hhid if s.household else "",
+             s.event_key, str(s.event_date or "")] if p)}
+        for s in submissions if s.lat is not None and s.lon is not None
+    ]
+    if points:
+        map_html = points_map_html(points)
+    else:
+        map_html = trials_map_html(list(uc.households.all()))
     ctx = {
         "uc": uc,
         "total_submissions": len(submissions),
+        "mapped_points": len(points),
         "country": ", ".join(uc.countries) or "—",
         "trend_html": submission_trend_html(submissions),
-        "map_html": trials_map_html(households),
+        "map_html": map_html,
         "health": _health_counts(uc),
         "attribution": _attribution_stats(uc),
         "jobs_progress": _jobs_progress(uc),
