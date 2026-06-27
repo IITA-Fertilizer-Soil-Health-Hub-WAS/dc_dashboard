@@ -12,6 +12,37 @@ from plotly.io import to_html
 
 AMBER = "#fdb415"
 GREEN = "#55b047"
+RED = "#c3531f"
+
+
+def points_map_html(points) -> str:
+    """Folium map from an iterable of points.
+
+    Each point is a dict/tuple-like with ``lat``, ``lon``, ``label`` and an
+    optional ``color`` (defaults to amber). Used by the M&E coverage and
+    enumerator maps; ``trials_map_html`` is the household-specific variant.
+    """
+    pts = [p for p in points if p.get("lat") is not None and p.get("lon") is not None]
+    if pts:
+        center = (
+            sum(float(p["lat"]) for p in pts) / len(pts),
+            sum(float(p["lon"]) for p in pts) / len(pts),
+        )
+        zoom = 7
+    else:
+        center, zoom = (0.0, 20.0), 2
+    m = folium.Map(location=center, zoom_start=zoom, tiles="OpenStreetMap")
+    for p in pts:
+        folium.CircleMarker(
+            location=(float(p["lat"]), float(p["lon"])),
+            radius=5,
+            color=p.get("color", AMBER),
+            fill=True,
+            fill_opacity=0.85,
+            weight=1,
+            popup=p.get("label", ""),
+        ).add_to(m)
+    return m._repr_html_()
 
 
 def submission_trend_html(submissions) -> str:

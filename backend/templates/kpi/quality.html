@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Quality · {{ uc.code }} · EiA2030 DCMT{% endblock %}
+{% block crumbs %}<span class="sep">/</span><a href="{% url 'kpi:overview' %}">M&amp;E</a><span class="sep">/</span><a href="{% url 'kpi:project' uc.code %}">{{ uc.code }}</a><span class="sep">/</span><span class="cur">Quality</span>{% endblock %}
+{% block extrahead %}<style>
+  .sevbar{display:flex;align-items:center;gap:.6rem;margin:.4rem 0;}
+  .sevbar .nm{flex:0 0 110px;font-size:.86rem;font-weight:600;text-transform:capitalize;}
+  .sevbar .track{flex:1;height:16px;background:var(--line);border-radius:8px;overflow:hidden;}
+  .sevbar .track > i{display:block;height:100%;}
+  .sevbar .v{flex:0 0 56px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums;}
+  table.heat td.c{text-align:center;font-variant-numeric:tabular-nums;width:90px;}
+  table.heat td.c span{display:inline-block;min-width:34px;padding:.18rem .35rem;border-radius:5px;font-weight:600;}
+</style>{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h2>{{ uc.name }} — quality</h2><span class="pill">{{ uc.code }}</span>
+    <span style="flex:1"></span>
+    <div class="tabs">
+      {% for k, label in periods.items %}<a class="seg {% if days == k %}on{% endif %}" href="?days={{ k }}">{{ label }}</a>{% endfor %}
+    </div>
+  </div>
+  <p class="lede">Validation flags raised by the auto-quality engine — {{ period_label|lower }}.</p>
+  {% include "kpi/_subnav.html" %}
+
+  <div class="cards">
+    <div class="card infobox"><div class="n">{{ open_flags }}</div><div class="l">Open flags</div></div>
+    <div class="card infobox"><div class="n">{{ resolved_flags }}</div><div class="l">Resolved</div></div>
+    <div class="card infobox"><div class="n">{{ waived_flags }}</div><div class="l">Waived</div></div>
+    <div class="card infobox"><div class="n">{{ resolution_rate }}%</div><div class="l">Resolution rate</div></div>
+  </div>
+
+  <div class="cards" style="margin-top:1.1rem;align-items:flex-start;">
+    <div class="card" style="flex:1;min-width:340px;">
+      <h3 style="margin-bottom:.8rem;">Flags by severity</h3>
+      {% for s in by_severity %}
+        <div class="sevbar">
+          <span class="nm">{{ s.severity|lower }}</span>
+          <div class="track"><i style="width:{% widthratio s.n sev_max 100 %}%;background:{{ s.color }};"></i></div>
+          <span class="v">{{ s.n }}</span>
+        </div>
+      {% empty %}<div class="empty" style="border:none;">No flags in this period.</div>{% endfor %}
+    </div>
+    <div class="card" style="flex:2;min-width:380px;padding:0;overflow:hidden;">
+      <div style="padding:1.15rem 1.25rem .4rem;"><h3>Open flags by rule</h3></div>
+      <table class="heat">
+        <thead><tr><th>Rule</th><th class="subtle">Type</th>{% for s in severities %}<th class="c">{{ s|lower }}</th>{% endfor %}<th class="c">Total</th></tr></thead>
+        <tbody>
+          {% for row in heatmap %}
+            <tr>
+              <td><code>{{ row.code }}</code></td>
+              <td class="subtle">{{ row.rule_type }}</td>
+              {% for c in row.cells %}
+                <td class="c">{% if c.n %}<span style="background:{{ c.color }};color:#fff;">{{ c.n }}</span>{% else %}<span class="subtle">·</span>{% endif %}</td>
+              {% endfor %}
+              <td class="c"><strong>{{ row.total }}</strong></td>
+            </tr>
+          {% empty %}<tr><td colspan="{{ severities|length|add:3 }}"><div class="empty" style="border:none;">No open flags — clean run.</div></td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

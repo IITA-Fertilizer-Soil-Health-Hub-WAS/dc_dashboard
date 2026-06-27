@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Enumerators · {{ uc.code }} · EiA2030 DCMT{% endblock %}
+{% block crumbs %}<span class="sep">/</span><a href="{% url 'kpi:overview' %}">M&amp;E</a><span class="sep">/</span><a href="{% url 'kpi:project' uc.code %}">{{ uc.code }}</a><span class="sep">/</span><span class="cur">Enumerators</span>{% endblock %}
+{% block extrahead %}<style>
+  .lead-bar{display:block;height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:.25rem;}
+  .lead-bar > i{display:block;height:100%;background:linear-gradient(90deg,var(--brand),#3f9142);}
+  .kmap{height:420px;border-radius:12px;overflow:hidden;border:1px solid var(--line);}
+  .kmap iframe{border:0;width:100%;height:100%;}
+</style>{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h2>{{ uc.name }} — enumerators</h2><span class="pill">{{ uc.code }}</span>
+    <span style="flex:1"></span>
+    <div class="tabs">
+      {% for k, label in periods.items %}<a class="seg {% if days == k %}on{% endif %}" href="?days={{ k }}">{{ label }}</a>{% endfor %}
+    </div>
+  </div>
+  <p class="lede">{{ active_count }} active enumerator{{ active_count|pluralize }} — {{ period_label|lower }}.</p>
+  {% include "kpi/_subnav.html" %}
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <table>
+      <thead><tr><th>Enumerator</th><th>Submissions</th><th>Approved</th><th>Open issues</th><th>Last active</th></tr></thead>
+      <tbody>
+        {% for e in leaderboard %}
+          <tr>
+            <td>
+              <strong>{{ e.enumerator__enid }}</strong>{% if e.enumerator__first_name %} · {{ e.enumerator__first_name }} {{ e.enumerator__surname }}{% endif %}
+              <span class="lead-bar"><i style="width:{% widthratio e.n leaderboard_max 100 %}%;"></i></span>
+            </td>
+            <td style="font-variant-numeric:tabular-nums;">{{ e.n }}</td>
+            <td><span class="pill" title="{{ e.approved }} approved">{{ e.approval_pct }}%</span></td>
+            <td>{% if e.open_flags %}<span class="pill" style="background:#fbe7df;color:#c3531f;">{{ e.open_flags }}</span>{% else %}<span class="subtle">0</span>{% endif %}</td>
+            <td class="subtle">{{ e.last_active|default:"—" }}</td>
+          </tr>
+        {% empty %}<tr><td colspan="5"><div class="empty" style="border:none;">No enumerator activity in this period.</div></td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card" style="margin-top:1.1rem;">
+    <h3 style="margin-bottom:.8rem;">Collection points</h3>
+    {% if points %}<div class="kmap">{{ map_html|safe }}</div>
+    {% else %}<div class="empty" style="border:none;">No geo-located collection units yet.</div>{% endif %}
+  </div>
+{% endblock %}

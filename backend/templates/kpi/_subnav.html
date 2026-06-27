@@ -1,0 +1,15 @@
+{% with cur=request.resolver_match.url_name %}
+<style>
+  .subnav{display:flex;gap:.3rem;border-bottom:1px solid var(--line);margin:.2rem 0 1.1rem;}
+  .subnav a{padding:.5rem .9rem;font-size:.9rem;font-weight:600;color:var(--muted);
+            border-bottom:2px solid transparent;margin-bottom:-1px;text-decoration:none;}
+  .subnav a:hover{color:var(--ink);}
+  .subnav a.on{color:var(--brand);border-bottom-color:var(--brand);}
+</style>
+<div class="subnav">
+  <a href="{% url 'kpi:project' uc.code %}" class="{% if cur == 'project' %}on{% endif %}">Summary</a>
+  <a href="{% url 'kpi:quality' uc.code %}" class="{% if cur == 'quality' %}on{% endif %}">Quality</a>
+  <a href="{% url 'kpi:enumerators' uc.code %}" class="{% if cur == 'enumerators' %}on{% endif %}">Enumerators</a>
+  <a href="{% url 'kpi:coverage' uc.code %}" class="{% if cur == 'coverage' %}on{% endif %}">Coverage</a>
+</div>
+{% endwith %}
