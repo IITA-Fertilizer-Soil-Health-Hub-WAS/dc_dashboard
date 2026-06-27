@@ -29,8 +29,9 @@
       </div>
     </div>
     <div class="card" style="padding:0; overflow:hidden; margin-bottom:1.6rem;">
+      <div class="table-wrap">
       <table>
-        <thead><tr><th>Person</th><th>Project</th><th>Role</th><th></th></tr></thead>
+        <thead><tr><th scope="col">Person</th><th scope="col">Project</th><th scope="col">Role</th><th scope="col"></th></tr></thead>
         <tbody>
           {% for r in access_requests %}
             <tr>
@@ -58,6 +59,7 @@
           {% endfor %}
         </tbody>
       </table>
+      </div>
     </div>
   {% endif %}
 
@@ -74,8 +76,9 @@
     </div>
   </div>
   <div class="card" style="padding:0; overflow:hidden;">
+    <div class="table-wrap">
     <table>
-      <thead><tr><th>Person</th><th>Grant scope</th><th>Role</th><th></th></tr></thead>
+      <thead><tr><th scope="col">Person</th><th scope="col">Grant scope</th><th scope="col">Role</th><th scope="col"></th></tr></thead>
       <tbody>
         {% for u in pending %}
           <tr>
@@ -102,10 +105,11 @@
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="4"><div class="empty" style="border:none; padding:1.6rem;">No one is waiting for approval. 🎉</div></td></tr>
+          <tr><td colspan="4"><div class="empty" style="border:none; padding:1.6rem;">No one is waiting for approval.</div></td></tr>
         {% endfor %}
       </tbody>
     </table>
+    </div>
   </div>
 
   {# ---- Grant access to an existing user ---- #}
@@ -170,8 +174,9 @@
     </div>
   </div>
   <div class="card" style="padding:0; overflow:hidden;">
+    <div class="table-wrap">
     <table>
-      <thead><tr><th>Person</th><th>Scope</th><th>Role</th><th>Granted by</th><th></th></tr></thead>
+      <thead><tr><th scope="col">Person</th><th scope="col">Scope</th><th scope="col">Role</th><th scope="col">Granted by</th><th scope="col"></th></tr></thead>
       <tbody>
         {% for m in memberships %}
           <tr>
@@ -206,5 +211,6 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
   </div>
 {% endblock %}

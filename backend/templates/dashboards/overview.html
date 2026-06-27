@@ -14,10 +14,11 @@
   </div>
 
   <div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-wrap">
     <table>
       <thead>
-        <tr><th>Use case</th><th>Submissions</th><th>Approved</th><th>In review</th>
-          <th>Open issues</th><th>WB pending</th><th>WB failed</th></tr>
+        <tr><th scope="col">Use case</th><th scope="col">Submissions</th><th scope="col">Approved</th><th scope="col">In review</th>
+          <th scope="col">Open issues</th><th scope="col">WB pending</th><th scope="col">WB failed</th></tr>
       </thead>
       <tbody>
         {% for r in rows %}
@@ -36,5 +37,6 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
   </div>
 {% endblock %}

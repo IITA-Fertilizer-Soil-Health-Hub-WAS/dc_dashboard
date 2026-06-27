@@ -19,8 +19,9 @@
       </div>
     </div>
     <div class="card" style="padding:0;overflow:hidden;">
+      <div class="table-wrap">
       <table>
-        <thead><tr><th>Unit</th><th>Name</th><th>Location</th><th>Status</th></tr></thead>
+        <thead><tr><th scope="col">Unit</th><th scope="col">Name</th><th scope="col">Location</th><th scope="col">Status</th></tr></thead>
         <tbody>
           {% for a in g.units %}
             <tr>
@@ -35,6 +36,7 @@
           {% endfor %}
         </tbody>
       </table>
+      </div>
     </div>
   {% empty %}
     <div class="empty">No assignments yet.<br><span class="subtle">A coordinator will assign you units to collect on.</span></div>
