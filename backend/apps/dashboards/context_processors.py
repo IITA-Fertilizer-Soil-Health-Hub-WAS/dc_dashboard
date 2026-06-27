@@ -14,6 +14,10 @@ def navigation(request):
     if user is None or not user.is_authenticated:
         return {"nav_use_cases": [], "console_groups": []}
 
+    from apps.fieldwork.models import UnitAssignment
+
+    show_my_assignments = UnitAssignment.objects.filter(enumerator=user).exists()
+
     from apps.console.registry import REGISTRY, grouped_for
 
     # Staff see all console sections; coordinators see a read-only, scoped subset
@@ -51,4 +55,5 @@ def navigation(request):
         "can_manage_access": manages_access,
         "pending_approvals_count": pending_count,
         "show_claim_admin": claim_admin_available(user),
+        "show_my_assignments": show_my_assignments,
     }

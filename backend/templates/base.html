@@ -279,6 +279,12 @@
            class="{% if request.resolver_match.url_name == 'overview' %}active{% endif %}">
           <span class="msym">dashboard</span>Overview
         </a>
+        {% if show_my_assignments %}
+          <a href="{% url 'dashboards:my_assignments' %}" title="Plots / farmers assigned to me to collect on"
+             class="{% if request.resolver_match.url_name == 'my_assignments' %}active{% endif %}">
+            <span class="msym">assignment_turned_in</span>My assignments
+          </a>
+        {% endif %}
         {% if can_manage_access %}
           <a href="{% url 'dashboards:team' %}" title="Approve users and grant access within your scope"
              class="{% if request.resolver_match.url_name == 'team' %}active{% endif %}">

@@ -68,6 +68,9 @@
               {% if m.key == 'forms' and user.is_staff %}
                 <a href="{% url 'console:form_mappings' row.pk %}">Mappings</a>
               {% endif %}
+              {% if m.key == 'jobs' and can_edit %}
+                <a href="{% url 'console:job_assignments' row.pk %}">Assignments</a>
+              {% endif %}
               {% if can_edit %}
                 <a href="{% url 'console:edit' m.key row.pk %}">Edit</a>
                 <a class="del" href="{% url 'console:delete' m.key row.pk %}">Delete</a>

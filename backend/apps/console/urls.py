@@ -9,6 +9,7 @@ app_name = "console"
 urlpatterns = [
     # Must precede the generic "<slug:key>/" pattern.
     path("forms/<uuid:pk>/mappings/", views.FormMappingsView.as_view(), name="form_mappings"),
+    path("jobs/<uuid:pk>/assignments/", views.JobAssignmentsView.as_view(), name="job_assignments"),
     path("writeback/", views.WriteBackQueueView.as_view(), name="writeback"),
     path("publish-form/", views.PublishFormView.as_view(), name="publish_form"),
     path("collection-units/import/", views.ImportCollectionUnitsView.as_view(),

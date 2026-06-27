@@ -1,0 +1,58 @@
+{% extends "console/base.html" %}
+{% block title %}Assignments · {{ job.name }} · Manage{% endblock %}
+{% block crumbs %}<span class="sep">/</span><a href="{% url 'console:list' 'jobs' %}">Jobs</a><span class="sep">/</span><span class="cur">{{ job.name }}</span>{% endblock %}
+{% block console_main %}
+  <div class="page-head">
+    <h2>{{ job.name }}</h2>
+    <span class="pill">{{ job.use_case.code }}</span>
+    {% if job.form %}<span class="subtle">{{ job.form.title|default:job.form.server_ref }}</span>{% endif %}
+    {% if job.deadline %}<span class="pill warn">due {{ job.deadline }}</span>{% endif %}
+  </div>
+  <p class="subtle" style="margin:.1rem 0 1rem;">Assign the {{ job.use_case.get_unit_type_display|lower }}s to enumerators. {{ assignments|length }} of {{ job.target_count }} assigned.</p>
+
+  {% if messages %}{% for msg in messages %}<div class="pill" style="margin-bottom:.7rem;">{{ msg }}</div>{% endfor %}{% endif %}
+
+  {# Add one / assign all #}
+  <div class="card" style="margin-bottom:1.2rem;">
+    <form method="post" class="toolbar" style="margin:0;">
+      {% csrf_token %}
+      <select name="unit" class="search" style="max-width:240px;">
+        <option value="">Unit…</option>
+        {% for u in available_units %}<option value="{{ u.pk }}">{{ u.code }}{% if u.name %} · {{ u.name }}{% endif %}</option>{% endfor %}
+      </select>
+      <select name="enumerator" class="search" style="max-width:240px;">
+        <option value="">Unassigned</option>
+        {% for e in enumerators %}<option value="{{ e.pk }}">{{ e.full_name|default:e.email }}</option>{% endfor %}
+      </select>
+      <button class="btn btn-open" type="submit">Add</button>
+      <span style="flex:1"></span>
+      <button class="btn btn-request" type="submit" name="action" value="assign_all"
+              onclick="return confirm('Assign all remaining units to the selected enumerator?');">Assign all remaining</button>
+    </form>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <table>
+      <thead><tr><th>Unit</th><th>Name</th><th>Enumerator</th><th></th></tr></thead>
+      <tbody>
+        {% for a in assignments %}
+          <tr>
+            <td class="mono">{{ a.unit.code }}</td>
+            <td>{{ a.unit.name|default:"—" }}</td>
+            <td>{% if a.enumerator %}{{ a.enumerator.full_name|default:a.enumerator.email }}{% else %}<span class="subtle">Unassigned</span>{% endif %}</td>
+            <td style="text-align:right;">
+              <form method="post" style="display:inline;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="remove">
+                <input type="hidden" name="assignment" value="{{ a.pk }}">
+                <button class="btn btn-decline" type="submit" style="padding:.25rem .55rem;font-size:.74rem;">Remove</button>
+              </form>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4"><div class="empty" style="border:none;">No units assigned yet.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

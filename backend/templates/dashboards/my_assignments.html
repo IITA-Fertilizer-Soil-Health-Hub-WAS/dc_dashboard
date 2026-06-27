@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}My assignments · EiA2030 DCMT{% endblock %}
+{% block crumbs %}<span class="sep">/</span><span class="cur">My assignments</span>{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h2>My assignments</h2>
+    {% if count %}<span class="pill">{{ count }}</span>{% endif %}
+  </div>
+  <p class="lede">The plots / farmers you're assigned to collect on. Collect in ODK Collect / Enketo — including offline — then submissions sync automatically.</p>
+
+  {% for g in job_groups %}
+    <div class="section">
+      <div class="st">
+        <h3><span class="msym">assignment</span>{{ g.job.name }} <span class="pill neutral">{{ g.job.use_case.code }}</span></h3>
+        <div class="desc">
+          {% if g.job.form %}Form: {{ g.job.form.title|default:g.job.form.server_ref }} · {% endif %}
+          {% if g.job.deadline %}Due {{ g.job.deadline }}{% else %}No deadline{% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table>
+        <thead><tr><th>Unit</th><th>Name</th><th>Location</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for a in g.units %}
+            <tr>
+              <td class="mono">{{ a.unit.code }}</td>
+              <td>{{ a.unit.name|default:"—" }}</td>
+              <td class="subtle">{{ a.unit.district|default:a.unit.region|default:a.unit.country|default:"—" }}</td>
+              <td>
+                {% if a.unit.submissions.exists %}<span class="pill ok">collected</span>
+                {% else %}<span class="pill warn">pending</span>{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% empty %}
+    <div class="empty">No assignments yet.<br><span class="subtle">A coordinator will assign you units to collect on.</span></div>
+  {% endfor %}
+{% endblock %}

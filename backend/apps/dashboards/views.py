@@ -56,6 +56,25 @@ def index(request):
 
 
 @login_required
+def my_assignments(request):
+    """An enumerator's field work: the collection units assigned to them,
+    grouped by job, with the form to collect and the deadline."""
+    from apps.fieldwork.models import UnitAssignment
+
+    assignments = (
+        UnitAssignment.objects.filter(enumerator=request.user)
+        .select_related("job", "job__use_case", "job__form", "unit")
+        .order_by("job__deadline", "job__name", "unit__code")
+    )
+    groups: dict = {}
+    for a in assignments:
+        groups.setdefault(a.job, []).append(a)
+    job_groups = [{"job": job, "units": units} for job, units in groups.items()]
+    return render(request, "dashboards/my_assignments.html",
+                  {"job_groups": job_groups, "count": assignments.count()})
+
+
+@login_required
 def overview(request):
     """Cross-use-case overview: key metrics for every use case I can see."""
     from apps.validation.models import ValidationFlag

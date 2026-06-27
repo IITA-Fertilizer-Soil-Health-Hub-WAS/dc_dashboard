@@ -736,3 +736,60 @@ class FormMappingsView(StaffMixin, View):
             created += 1
         messages.success(request, f"Imported {created} mapping(s) from CSV.")
         return redirect("console:form_mappings", pk=form.pk)
+
+
+class JobAssignmentsView(UserPassesTestMixin, View):
+    """Assign collection units (and an enumerator each) to a job. Staff for any;
+    a coordinator only for jobs in their own projects."""
+
+    def test_func(self) -> bool:
+        from .registry import console_key_allowed
+
+        return console_key_allowed(self.request.user, "jobs")
+
+    def _job(self, request, pk):
+        return _scoped_get(request.user, _managed("jobs"), "jobs", pk)
+
+    def _ctx(self, job):
+        from apps.fieldwork.models import CollectionUnit
+        from apps.fieldwork.services import project_enumerators
+
+        taken = job.assignments.values_list("unit_id", flat=True)
+        return _console_page_ctx("jobs") | {
+            "job": job,
+            "assignments": job.assignments.select_related("unit", "enumerator").all(),
+            "available_units": CollectionUnit.objects.filter(use_case=job.use_case)
+            .exclude(id__in=taken).order_by("code"),
+            "enumerators": project_enumerators(job.use_case),
+        }
+
+    def get(self, request, pk):
+        return render(request, "console/job_assignments.html", self._ctx(self._job(request, pk)))
+
+    def post(self, request, pk):
+        from apps.accounts.models import User
+        from apps.fieldwork.models import CollectionUnit, UnitAssignment
+
+        job = self._job(request, pk)
+        action = request.POST.get("action")
+        enum = User.objects.filter(pk=request.POST.get("enumerator")).first()
+
+        if action == "remove":
+            UnitAssignment.objects.filter(job=job, pk=request.POST.get("assignment")).delete()
+        elif action == "assign_all":
+            units = CollectionUnit.objects.filter(use_case=job.use_case).exclude(
+                assignments__job=job)
+            UnitAssignment.objects.bulk_create(
+                [UnitAssignment(job=job, unit=u, enumerator=enum) for u in units])
+            if enum:
+                job.assigned_to.add(enum)
+            messages.success(request, f"Assigned {len(units)} unit(s).")
+        else:  # add one
+            unit = CollectionUnit.objects.filter(
+                use_case=job.use_case, pk=request.POST.get("unit")).first()
+            if unit:
+                UnitAssignment.objects.get_or_create(
+                    job=job, unit=unit, defaults={"enumerator": enum})
+                if enum:
+                    job.assigned_to.add(enum)
+        return redirect("console:job_assignments", pk=job.pk)
