@@ -23,12 +23,13 @@ def navigation(request):
         .count()
     )
 
-    console_groups = []
-    active_group = None
-    if user.is_staff:
-        from apps.console.registry import REGISTRY, grouped
+    from apps.console.registry import REGISTRY, grouped_for
 
-        console_groups = grouped()
+    # Staff see all console sections; coordinators see a read-only, scoped subset
+    # (their projects' configuration + field data).
+    console_groups = grouped_for(user)
+    active_group = None
+    if console_groups:
         match = getattr(request, "resolver_match", None)
         if match is not None and match.app_name == "console":
             current = REGISTRY.get(match.kwargs.get("key"))

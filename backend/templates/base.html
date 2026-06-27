@@ -79,6 +79,11 @@
     details.nav-group .nav-sub a.active{background:rgba(255,255,255,.11); color:#fff; border-left-color:var(--gold);}
     .nav a.nav-back{color:#9fc2b0; font-weight:600; margin-bottom:.3rem;}
     .nav a.nav-back:hover{color:#fff;}
+    .nav .nav-search{width:100%; margin:.2rem 0 .35rem; padding:.4rem .6rem; border-radius:8px;
+      border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.07); color:#eaf3ee;
+      font-family:var(--sans); font-size:.84rem;}
+    .nav .nav-search::placeholder{color:#9fc2b0;}
+    .nav .nav-search:focus{outline:none; border-color:var(--gold); background:rgba(255,255,255,.12);}
     .nav a.nav-add{color:var(--gold); font-weight:600; margin-top:.2rem;}
     .nav a.nav-add:hover{background:rgba(200,162,58,.14); color:#f0e6c8;}
     .nav a.nav-add.active{background:rgba(200,162,58,.18); color:#fff; border-left-color:var(--gold);}
@@ -292,23 +297,24 @@
           <span class="msym">grid_view</span>Projects
           {% if nav_use_cases_total %}<span class="pill neutral" style="margin-left:auto;font-size:.66rem;">{{ nav_use_cases_total }}</span>{% endif %}
         </a>
-        {% for uc in nav_use_cases %}
-          <a href="{% url 'dashboards:usecase' uc.code %}"
-             title="Review submissions for {{ uc.name }}"
-             class="{% if request.resolver_match.kwargs.code == uc.code %}active{% endif %}">
-            <span class="msym">monitoring</span>{{ uc.name }}
-          </a>
-        {% empty %}
+        {% if nav_use_cases_total %}
+          <input class="nav-search" type="search" placeholder="Filter projects…"
+                 hx-get="{% url 'dashboards:project_nav_search' %}" hx-target="#nav-proj-list"
+                 hx-trigger="keyup changed delay:250ms, search" name="q" autocomplete="off">
+          <div id="nav-proj-list">
+            {% include "dashboards/_nav_projects.html" with projects=nav_use_cases %}
+          </div>
+          {% if nav_use_cases_total > 7 %}
+            <a href="{% url 'dashboards:projects' %}" class="nav-back" style="font-size:.82rem;">
+              <span class="msym">more_horiz</span>All {{ nav_use_cases_total }} projects →
+            </a>
+          {% endif %}
+        {% else %}
           <div class="muted-note">No projects yet — <a href="{% url 'dashboards:projects' %}?scope=all" style="color:#cfe2d6;text-decoration:underline;">browse to request access</a>.</div>
-        {% endfor %}
-        {% if nav_use_cases_total > 7 %}
-          <a href="{% url 'dashboards:projects' %}" class="nav-back" style="font-size:.82rem;">
-            <span class="msym">more_horiz</span>All {{ nav_use_cases_total }} projects →
-          </a>
         {% endif %}
-        {% if user.is_staff %}
-          {% comment %}Management folds into collapsed groups so the rail stays focused on monitoring; only the group you're in auto-expands.{% endcomment %}
-          <div class="lbl" style="margin-top:.5rem;">Administration</div>
+        {% if console_groups %}
+          {% comment %}Staff get full Administration; coordinators get a read-only, scoped Manage view of their projects' config & field data. Only the group you're in auto-expands.{% endcomment %}
+          <div class="lbl" style="margin-top:.5rem;">{% if user.is_staff %}Administration{% else %}Manage{% endif %}</div>
           {% for group, items in console_groups %}
             <details class="nav-group" {% if group == console_active_group %}open{% endif %}>
               <summary>{{ group }}<span class="msym chev">chevron_right</span></summary>
@@ -322,17 +328,19 @@
               </div>
             </details>
           {% endfor %}
-          <a href="{% url 'console:writeback' %}" title="Submissions whose edits still need to reach the source server"
-             class="{% if request.resolver_match.url_name == 'writeback' %}active{% endif %}">
-            <span class="msym">sync</span>Write-back queue
-          </a>
-          <a href="{% url 'console:link_enumerators' %}" title="Link enumerators to platform accounts so submissions trace to a user"
-             class="{% if request.resolver_match.url_name == 'link_enumerators' %}active{% endif %}">
-            <span class="msym">link</span>Link enumerators
-          </a>
-          <a href="/admin/" class="nav-sys" title="System settings: review audit, groups, scheduled tasks">
-            <span class="msym">settings</span>Admin console
-          </a>
+          {% if user.is_staff %}
+            <a href="{% url 'console:writeback' %}" title="Submissions whose edits still need to reach the source server"
+               class="{% if request.resolver_match.url_name == 'writeback' %}active{% endif %}">
+              <span class="msym">sync</span>Write-back queue
+            </a>
+            <a href="{% url 'console:link_enumerators' %}" title="Link enumerators to platform accounts so submissions trace to a user"
+               class="{% if request.resolver_match.url_name == 'link_enumerators' %}active{% endif %}">
+              <span class="msym">link</span>Link enumerators
+            </a>
+            <a href="/admin/" class="nav-sys" title="System settings: review audit, groups, scheduled tasks">
+              <span class="msym">settings</span>Admin console
+            </a>
+          {% endif %}
         {% endif %}
       </nav>
       <div class="userbox">

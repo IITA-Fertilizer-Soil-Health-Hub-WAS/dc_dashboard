@@ -22,13 +22,14 @@
         </select>
       </form>
     {% endif %}
-    {% if m.key == 'use-cases' %}
+    {% if m.key == 'use-cases' and can_edit %}
       <a class="btn-new" style="background:var(--gold);color:var(--brand-900);" href="{% url 'console:onboard' %}">Onboard project</a>
     {% endif %}
-    {% if not m.readonly %}
+    {% if can_edit %}
       <a class="btn-new" href="{% url 'console:create' m.key %}">+ New</a>
     {% endif %}
   </div>
+  {% if not can_edit %}<p class="subtle" style="margin:.2rem 0 1rem;font-size:.82rem;">Read-only — showing the projects you coordinate.</p>{% endif %}
 
   {% if messages %}{% for msg in messages %}<div class="pill" style="margin-bottom:.7rem;">{{ msg }}</div>{% endfor %}{% endif %}
 
@@ -37,7 +38,7 @@
       <thead>
         <tr>
           {% for col in columns %}<th>{{ col }}</th>{% endfor %}
-          <th style="text-align:right;">{% if not m.readonly %}Actions{% endif %}</th>
+          <th style="text-align:right;">{% if can_edit or m.key == 'forms' %}Actions{% endif %}</th>
         </tr>
       </thead>
       <tbody>
@@ -52,17 +53,19 @@
               </td>
             {% endfor %}
             <td class="row-actions" style="text-align:right;white-space:nowrap;">
-              {% for a in m.actions %}
-                <form method="post" action="{% url 'console:action' m.key row.pk a.slug %}" style="display:inline;">
-                  {% csrf_token %}
-                  <button class="btn {{ a.style }}" type="submit"
-                          style="padding:.25rem .55rem;font-size:.74rem;">{{ a.label }}</button>
-                </form>
-              {% endfor %}
-              {% if m.key == 'forms' %}
+              {% if can_edit %}
+                {% for a in m.actions %}
+                  <form method="post" action="{% url 'console:action' m.key row.pk a.slug %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button class="btn {{ a.style }}" type="submit"
+                            style="padding:.25rem .55rem;font-size:.74rem;">{{ a.label }}</button>
+                  </form>
+                {% endfor %}
+              {% endif %}
+              {% if m.key == 'forms' and can_edit %}
                 <a href="{% url 'console:form_mappings' row.pk %}">Mappings</a>
               {% endif %}
-              {% if not m.readonly %}
+              {% if can_edit %}
                 <a href="{% url 'console:edit' m.key row.pk %}">Edit</a>
                 <a class="del" href="{% url 'console:delete' m.key row.pk %}">Delete</a>
               {% endif %}

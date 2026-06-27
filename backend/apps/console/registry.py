@@ -159,6 +159,59 @@ _ENTRIES: list[Managed] = [
 
 REGISTRY: dict[str, Managed] = {m.key: m for m in _ENTRIES}
 
+# Console sections a coordinator may view (read-only), scoped to their own
+# projects — their configuration and field data. Tenancy / Geography / Users /
+# Memberships stay hub-operator (staff) only; coordinators manage access through
+# the in-app Team & access screen instead.
+COORDINATOR_CONSOLE_KEYS: set[str] = {
+    "forms", "field-mappings", "event-schedule", "crops", "trials", "stages",
+    "validation-rules", "enumerators", "households", "submissions", "validation-flags",
+}
+
+# ORM lookup from each coordinator-visible section to its use case id, used to
+# scope the list to the coordinator's own projects.
+USECASE_FILTER_PATHS: dict[str, str] = {
+    "forms": "use_case",
+    "field-mappings": "form__use_case",
+    "event-schedule": "use_case",
+    "crops": "use_case",
+    "trials": "use_case",
+    "stages": "use_case",
+    "validation-rules": "use_case",
+    "enumerators": "use_case",
+    "households": "use_case",
+    "submissions": "use_case",
+    "validation-flags": "submission__use_case",
+}
+
+
+def console_key_allowed(user, key: str) -> bool:
+    """Whether `user` may open this console section."""
+    if not getattr(user, "is_authenticated", False) or not user.is_active:
+        return False
+    if user.is_staff:
+        return True  # hub operator: everything
+    from apps.rbac.permissions import can_manage_access
+
+    return key in COORDINATOR_CONSOLE_KEYS and can_manage_access(user)
+
+
+def grouped_for(user) -> list[tuple[str, list[Managed]]]:
+    """Sidebar groups visible to `user`: everything for staff; the coordinator
+    subset (Configuration + Field data, read-only) for a coordinator."""
+    if getattr(user, "is_staff", False):
+        return grouped()
+    from apps.rbac.permissions import can_manage_access
+
+    if not can_manage_access(user):
+        return []
+    out = []
+    for group, items in grouped():
+        vis = [m for m in items if m.key in COORDINATOR_CONSOLE_KEYS]
+        if vis:
+            out.append((group, vis))
+    return out
+
 # ORM lookup from each tenant-scoped section to its owning Organization, used by
 # the hub operator's per-institution filter on console lists. Sections not listed
 # here (e.g. Institutions themselves) are not filtered.

@@ -57,9 +57,20 @@ def _console_page_ctx(key: str) -> dict:
     return {"groups": grouped(), "console_key": key}
 
 
-class ConsoleListView(StaffMixin, View):
+class ConsoleListView(UserPassesTestMixin, View):
+    """List view — staff see everything; coordinators see a read-only, scoped
+    subset of their own projects' configuration and field data."""
+
+    def test_func(self) -> bool:
+        from .registry import console_key_allowed
+
+        return console_key_allowed(self.request.user, self.kwargs.get("key"))
+
     def get(self, request, key):
+        from .registry import ORG_FILTER_PATHS, USECASE_FILTER_PATHS
+
         m = _managed(key)
+        is_staff = request.user.is_staff
         qs = m.model._default_manager.all()
         if m.ordering:
             qs = qs.order_by(*m.ordering)
@@ -70,16 +81,21 @@ class ConsoleListView(StaffMixin, View):
                 cond |= Q(**{f"{f}__icontains": q})
             qs = qs.filter(cond)
 
-        # Hub operator's per-institution filter (only where the section is
-        # tenant-scoped and more than one institution exists).
+        # A coordinator only ever sees rows belonging to projects they coordinate.
+        if not is_staff:
+            from apps.rbac.permissions import grantable_scopes
+
+            uc_ids = list(grantable_scopes(request.user)["use_cases"].values_list("id", flat=True))
+            path = USECASE_FILTER_PATHS.get(key)
+            qs = qs.filter(**{f"{path}__in": uc_ids}) if path else qs.none()
+
+        # Hub operator's per-institution filter (staff only).
         from apps.usecases.models import Organization
 
-        from .registry import ORG_FILTER_PATHS
-
         org_path = ORG_FILTER_PATHS.get(key)
-        orgs = list(Organization.objects.all()) if org_path else []
+        orgs = list(Organization.objects.all()) if (org_path and is_staff) else []
         org_code = (request.GET.get("org") or "").strip()
-        if org_path and org_code:
+        if org_path and org_code and is_staff:
             qs = qs.filter(**{f"{org_path}__code": org_code})
 
         page = Paginator(qs, 30).get_page(request.GET.get("page"))
@@ -95,6 +111,8 @@ class ConsoleListView(StaffMixin, View):
             "count": qs.count(),
             "org_options": orgs if len(orgs) > 1 else [],
             "org_filter": org_code,
+            # Coordinators get a read-only window; only staff may mutate.
+            "can_edit": is_staff and not m.readonly,
         }
         return render(request, "console/list.html", ctx)
 

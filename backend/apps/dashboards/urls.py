@@ -10,6 +10,7 @@ app_name = "dashboards"
 urlpatterns = [
     path("", projects_views.projects, name="index"),
     path("projects/", projects_views.projects, name="projects"),
+    path("projects/search/", projects_views.project_nav_search, name="project_nav_search"),
     path("projects/<slug:code>/request/", projects_views.project_request, name="project_request"),
     path("style-preview/", views.style_preview, name="style_preview"),
     path("overview/", views.overview, name="overview"),
