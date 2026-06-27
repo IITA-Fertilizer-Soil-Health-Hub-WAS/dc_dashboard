@@ -45,8 +45,13 @@ def test_console_key_allowed_matrix(world):
 
 def test_grouped_for_coordinator_is_scoped_subset(world):
     groups = dict(grouped_for(world["coord"]))
-    assert set(groups) <= {"Configuration", "Field data"}
-    assert "Tenancy" not in groups and "Access" not in groups
+    # Coordinators never see tenancy or geography setup.
+    assert "Tenancy" not in groups and "Geography" not in groups
+    assert set(groups) <= {"Configuration", "Field data", "Monitoring", "Access"}
+    # The Access group, when present, exposes only access-requests — never the
+    # Users / Memberships management (those stay staff-only).
+    if "Access" in groups:
+        assert {m.key for m in groups["Access"]} == {"access-requests"}
     # Staff get the full set.
     assert "Tenancy" in dict(grouped_for(world["staff"]))
 

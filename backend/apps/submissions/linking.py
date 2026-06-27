@@ -92,6 +92,7 @@ def _candidates(enum, by_phone, by_name, keys) -> tuple[list[User], str]:
 def link_enumerators(
     *,
     use_case=None,
+    use_cases=None,
     by: tuple[str, ...] = MATCH_KEYS,
     overwrite: bool = False,
     apply: bool = False,
@@ -100,7 +101,8 @@ def link_enumerators(
 
     ``apply=False`` (default) previews without writing. ``overwrite=True``
     re-evaluates enumerators that already have a linked account. ``use_case``
-    limits the scope to one project.
+    limits the scope to one project; ``use_cases`` (an iterable of UseCase or
+    ids) limits it to a set — used to scope a coordinator to their own projects.
     """
     report = LinkReport(applied=apply)
     by_phone, by_name = _build_user_indexes()
@@ -108,6 +110,8 @@ def link_enumerators(
     qs = Enumerator.objects.select_related("use_case")
     if use_case is not None:
         qs = qs.filter(use_case=use_case)
+    if use_cases is not None:
+        qs = qs.filter(use_case__in=list(use_cases))
 
     for enum in qs:
         base = dict(enumerator_pk=str(enum.pk), enid=enum.enid, use_case=enum.use_case.code)

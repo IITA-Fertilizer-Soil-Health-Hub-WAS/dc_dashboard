@@ -195,6 +195,7 @@ COORDINATOR_CONSOLE_KEYS: set[str] = {
     "forms", "field-mappings", "event-schedule", "crops", "trials", "stages",
     "validation-rules", "jobs", "collection-units", "enumerators", "households",
     "submissions", "validation-flags", "alert-rules", "alert-events",
+    "access-requests",
 }
 
 # ORM lookup from each coordinator-visible section to its use case id, used to
@@ -215,6 +216,7 @@ USECASE_FILTER_PATHS: dict[str, str] = {
     "validation-flags": "submission__use_case",
     "alert-rules": "use_case",
     "alert-events": "use_case",
+    "access-requests": "use_case",
 }
 
 

@@ -23,6 +23,21 @@ class StaffMixin(UserPassesTestMixin):
         return bool(u.is_authenticated and u.is_active and u.is_staff)
 
 
+class ManageMixin(UserPassesTestMixin):
+    """Staff, or a coordinator who manages at least one project. Views using this
+    MUST scope their own querysets to the coordinator's projects when not staff."""
+
+    def test_func(self) -> bool:
+        u = self.request.user
+        if not (u.is_authenticated and u.is_active):
+            return False
+        if u.is_staff:
+            return True
+        from apps.rbac.permissions import can_manage_access
+
+        return can_manage_access(u)
+
+
 def _managed(key: str) -> Managed:
     m = REGISTRY.get(key)
     if m is None:
@@ -555,24 +570,26 @@ class ConsoleDeleteView(UserPassesTestMixin, View):
         return redirect("console:list", key=key)
 
 
-class WriteBackQueueView(StaffMixin, View):
+class WriteBackQueueView(ManageMixin, View):
     """Operational queue: submissions whose reviewer edits still need to reach the
-    source server. Retry one or flush all PENDING/FAILED."""
+    source server. Retry one or flush all PENDING/FAILED. Coordinators see and
+    act on only their own projects' queue."""
 
-    def _queue(self):
+    def _queue(self, request):
         from apps.submissions.models import Submission
 
         status = Submission.WriteBackStatus
-        return (
-            Submission.objects.filter(writeback_status__in=[status.PENDING, status.FAILED])
-            .select_related("use_case", "enumerator", "household")
-            .order_by("writeback_status", "-updated_at")
+        qs = Submission.objects.filter(writeback_status__in=[status.PENDING, status.FAILED])
+        if not request.user.is_staff:
+            qs = qs.filter(use_case_id__in=_coordinator_uc_ids(request.user))
+        return qs.select_related("use_case", "enumerator", "household").order_by(
+            "writeback_status", "-updated_at"
         )
 
     def get(self, request):
         from django.conf import settings
 
-        qs = self._queue()
+        qs = self._queue(request)
         ctx = _console_page_ctx("writeback") | {
             "rows": qs[:300],
             "pending": qs.filter(writeback_status="PENDING").count(),
@@ -584,31 +601,38 @@ class WriteBackQueueView(StaffMixin, View):
     def post(self, request):
         from apps.ingestion.tasks import writeback_submission_task
 
+        qs = self._queue(request)  # already scoped to the user's projects
         action = request.POST.get("action")
         if action == "flush":
-            ids = list(self._queue().values_list("pk", flat=True))
+            ids = list(qs.values_list("pk", flat=True))
             for pk in ids:
                 writeback_submission_task.delay(str(pk))
             messages.success(request, f"Queued write-back for {len(ids)} submission(s).")
         elif action == "retry":
             pk = request.POST.get("submission_id")
-            if pk:
+            # Only act on a submission inside the user's scoped queue.
+            if pk and qs.filter(pk=pk).exists():
                 writeback_submission_task.delay(str(pk))
                 messages.success(request, "Write-back retried.")
         return redirect("console:writeback")
 
 
-class EnumeratorLinkView(StaffMixin, View):
+class EnumeratorLinkView(ManageMixin, View):
     """Bulk-link Enumerators to platform accounts by phone/name.
 
     GET shows a dry-run preview (matches + ambiguous); POST applies the confident
     matches. After applying, the next sync populates Submission.collected_by.
+    Coordinators are scoped to their own projects' enumerators.
     """
+
+    def _scope(self, request):
+        # Staff: all projects (None). Coordinator: only their own.
+        return None if request.user.is_staff else _coordinator_uc_ids(request.user)
 
     def get(self, request):
         from apps.submissions.linking import link_enumerators
 
-        report = link_enumerators(apply=False)
+        report = link_enumerators(apply=False, use_cases=self._scope(request))
         ctx = _console_page_ctx("link-enumerators") | {
             "report": report,
             "rows": report.actionable[:300],
@@ -619,7 +643,7 @@ class EnumeratorLinkView(StaffMixin, View):
         from apps.submissions.linking import link_enumerators
 
         overwrite = request.POST.get("overwrite") == "1"
-        report = link_enumerators(apply=True, overwrite=overwrite)
+        report = link_enumerators(apply=True, overwrite=overwrite, use_cases=self._scope(request))
         if report.matched:
             messages.success(
                 request, f"Linked {report.matched} enumerator(s) to accounts. "

@@ -419,6 +419,8 @@
                class="{% if request.resolver_match.url_name == 'publish_form' %}active{% endif %}">
               <span class="msym">upload_file</span>Publish form
             </a>
+          {% endif %}
+          {% if can_manage_access %}
             <a href="{% url 'console:writeback' %}" title="Submissions whose edits still need to reach the source server"
                class="{% if request.resolver_match.url_name == 'writeback' %}active{% endif %}">
               <span class="msym">sync</span>Write-back queue
@@ -427,6 +429,8 @@
                class="{% if request.resolver_match.url_name == 'link_enumerators' %}active{% endif %}">
               <span class="msym">link</span>Link enumerators
             </a>
+          {% endif %}
+          {% if user.is_staff %}
             <a href="/admin/" class="nav-sys" title="System settings: review audit, groups, scheduled tasks">
               <span class="msym">settings</span>Admin console
             </a>
