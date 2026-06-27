@@ -15,8 +15,15 @@ def navigation(request):
         return {"nav_use_cases": [], "console_groups": []}
 
     from apps.fieldwork.models import UnitAssignment
+    from apps.rbac.models import Role, UseCaseMembership
 
-    show_my_assignments = UnitAssignment.objects.filter(enumerator=user).exists()
+    # Anyone holding the enumerator role gets the link as their entry point —
+    # not only once they already have an assignment (otherwise a freshly
+    # onboarded enumerator sees no path to their own work).
+    show_my_assignments = (
+        UseCaseMembership.objects.filter(user=user, role=Role.ENUMERATOR).exists()
+        or UnitAssignment.objects.filter(enumerator=user).exists()
+    )
 
     from apps.console.registry import REGISTRY, grouped_for
 
