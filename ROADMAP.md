@@ -58,8 +58,8 @@ backend, confirms, auto-maps fields, then access is granted.
   `ona_form_id`), `version`, `publish_status`, `published_at`.
 - UI: "Publish form" screen → pick project, upload `.xlsx`, push, surface
   conversion warnings, auto-create + auto-map the form.
-- Stages: A1 backend impls (VCR) · A2 model + migration · A3 upload UI +
-  auto-map · A4 tests.
+- Stages (all shipped ✓): A1 backend impls · A2 model + migration · A3 upload UI
+  + auto-map · A4 tests.
 
 ### B — Jobs / collection units
 Coordinators define what to collect on, assign enumerators, set targets +
@@ -75,8 +75,9 @@ deadlines; the platform tracks expected vs actual per unit.
   - `Submission.collection_unit` FK — matched at ingest by an ID field.
 - UI: job CRUD (coordinator-scoped) + CSV unit import + enumerator assignment +
   "My assignments" + expected-vs-actual completion.
-- Stages: B1 models + migration + ingest link · B2 job CRUD + CSV import ·
-  B3 assignment + "My assignments" · B4 completion tracking · B5 tests.
+- Stages (all shipped ✓): B1 models + migration + ingest link · B2 job CRUD +
+  CSV import · B3 assignment + "My assignments" · B4 completion tracking · B5
+  tests.
 
 ### C — M&E KPI dashboard
 The doc's Phase 5, in-app. We already ingest into Postgres, so **no separate ETL
@@ -96,9 +97,11 @@ real-time cards.
   - **Timeliness** — sync lag; 7/30-day trend; pace vs target; overdue.
 - UI (role-scoped): Overview · Project · Data Quality (heatmap + drilldown) ·
   Enumerator leaderboard + map · Coverage map + gap · Alerts (in-app + email).
-- Exports: CSV (have) → add XLSX, GeoJSON; SPSS/STATA (`pyreadstat`) optional.
-- Stages: C1 models + Beat aggregation · C2 Overview + Project · C3 Quality +
-  Enumerator + Coverage · C4 Alerts + email · C5 exports · C6 tests.
+- Exports: CSV + GeoJSON shipped (KPI summary, enumerators, units FeatureCollection,
+  approved dataset); XLSX + SPSS/STATA (`openpyxl` / `pyreadstat`) optional follow-up.
+- Stages (all shipped ✓): C1 models + Beat aggregation · C2 Overview + Project ·
+  C3 Quality + Enumerator + Coverage · C4 Alerts (in-app + email, hourly Beat) ·
+  C5 exports (CSV + GeoJSON) · C6 tests (written per-stage).
 
 ## Sequencing
 
