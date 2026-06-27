@@ -279,6 +279,10 @@
            class="{% if request.resolver_match.url_name == 'overview' %}active{% endif %}">
           <span class="msym">dashboard</span>Overview
         </a>
+        <a href="{% url 'kpi:overview' %}" title="M&amp;E KPI dashboard"
+           class="{% if request.resolver_match.app_name == 'kpi' %}active{% endif %}">
+          <span class="msym">insights</span>M&amp;E
+        </a>
         {% if show_my_assignments %}
           <a href="{% url 'dashboards:my_assignments' %}" title="Plots / farmers assigned to me to collect on"
              class="{% if request.resolver_match.url_name == 'my_assignments' %}active{% endif %}">
