@@ -64,6 +64,29 @@
         </form>
       </div>
 
+      <!-- Full submission: every field the enumerator entered -->
+      <div class="card" style="margin-top:1rem;padding:0;overflow:hidden;">
+        <details {% if not values %}open{% endif %}>
+          <summary style="cursor:pointer;list-style:none;padding:.9rem 1.1rem;display:flex;align-items:center;gap:.6rem;">
+            <span class="msym">description</span><h3 style="margin:0;">All submitted fields</h3>
+            <span class="pill neutral" style="margin-left:auto;">{{ raw_fields|length }}</span>
+          </summary>
+          <div class="table-wrap" style="border-top:1px solid var(--line);">
+            <table>
+              <thead><tr><th scope="col">Field</th><th scope="col">Value</th></tr></thead>
+              <tbody>
+                {% for f in raw_fields %}
+                  <tr><td class="mono" style="white-space:nowrap;">{{ f.key }}</td>
+                      <td>{{ f.value|default:"—" }}</td></tr>
+                {% empty %}
+                  <tr><td colspan="2"><div class="empty" style="border:none;">No raw data stored.</div></td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+
       <!-- Open issues -->
       {% if flags %}
         <div class="card" style="margin-top:1rem;">

@@ -463,7 +463,32 @@ def submission_review(request, code, submission_id):
     return render(request, "dashboards/submission_review.html", {
         "uc": uc, "submission": submission, "values": values, "flags": flags,
         "actions": actions, "review": review, "can": can, "ok": ok, "error": error,
+        "raw_fields": _raw_submission_fields(submission.raw_payload),
     })
+
+
+# ODK / ONA system fields to hide from the full-submission view (keep the actual
+# answers, drop plumbing).
+_SYSTEM_FIELD_PREFIXES = ("_", "meta/", "formhub/")
+_SYSTEM_FIELD_KEYS = {
+    "start", "end", "today", "deviceid", "username", "subscriberid", "simserial",
+    "phonenumber", "__version__", "instanceID", "instanceName",
+}
+
+
+def _raw_submission_fields(payload: dict) -> list[dict]:
+    """Every field the enumerator submitted (from the untouched server record),
+    minus ODK/ONA system plumbing — so the full form shows on the review screen."""
+    import json
+
+    out = []
+    for key, value in (payload or {}).items():
+        if key in _SYSTEM_FIELD_KEYS or key.startswith(_SYSTEM_FIELD_PREFIXES):
+            continue
+        if isinstance(value, (dict, list)):
+            value = json.dumps(value, ensure_ascii=False)
+        out.append({"key": key, "value": "" if value is None else value})
+    return sorted(out, key=lambda r: r["key"])
 
 
 @login_required
