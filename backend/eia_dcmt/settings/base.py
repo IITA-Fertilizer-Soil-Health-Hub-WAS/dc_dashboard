@@ -43,10 +43,13 @@ DJANGO_APPS = [
     "django.contrib.sites",
 ]
 
-# Auth0 (OIDC) is the ONLY registration / sign-in path for end users. Local
-# email+password signup and login are disabled (see the auth section below and
-# the redirects in eia_dcmt/urls.py). Platform Admins still use the Django /admin
-# login (superuser) for back-office tasks.
+# Auth0 (OIDC) is the PRIMARY registration / sign-in path for end users — most
+# enumerators are field staff outside CGIAR, so Auth0 (email/social) is what they
+# use. Microsoft Entra ID is an OPTIONAL fallback OIDC provider (for CGIAR/IITA
+# staff), env-gated and off until creds are supplied — never a replacement for
+# Auth0. Local email+password signup/login stay disabled (see the auth section
+# below and the redirects in eia_dcmt/urls.py). Platform Admins still use the
+# Django /admin login (superuser) for back-office tasks.
 THIRD_PARTY_APPS = [
     "rest_framework",
     "guardian",
@@ -63,6 +66,13 @@ AUTH0_CLIENT_SECRET = env("AUTH0_CLIENT_SECRET", default="")
 # True only when all three creds are present; the login page uses this to show a
 # clear "not configured" message instead of a 500 from the OIDC discovery fetch.
 AUTH0_CONFIGURED = bool(AUTH0_DOMAIN and AUTH0_CLIENT_ID and AUTH0_CLIENT_SECRET)
+
+# Microsoft Entra ID — OPTIONAL fallback OIDC provider (CGIAR/IITA staff). Stays
+# off until all three are supplied; Auth0 remains the primary login either way.
+ENTRA_TENANT_ID = env("ENTRA_TENANT_ID", default="")
+ENTRA_CLIENT_ID = env("ENTRA_CLIENT_ID", default="")
+ENTRA_CLIENT_SECRET = env("ENTRA_CLIENT_SECRET", default="")
+ENTRA_CONFIGURED = bool(ENTRA_TENANT_ID and ENTRA_CLIENT_ID and ENTRA_CLIENT_SECRET)
 
 LOCAL_APPS = [
     "apps.common",
@@ -159,26 +169,40 @@ LOGIN_REDIRECT_URL = "/"
 # degrades gracefully when Auth0 isn't configured instead of 500-ing.
 LOGIN_URL = "/login/"
 AUTH0_LOGIN_URL = "/accounts/oidc/auth0/login/"
+ENTRA_LOGIN_URL = "/accounts/oidc/entra/login/"
 ACCOUNT_LOGOUT_ON_GET = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
 
 ACCOUNT_ADAPTER = "apps.accounts.adapters.AccountAdapter"
 SOCIALACCOUNT_ADAPTER = "apps.accounts.adapters.SocialAccountAdapter"
-SOCIALACCOUNT_PROVIDERS = {
-    "openid_connect": {
-        "APPS": [
-            {
-                "provider_id": "auth0",
-                "name": "Auth0",
-                "client_id": AUTH0_CLIENT_ID,
-                "secret": AUTH0_CLIENT_SECRET,
-                "settings": {
-                    "server_url": f"https://{AUTH0_DOMAIN}/.well-known/openid-configuration",
-                },
-            }
-        ]
+# Auth0 is always registered (primary). Entra ID is appended only when its creds
+# are present, so it never interferes with the Auth0-only default deployment.
+_OIDC_APPS = [
+    {
+        "provider_id": "auth0",
+        "name": "Auth0",
+        "client_id": AUTH0_CLIENT_ID,
+        "secret": AUTH0_CLIENT_SECRET,
+        "settings": {
+            "server_url": f"https://{AUTH0_DOMAIN}/.well-known/openid-configuration",
+        },
     }
-}
+]
+if ENTRA_CONFIGURED:
+    _OIDC_APPS.append({
+        "provider_id": "entra",
+        "name": "Microsoft Entra ID",
+        "client_id": ENTRA_CLIENT_ID,
+        "secret": ENTRA_CLIENT_SECRET,
+        "settings": {
+            "server_url": (
+                f"https://login.microsoftonline.com/{ENTRA_TENANT_ID}"
+                "/v2.0/.well-known/openid-configuration"
+            ),
+        },
+    })
+
+SOCIALACCOUNT_PROVIDERS = {"openid_connect": {"APPS": _OIDC_APPS}}
 
 GUARDIAN_RAISE_403 = True
 

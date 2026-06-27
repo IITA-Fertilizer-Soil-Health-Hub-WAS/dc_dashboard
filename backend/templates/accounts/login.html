@@ -22,6 +22,12 @@
       <p class="subtle" style="font-size:.78rem;margin:.9rem 0 0;text-align:center;line-height:1.5;">
         First sign-in creates your account. A Platform Admin approves access and assigns your role.
       </p>
+      {% if entra_configured %}
+        <a class="btn btn-request" style="display:block;font-size:.9rem;padding:.6rem;margin-top:.9rem;text-align:center;text-decoration:none;"
+           href="{{ entra_login_url }}{% if next %}?next={{ next|urlencode }}{% endif %}">
+          CGIAR staff: continue with Microsoft
+        </a>
+      {% endif %}
     {% else %}
       <div class="err" style="text-align:left;margin:0;">
         <strong>Auth0 is not configured.</strong> Set <code>AUTH0_DOMAIN</code>,

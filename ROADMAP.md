@@ -113,7 +113,10 @@ live verification, committed to `fork/redesign/python`.
 
 - **Real-time:** add submission **webhooks** (ODK Central / ONA) → instant
   ingest, alongside the periodic sync.
-- **Auth (Entra ID):** the doc wants Microsoft Entra ID; we use Auth0. Both are
-  OIDC — an allauth provider swap (config-level), done at IITA cutover.
+- **Auth (Entra ID):** Auth0 stays the **primary** provider — most enumerators
+  are field staff outside CGIAR and rely on it. Microsoft Entra ID is shipped as
+  an **optional fallback** OIDC provider (CGIAR/IITA staff), env-gated
+  (`ENTRA_TENANT_ID/CLIENT_ID/CLIENT_SECRET`) and off until configured — an
+  additive allauth provider, never a replacement.
 - **Server-agnostic** preserved throughout: all server-specific logic stays
   behind `CollectionBackend`.

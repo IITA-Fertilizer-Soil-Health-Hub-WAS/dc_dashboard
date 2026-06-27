@@ -30,6 +30,9 @@ class LoginLandingView(LoginView):
         ctx = super().get_context_data(**kwargs)
         ctx["auth0_configured"] = settings.AUTH0_CONFIGURED
         ctx["auth0_login_url"] = settings.AUTH0_LOGIN_URL
+        # Entra ID is an optional fallback — only surfaced when configured.
+        ctx["entra_configured"] = settings.ENTRA_CONFIGURED
+        ctx["entra_login_url"] = settings.ENTRA_LOGIN_URL
         ctx["next"] = self.request.GET.get("next", "")
         return ctx
 
