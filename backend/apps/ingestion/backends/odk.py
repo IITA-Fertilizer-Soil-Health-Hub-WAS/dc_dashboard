@@ -105,9 +105,9 @@ class OdkBackend(CollectionBackend):
             return WriteResult(ok=False, message="No edited fields are mapped to the source form")
 
         try:
-            original = self._fetch_instance_xml(submission.form.ona_form_id, data_id)
+            original = self._fetch_instance_xml(submission.form.server_ref, data_id)
             edited_xml, old_iid = build_edited_instance(original, path_changes)
-            remote_id = self._submit_edited_xml(submission.form.ona_form_id, edited_xml)
+            remote_id = self._submit_edited_xml(submission.form.server_ref, edited_xml)
         except Exception as exc:  # network / server / parse errors
             return WriteResult(ok=False, message=f"Write-back failed: {exc}")
 

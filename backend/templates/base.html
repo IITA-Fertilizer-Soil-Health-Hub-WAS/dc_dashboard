@@ -324,6 +324,10 @@
             </details>
           {% endfor %}
           {% if user.is_staff %}
+            <a href="{% url 'console:publish_form' %}" title="Upload an XLSForm and publish it to a project's server"
+               class="{% if request.resolver_match.url_name == 'publish_form' %}active{% endif %}">
+              <span class="msym">upload_file</span>Publish form
+            </a>
             <a href="{% url 'console:writeback' %}" title="Submissions whose edits still need to reach the source server"
                class="{% if request.resolver_match.url_name == 'writeback' %}active{% endif %}">
               <span class="msym">sync</span>Write-back queue

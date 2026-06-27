@@ -120,7 +120,7 @@ def sync_use_case(use_case: UseCase, backend=None, client=None) -> SyncStats:
 
     # 1) Registration forms first (enumerators + households are FKs for submissions).
     for form in [f for f in forms if f.role in REGISTRATION_ROLES]:
-        records = plugin.pre_ingest(form, _fetch(source, form.ona_form_id))
+        records = plugin.pre_ingest(form, _fetch(source, form.server_ref))
         if not form.mappings.exists() and records:
             auto_map_form(form, records[0])
         mappings = list(form.mappings.order_by("order", "target_field"))
@@ -133,7 +133,7 @@ def sync_use_case(use_case: UseCase, backend=None, client=None) -> SyncStats:
 
     # 2) Validation forms -> immutable Submissions + authoritative values.
     for form in [f for f in forms if f.role in VALIDATION_ROLES]:
-        records = plugin.pre_ingest(form, _fetch(source, form.ona_form_id))
+        records = plugin.pre_ingest(form, _fetch(source, form.server_ref))
         if not form.mappings.exists() and records:
             auto_map_form(form, records[0])
         mappings = list(form.mappings.order_by("order", "target_field"))

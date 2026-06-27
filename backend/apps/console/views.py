@@ -196,6 +196,52 @@ class ConsoleFormView(UserPassesTestMixin, View):
         return render(request, "console/form.html", _base_ctx(m) | {"form": form, "instance": instance})
 
 
+class PublishFormView(StaffMixin, View):
+    """Platform Admin uploads an XLSForm and publishes it to a project's server,
+    then (on success) the form is recorded and ready to grant + collect."""
+
+    def _ctx(self, request, **extra):
+        from apps.usecases.models import FormDefinition, UseCase
+
+        ctx = {
+            "groups": grouped(),
+            "console_key": "forms",
+            "use_cases": UseCase.objects.filter(is_active=True).order_by("code"),
+            "roles": FormDefinition.Role.choices,
+        }
+        ctx.update(extra)
+        return ctx
+
+    def get(self, request):
+        return render(request, "console/publish_form.html", self._ctx(request))
+
+    def post(self, request):
+        from apps.ingestion.publishing import publish_xlsform
+        from apps.usecases.models import UseCase
+
+        uc = UseCase.objects.filter(pk=request.POST.get("use_case")).first()
+        upload = request.FILES.get("xlsform")
+        role = request.POST.get("role") or "VALIDATION"
+        if uc is None or upload is None:
+            return render(request, "console/publish_form.html",
+                          self._ctx(request, error="Pick a project and choose an XLSForm file."))
+
+        form, result = publish_xlsform(
+            uc, upload.read(), filename=upload.name, role=role,
+            title=(request.POST.get("title") or "").strip(),
+        )
+        if not result.ok:
+            return render(request, "console/publish_form.html",
+                          self._ctx(request, error=result.message))
+
+        messages.success(
+            request,
+            f"Published “{form.title or form.server_ref}” to {uc.code}. "
+            f"Grant coordinators access, then “Sync now” once data starts arriving.",
+        )
+        return redirect("console:list", key="forms")
+
+
 class OnboardProjectView(StaffMixin, View):
     """Onboard a new project to monitor, end to end, from inside the app:
 

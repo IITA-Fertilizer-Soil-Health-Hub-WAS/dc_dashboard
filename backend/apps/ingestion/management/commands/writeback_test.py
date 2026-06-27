@@ -67,7 +67,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING("No edited fields map to source paths."))
             return
         try:
-            original = backend._fetch_instance_xml(sub.form.ona_form_id, sub.ona_submission_id)
+            original = backend._fetch_instance_xml(sub.form.server_ref, sub.ona_submission_id)
         except Exception as exc:
             raise CommandError(f"Could not fetch original instance: {exc}") from exc
         edited, old_iid = build_edited_instance(original, path_changes)

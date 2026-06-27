@@ -45,13 +45,24 @@ SNS_PATH = Path(settings.USECASE_CONFIG_DIR) / "sns-rwanda.yaml"
 
 
 class FakeOnaClient:
-    """Returns canned records per form_id, mimicking the ONA API shape."""
+    """Returns canned records per form_id, mimicking the ONA API shape.
+
+    Robust to int/str form ids: sync now passes ``form.server_ref`` (a string),
+    just as the real ONA backend coerces with ``int(form_id)``."""
 
     def __init__(self, by_form: dict[int, list[dict]]):
         self.by_form = by_form
 
-    def get_data(self, form_id: int) -> list[dict]:
-        return list(self.by_form.get(form_id, []))
+    def get_data(self, form_id) -> list[dict]:
+        rows = self.by_form.get(form_id)
+        if rows is None:
+            try:
+                rows = self.by_form.get(int(form_id))
+            except (TypeError, ValueError):
+                rows = None
+        if rows is None:
+            rows = self.by_form.get(str(form_id))
+        return list(rows or [])
 
 
 def _records():

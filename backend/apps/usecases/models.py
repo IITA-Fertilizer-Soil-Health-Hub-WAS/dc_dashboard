@@ -188,7 +188,8 @@ class Trial(BaseModel):
 
 
 class FormDefinition(BaseModel):
-    """One ONA form belonging to a use case (was the form_id inventory in okapi.R)."""
+    """One form belonging to a use case. Either onboarded by id, or published to
+    the server from an uploaded XLSForm (see apps.ingestion.backends.publish_form)."""
 
     class Role(models.TextChoices):
         ENUM_REG = "ENUM_REG", "Enumerator registration"
@@ -198,20 +199,52 @@ class FormDefinition(BaseModel):
         INTERCROP = "INTERCROP", "Intercropping"
         EXTRA = "EXTRA", "Extra"
 
+    class PublishStatus(models.TextChoices):
+        EXTERNAL = "EXTERNAL", "External (onboarded)"
+        PUBLISHED = "PUBLISHED", "Published from XLSForm"
+        FAILED = "FAILED", "Publish failed"
+
     use_case = models.ForeignKey(UseCase, on_delete=models.CASCADE, related_name="forms")
-    ona_form_id = models.BigIntegerField()
+    # ONA numeric form id (legacy / ONA). Null for forms identified by a string id
+    # (e.g. ODK Central xmlFormId) — use `server_ref` for the id to call the backend.
+    ona_form_id = models.BigIntegerField(null=True, blank=True)
+    # Canonical server-agnostic form id (ONA formid as string, ODK Central xmlFormId).
+    server_form_id = models.CharField(max_length=255, blank=True)
+    title = models.CharField(max_length=255, blank=True)
     role = models.CharField(max_length=16, choices=Role.choices)
     crop = models.ForeignKey(Crop, null=True, blank=True, on_delete=models.SET_NULL)
     season = models.CharField(max_length=16, blank=True)  # "S1"/"S2" (BioSSA)
     # ONA system columns to drop (the R `system_var` strip list); per-form override.
     system_vars_drop = models.JSONField(default=list, blank=True)
 
+    # --- publishing (form uploaded as XLSForm and pushed to the server) ---
+    xlsform = models.FileField(upload_to="xlsforms/", null=True, blank=True)
+    version = models.CharField(max_length=64, blank=True)
+    publish_status = models.CharField(
+        max_length=12, choices=PublishStatus.choices, default=PublishStatus.EXTERNAL
+    )
+    published_at = models.DateTimeField(null=True, blank=True)
+
     class Meta:
         unique_together = ("use_case", "ona_form_id")
         ordering = ["use_case", "role", "ona_form_id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["use_case", "server_form_id"],
+                condition=models.Q(server_form_id__gt=""),
+                name="uniq_form_server_id",
+            )
+        ]
+
+    @property
+    def server_ref(self) -> str:
+        """The id to call the backend with — the server form id, else the ONA id."""
+        if self.server_form_id:
+            return self.server_form_id
+        return str(self.ona_form_id) if self.ona_form_id is not None else ""
 
     def __str__(self) -> str:
-        return f"{self.use_case.code}:{self.role}:{self.ona_form_id}"
+        return f"{self.use_case.code}:{self.role}:{self.server_ref}"
 
 
 class FieldMapping(BaseModel):

@@ -1,0 +1,44 @@
+{% extends "console/base.html" %}
+{% block title %}Publish form · Manage · EiA2030 DCMT{% endblock %}
+{% block crumbs %}<span class="sep">/</span><span class="cur">Manage</span><span class="sep">/</span><span class="cur">Publish form</span>{% endblock %}
+{% block console_main %}
+  <div class="page-head"><h2>Publish a form</h2></div>
+  <p class="subtle" style="margin:.1rem 0 1.2rem;max-width:64ch;">
+    Upload an ODK XLSForm (.xlsx) and push it to the project's collection server.
+    The server converts and publishes it; enumerators then download it in ODK
+    Collect / Enketo and collect — including offline. Grant coordinators access
+    afterwards.
+  </p>
+
+  {% if error %}<div class="err"><strong>Couldn't publish:</strong> {{ error }}</div>{% endif %}
+  {% if messages %}{% for msg in messages %}<div class="pill" style="margin-bottom:.7rem;">{{ msg }}</div>{% endfor %}{% endif %}
+
+  <div class="card" style="max-width:640px;">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="field" style="margin-bottom:1rem;">
+        <label>Project</label>
+        <select name="use_case" required class="input" style="width:100%;">
+          <option value="">Choose a project…</option>
+          {% for uc in use_cases %}<option value="{{ uc.pk }}">{{ uc.code }} — {{ uc.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:1rem;">
+        <label>XLSForm (.xlsx)</label>
+        <input type="file" name="xlsform" accept=".xlsx" required class="input" style="width:100%;">
+      </div>
+      <div class="field" style="margin-bottom:1rem;">
+        <label>Form role</label>
+        <select name="role" class="input" style="width:100%;">
+          {% for value, label in roles %}<option value="{{ value }}" {% if value == 'VALIDATION' %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+        <div class="helptext" style="font-size:.74rem;color:var(--faint);margin-top:.25rem;">What this form collects — drives how submissions are processed.</div>
+      </div>
+      <div class="field" style="margin-bottom:1.2rem;">
+        <label>Title (optional)</label>
+        <input type="text" name="title" class="input" style="width:100%;" placeholder="Defaults to the form's own title">
+      </div>
+      <button class="btn btn-open" type="submit">Publish to server</button>
+    </form>
+  </div>
+{% endblock %}
