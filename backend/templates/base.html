@@ -90,11 +90,16 @@
     .nav .nav-proj-select:focus{outline:none; border-color:var(--gold); background:rgba(255,255,255,.12);}
     .nav .nav-proj-select option{color:var(--ink); background:#fff;}
     .nav .ws-head{padding:.2rem .5rem .7rem; border-bottom:1px solid rgba(255,255,255,.12); margin-bottom:.5rem;}
-    .nav .ws-name{display:flex; align-items:center; gap:.45rem; color:#fff; font-family:var(--serif);
-      font-weight:600; font-size:1rem; margin-bottom:.5rem; line-height:1.15;}
-    .nav .ws-name span{white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-    .nav .ws-name .msym{color:var(--gold); opacity:1; flex-shrink:0;}
-    .nav .ws-head .nav-back{margin-top:.45rem; font-size:.8rem;}
+    .nav .ws-switch{display:flex; align-items:center; gap:.45rem;}
+    .nav .ws-switch .msym{color:var(--gold); opacity:1; flex-shrink:0;}
+    .nav .ws-switch select{flex:1; min-width:0; padding:.45rem .55rem; border-radius:8px;
+      border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.08); color:#fff;
+      font-family:var(--serif); font-weight:600; font-size:.98rem; cursor:pointer;}
+    .nav .ws-switch select:focus{outline:none; border-color:var(--gold); background:rgba(255,255,255,.13);}
+    .nav .ws-switch select option{color:var(--ink); background:#fff; font-weight:500;}
+    .nav .ws-switch .ws-single{font-family:var(--serif); font-weight:600; font-size:1rem; color:#fff;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .nav .ws-head .nav-back{margin-top:.5rem; font-size:.8rem;}
     .nav a.nav-add{color:var(--gold); font-weight:600; margin-top:.2rem;}
     .nav a.nav-add:hover{background:rgba(200,162,58,.14); color:#f0e6c8;}
     .nav a.nav-add.active{background:rgba(200,162,58,.18); color:#fff; border-left-color:var(--gold);}
@@ -352,18 +357,24 @@
         {% if active_uc %}
           {# ===================== Project workspace ===================== #}
           <div class="ws-head">
-            <div class="ws-name"><span class="msym">folder_open</span><span title="{{ active_uc.name }}">{{ active_uc.name }}</span></div>
-            {% if nav_use_cases_total > 1 %}
-              <select class="nav-proj-select" aria-label="Switch project"
-                      onchange="if(this.value){window.location.href=this.value;}">
-                {% for uc in nav_use_cases %}
-                  <option value="{% url 'dashboards:usecase' uc.code %}" {% if uc.code == active_uc.code %}selected{% endif %}>{{ uc.name|default:uc.code }}</option>
-                {% endfor %}
-              </select>
+            <div class="ws-switch">
+              <span class="msym" aria-hidden="true">folder_open</span>
+              {% if nav_use_cases_total > 1 %}
+                <select aria-label="Current project — choose another to switch"
+                        onchange="if(this.value){window.location.href=this.value;}">
+                  {% for uc in nav_use_cases %}
+                    <option value="{% url 'dashboards:usecase' uc.code %}" {% if uc.code == active_uc.code %}selected{% endif %}>{{ uc.name|default:uc.code }}</option>
+                  {% endfor %}
+                </select>
+              {% else %}
+                <span class="ws-single" title="{{ active_uc.name }}">{{ active_uc.name }}</span>
+              {% endif %}
+            </div>
+            {% if user.is_staff %}
+              <a class="nav-back" href="{% url 'dashboards:projects' %}">
+                <span class="msym">grid_view</span>All projects
+              </a>
             {% endif %}
-            <a class="nav-back" href="{% url 'dashboards:projects' %}">
-              <span class="msym">grid_view</span>{% if user.is_staff %}All projects{% else %}Switch project{% endif %}
-            </a>
           </div>
 
           <a href="{% url 'dashboards:usecase' active_uc.code %}"
