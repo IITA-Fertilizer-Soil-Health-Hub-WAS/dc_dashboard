@@ -115,20 +115,20 @@ _ENTRIES: list[Managed] = [
             search_fields=["code"], icon="rule",
             description="Checks that flag submissions for review."),
     # ---- Access: who can see & act ----
-    Managed("users", User, "Users", "Access",
+    Managed("users", User, "Users", "Accounts & roles",
             list_display=["user_id", "email", "full_name", "organization", "is_active",
                           "is_staff", "is_superuser", "approved_at"],
             form_fields=["email", "full_name", "phone", "organization", "is_active",
                          "email_verified", "is_staff", "is_superuser"],
             search_fields=["user_id", "email", "full_name"], ordering=["email"], icon="person",
             actions=USER_ACTIONS, description="People and account approval status."),
-    Managed("memberships", UseCaseMembership, "Memberships", "Access",
+    Managed("memberships", UseCaseMembership, "Memberships", "Accounts & roles",
             list_display=["user", "use_case", "country", "region", "role", "granted_by",
                           "created_at"],
             form_fields=["user", "use_case", "country", "region", "role"],
             search_fields=["user__email", "use_case__code"], icon="group",
             description="Who can access which use case / country / region, and their role."),
-    Managed("access-requests", UseCaseAccessRequest, "Access requests", "Access",
+    Managed("access-requests", UseCaseAccessRequest, "Access requests", "Accounts & roles",
             list_display=["user", "use_case", "status", "decided_by", "decided_at",
                           "created_at"],
             search_fields=["user__email", "use_case__code"], readonly=True, icon="pending_actions",
@@ -183,15 +183,21 @@ _ENTRIES: list[Managed] = [
 
 REGISTRY: dict[str, Managed] = {m.key: m for m in _ENTRIES}
 
-# Console sections a coordinator may view (read-only), scoped to their own
-# projects — their configuration and field data. Tenancy / Geography / Users /
-# Memberships stay hub-operator (staff) only; coordinators manage access through
-# the in-app Team & access screen instead.
+# Console sections a coordinator may manage, scoped to their own projects — their
+# configuration and field data. Tenancy / Geography / Accounts stay hub-operator
+# (staff) only; coordinators handle access through the in-app Team & access screen
+# (so access-requests is intentionally NOT a separate console section for them).
 COORDINATOR_CONSOLE_KEYS: set[str] = {
     "forms", "field-mappings", "event-schedule", "crops", "trials", "stages",
     "validation-rules", "jobs", "collection-units", "enumerators", "households",
     "submissions", "validation-flags", "alert-rules", "alert-events",
-    "access-requests",
+}
+
+# Field-data sections an ordinary member (viewer / enumerator) may VIEW, read-only
+# and scoped to projects they belong to. They already see this data via the project
+# tabs; this surfaces it in the console rail. Never editable for a plain member.
+MEMBER_READ_KEYS: set[str] = {
+    "submissions", "validation-flags", "enumerators", "collection-units", "households",
 }
 
 # ORM lookup from each coordinator-visible section to its use case id, used to
@@ -216,29 +222,55 @@ USECASE_FILTER_PATHS: dict[str, str] = {
 }
 
 
-def console_key_allowed(user, key: str) -> bool:
-    """Whether `user` may open this console section."""
+def _visible_console_keys(user) -> set[str] | None:
+    """The console sections a user may OPEN: None means all (staff); otherwise a
+    set. Coordinators get their manage subset; ordinary members who belong to at
+    least one project get read-only field data; everyone else gets nothing."""
     if not getattr(user, "is_authenticated", False) or not user.is_active:
-        return False
+        return set()
     if user.is_staff:
-        return True  # hub operator: everything
+        return None  # everything
+    from apps.rbac.permissions import can_manage_access, visible_use_cases
+
+    if can_manage_access(user):
+        return COORDINATOR_CONSOLE_KEYS
+    if visible_use_cases(user).exists():
+        return MEMBER_READ_KEYS
+    return set()
+
+
+def console_key_allowed(user, key: str) -> bool:
+    """Whether `user` may open (view) this console section."""
+    keys = _visible_console_keys(user)
+    return keys is None or key in keys
+
+
+def console_can_edit(user, key: str) -> bool:
+    """Whether `user` may mutate this section. Members are always read-only;
+    read-only sections are never editable; coordinators only their own scope."""
+    if not console_key_allowed(user, key):
+        return False
+    m = REGISTRY.get(key)
+    if m is None or m.readonly:
+        return False
+    if getattr(user, "is_staff", False):
+        return True
     from apps.rbac.permissions import can_manage_access
 
-    return key in COORDINATOR_CONSOLE_KEYS and can_manage_access(user)
+    return can_manage_access(user) and key in COORDINATOR_CONSOLE_KEYS
 
 
 def grouped_for(user) -> list[tuple[str, list[Managed]]]:
     """Sidebar groups visible to `user`: everything for staff; the coordinator
-    subset (Configuration + Field data, read-only) for a coordinator."""
-    if getattr(user, "is_staff", False):
+    manage subset; or read-only field data for an ordinary project member."""
+    keys = _visible_console_keys(user)
+    if keys is None:
         return grouped()
-    from apps.rbac.permissions import can_manage_access
-
-    if not can_manage_access(user):
+    if not keys:
         return []
     out = []
     for group, items in grouped():
-        vis = [m for m in items if m.key in COORDINATOR_CONSOLE_KEYS]
+        vis = [m for m in items if m.key in keys]
         if vis:
             out.append((group, vis))
     return out
@@ -268,7 +300,7 @@ ORG_FILTER_PATHS: dict[str, str] = {
 }
 
 # Group order for sidebar rendering.
-GROUPS: list[str] = ["Tenancy", "Geography", "Configuration", "Access", "Field data"]
+GROUPS: list[str] = ["Tenancy", "Geography", "Configuration", "Accounts & roles", "Field data"]
 
 
 def grouped() -> list[tuple[str, list[Managed]]]:

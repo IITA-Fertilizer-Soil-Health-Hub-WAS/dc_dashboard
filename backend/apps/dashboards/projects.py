@@ -111,17 +111,6 @@ def projects(request):
     })
 
 
-@login_required
-def project_nav_search(request):
-    """Type-ahead for the sidebar Projects dropdown — the user's matching projects."""
-    q = (request.GET.get("q") or "").strip()
-    qs = visible_use_cases(request.user)
-    if q:
-        qs = qs.filter(Q(code__icontains=q) | Q(name__icontains=q))
-    projects = list(qs.order_by("code")[:12])
-    return render(request, "dashboards/_nav_projects.html", {"projects": projects})
-
-
 @require_http_methods(["GET", "POST"])
 @login_required
 def project_request(request, code):

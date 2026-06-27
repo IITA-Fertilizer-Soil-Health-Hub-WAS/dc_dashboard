@@ -45,13 +45,12 @@ def test_console_key_allowed_matrix(world):
 
 def test_grouped_for_coordinator_is_scoped_subset(world):
     groups = dict(grouped_for(world["coord"]))
-    # Coordinators never see tenancy or geography setup.
+    # Coordinators see only their projects' config / field data / monitoring —
+    # never tenancy, geography, or the accounts & roles registry (access is the
+    # Team & access screen, not a console section).
+    assert set(groups) <= {"Configuration", "Field data", "Monitoring"}
     assert "Tenancy" not in groups and "Geography" not in groups
-    assert set(groups) <= {"Configuration", "Field data", "Monitoring", "Access"}
-    # The Access group, when present, exposes only access-requests — never the
-    # Users / Memberships management (those stay staff-only).
-    if "Access" in groups:
-        assert {m.key for m in groups["Access"]} == {"access-requests"}
+    assert "Accounts & roles" not in groups
     # Staff get the full set.
     assert "Tenancy" in dict(grouped_for(world["staff"]))
 
@@ -132,15 +131,12 @@ def test_coordinator_cannot_mutate_readonly_section(client, world):
     assert client.get(reverse("console:create", args=["submissions"])).status_code == 403
 
 
-def test_viewer_has_no_console(client, world):
+def test_viewer_has_read_only_field_data_only(client, world):
     client.force_login(world["viewer"])
+    # No configuration access (config stays coordinator+)...
     assert client.get(reverse("console:list", args=["forms"])).status_code == 403
-    assert grouped_for(world["viewer"]) == []
+    # ...but at most read-only field data for their own projects — never config.
+    groups = dict(grouped_for(world["viewer"]))
+    assert set(groups) <= {"Field data"}
 
 
-def test_nav_search_returns_matching_projects(client, world):
-    client.force_login(world["coord"])
-    resp = client.get(reverse("dashboards:project_nav_search") + "?q=MINE")
-    assert resp.status_code == 200
-    assert b"Mine" in resp.content
-    assert b"Other" not in resp.content  # coord isn't a member of OTHER anyway

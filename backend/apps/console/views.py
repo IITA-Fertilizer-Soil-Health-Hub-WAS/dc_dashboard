@@ -73,8 +73,8 @@ def _console_page_ctx(key: str) -> dict:
 
 
 class ConsoleListView(UserPassesTestMixin, View):
-    """List view — staff see everything; coordinators see a read-only, scoped
-    subset of their own projects' configuration and field data."""
+    """List view — staff see everything; coordinators see a scoped subset of their
+    projects' config & field data; ordinary members see read-only field data."""
 
     def test_func(self) -> bool:
         from .registry import console_key_allowed
@@ -82,7 +82,7 @@ class ConsoleListView(UserPassesTestMixin, View):
         return console_key_allowed(self.request.user, self.kwargs.get("key"))
 
     def get(self, request, key):
-        from .registry import ORG_FILTER_PATHS, USECASE_FILTER_PATHS, console_key_allowed
+        from .registry import ORG_FILTER_PATHS, USECASE_FILTER_PATHS, console_can_edit
 
         m = _managed(key)
         is_staff = request.user.is_staff
@@ -96,11 +96,16 @@ class ConsoleListView(UserPassesTestMixin, View):
                 cond |= Q(**{f"{f}__icontains": q})
             qs = qs.filter(cond)
 
-        # A coordinator only ever sees rows belonging to projects they coordinate.
+        # Non-staff only ever see rows belonging to their own projects:
+        # coordinators to the projects they coordinate, ordinary members to the
+        # projects they belong to (read-only field data).
         if not is_staff:
-            from apps.rbac.permissions import grantable_scopes
+            from apps.rbac.permissions import can_manage_access, visible_use_cases
 
-            uc_ids = list(grantable_scopes(request.user)["use_cases"].values_list("id", flat=True))
+            if can_manage_access(request.user):
+                uc_ids = _coordinator_uc_ids(request.user)
+            else:
+                uc_ids = list(visible_use_cases(request.user).values_list("id", flat=True))
             path = USECASE_FILTER_PATHS.get(key)
             qs = qs.filter(**{f"{path}__in": uc_ids}) if path else qs.none()
 
@@ -128,7 +133,7 @@ class ConsoleListView(UserPassesTestMixin, View):
             "org_filter": org_code,
             # Staff and coordinators may mutate (coordinators only their own,
             # scoped projects); read-only sections are never editable.
-            "can_edit": console_key_allowed(request.user, key) and not m.readonly,
+            "can_edit": console_can_edit(request.user, key),
         }
         return render(request, "console/list.html", ctx)
 
@@ -153,9 +158,9 @@ class ImportCollectionUnitsView(UserPassesTestMixin, View):
     CSV. Staff for any project; a coordinator only for their own."""
 
     def test_func(self) -> bool:
-        from .registry import console_key_allowed
+        from .registry import console_can_edit
 
-        return console_key_allowed(self.request.user, "collection-units")
+        return console_can_edit(self.request.user, "collection-units")
 
     def _ctx(self, request, **extra):
         ctx = {"groups": grouped(), "console_key": "collection-units",
@@ -229,9 +234,9 @@ class ConsoleFormView(UserPassesTestMixin, View):
     foreign-key choices."""
 
     def test_func(self) -> bool:
-        from .registry import console_key_allowed
+        from .registry import console_can_edit
 
-        return console_key_allowed(self.request.user, self.kwargs.get("key"))
+        return console_can_edit(self.request.user, self.kwargs.get("key"))
 
     def _form_class(self, m: Managed):
         return modelform_factory(m.model, fields=m.form_fields or "__all__")
@@ -548,9 +553,9 @@ class ConsoleActionView(StaffMixin, View):
 
 class ConsoleDeleteView(UserPassesTestMixin, View):
     def test_func(self) -> bool:
-        from .registry import console_key_allowed
+        from .registry import console_can_edit
 
-        return console_key_allowed(self.request.user, self.kwargs.get("key"))
+        return console_can_edit(self.request.user, self.kwargs.get("key"))
 
     def get(self, request, key, pk):
         m = _managed(key)
@@ -767,9 +772,9 @@ class JobAssignmentsView(UserPassesTestMixin, View):
     a coordinator only for jobs in their own projects."""
 
     def test_func(self) -> bool:
-        from .registry import console_key_allowed
+        from .registry import console_can_edit
 
-        return console_key_allowed(self.request.user, "jobs")
+        return console_can_edit(self.request.user, "jobs")
 
     def _job(self, request, pk):
         return _scoped_get(request.user, _managed("jobs"), "jobs", pk)

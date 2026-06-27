@@ -49,10 +49,11 @@ def navigation(request):
             status=UseCaseAccessRequest.Status.PENDING, use_case_id__in=list(grant_uc)
         ).count()
 
-    # The sidebar shows a handful of the user's projects; the Projects page is the
-    # scalable directory (search / filter / paginate) for the rest.
+    # The sidebar offers a project dropdown (quick jump); the Projects page is the
+    # scalable directory (search / filter / paginate). Cap the dropdown so it stays
+    # sane for a hub operator with very many projects.
     visible = visible_use_cases(user)
-    nav_use_cases = list(visible[:7])
+    nav_use_cases = list(visible.order_by("code")[:200])
     nav_use_cases_total = visible.count()
     return {
         "nav_use_cases": nav_use_cases,

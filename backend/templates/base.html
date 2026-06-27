@@ -84,6 +84,11 @@
       font-family:var(--sans); font-size:.84rem;}
     .nav .nav-search::placeholder{color:#9fc2b0;}
     .nav .nav-search:focus{outline:none; border-color:var(--gold); background:rgba(255,255,255,.12);}
+    .nav .nav-proj-select{width:100%; margin:.15rem 0 .3rem; padding:.42rem .55rem; border-radius:8px;
+      border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.07); color:#eaf3ee;
+      font-family:var(--sans); font-size:.84rem; cursor:pointer;}
+    .nav .nav-proj-select:focus{outline:none; border-color:var(--gold); background:rgba(255,255,255,.12);}
+    .nav .nav-proj-select option{color:var(--ink); background:#fff;}
     .nav a.nav-add{color:var(--gold); font-weight:600; margin-top:.2rem;}
     .nav a.nav-add:hover{background:rgba(200,162,58,.14); color:#f0e6c8;}
     .nav a.nav-add.active{background:rgba(200,162,58,.18); color:#fff; border-left-color:var(--gold);}
@@ -383,14 +388,16 @@
           <span class="msym">grid_view</span>Projects
           {% if nav_use_cases_total %}<span class="pill neutral" style="margin-left:auto;font-size:.66rem;">{{ nav_use_cases_total }}</span>{% endif %}
         </a>
-        {% if nav_use_cases_total %}
-          <input class="nav-search" type="search" placeholder="Filter projects…"
-                 hx-get="{% url 'dashboards:project_nav_search' %}" hx-target="#nav-proj-list"
-                 hx-trigger="keyup changed delay:250ms, search" name="q" autocomplete="off">
-          <div id="nav-proj-list">
-            {% include "dashboards/_nav_projects.html" with projects=nav_use_cases %}
-          </div>
-          {% if nav_use_cases_total > 7 %}
+        {% if nav_use_cases %}
+          <select class="nav-proj-select" aria-label="Open a project"
+                  onchange="if(this.value){window.location.href=this.value;}">
+            <option value="">Open a project…</option>
+            {% for uc in nav_use_cases %}
+              <option value="{% url 'dashboards:usecase' uc.code %}"
+                {% if request.resolver_match.kwargs.code == uc.code %}selected{% endif %}>{{ uc.name|default:uc.code }}</option>
+            {% endfor %}
+          </select>
+          {% if nav_use_cases_total > nav_use_cases|length %}
             <a href="{% url 'dashboards:projects' %}" class="nav-back" style="font-size:.82rem;">
               <span class="msym">more_horiz</span>All {{ nav_use_cases_total }} projects →
             </a>
@@ -400,7 +407,7 @@
         {% endif %}
         {% if console_groups %}
           {% comment %}Staff get full Administration; coordinators get a read-only, scoped Manage view of their projects' config & field data. Only the group you're in auto-expands.{% endcomment %}
-          <div class="lbl" style="margin-top:.5rem;">{% if user.is_staff %}Administration{% else %}Configure{% endif %}</div>
+          <div class="lbl" style="margin-top:.5rem;">{% if user.is_staff %}Administration{% elif can_manage_access %}Configure{% else %}Data{% endif %}</div>
           {% for group, items in console_groups %}
             <details class="nav-group" {% if group == console_active_group %}open{% endif %}>
               <summary>{{ group }}<span class="msym chev">chevron_right</span></summary>

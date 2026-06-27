@@ -54,10 +54,12 @@ def test_link_enumerators_scoped(world):
     assert codes == {"MINE"}  # the other project's enumerator is out of scope
 
 
-def test_access_requests_visible_to_coordinator(client, world):
+def test_access_requests_not_a_coordinator_console_section(client, world):
+    # Access requests are handled in 'Team & access', so the raw console section
+    # stays staff-only — coordinators don't get a duplicate of it.
     client.force_login(world["coord"])
     resp = client.get(reverse("console:list", args=["access-requests"]))
-    assert resp.status_code == 200
+    assert resp.status_code != 200
 
 
 def test_access_requests_blocked_for_member(client, world):

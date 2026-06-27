@@ -1,9 +1,0 @@
-{% for uc in projects %}
-  <a href="{% url 'dashboards:usecase' uc.code %}"
-     title="Open {{ uc.name }}"
-     class="{% if request.resolver_match.kwargs.code == uc.code %}active{% endif %}">
-    <span class="msym">monitoring</span>{{ uc.name }}
-  </a>
-{% empty %}
-  <div class="muted-note">No matching projects.</div>
-{% endfor %}
