@@ -75,6 +75,7 @@ LOCAL_APPS = [
     "apps.review",
     "apps.validation",
     "apps.fieldwork",
+    "apps.kpi",
     "apps.dashboards",
     "apps.console",
     "apps.api",
@@ -200,23 +201,21 @@ CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default="redis://localhost:6379/1")
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 CELERY_TASK_ALWAYS_EAGER = env.bool("CELERY_TASK_ALWAYS_EAGER", default=False)
+# The DatabaseScheduler syncs these into django_celery_beat on startup.
 CELERY_BEAT_SCHEDULE = {
-    "sync-all-use-cases-daily": {
+    # Daily ONA sync (replaces the R `0 0 * * * Rscript dataprocessing.R` cron).
+    "daily-source-sync": {
         "task": "ingestion.sync_all_use_cases",
-        "schedule": crontab(hour=2, minute=0),  # daily 02:00 (was the R cron)
+        "schedule": crontab(hour=0, minute=0),
     },
     "review-digest-weekday-mornings": {
         "task": "review.send_review_digests",
         "schedule": crontab(hour=7, minute=0, day_of_week="mon-fri"),
     },
-}
-
-# Daily ONA sync (replaces the R `0 0 * * * Rscript dataprocessing.R` cron).
-# The DatabaseScheduler syncs this into django_celery_beat on startup.
-CELERY_BEAT_SCHEDULE = {
-    "daily-ona-sync": {
-        "task": "ingestion.sync_all_use_cases",
-        "schedule": crontab(hour=0, minute=0),
+    # M&E KPI aggregates — near-real-time refresh.
+    "kpi-rebuild-15min": {
+        "task": "kpi.rebuild_all",
+        "schedule": crontab(minute="*/15"),
     },
 }
 
