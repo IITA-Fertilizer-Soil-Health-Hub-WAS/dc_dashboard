@@ -15,3 +15,6 @@ data
 .idea/
 .DS_Store
 .claude/
+
+# Uploaded files (XLSForms etc.)
+backend/media/
