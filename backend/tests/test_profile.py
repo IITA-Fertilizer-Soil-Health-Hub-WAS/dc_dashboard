@@ -19,8 +19,7 @@ def _valid_post():
         "first_name": "Ama", "second_name": "", "family_name": "Mensah",
         "gender": "female", "age": "29", "education_level": "secondary",
         "phone": "+233200000000", "phone_alt": "", "country": "Ghana",
-        "enumerator_card_id": "", "consent_personal_info": "on",
-        "consent_followup": "on", "consent_photos": "",
+        "consent_personal_info": "on", "consent_followup": "on", "consent_photos": "",
     }
 
 

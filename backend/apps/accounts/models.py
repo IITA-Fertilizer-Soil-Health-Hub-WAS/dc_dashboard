@@ -141,8 +141,8 @@ class UserProfile(models.Model):
 
     phone_alt = models.CharField(max_length=32, blank=True)
     country = models.CharField(max_length=64, blank=True)
-    # The physical Enumerator card barcode assigned in the field (13 chars), if any.
-    enumerator_card_id = models.CharField(max_length=32, blank=True)
+    # The enumerator card / identity is the account's own User.user_id — no
+    # separate field is needed.
 
     consent_personal_info = models.BooleanField(default=False)
     consent_followup = models.BooleanField(default=False)

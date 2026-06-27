@@ -40,14 +40,16 @@
 
     <div class="card" style="margin-bottom:1.1rem;">
       <h3 style="margin-bottom:.8rem;">Contact</h3>
-      <div class="field"><label>Email</label>
-        <input type="email" value="{{ user.email }}" disabled style="background:var(--surface-2);color:var(--muted);">
-      </div>
       <div class="grid2">
+        <div class="field"><label>Email</label>
+          <input type="email" value="{{ user.email }}" disabled style="background:var(--surface-2);color:var(--muted);">
+        </div>
+        <div class="field"><label>Your User ID <span class="subtle">(your enumerator card)</span></label>
+          <input type="text" value="{{ user.user_id }}" disabled style="background:var(--surface-2);color:var(--muted);font-family:var(--mono);">
+        </div>
         <div class="field"><label>Primary mobile phone *</label>{{ form.phone }}{{ form.phone.errors }}</div>
         <div class="field"><label>Alternate phone</label>{{ form.phone_alt }}</div>
         <div class="field"><label>Country *</label>{{ form.country }}{{ form.country.errors }}</div>
-        <div class="field"><label>Enumerator card ID <span class="subtle">(if assigned)</span></label>{{ form.enumerator_card_id }}</div>
       </div>
     </div>
 
