@@ -22,7 +22,7 @@ from apps.review.state_machine import ReviewPermissionDenied, TransitionError
 from apps.submissions.models import Enumerator, Submission
 from apps.validation.models import ValidationFlag
 
-from .charts import points_map_html, submission_trend_html, trials_map_html
+from .charts import monthly_submission_counts, points_map_html, trials_map_html
 from .final import final_rows
 from .grid import build_event_grid
 from .scoping import get_scoped_use_case
@@ -183,12 +183,14 @@ def tab_summary(request, code):
         map_html = points_map_html(points)
     else:
         map_html = trials_map_html(list(uc.households.all()))
+    trend = monthly_submission_counts(submissions)
     ctx = {
         "uc": uc,
         "total_submissions": len(submissions),
         "mapped_points": len(points),
         "country": ", ".join(uc.countries) or "—",
-        "trend_html": submission_trend_html(submissions),
+        "trend": trend,
+        "trend_max": max((t["n"] for t in trend), default=0),
         "map_html": map_html,
         "health": _health_counts(uc),
         "attribution": _attribution_stats(uc),

@@ -61,6 +61,13 @@
   </div>
   <div class="card" style="flex:1; min-width:340px;">
     <h3>Trend of submissions</h3>
-    {{ trend_html|safe }}
+    {% if trend %}
+      <div class="kbars" role="img" aria-label="Monthly submissions — {{ total_submissions }} total across {{ trend|length }} month(s).">
+        {% for t in trend %}<div class="b" title="{{ t.month }}: {{ t.n }}" aria-hidden="true"><i style="height:{% widthratio t.n trend_max 110 %}px;"></i></div>{% endfor %}
+      </div>
+      <div class="kaxis"><span>{{ trend.0.month }}</span>{% with trend|last as lp %}<span>{{ lp.month }}</span>{% endwith %}</div>
+    {% else %}
+      <div class="empty" style="border:none;">No submissions yet.</div>
+    {% endif %}
   </div>
 </div>

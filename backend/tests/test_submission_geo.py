@@ -1,6 +1,8 @@
 """Submission location: the server's geodata lands on the submission and maps."""
 from __future__ import annotations
 
+from datetime import UTC
+
 import pytest
 from django.urls import reverse
 
@@ -49,3 +51,17 @@ def test_summary_map_plots_submission_points(client, world):
     assert resp.context["mapped_points"] == 1            # one submission has geo
     assert b"Submissions by location" in resp.content
     assert b"1 mapped" in resp.content
+
+
+def test_trend_uses_submission_time_when_no_event_date(django_user_model):
+    from datetime import datetime
+
+    from apps.dashboards.charts import _effective_date
+
+    org = Organization.objects.create(code="o2", name="O2")
+    uc = UseCase.objects.create(code="P2", name="P2", organization=org)
+    form = FormDefinition.objects.create(use_case=uc, ona_form_id=3, role=FormDefinition.Role.VALIDATION)
+    # No event_date, but a server submission_time — the trend must still place it.
+    s = Submission.objects.create(use_case=uc, form=form, ona_uuid="t1", content_hash="h",
+                                  ona_submission_time=datetime(2024, 6, 15, 9, 0, tzinfo=UTC))
+    assert _effective_date(s).strftime("%Y-%m") == "2024-06"
