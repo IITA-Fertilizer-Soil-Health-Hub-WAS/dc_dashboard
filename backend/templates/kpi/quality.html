@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Quality · {{ uc.code }} · EiA2030 DCMT{% endblock %}
+{% block title %}Quality · {{ uc.code }} · {{ SITE_NAME }}{% endblock %}
 {% block crumbs %}<span class="sep">/</span><a href="{% url 'kpi:overview' %}">M&amp;E</a><span class="sep">/</span><a href="{% url 'kpi:project' uc.code %}">{{ uc.code }}</a><span class="sep">/</span><span class="cur">Quality</span>{% endblock %}
 {% block extrahead %}<style>
   .sevbar{display:flex;align-items:center;gap:.6rem;margin:.4rem 0;}

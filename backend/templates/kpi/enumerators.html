@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Enumerators · {{ uc.code }} · EiA2030 DCMT{% endblock %}
+{% block title %}Enumerators · {{ uc.code }} · {{ SITE_NAME }}{% endblock %}
 {% block crumbs %}<span class="sep">/</span><a href="{% url 'kpi:overview' %}">M&amp;E</a><span class="sep">/</span><a href="{% url 'kpi:project' uc.code %}">{{ uc.code }}</a><span class="sep">/</span><span class="cur">Enumerators</span>{% endblock %}
 {% block extrahead %}<style>
   .lead-bar{display:block;height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:.25rem;}

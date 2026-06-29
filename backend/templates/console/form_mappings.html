@@ -1,5 +1,5 @@
 {% extends "console/base.html" %}
-{% block title %}Field mappings · {{ form }} · EiA2030 DCMT{% endblock %}
+{% block title %}Field mappings · {{ form }} · {{ SITE_NAME }}{% endblock %}
 {% block crumbs %}<span class="sep">/</span><span class="cur">Manage</span><span class="sep">/</span><a href="{% url 'console:list' 'forms' %}">Forms</a><span class="sep">/</span><span class="cur">Mappings</span>{% endblock %}
 {% block extrahead %}{{ block.super }}
 <style>

@@ -120,6 +120,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "apps.common.context_processors.site",
                 "apps.dashboards.context_processors.navigation",
             ],
         },
@@ -145,6 +146,10 @@ AUTHENTICATION_BACKENDS = [
     "guardian.backends.ObjectPermissionBackend",
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
+
+# Product name shown in the UI (title bars, sidebar brand, login). Configurable
+# so the platform can be white-labelled per deployment.
+SITE_NAME = env("SITE_NAME", default="Data Collection Monitor")
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
