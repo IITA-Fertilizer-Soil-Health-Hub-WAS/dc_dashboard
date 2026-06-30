@@ -32,7 +32,7 @@ class Command(BaseCommand):
         )
 
         admin, created = User.objects.get_or_create(
-            email="admin@eia.local",
+            email="admin@fieldbase.local",
             defaults={"is_staff": True, "is_superuser": True, "is_active": True,
                       "email_verified": True, "full_name": "Platform Admin"},
         )
@@ -41,9 +41,9 @@ class Command(BaseCommand):
             admin.save()
 
         role_users = {
-            Role.COUNTRY_COORDINATOR: "country-coordinator@eia.local",
-            Role.TRIAL_COORDINATOR: "coordinator@eia.local",
-            Role.VIEWER: "viewer@eia.local",
+            Role.COUNTRY_COORDINATOR: "country-coordinator@fieldbase.local",
+            Role.TRIAL_COORDINATOR: "coordinator@fieldbase.local",
+            Role.VIEWER: "viewer@fieldbase.local",
         }
         for role, email in role_users.items():
             user, created = User.objects.get_or_create(
@@ -59,6 +59,6 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(
             f"Seeded use cases [{rwanda.code}, {kalro.code}] and users "
-            f"(password='{DEMO_PASSWORD}'): admin@eia.local, coordinator@eia.local, "
-            f"agronomist@eia.local, viewer@eia.local"
+            f"(password='{DEMO_PASSWORD}'): admin@fieldbase.local, coordinator@fieldbase.local, "
+            f"agronomist@fieldbase.local, viewer@fieldbase.local"
         ))

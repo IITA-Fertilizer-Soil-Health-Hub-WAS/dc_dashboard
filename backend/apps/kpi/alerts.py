@@ -128,7 +128,7 @@ def run_alerts() -> dict[str, int]:
     events fired and emails sent."""
     fired = 0
     emailed = 0
-    sender = getattr(settings, "DEFAULT_FROM_EMAIL", "no-reply@eia.local")
+    sender = getattr(settings, "DEFAULT_FROM_EMAIL", "no-reply@fieldbase.local")
     for rule in AlertRule.objects.filter(is_enabled=True).select_related("use_case"):
         targets = [rule.use_case] if rule.use_case_id else list(
             UseCase.objects.filter(is_active=True)

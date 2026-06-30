@@ -22,7 +22,7 @@ def notify_assignment(submission, assignee) -> None:
     try:
         send_mail(
             subject, body,
-            getattr(settings, "DEFAULT_FROM_EMAIL", "no-reply@eia.local"),
+            getattr(settings, "DEFAULT_FROM_EMAIL", "no-reply@fieldbase.local"),
             [assignee.email], fail_silently=True,
         )
     except Exception:  # pragma: no cover - defensive

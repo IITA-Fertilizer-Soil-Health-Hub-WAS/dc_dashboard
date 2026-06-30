@@ -48,7 +48,7 @@ def send_review_digests() -> int:
     """Email each use case's reviewers a summary of work awaiting them.
     Returns the number of emails sent. Skips use cases with nothing pending."""
     sent = 0
-    sender = getattr(settings, "DEFAULT_FROM_EMAIL", "no-reply@eia.local")
+    sender = getattr(settings, "DEFAULT_FROM_EMAIL", "no-reply@fieldbase.local")
     for uc in UseCase.objects.filter(is_active=True):
         summary = pending_summary(uc)
         if not summary["pending"] and not summary["open_issues"]:

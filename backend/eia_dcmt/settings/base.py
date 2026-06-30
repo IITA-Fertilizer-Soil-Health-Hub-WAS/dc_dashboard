@@ -151,6 +151,11 @@ AUTHENTICATION_BACKENDS = [
 # so the platform can be white-labelled per deployment.
 SITE_NAME = env("SITE_NAME", default="Fieldbase")
 
+# Sender for platform email (digests, alerts, notifications).
+DEFAULT_FROM_EMAIL = env(
+    "DEFAULT_FROM_EMAIL", default=f"{SITE_NAME} <no-reply@fieldbase.local>"
+)
+
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -286,9 +291,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # --- django-unfold admin theme (forest green to match the app) ---------------
 UNFOLD = {
-    "SITE_TITLE": "EiA · DCMT Administration",
-    "SITE_HEADER": "EiA · DCMT",
-    "SITE_SUBHEADER": "Data Collection Monitoring",
+    "SITE_TITLE": f"{SITE_NAME} Administration",
+    "SITE_HEADER": SITE_NAME,
+    "SITE_SUBHEADER": "Field data & M&E",
     "SITE_SYMBOL": "eco",  # Material symbol (leaf) shown in the sidebar header
     # Clicking the admin header / "View site" returns to the main app dashboard.
     "SITE_URL": "/",
