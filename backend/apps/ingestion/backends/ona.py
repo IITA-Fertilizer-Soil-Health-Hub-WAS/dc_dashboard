@@ -66,11 +66,13 @@ class OnaBackend(OdkBackend):
             raise RuntimeError(f"form.json HTTP {resp.status_code}: {resp.text[:200]}")
         return parse_form_json(resp.json())
 
-    def fetch_attachment(self, attachment_id) -> tuple[bytes, str]:
-        """Media bytes for a submission photo: GET /api/v1/files/{id}?filename=… .
-        ONA also accepts the plain /files/{id} form; we follow redirects to the
-        stored object."""
-        url = f"{self._base()}/api/v1/files/{int(attachment_id)}"
+    def fetch_attachment(self, attachment: dict[str, Any]) -> tuple[bytes, str]:
+        """Media bytes for a submission photo: GET /api/v1/files/{id}. We follow
+        redirects to the stored object."""
+        att_id = attachment.get("id")
+        if att_id is None:
+            raise RuntimeError("ONA attachment has no file id")
+        url = f"{self._base()}/api/v1/files/{int(att_id)}"
         with httpx.Client(timeout=60.0, follow_redirects=True) as client:
             resp = client.get(url, headers=self._headers())
         if resp.status_code != 200:

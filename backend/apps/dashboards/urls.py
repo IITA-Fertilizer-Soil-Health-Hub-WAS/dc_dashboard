@@ -36,7 +36,7 @@ urlpatterns = [
         name="submission_review",
     ),
     path(
-        "usecase/<slug:code>/submission/<uuid:submission_id>/media/<int:attachment_id>/",
+        "usecase/<slug:code>/submission/<uuid:submission_id>/media/<str:name>/",
         views.submission_media,
         name="submission_media",
     ),

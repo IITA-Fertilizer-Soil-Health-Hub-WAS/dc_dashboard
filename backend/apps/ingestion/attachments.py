@@ -45,5 +45,14 @@ def parse_attachments(raw_payload: dict) -> list[dict]:
             "mimetype": mimetype,
             "is_image": mimetype.startswith(_IMAGE_TYPES),
             "question": ref_by_name.get(name, ""),
+            "download_url": att.get("download_url") or "",
         })
     return out
+
+
+def guess_mimetype(name: str) -> str:
+    """Best-effort content type from a filename, for servers (ODK Central) that
+    list attachments by name without a mimetype."""
+    import mimetypes
+
+    return mimetypes.guess_type(name)[0] or "application/octet-stream"

@@ -93,10 +93,18 @@ class CollectionBackend:
         submissions render with human labels. Default: unsupported (empty)."""
         return []
 
-    def fetch_attachment(self, attachment_id) -> tuple[bytes, str]:
-        """Fetch one media attachment's bytes + content-type by its server id, so
-        the app can proxy photos into the review screen with the backend's own
-        credentials. Default: unsupported."""
+    def list_attachments(self, submission) -> list[dict[str, Any]]:
+        """A submission's media descriptors ({name, mimetype, is_image, question, …}).
+        Default: read the record's embedded `_attachments` (ONA/Kobo). Servers that
+        don't embed them (ODK Central) override to look them up."""
+        from apps.ingestion.attachments import parse_attachments
+
+        return parse_attachments(getattr(submission, "raw_payload", None))
+
+    def fetch_attachment(self, attachment: dict[str, Any]) -> tuple[bytes, str]:
+        """Fetch one media attachment's bytes + content-type, given a descriptor
+        from `list_attachments`, so the app can proxy photos into the review screen
+        with the backend's own credentials. Default: unsupported."""
         raise NotImplementedError(f"{self.label or self.type} does not support attachments")
 
     # --- write-back ---

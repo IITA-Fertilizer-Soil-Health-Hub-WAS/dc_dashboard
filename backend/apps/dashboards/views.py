@@ -508,11 +508,10 @@ def submission_review(request, code, submission_id):
     from apps.review.models import RejectionReason
 
     fields = _merged_fields(submission)
-    from apps.ingestion.attachments import parse_attachments
     from apps.ingestion.form_schema import label_map
 
     lm = label_map(getattr(submission.form, "field_schema", None) or [])
-    media = parse_attachments(submission.raw_payload)
+    media = _list_media(uc, submission)
     for m in media:
         meta = lm.get(m["question"])
         m["question_label"] = meta["label"] if meta else m["question"]
@@ -527,22 +526,34 @@ def submission_review(request, code, submission_id):
     })
 
 
+def _list_media(uc, submission) -> list[dict]:
+    """A submission's media descriptors via its backend (ONA/Kobo read the embedded
+    `_attachments`; ODK Central looks them up). Never fatal to the review page: on
+    any backend error, fall back to whatever is embedded in the record."""
+    try:
+        from apps.ingestion.backends.registry import get_backend_for
+
+        return get_backend_for(uc).list_attachments(submission)
+    except Exception:
+        from apps.ingestion.attachments import parse_attachments
+
+        return parse_attachments(getattr(submission, "raw_payload", None))
+
+
 @login_required
-def submission_media(request, code, submission_id, attachment_id):
+def submission_media(request, code, submission_id, name):
     """Stream one submission photo/media through the app, using the backend's own
-    credentials — ONA attachments aren't publicly fetchable. Scoped to a member of
-    the use case, and the attachment must belong to this submission's record."""
+    credentials — collection-server attachments aren't publicly fetchable. Scoped to
+    a member of the use case; the file must belong to this submission's record."""
     uc = get_scoped_use_case(request, code)
     submission = get_object_or_404(Submission, use_case=uc, pk=submission_id)
-    from apps.ingestion.attachments import parse_attachments
+    match = next((a for a in _list_media(uc, submission) if a.get("name") == name), None)
+    if match is None:
+        raise Http404("Attachment not part of this submission.")
     from apps.ingestion.backends.registry import get_backend_for
 
-    valid_ids = {a["id"] for a in parse_attachments(submission.raw_payload)}
-    if attachment_id not in valid_ids:
-        raise Http404("Attachment not part of this submission.")
-
     try:
-        data, ctype = get_backend_for(uc).fetch_attachment(attachment_id)
+        data, ctype = get_backend_for(uc).fetch_attachment(match)
     except NotImplementedError:
         raise Http404("This source does not expose attachments.") from None
     except Exception as exc:

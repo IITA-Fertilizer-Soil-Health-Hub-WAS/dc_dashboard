@@ -70,6 +70,60 @@ class OdkCentralBackend(OdkBackend):
         path = f"/v1/projects/{self._project_id()}/forms/{form_id}.svc/Submissions"
         yield from self._get_json(path).get("value", [])
 
+    # --- media ---
+    def _instance_ref(self, submission) -> tuple[str, str]:
+        """(instanceId, xmlFormId) for a submission — Central looks media up by both."""
+        payload = getattr(submission, "raw_payload", None) or {}
+        instance = payload.get("__id") or getattr(submission, "ona_uuid", "")
+        form = getattr(submission, "form", None)
+        form_ref = getattr(form, "server_ref", "") if form else ""
+        return instance, form_ref
+
+    def list_attachments(self, submission) -> list[dict[str, Any]]:
+        """Central doesn't embed `_attachments`; list them per submission:
+        GET /v1/projects/{pid}/forms/{fid}/submissions/{instance}/attachments →
+        [{name, exists}]. The answering question is matched by filename value."""
+        from apps.ingestion.attachments import guess_mimetype
+
+        instance, form_ref = self._instance_ref(submission)
+        if not (instance and form_ref):
+            return []
+        pid = self._project_id()
+        path = f"/v1/projects/{pid}/forms/{form_ref}/submissions/{instance}/attachments"
+        try:
+            items = self._get_json(path)
+        except BackendError:
+            return []
+        payload = getattr(submission, "raw_payload", None) or {}
+        ref_by_name = {v: k for k, v in payload.items() if isinstance(v, str) and v}
+        out: list[dict[str, Any]] = []
+        for it in items:
+            name = it.get("name")
+            if not name or it.get("exists") is False:
+                continue
+            mimetype = guess_mimetype(name)
+            out.append({
+                "id": name, "name": name, "mimetype": mimetype,
+                "is_image": mimetype.startswith("image/"),
+                "question": ref_by_name.get(name, ""),
+                "instance": instance, "form_ref": form_ref,
+            })
+        return out
+
+    def fetch_attachment(self, attachment: dict[str, Any]) -> tuple[bytes, str]:
+        name = attachment.get("name")
+        instance, form_ref = attachment.get("instance"), attachment.get("form_ref")
+        if not (name and instance and form_ref):
+            raise BackendError("ODK Central attachment is missing its submission ref")
+        pid = self._project_id()
+        path = f"/v1/projects/{pid}/forms/{form_ref}/submissions/{instance}/attachments/{name}"
+        with httpx.Client(timeout=60.0, follow_redirects=True) as client:
+            resp = client.get(f"{self._base()}{path}",
+                              headers={"Authorization": f"Bearer {self.token}"})
+        if resp.status_code != 200:
+            raise BackendError(f"Central attachment HTTP {resp.status_code}: {resp.text[:200]}")
+        return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
+
     # --- write-back ---
     def _fetch_instance_xml(self, form_id, data_id) -> str:
         path = f"/v1/projects/{self._project_id()}/forms/{form_id}/submissions/{data_id}.xml"

@@ -62,6 +62,18 @@ class KoboBackend(OdkBackend):
         data = self._get_json(f"{self._kpi()}/api/v2/assets/{form_id}/data/?format=json")
         yield from data.get("results", [])
 
+    def fetch_attachment(self, attachment: dict[str, Any]) -> tuple[bytes, str]:
+        """Kobo embeds each attachment's `download_url` (on KoBoCAT) in the record;
+        fetch it with the API token."""
+        url = attachment.get("download_url")
+        if not url:
+            raise BackendError("Kobo attachment has no download_url")
+        with httpx.Client(timeout=60.0, follow_redirects=True) as client:
+            resp = client.get(url, headers={"Authorization": f"Token {self.token}"})
+        if resp.status_code != 200:
+            raise BackendError(f"Kobo attachment HTTP {resp.status_code}: {resp.text[:200]}")
+        return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
+
     # --- write-back via KoBoCAT (OpenRosa) ---
     def _fetch_instance_xml(self, form_id, data_id) -> str:
         url = f"{self._kc()}/api/v1/data/{form_id}/{data_id}.xml"

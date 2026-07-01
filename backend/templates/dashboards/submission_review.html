@@ -83,7 +83,7 @@
           </div>
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.7rem;">
             {% for m in media %}
-              {% url 'dashboards:submission_media' uc.code submission.id m.id as media_url %}
+              {% url 'dashboards:submission_media' uc.code submission.id m.name as media_url %}
               <figure style="margin:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface-2,#f6f7f9);">
                 {% if m.is_image %}
                   <a href="{{ media_url }}" target="_blank" rel="noopener" title="Open full size">
