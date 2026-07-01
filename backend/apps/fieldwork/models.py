@@ -67,12 +67,28 @@ class Job(BaseModel):
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
         related_name="created_jobs",
     )
+    # Closure: a job is wrapped up with an optional note (who/when/why).
+    closed_at = models.DateTimeField(null=True, blank=True)
+    closed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="closed_jobs",
+    )
+    closure_note = models.TextField(blank=True)
 
     class Meta:
         ordering = ["-created_at"]
 
     def __str__(self) -> str:
         return f"{self.use_case.code}:{self.name}"
+
+    def close(self, user, note: str = "") -> None:
+        from django.utils import timezone
+
+        self.status = self.Status.CLOSED
+        self.closed_by = user if getattr(user, "is_authenticated", False) else None
+        self.closed_at = timezone.now()
+        self.closure_note = note
+        self.save(update_fields=["status", "closed_by", "closed_at", "closure_note", "updated_at"])
 
 
 class UnitAssignment(BaseModel):

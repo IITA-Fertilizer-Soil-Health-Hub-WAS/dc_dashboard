@@ -18,6 +18,7 @@
           <tr>
             <td style="white-space:nowrap;">
               <a href="{% url 'dashboards:submission_review' uc.code row.s.id %}">{{ row.s.enumerator.enid|default:"—" }}</a>
+              {% if row.corrected %}<span class="pill gold" style="font-size:.6rem;">corrected</span>{% endif %}
               <div class="subtle" style="font-size:.72rem;">{{ row.s.household.hhid|default:row.s.ona_uuid|truncatechars:12 }} · {{ row.s.event_date|default:"—" }}</div>
             </td>
             <td style="white-space:nowrap;">{% if row.s.collected_by %}<span class="uid" title="{{ row.s.collected_by.email }}">{{ row.s.collected_by.user_id }}</span>{% else %}<span class="subtle">—</span>{% endif %}</td>

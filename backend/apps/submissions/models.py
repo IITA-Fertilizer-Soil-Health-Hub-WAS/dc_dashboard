@@ -148,6 +148,12 @@ class Submission(BaseModel):
     def __str__(self) -> str:
         return f"{self.use_case.code}:{self.ona_uuid}"
 
+    @property
+    def is_corrected(self) -> bool:
+        """True if any field was edited by a reviewer during QC (shows a
+        'Corrected' badge, mirroring SDMT)."""
+        return any(v.is_edited for v in self.values.all())
+
 
 class SubmissionValue(BaseModel):
     """Field-level authoritative layer. ``raw_value`` is immutable; ``current_value``

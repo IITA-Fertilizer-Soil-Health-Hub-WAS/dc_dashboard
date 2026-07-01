@@ -13,6 +13,7 @@ from apps.accounts.models import User, UserProfile
 from apps.fieldwork.models import CollectionUnit, Job
 from apps.kpi.models import AlertEvent, AlertRule
 from apps.rbac.models import UseCaseAccessRequest, UseCaseMembership
+from apps.review.models import RejectionReason
 from apps.submissions.models import Enumerator, Household, Submission
 from apps.usecases.models import (
     Country,
@@ -114,6 +115,11 @@ _ENTRIES: list[Managed] = [
                          "auto_flag_state", "is_enabled"],
             search_fields=["code"], icon="rule",
             description="Checks that flag submissions for review."),
+    Managed("rejection-reasons", RejectionReason, "Rejection reasons", "Configuration",
+            list_display=["use_case", "code", "label", "order", "is_active"],
+            form_fields=["use_case", "code", "label", "order", "is_active"],
+            search_fields=["code", "label"], icon="block",
+            description="Categorised reasons a reviewer can decline a submission for."),
     # ---- Access: who can see & act ----
     Managed("users", User, "Users", "Accounts & roles",
             list_display=["user_id", "email", "full_name", "organization", "is_active",
@@ -194,8 +200,9 @@ REGISTRY: dict[str, Managed] = {m.key: m for m in _ENTRIES}
 # (so access-requests is intentionally NOT a separate console section for them).
 COORDINATOR_CONSOLE_KEYS: set[str] = {
     "forms", "field-mappings", "event-schedule", "crops", "trials", "stages",
-    "validation-rules", "jobs", "collection-units", "enumerators", "households",
-    "submissions", "validation-flags", "alert-rules", "alert-events",
+    "validation-rules", "rejection-reasons", "jobs", "collection-units",
+    "enumerators", "households", "submissions", "validation-flags",
+    "alert-rules", "alert-events",
 }
 
 # Field-data sections an ordinary member (viewer / enumerator) may VIEW, read-only
@@ -215,6 +222,7 @@ USECASE_FILTER_PATHS: dict[str, str] = {
     "trials": "use_case",
     "stages": "use_case",
     "validation-rules": "use_case",
+    "rejection-reasons": "use_case",
     "jobs": "use_case",
     "collection-units": "use_case",
     "enumerators": "use_case",

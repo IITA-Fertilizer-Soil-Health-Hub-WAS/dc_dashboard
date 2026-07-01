@@ -12,6 +12,29 @@ from django.db import models
 
 from apps.common.models import BaseModel
 from apps.submissions.models import Submission
+from apps.usecases.models import UseCase
+
+
+class RejectionReason(BaseModel):
+    """A configurable reason a submission can be declined for — so rejections are
+    categorised (and reportable) instead of only a free-text note. Adapted from
+    SDMT's rejection-reason taxonomy. `use_case` null = available to every project."""
+
+    use_case = models.ForeignKey(
+        UseCase, null=True, blank=True, on_delete=models.CASCADE,
+        related_name="rejection_reasons",
+    )
+    code = models.SlugField(max_length=64)
+    label = models.CharField(max_length=255)
+    order = models.PositiveSmallIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["order", "label"]
+        unique_together = ("use_case", "code")
+
+    def __str__(self) -> str:
+        return self.label
 
 
 class ReviewState(models.TextChoices):
@@ -74,6 +97,11 @@ class Review(BaseModel):
         related_name="qc_signed_reviews",
     )
     qc_signed_at = models.DateTimeField(null=True, blank=True)
+    # Why the submission was declined (categorised), set on the DECLINE action.
+    rejection_reason = models.ForeignKey(
+        RejectionReason, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="reviews",
+    )
 
     class Meta:
         ordering = ["-updated_at"]

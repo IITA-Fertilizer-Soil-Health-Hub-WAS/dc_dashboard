@@ -796,6 +796,7 @@ class JobAssignmentsView(UserPassesTestMixin, View):
         taken = job.assignments.values_list("unit_id", flat=True)
         return _console_page_ctx("jobs") | {
             "job": job,
+            "can_edit": True,  # reaching this view already requires edit rights
             "assignments": job.assignments.select_related("unit", "enumerator")
             .prefetch_related("unit__submissions").all(),
             "available_units": CollectionUnit.objects.filter(use_case=job.use_case)
@@ -816,7 +817,16 @@ class JobAssignmentsView(UserPassesTestMixin, View):
         action = request.POST.get("action")
         enum = User.objects.filter(pk=request.POST.get("enumerator")).first()
 
-        if action == "remove":
+        if action == "close_job":
+            job.close(request.user, note=(request.POST.get("closure_note") or "").strip())
+            messages.success(request, f"Job {job.name} closed.")
+        elif action == "reopen_job":
+            job.status = job.Status.ACTIVE
+            job.closed_at = job.closed_by = None
+            job.closure_note = ""
+            job.save(update_fields=["status", "closed_at", "closed_by", "closure_note", "updated_at"])
+            messages.success(request, f"Job {job.name} reopened.")
+        elif action == "remove":
             UnitAssignment.objects.filter(job=job, pk=request.POST.get("assignment")).delete()
         elif action == "assign_all":
             units = CollectionUnit.objects.filter(use_case=job.use_case).exclude(

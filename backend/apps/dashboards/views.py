@@ -347,16 +347,20 @@ def _data_grid(submissions, max_cols: int = 60):
     built = []
     for s in submissions:
         fm = _raw_field_map(s.raw_payload)
+        corrected = False
         for v in s.values.all():           # overlay reviewer edits
             if v.field_key in fm:
                 fm[v.field_key] = v.current_value
+            if v.is_edited:
+                corrected = True
         for k in fm:
             if k not in seen:
                 seen.add(k)
                 col_order.append(k)
-        built.append((s, fm))
+        built.append((s, fm, corrected))
     columns = sorted(col_order)[:max_cols]
-    rows = [{"s": s, "cells": [fm.get(c, "") for c in columns]} for s, fm in built]
+    rows = [{"s": s, "corrected": corrected, "cells": [fm.get(c, "") for c in columns]}
+            for s, fm, corrected in built]
     return columns, rows
 
 
@@ -469,6 +473,16 @@ def submission_review(request, code, submission_id):
             elif action == "assign_me":
                 services.assign(request.user, submission, request.user)
                 ok = "Assigned to you."
+            elif action == ReviewAction.DECLINE:
+                reason = None
+                rc = (request.POST.get("rejection_reason") or "").strip()
+                if rc:
+                    from apps.review.models import RejectionReason
+                    reason = RejectionReason.objects.filter(
+                        Q(use_case=uc) | Q(use_case__isnull=True), pk=rc
+                    ).first()
+                services.decline(request.user, submission, note=note, reason=reason)
+                ok = "Decline recorded."
             elif action in ACTION_SERVICES:
                 ACTION_SERVICES[action](request.user, submission, note=note)
                 ok = f"{dict(ReviewAction.choices).get(action, action)} recorded."
@@ -491,10 +505,17 @@ def submission_review(request, code, submission_id):
         "final_approve": user_can(request.user, "final_approve", uc),
         "open_review": user_can(request.user, "open_review", uc),
     }
+    from apps.review.models import RejectionReason
+
+    fields = _merged_fields(submission)
     return render(request, "dashboards/submission_review.html", {
         "uc": uc, "submission": submission, "flags": flags,
         "actions": actions, "review": review, "can": can, "ok": ok, "error": error,
-        "fields": _merged_fields(submission),
+        "fields": fields,
+        "is_corrected": any(f["is_edited"] for f in fields),
+        "rejection_reasons": RejectionReason.objects.filter(
+            Q(use_case=uc) | Q(use_case__isnull=True), is_active=True
+        ).order_by("order", "label"),
     })
 
 

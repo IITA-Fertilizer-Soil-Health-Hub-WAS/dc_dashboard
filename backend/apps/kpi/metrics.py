@@ -194,9 +194,24 @@ def quality_metrics(use_case, days: str = "30") -> dict:
     heatmap.sort(key=lambda x: -x["total"])
     cell_max = max((c["n"] for row in heatmap for c in row["cells"]), default=0)
 
+    # Declined submissions grouped by their categorised rejection reason.
+    from apps.review.models import Review, ReviewState
+
+    rejections = list(
+        Review.objects.filter(
+            submission__use_case=use_case, state=ReviewState.DECLINED,
+            rejection_reason__isnull=False,
+        )
+        .values("rejection_reason__label")
+        .annotate(n=Count("id")).order_by("-n")
+    )
+    rej_max = max((r["n"] for r in rejections), default=0)
+
     return {
         "days": days,
         "period_label": PERIODS.get(days, "Last 30 days"),
+        "rejections_by_reason": rejections,
+        "rej_max": rej_max,
         "total_flags": total,
         "open_flags": open_n,
         "resolved_flags": resolved_n,

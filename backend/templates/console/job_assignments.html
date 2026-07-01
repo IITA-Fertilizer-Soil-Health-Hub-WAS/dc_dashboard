@@ -16,11 +16,24 @@
   <div class="card" style="margin-bottom:1.2rem;">
     <h3 style="display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem;">
       <span class="msym" style="color:var(--brand);">insights</span>Progress
-      <span class="pill {% if progress.pct == 100 %}ok{% elif progress.overdue %}danger{% else %}info{% endif %}" style="margin-left:auto;">{{ progress.pct }}%</span>
+      <span class="pill {% if progress.pct == 100 %}ok{% elif progress.overdue %}danger{% else %}info{% endif %}" style="margin-left:auto;">{{ progress.pct }}% collected</span>
+      <span class="pill {% if progress.qc_pct == 100 %}ok{% else %}neutral{% endif %}">{{ progress.qc_pct }}% QC</span>
       {% if progress.overdue %}<span class="pill danger">overdue</span>{% endif %}
+      {% if job.status == 'CLOSED' %}<span class="pill neutral">closed</span>{% endif %}
     </h3>
     <div class="meter" style="margin-bottom:.5rem;"><i style="width:{{ progress.pct }}%;"></i></div>
-    <p class="subtle" style="margin:0;font-size:.82rem;">{{ progress.collected }} collected · {{ progress.pending }} pending · target {{ progress.target }}</p>
+    <p class="subtle" style="margin:0;font-size:.82rem;">{{ progress.collected }} collected · {{ progress.pending }} pending · target {{ progress.target }} · {{ progress.approved_submissions }}/{{ progress.submissions }} submissions validated</p>
+    {% if job.status == 'CLOSED' %}
+      <div class="banner info" style="margin-top:.8rem;"><span class="msym">lock</span><div class="bx">Closed {{ job.closed_at|date:"M j, Y" }}{% if job.closed_by %} by {{ job.closed_by.full_name|default:job.closed_by.email }}{% endif %}{% if job.closure_note %} — {{ job.closure_note }}{% endif %}</div>
+        {% if can_edit %}<form method="post" style="margin:0;" class="ba"><input type="hidden" name="action" value="reopen_job">{% csrf_token %}<button class="btn btn-request" type="submit">Reopen</button></form>{% endif %}
+      </div>
+    {% elif can_edit %}
+      <form method="post" style="margin-top:.8rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+        {% csrf_token %}<input type="hidden" name="action" value="close_job">
+        <input name="closure_note" placeholder="Closing comment (optional)" style="flex:1;min-width:200px;padding:.4rem .6rem;border:1px solid var(--line);border-radius:7px;font-size:.85rem;">
+        <button class="btn btn-decline" type="submit" onclick="return confirm('Close this job?');">Close job</button>
+      </form>
+    {% endif %}
     {% if enum_progress %}
       <div class="table-wrap" style="margin-top:.8rem;">
       <table>

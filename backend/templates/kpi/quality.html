@@ -38,6 +38,15 @@
           <span class="v">{{ s.n }}</span>
         </div>
       {% empty %}<div class="empty" style="border:none;">No flags in this period.</div>{% endfor %}
+
+      <h3 style="margin:1.2rem 0 .8rem;">Rejections by reason</h3>
+      {% for r in rejections_by_reason %}
+        <div class="sevbar">
+          <span class="nm" title="{{ r.rejection_reason__label }}">{{ r.rejection_reason__label }}</span>
+          <div class="track"><i style="width:{% widthratio r.n rej_max 100 %}%;background:#c3531f;"></i></div>
+          <span class="v">{{ r.n }}</span>
+        </div>
+      {% empty %}<div class="subtle" style="font-size:.82rem;">No categorised rejections yet.</div>{% endfor %}
     </div>
     <div class="card" style="flex:2;min-width:380px;padding:0;overflow:hidden;">
       <div style="padding:1.15rem 1.25rem .4rem;"><h3>Open flags by rule</h3></div>

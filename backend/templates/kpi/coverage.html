@@ -31,7 +31,7 @@
         <div class="jrow">
           <span class="nm">{{ jp.job.name }}</span>
           <div class="track"><i style="width:{{ jp.progress.pct }}%;"></i></div>
-          <span class="v">{{ jp.progress.collected }}/{{ jp.progress.target }} · {{ jp.progress.pct }}%</span>
+          <span class="v">{{ jp.progress.collected }}/{{ jp.progress.target }} · {{ jp.progress.pct }}% · {{ jp.progress.qc_pct }}% QC</span>
         </div>
       {% empty %}<div class="empty" style="border:none;">No jobs defined for this project yet.</div>{% endfor %}
     </div>

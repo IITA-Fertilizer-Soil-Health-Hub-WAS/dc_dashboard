@@ -82,8 +82,12 @@ def request_edit(user, submission, note: str = "") -> Review:
     )
 
 
-def decline(user, submission, note: str = "") -> Review:
-    return _transition(user=user, submission=submission, action=ReviewAction.DECLINE, note=note)
+def decline(user, submission, note: str = "", reason=None) -> Review:
+    review = _transition(user=user, submission=submission, action=ReviewAction.DECLINE, note=note)
+    if reason is not None:
+        review.rejection_reason = reason
+        review.save(update_fields=["rejection_reason", "updated_at"])
+    return review
 
 
 def endorse(user, submission, note: str = "") -> Review:

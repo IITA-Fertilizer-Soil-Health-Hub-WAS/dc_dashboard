@@ -47,6 +47,16 @@ def job_progress(job) -> dict:
         job.deadline and job.status != job.Status.CLOSED
         and date.today() > job.deadline and collected < target
     )
+    # QC progress: of the submissions on this job's units, how many are validated
+    # (final-approved). Mirrors SDMT's per-job QC % column.
+    from apps.review.models import ReviewState
+    from apps.submissions.models import Submission
+
+    unit_ids = UnitAssignment.objects.filter(job=job).values_list("unit_id", flat=True)
+    subs = Submission.objects.filter(use_case=job.use_case, collection_unit_id__in=unit_ids)
+    total_subs = subs.count()
+    approved_subs = subs.filter(review__state=ReviewState.APPROVED).count()
+
     return {
         "total": total,
         "collected": collected,
@@ -54,6 +64,9 @@ def job_progress(job) -> dict:
         "target": target,
         "pct": _pct(collected, target or total),
         "overdue": overdue,
+        "submissions": total_subs,
+        "approved_submissions": approved_subs,
+        "qc_pct": _pct(approved_subs, total_subs),
     }
 
 
