@@ -93,6 +93,12 @@ class CollectionBackend:
         submissions render with human labels. Default: unsupported (empty)."""
         return []
 
+    def fetch_attachment(self, attachment_id) -> tuple[bytes, str]:
+        """Fetch one media attachment's bytes + content-type by its server id, so
+        the app can proxy photos into the review screen with the backend's own
+        credentials. Default: unsupported."""
+        raise NotImplementedError(f"{self.label or self.type} does not support attachments")
+
     # --- write-back ---
     def push_edit(self, submission, changes: dict[str, Any]) -> WriteResult:
         """Push reviewer edits to the source record. Default: unsupported."""

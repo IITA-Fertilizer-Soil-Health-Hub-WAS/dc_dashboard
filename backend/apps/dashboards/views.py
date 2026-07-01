@@ -508,15 +508,48 @@ def submission_review(request, code, submission_id):
     from apps.review.models import RejectionReason
 
     fields = _merged_fields(submission)
+    from apps.ingestion.attachments import parse_attachments
+    from apps.ingestion.form_schema import label_map
+
+    lm = label_map(getattr(submission.form, "field_schema", None) or [])
+    media = parse_attachments(submission.raw_payload)
+    for m in media:
+        meta = lm.get(m["question"])
+        m["question_label"] = meta["label"] if meta else m["question"]
     return render(request, "dashboards/submission_review.html", {
         "uc": uc, "submission": submission, "flags": flags,
         "actions": actions, "review": review, "can": can, "ok": ok, "error": error,
-        "fields": fields,
+        "fields": fields, "media": media,
         "is_corrected": any(f["is_edited"] for f in fields),
         "rejection_reasons": RejectionReason.objects.filter(
             Q(use_case=uc) | Q(use_case__isnull=True), is_active=True
         ).order_by("order", "label"),
     })
+
+
+@login_required
+def submission_media(request, code, submission_id, attachment_id):
+    """Stream one submission photo/media through the app, using the backend's own
+    credentials — ONA attachments aren't publicly fetchable. Scoped to a member of
+    the use case, and the attachment must belong to this submission's record."""
+    uc = get_scoped_use_case(request, code)
+    submission = get_object_or_404(Submission, use_case=uc, pk=submission_id)
+    from apps.ingestion.attachments import parse_attachments
+    from apps.ingestion.backends.registry import get_backend_for
+
+    valid_ids = {a["id"] for a in parse_attachments(submission.raw_payload)}
+    if attachment_id not in valid_ids:
+        raise Http404("Attachment not part of this submission.")
+
+    try:
+        data, ctype = get_backend_for(uc).fetch_attachment(attachment_id)
+    except NotImplementedError:
+        raise Http404("This source does not expose attachments.") from None
+    except Exception as exc:
+        return HttpResponse(f"Could not load attachment: {exc}", status=502)
+    resp = HttpResponse(data, content_type=ctype)
+    resp["Cache-Control"] = "private, max-age=600"
+    return resp
 
 
 # ODK / ONA system fields to hide (keep the actual answers, drop plumbing).

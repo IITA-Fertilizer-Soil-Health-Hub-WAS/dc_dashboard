@@ -35,6 +35,11 @@ urlpatterns = [
         views.submission_review,
         name="submission_review",
     ),
+    path(
+        "usecase/<slug:code>/submission/<uuid:submission_id>/media/<int:attachment_id>/",
+        views.submission_media,
+        name="submission_media",
+    ),
     path("usecase/<slug:code>/bulk-action/", views.bulk_submission_action, name="bulk_action"),
     path(
         "usecase/<slug:code>/submission/<uuid:submission_id>/action/",
