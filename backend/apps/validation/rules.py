@@ -70,6 +70,24 @@ def numeric_range(submission, params) -> list[FlagResult]:
     return []
 
 
+def geo_distance(submission, params) -> list[FlagResult]:
+    """Flag a submission collected too far from its assigned plot — a GPS mismatch
+    that usually means the wrong plot was visited, or the location was faked.
+    (Adapted from SDMT's distance-to-reference-point spatial check.)
+
+    params: {max_m: metres (default 100), message?}. No flag when the submission
+    or its unit lacks coordinates (nothing to compare).
+    """
+    dist = submission.distance_to_unit_m
+    if dist is None:
+        return []
+    max_m = params.get("max_m", 100)
+    if dist <= max_m:
+        return []
+    msg = params.get("message", f"Collected {dist:.0f} m from assigned plot (>{max_m:.0f} m)")
+    return [FlagResult(submission.id, msg, "", {"distance_m": round(dist, 1), "max_m": max_m})]
+
+
 # --- Per-household rules (need the whole event timeline) ----------------------
 
 def event_sequence(use_case, params) -> list[FlagResult]:

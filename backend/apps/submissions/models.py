@@ -154,6 +154,20 @@ class Submission(BaseModel):
         'Corrected' badge, mirroring SDMT)."""
         return any(v.is_edited for v in self.values.all())
 
+    @property
+    def distance_to_unit_m(self) -> float | None:
+        """Metres between where this submission was collected and the assigned
+        collection unit's plot location — None unless both have coordinates. The
+        basis for the spatial QC flag + the review-screen 'distance from plot' map."""
+        from apps.common.geo import haversine_m
+
+        unit = self.collection_unit
+        if unit is None or self.lat is None or self.lon is None:
+            return None
+        if unit.lat is None or unit.lon is None:
+            return None
+        return haversine_m(self.lat, self.lon, unit.lat, unit.lon)
+
 
 class SubmissionValue(BaseModel):
     """Field-level authoritative layer. ``raw_value`` is immutable; ``current_value``

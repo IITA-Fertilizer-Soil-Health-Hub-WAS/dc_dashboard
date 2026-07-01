@@ -13,6 +13,36 @@ GREEN = "#55b047"
 RED = "#c3531f"
 
 
+def submission_plot_map_html(submission) -> str:
+    """A per-submission map: where it was collected (green) vs its assigned plot
+    (amber), joined by a line, so a reviewer sees the GPS mismatch at a glance.
+    Returns "" when there's nothing spatial to show."""
+    sub_pt = None
+    if submission.lat is not None and submission.lon is not None:
+        sub_pt = (float(submission.lat), float(submission.lon))
+    unit = submission.collection_unit
+    unit_pt = None
+    if unit is not None and unit.lat is not None and unit.lon is not None:
+        unit_pt = (float(unit.lat), float(unit.lon))
+    pts = [p for p in (sub_pt, unit_pt) if p]
+    if not pts:
+        return ""
+
+    center = (sum(p[0] for p in pts) / len(pts), sum(p[1] for p in pts) / len(pts))
+    m = folium.Map(location=center, zoom_start=16 if len(pts) == 1 else 14,
+                   tiles="OpenStreetMap")
+    if unit_pt:
+        folium.CircleMarker(unit_pt, radius=7, color=AMBER, fill=True, fill_opacity=0.9,
+                            weight=1, popup=f"Assigned plot: {unit.code}").add_to(m)
+    if sub_pt:
+        folium.CircleMarker(sub_pt, radius=6, color=GREEN, fill=True, fill_opacity=0.9,
+                            weight=1, popup="Collected here").add_to(m)
+    if sub_pt and unit_pt:
+        folium.PolyLine([sub_pt, unit_pt], color=RED, weight=2, dash_array="5").add_to(m)
+        m.fit_bounds([sub_pt, unit_pt], padding=(40, 40))
+    return m._repr_html_()
+
+
 def points_map_html(points) -> str:
     """Folium map from an iterable of points.
 

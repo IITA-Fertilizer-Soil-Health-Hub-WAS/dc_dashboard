@@ -74,6 +74,26 @@
       </div>
       </div>
 
+      <!-- Location vs assigned plot -->
+      {% if plot_map_html %}
+        <div class="card" style="margin-top:1rem;">
+          <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:.6rem;">
+            <h3 style="margin:0;">Location</h3>
+            {% if distance_m is not None %}
+              {% if distance_m > 100 %}
+                <span class="pill" style="background:#fdecea;color:#c3531f;" title="Collected far from the assigned plot">{{ distance_m|floatformat:0 }} m from plot</span>
+              {% else %}
+                <span class="pill" style="background:#eaf6ea;color:#2f7d32;" title="Collected near the assigned plot">{{ distance_m|floatformat:0 }} m from plot</span>
+              {% endif %}
+            {% endif %}
+            <span class="subtle" style="margin-left:auto;font-size:.72rem;">
+              <span style="color:#55b047;">●</span> collected &nbsp; <span style="color:#fdb415;">●</span> assigned plot
+            </span>
+          </div>
+          <div style="border:1px solid var(--line);border-radius:8px;overflow:hidden;">{{ plot_map_html|safe }}</div>
+        </div>
+      {% endif %}
+
       <!-- Photos & media -->
       {% if media %}
         <div class="card" style="margin-top:1rem;">

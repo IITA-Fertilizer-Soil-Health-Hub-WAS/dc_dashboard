@@ -515,10 +515,15 @@ def submission_review(request, code, submission_id):
     for m in media:
         meta = lm.get(m["question"])
         m["question_label"] = meta["label"] if meta else m["question"]
+    from apps.dashboards.charts import submission_plot_map_html
+
+    distance_m = submission.distance_to_unit_m
     return render(request, "dashboards/submission_review.html", {
         "uc": uc, "submission": submission, "flags": flags,
         "actions": actions, "review": review, "can": can, "ok": ok, "error": error,
         "fields": fields, "media": media,
+        "distance_m": distance_m,
+        "plot_map_html": submission_plot_map_html(submission),
         "is_corrected": any(f["is_edited"] for f in fields),
         "rejection_reasons": RejectionReason.objects.filter(
             Q(use_case=uc) | Q(use_case__isnull=True), is_active=True

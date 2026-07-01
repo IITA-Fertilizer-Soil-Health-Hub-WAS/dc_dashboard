@@ -23,6 +23,7 @@ PER_SUBMISSION = {
     ValidationRule.RuleType.REGEX_ID: rule_impls.regex_id,
     ValidationRule.RuleType.REQUIRED_FIELD: rule_impls.required_field,
     ValidationRule.RuleType.NUMERIC_RANGE: rule_impls.numeric_range,
+    ValidationRule.RuleType.GEO_DISTANCE: rule_impls.geo_distance,
 }
 # Rules evaluated once per use case (need the whole timeline).
 PER_USE_CASE = {
@@ -54,7 +55,9 @@ def _run_rule(rule: ValidationRule, submissions) -> list[rule_impls.FlagResult]:
 @transaction.atomic
 def run_for_use_case(use_case) -> ValidationStats:
     stats = ValidationStats(use_case=use_case.code)
-    submissions = list(Submission.objects.filter(use_case=use_case))
+    submissions = list(
+        Submission.objects.filter(use_case=use_case).select_related("collection_unit")
+    )
     error_submission_ids: set = set()
 
     for rule in use_case.rules.filter(is_enabled=True):
