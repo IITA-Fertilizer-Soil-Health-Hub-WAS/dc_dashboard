@@ -88,6 +88,11 @@ class CollectionBackend:
             return sorted(record.keys())
         return []
 
+    def get_form_schema(self, form_id) -> list[dict[str, Any]]:
+        """The form's field schema (flat list of {path,label,group,type}) so
+        submissions render with human labels. Default: unsupported (empty)."""
+        return []
+
     # --- write-back ---
     def push_edit(self, submission, changes: dict[str, Any]) -> WriteResult:
         """Push reviewer edits to the source record. Default: unsupported."""

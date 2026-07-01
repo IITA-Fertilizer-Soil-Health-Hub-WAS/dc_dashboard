@@ -544,24 +544,39 @@ def _raw_field_map(payload: dict) -> dict:
 
 def _merged_fields(submission) -> list[dict]:
     """Every editable field: the raw server fields plus any engine/mapped values,
-    each showing its raw (source) value and current (authoritative) value."""
+    each showing its raw (source) value and current (authoritative) value. When the
+    form's field schema is cached, each field also carries its human label + section
+    group and fields are ordered by the form (SDMT-style labelled QC view); fields
+    with no schema entry fall back to the raw key and sort after, alphabetically."""
+    from apps.ingestion.form_schema import label_map
+
     raw_map = _raw_field_map(submission.raw_payload)
     svs = {v.field_key: v for v in submission.values.all()}
+    form = getattr(submission, "form", None)
+    lm = label_map(getattr(form, "field_schema", None) or [])
+    order = {path: i for i, path in enumerate(lm)}
+
+    def make(key, raw, current, is_edited):
+        meta = lm.get(key)
+        return {
+            "key": key, "raw": raw, "current": current, "is_edited": is_edited,
+            "label": meta["label"] if meta else key,
+            "group": meta["group"] if meta else "",
+        }
+
     fields = []
-    for key in sorted(raw_map):
+    for key in raw_map:
         sv = svs.get(key)
-        fields.append({
-            "key": key,
-            "raw": raw_map[key],
-            "current": sv.current_value if sv else raw_map[key],
-            "is_edited": bool(sv and sv.is_edited),
-        })
-    for key in sorted(svs):
+        fields.append(make(key, raw_map[key],
+                           sv.current_value if sv else raw_map[key],
+                           bool(sv and sv.is_edited)))
+    for key in svs:
         if key in raw_map:
             continue
         sv = svs[key]
-        fields.append({"key": key, "raw": sv.raw_value,
-                       "current": sv.current_value, "is_edited": sv.is_edited})
+        fields.append(make(key, sv.raw_value, sv.current_value, sv.is_edited))
+    # Ordered by the form schema first (in-form order), unknown fields after by key.
+    fields.sort(key=lambda f: (order.get(f["key"], len(order)), f["key"]))
     return fields
 
 

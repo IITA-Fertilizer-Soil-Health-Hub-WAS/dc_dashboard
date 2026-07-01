@@ -118,6 +118,20 @@ def sync_use_case(use_case: UseCase, backend=None, client=None) -> SyncStats:
     # prefetch cache would hide the new rows.
     forms = list(use_case.forms.all())
 
+    # Cache each form's field schema (question labels + section groups) so the
+    # review screen renders human labels. Best-effort: never block a data sync.
+    for form in forms:
+        get_schema = getattr(source, "get_form_schema", None)
+        if not (callable(get_schema) and form.server_ref):
+            continue
+        try:
+            schema = get_schema(form.server_ref)
+        except Exception:
+            continue
+        if schema and schema != form.field_schema:
+            form.field_schema = schema
+            form.save(update_fields=["field_schema"])
+
     # 1) Registration forms first (enumerators + households are FKs for submissions).
     for form in [f for f in forms if f.role in REGISTRATION_ROLES]:
         records = plugin.pre_ingest(form, _fetch(source, form.server_ref))

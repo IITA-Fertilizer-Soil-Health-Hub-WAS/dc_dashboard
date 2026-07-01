@@ -38,11 +38,16 @@
           <input type="hidden" name="action" value="save_edits">
           <div class="table-wrap">
           <table>
-            <thead><tr><th scope="col">Field</th><th scope="col">Raw (source)</th><th scope="col">Current (authoritative)</th></tr></thead>
+            <thead><tr><th scope="col">Question</th><th scope="col">Raw (source)</th><th scope="col">Current (authoritative)</th></tr></thead>
+            {% regroup fields by group as field_groups %}
+            {% for grp in field_groups %}
+            {% if grp.grouper %}
+            <tbody><tr><th colspan="3" scope="colgroup" style="text-align:left;background:var(--surface-2, #f6f7f9);padding:.45rem 1.1rem;font-size:.78rem;letter-spacing:.02em;text-transform:uppercase;color:var(--muted);">{{ grp.grouper }}</th></tr></tbody>
+            {% endif %}
             <tbody>
-              {% for f in fields %}
+              {% for f in grp.list %}
                 <tr>
-                  <td class="mono" style="white-space:nowrap;">{{ f.key }}{% if f.is_edited %} <span class="pill" style="font-size:.66rem;">edited</span>{% endif %}</td>
+                  <td style="white-space:nowrap;">{{ f.label }}{% if f.is_edited %} <span class="pill" style="font-size:.66rem;">edited</span>{% endif %}{% if f.label != f.key %}<br><span class="mono subtle" style="font-size:.68rem;">{{ f.key }}</span>{% endif %}</td>
                   <td class="subtle">{{ f.raw|default:"—" }}</td>
                   <td>
                     {% if can.edit %}
@@ -51,10 +56,11 @@
                     {% else %}{{ f.current|default:"—" }}{% endif %}
                   </td>
                 </tr>
-              {% empty %}
-                <tr><td colspan="3"><div class="empty" style="border:none;">No data stored for this submission.</div></td></tr>
               {% endfor %}
             </tbody>
+            {% empty %}
+            <tbody><tr><td colspan="3"><div class="empty" style="border:none;">No data stored for this submission.</div></td></tr></tbody>
+            {% endfor %}
           </table>
           </div>
           {% if can.edit and fields %}

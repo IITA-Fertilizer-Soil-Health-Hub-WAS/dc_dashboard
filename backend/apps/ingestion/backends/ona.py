@@ -55,6 +55,17 @@ class OnaBackend(OdkBackend):
     def sample_fields(self, form_id) -> list[str]:
         return self._client().sample_fields(int(form_id))
 
+    def get_form_schema(self, form_id) -> list[dict[str, Any]]:
+        """ONA XForm JSON: GET /api/v1/forms/{id}/form.json → flat field schema."""
+        from apps.ingestion.form_schema import parse_form_json
+
+        url = f"{self._base()}/api/v1/forms/{int(form_id)}/form.json"
+        with httpx.Client(timeout=30.0) as client:
+            resp = client.get(url, headers=self._headers())
+        if resp.status_code != 200:
+            raise RuntimeError(f"form.json HTTP {resp.status_code}: {resp.text[:200]}")
+        return parse_form_json(resp.json())
+
     # --- write-back endpoints (ODK edit flow) ---
     def _fetch_instance_xml(self, form_id, data_id) -> str:
         """Original submission as XML: GET /api/v1/data/{form}/{data_id}.xml"""

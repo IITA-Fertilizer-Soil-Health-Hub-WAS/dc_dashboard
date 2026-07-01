@@ -224,6 +224,11 @@ class FormDefinition(BaseModel):
     season = models.CharField(max_length=16, blank=True)  # "S1"/"S2" (BioSSA)
     # ONA system columns to drop (the R `system_var` strip list); per-form override.
     system_vars_drop = models.JSONField(default=list, blank=True)
+    # Cached form schema from the server: an ordered list of
+    # {path, label, group, type} so submissions render with human question labels
+    # grouped by section instead of raw ODK field paths. Populated by
+    # `sync_form_schemas`; empty falls back to raw keys.
+    field_schema = models.JSONField(default=list, blank=True)
 
     # --- publishing (form uploaded as XLSForm and pushed to the server) ---
     xlsform = models.FileField(upload_to="xlsforms/", null=True, blank=True)
