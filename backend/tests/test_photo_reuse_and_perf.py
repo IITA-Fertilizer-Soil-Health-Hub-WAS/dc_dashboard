@@ -82,6 +82,29 @@ def test_hash_submission_media_stores_image_sha256_only(world):
     assert hashes == [expected]        # only the image, not the .txt
     sub.refresh_from_db()
     assert sub.media_hashes == [expected]
+    assert sub.media_hashed_at is not None   # marked processed
+
+
+def test_hash_use_case_media_only_new_skips_processed(world, monkeypatch):
+    """The recurring task must not re-fetch already-processed submissions — even
+    media-less ones (marked via media_hashed_at, not by having hashes)."""
+    from apps.ingestion import media_hash as mh
+
+    calls = {"n": 0}
+
+    def fake_hash(submission, backend=None):
+        calls["n"] += 1
+        submission.media_hashed_at = timezone.now()
+        submission.save(update_fields=["media_hashed_at"])
+        return []
+
+    monkeypatch.setattr(mh, "hash_submission_media", fake_hash)
+    _sub(world, "s1")
+    _sub(world, "s2")
+    first = mh.hash_use_case_media(world["uc"], only_new=True)
+    assert first.processed == 2 and calls["n"] == 2
+    second = mh.hash_use_case_media(world["uc"], only_new=True)  # nothing new
+    assert second.processed == 0 and calls["n"] == 2
 
 
 # --- enumerator self-service scorecard ---------------------------------------

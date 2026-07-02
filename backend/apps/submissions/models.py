@@ -121,8 +121,11 @@ class Submission(BaseModel):
 
     # SHA-256 of each photo/media attachment's bytes, computed on demand by the
     # media-hashing task. Powers the PHOTO_REUSE integrity check (the same image
-    # reused across different farmers is a curbstoning signal). Empty until hashed.
+    # reused across different farmers is a curbstoning signal). Empty until hashed;
+    # `media_hashed_at` marks it as processed (even when there is no media) so the
+    # recurring task never re-fetches the same submission.
     media_hashes = models.JSONField(default=list, blank=True)
+    media_hashed_at = models.DateTimeField(null=True, blank=True)
 
     # Write-back: propagating reviewer edits back to the source collection server.
     class WriteBackStatus(models.TextChoices):

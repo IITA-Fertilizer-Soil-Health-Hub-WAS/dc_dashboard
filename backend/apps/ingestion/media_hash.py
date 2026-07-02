@@ -11,6 +11,8 @@ import hashlib
 import logging
 from dataclasses import dataclass
 
+from django.utils import timezone
+
 logger = logging.getLogger(__name__)
 
 
@@ -43,7 +45,8 @@ def hash_submission_media(submission, backend=None) -> list[str]:
 
     ordered = sorted(hashes)
     submission.media_hashes = ordered
-    submission.save(update_fields=["media_hashes", "updated_at"])
+    submission.media_hashed_at = timezone.now()  # processed — don't re-fetch next run
+    submission.save(update_fields=["media_hashes", "media_hashed_at", "updated_at"])
     return ordered
 
 
@@ -60,7 +63,7 @@ def hash_use_case_media(use_case, *, limit: int | None = None, only_new: bool = 
 
     qs = Submission.objects.filter(use_case=use_case).order_by("-ingested_at")
     if only_new:
-        qs = qs.filter(media_hashes=[])
+        qs = qs.filter(media_hashed_at__isnull=True)
     if limit:
         qs = qs[:limit]
 
