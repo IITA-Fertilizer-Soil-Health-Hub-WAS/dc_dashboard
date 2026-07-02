@@ -91,6 +91,60 @@ class Job(BaseModel):
         self.save(update_fields=["status", "closed_by", "closed_at", "closure_note", "updated_at"])
 
 
+class CandidatePlot(BaseModel):
+    """A plot proposed by the upstream GIS site-selection tool. Each trial gets a
+    small set (typically 3 primary + 1 backup) as GeoJSON polygons with accessibility
+    / cropping-region attributes. The country coordinator elects ONE per trial (a web
+    decision, ground-truthed in the field); the elected candidate is promoted to a
+    CollectionUnit. See project memory: plot-election governance."""
+
+    class Role(models.TextChoices):
+        PRIMARY = "PRIMARY", "Primary"
+        BACKUP = "BACKUP", "Backup"
+
+    class Status(models.TextChoices):
+        PROPOSED = "PROPOSED", "Proposed"
+        ELECTED = "ELECTED", "Elected"
+        NOT_SELECTED = "NOT_SELECTED", "Not selected"
+
+    use_case = models.ForeignKey(
+        UseCase, on_delete=models.CASCADE, related_name="candidate_plots"
+    )
+    # The trial / area this candidate belongs to — the key the GIS export must carry.
+    trial_key = models.CharField(max_length=64)
+    candidate_ref = models.CharField(max_length=32)  # e.g. "A" / "B" / "C" / plot code
+    role = models.CharField(max_length=8, choices=Role.choices, default=Role.PRIMARY)
+    rank = models.PositiveIntegerField(default=0)  # GIS rank; 1 = recommended
+    accessibility = models.CharField(max_length=32, blank=True)
+    cropping_region = models.CharField(max_length=128, blank=True)
+    geometry = models.JSONField(default=dict, blank=True)  # GeoJSON Polygon / MultiPolygon
+    centroid_lat = models.DecimalField(max_digits=12, decimal_places=7, null=True, blank=True)
+    centroid_lon = models.DecimalField(max_digits=12, decimal_places=7, null=True, blank=True)
+    properties = models.JSONField(default=dict, blank=True)  # any other GIS attributes
+
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.PROPOSED)
+    # Election audit (set in the coordinator election step).
+    elected_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="elected_plots",
+    )
+    elected_at = models.DateTimeField(null=True, blank=True)
+    election_note = models.CharField(max_length=255, blank=True)
+    # The unit created when this candidate is elected.
+    collection_unit = models.ForeignKey(
+        CollectionUnit, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="source_candidate",
+    )
+
+    class Meta:
+        unique_together = ("use_case", "trial_key", "candidate_ref")
+        ordering = ["use_case", "trial_key", "rank", "candidate_ref"]
+        indexes = [models.Index(fields=["use_case", "trial_key"])]
+
+    def __str__(self) -> str:
+        return f"{self.use_case.code}:{self.trial_key}:{self.candidate_ref}"
+
+
 class UnitAssignment(BaseModel):
     """Which enumerator is responsible for which unit within a job."""
 

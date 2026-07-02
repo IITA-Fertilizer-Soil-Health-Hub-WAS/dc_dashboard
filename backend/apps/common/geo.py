@@ -19,3 +19,32 @@ def haversine_m(lat1, lon1, lat2, lon2) -> float | None:
     dlambda = math.radians(l2 - l1)
     a = math.sin(dphi / 2) ** 2 + math.cos(rp1) * math.cos(rp2) * math.sin(dlambda / 2) ** 2
     return 2 * EARTH_RADIUS_M * math.asin(math.sqrt(a))
+
+
+def _rings(geometry) -> list[list]:
+    """The exterior coordinate rings of a GeoJSON Polygon / MultiPolygon."""
+    if not isinstance(geometry, dict):
+        return []
+    gtype, coords = geometry.get("type"), geometry.get("coordinates")
+    if gtype == "Polygon" and coords:
+        return [coords[0]]
+    if gtype == "MultiPolygon" and coords:
+        return [poly[0] for poly in coords if poly]
+    return []
+
+
+def polygon_centroid(geometry) -> tuple[float, float] | None:
+    """Approximate centroid (lat, lon) of a GeoJSON Polygon / MultiPolygon — the
+    mean of its exterior ring vertices. Good enough to centre a map / seed a
+    provisional reference point; not area-weighted. GeoJSON coords are [lon, lat].
+    Returns None if there's no usable ring."""
+    pts = [pt for ring in _rings(geometry) for pt in ring
+           if isinstance(pt, (list, tuple)) and len(pt) >= 2]
+    if not pts:
+        return None
+    try:
+        lon = sum(float(p[0]) for p in pts) / len(pts)
+        lat = sum(float(p[1]) for p in pts) / len(pts)
+    except (TypeError, ValueError):
+        return None
+    return (lat, lon)
