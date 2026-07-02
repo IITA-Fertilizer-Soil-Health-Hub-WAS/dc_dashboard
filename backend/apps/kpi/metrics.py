@@ -369,30 +369,11 @@ def _gps_error_by_enum(subs) -> dict:
     return out
 
 
-def enumerator_trend(use_case, enumerator_id, weeks: int = 12) -> dict:
-    """One enumerator's flag rate over time — weekly buckets — so a coordinator can
-    catch *degrading* quality early rather than only seeing a period average. Each
-    bucket: submissions and how many drew an open flag. A first-half vs second-half
-    comparison labels the direction (improving / worsening / stable)."""
-    from apps.submissions.models import Enumerator
-
-    enum = Enumerator.objects.filter(pk=enumerator_id, use_case=use_case).first()
+def _flag_trend(subs, flagged_ids, weeks: int) -> dict:
+    """Weekly flag-rate series + direction from an iterable of submission dicts
+    (id, event_date, ona_submission_time) and the set of flagged submission ids.
+    Shared by the per-enumerator and project-wide trends."""
     start = date.today() - timedelta(weeks=weeks)
-
-    subs = list(
-        Submission.objects.filter(use_case=use_case, enumerator_id=enumerator_id)
-        .filter(
-            Q(event_date__gte=start)
-            | Q(event_date__isnull=True, ona_submission_time__date__gte=start)
-        )
-        .values("id", "event_date", "ona_submission_time")
-    )
-    flagged_ids = set(
-        ValidationFlag.objects.filter(
-            submission__enumerator_id=enumerator_id, status=ValidationFlag.Status.OPEN,
-        ).values_list("submission_id", flat=True)
-    )
-
     buckets = [{"n": 0, "flagged": 0} for _ in range(weeks)]
     for s in subs:
         d = s["event_date"] or (s["ona_submission_time"].date() if s["ona_submission_time"] else None)
@@ -424,7 +405,6 @@ def enumerator_trend(use_case, enumerator_id, weeks: int = 12) -> dict:
             direction = "improving"
 
     return {
-        "enumerator": enum,
         "series": series,
         "max_pct": max((s["flag_pct"] or 0 for s in series), default=0),
         "total_n": sum(b["n"] for b in buckets),
@@ -433,6 +413,46 @@ def enumerator_trend(use_case, enumerator_id, weeks: int = 12) -> dict:
         "recent_pct": None if recent is None else round(recent),
         "weeks": weeks,
     }
+
+
+def _trend_window_subs(base_qs, weeks: int):
+    start = date.today() - timedelta(weeks=weeks)
+    return base_qs.filter(
+        Q(event_date__gte=start)
+        | Q(event_date__isnull=True, ona_submission_time__date__gte=start)
+    ).values("id", "event_date", "ona_submission_time")
+
+
+def enumerator_trend(use_case, enumerator_id, weeks: int = 12) -> dict:
+    """One enumerator's flag rate over time — weekly buckets — so a coordinator can
+    catch *degrading* quality early rather than only seeing a period average. Each
+    bucket: submissions and how many drew an open flag. A first-half vs second-half
+    comparison labels the direction (improving / worsening / stable)."""
+    from apps.submissions.models import Enumerator
+
+    enum = Enumerator.objects.filter(pk=enumerator_id, use_case=use_case).first()
+    subs = _trend_window_subs(
+        Submission.objects.filter(use_case=use_case, enumerator_id=enumerator_id), weeks
+    )
+    flagged_ids = set(
+        ValidationFlag.objects.filter(
+            submission__enumerator_id=enumerator_id, status=ValidationFlag.Status.OPEN,
+        ).values_list("submission_id", flat=True)
+    )
+    return {"enumerator": enum, **_flag_trend(subs, flagged_ids, weeks)}
+
+
+def project_quality_trend(use_case, weeks: int = 12) -> dict:
+    """The whole project's flag rate over time — the same early-warning line as the
+    per-enumerator trend, but project-wide, so a *systemic* slide (a bad form version,
+    seasonal pressure) shows up even when no single enumerator's trend would."""
+    subs = _trend_window_subs(Submission.objects.filter(use_case=use_case), weeks)
+    flagged_ids = set(
+        ValidationFlag.objects.filter(
+            rule__use_case=use_case, status=ValidationFlag.Status.OPEN,
+        ).values_list("submission_id", flat=True)
+    )
+    return _flag_trend(subs, flagged_ids, weeks)
 
 
 def _collected_units(use_case):

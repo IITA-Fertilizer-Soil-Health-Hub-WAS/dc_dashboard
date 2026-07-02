@@ -6,7 +6,7 @@ from datetime import date, timedelta
 import pytest
 from django.urls import reverse
 
-from apps.kpi.metrics import enumerator_trend
+from apps.kpi.metrics import enumerator_trend, project_quality_trend
 from apps.rbac.models import Role, UseCaseMembership
 from apps.submissions.models import Enumerator, Submission
 from apps.usecases.models import FormDefinition, Organization, UseCase
@@ -59,6 +59,25 @@ def test_trend_improving_when_recent_is_cleaner(world):
         _sub(world, f"new{i}", days_ago=3 + i, flagged=False)
     t = enumerator_trend(world["uc"], world["enum"].id)
     assert t["direction"] == "improving"
+
+
+def test_project_quality_trend_detects_systemic_slide(world):
+    # No enumerator attribution needed — the project-wide line still worsens.
+    for i in range(4):
+        s = Submission.objects.create(
+            use_case=world["uc"], form=world["form"], ona_uuid=f"old{i}", content_hash=f"old{i}",
+            event_date=date.today() - timedelta(days=70 + i))
+        assert s  # clean
+    for i in range(4):
+        s = Submission.objects.create(
+            use_case=world["uc"], form=world["form"], ona_uuid=f"new{i}", content_hash=f"new{i}",
+            event_date=date.today() - timedelta(days=3 + i))
+        ValidationFlag.objects.create(
+            submission=s, rule=world["rule"], message="m", severity="WARNING",
+            status=ValidationFlag.Status.OPEN)
+    t = project_quality_trend(world["uc"])
+    assert t["direction"] == "worsening"
+    assert t["early_pct"] == 0 and t["recent_pct"] == 100 and t["total_n"] == 8
 
 
 def test_enumerator_detail_view_renders(client, world, django_user_model):

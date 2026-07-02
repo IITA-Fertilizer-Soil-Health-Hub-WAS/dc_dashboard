@@ -14,6 +14,7 @@ from .metrics import (
     enumerator_trend,
     overview_metrics,
     project_metrics,
+    project_quality_trend,
     quality_metrics,
 )
 
@@ -43,7 +44,9 @@ def kpi_project(request, code):
 @login_required
 def kpi_quality(request, code):
     uc = get_scoped_use_case(request, code)
-    ctx = quality_metrics(uc, _days(request)) | {"uc": uc, "periods": PERIODS}
+    ctx = quality_metrics(uc, _days(request)) | {
+        "uc": uc, "periods": PERIODS, "qtrend": project_quality_trend(uc),
+    }
     return render(request, "kpi/quality.html", ctx)
 
 

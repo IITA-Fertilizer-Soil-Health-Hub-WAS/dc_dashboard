@@ -74,6 +74,26 @@ def test_low_volume_worsening_is_ignored(world):
     assert evaluate_rule_for_use_case(_rule(world), world["uc"]) is None
 
 
+def test_project_quality_worsening_alert(world):
+    # A systemic slide (no per-enumerator attribution) fires the project alert.
+    for i in range(4):
+        Submission.objects.create(
+            use_case=world["uc"], form=world["form"], ona_uuid=f"o{i}", content_hash=f"o{i}",
+            event_date=date.today() - timedelta(days=70 + i))
+    for i in range(4):
+        s = Submission.objects.create(
+            use_case=world["uc"], form=world["form"], ona_uuid=f"n{i}", content_hash=f"n{i}",
+            event_date=date.today() - timedelta(days=3 + i))
+        ValidationFlag.objects.create(
+            submission=s, rule=world["vrule"], message="m", severity="WARNING",
+            status=ValidationFlag.Status.OPEN)
+    rule = AlertRule.objects.create(
+        use_case=world["uc"], name="Project slide", metric="project_quality_worsening",
+        comparator=AlertRule.Comparator.GTE, threshold=1)
+    event = evaluate_rule_for_use_case(rule, world["uc"])
+    assert event is not None and "0%→100%" in event.message
+
+
 def test_run_alerts_emails_watchers(world, mailoutbox):
     _make_worsening(world, "EN-BAD")
     _rule(world)

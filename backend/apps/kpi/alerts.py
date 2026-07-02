@@ -33,6 +33,7 @@ METRICS = {
     "coverage_pct": "Coverage %",
     "active_enumerators": "Active enumerators (latest day)",
     "worsening_enumerators": "Enumerators with worsening quality",
+    "project_quality_worsening": "Project quality trend worsening (1/0)",
 }
 
 # An enumerator needs at least this many submissions in the trend window before a
@@ -128,6 +129,15 @@ def evaluate_rule_for_use_case(rule: AlertRule, use_case) -> AlertEvent | None:
         if not _breaches(observed, rule.comparator, rule.threshold):
             return None
         detail = "worsening: " + (", ".join(worsening) if worsening else "none")
+    elif metric == "project_quality_worsening":
+        from .metrics import project_quality_trend
+
+        t = project_quality_trend(use_case)
+        worsening = t["direction"] == "worsening" and t["total_n"] >= MIN_TREND_VOLUME
+        observed = 1.0 if worsening else 0.0
+        if not _breaches(observed, rule.comparator, rule.threshold):
+            return None
+        detail = f"project flag rate {t['early_pct']}%→{t['recent_pct']}% (earlier vs recent half)"
     else:  # unknown metric — skip safely
         return None
 
