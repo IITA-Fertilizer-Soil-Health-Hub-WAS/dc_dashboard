@@ -56,6 +56,20 @@ def test_create_edit_delete_cycle(client, staff, uc):
     assert not Trial.objects.filter(pk=t.pk).exists()
 
 
+def test_new_form_defaults_use_case_to_active_project(client, staff, uc):
+    client.force_login(staff)
+    # ?use_case= (carried by every scoped sidebar link) pre-selects the project.
+    body = client.get(f"/manage/trials/new/?use_case={uc.code}").content.decode()
+    assert f'value="{uc.pk}" selected' in body
+    # Falls back to the active-project session when no query param is present.
+    other = UseCase.objects.create(code="OTHER", name="Other")  # noqa: F841
+    session = client.session
+    session["active_project"] = uc.code
+    session.save()
+    body = client.get("/manage/trials/new/").content.decode()
+    assert f'value="{uc.pk}" selected' in body
+
+
 def test_readonly_section_blocks_writes(client, staff, uc):
     client.force_login(staff)
     assert client.get("/manage/submissions/").status_code == 200       # list allowed

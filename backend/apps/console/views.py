@@ -234,6 +234,21 @@ def _restrict_form_to_scope(form, user):
             field.queryset = qs.filter(use_case_id__in=uc_ids)
 
 
+def _default_use_case(form, request):
+    """Pre-select a new row's Project to the workspace the coordinator is in — the
+    ?use_case= carried by every sidebar console link, else the active-project
+    session. Only applies when the form still offers that project as a choice."""
+    field = form.fields.get("use_case")
+    if field is None or getattr(field, "queryset", None) is None:
+        return
+    code = request.GET.get("use_case") or request.session.get("active_project")
+    if not code:
+        return
+    uc = field.queryset.filter(code=code).first()
+    if uc is not None:
+        form.initial.setdefault("use_case", uc.pk)
+
+
 class ConsoleFormView(UserPassesTestMixin, View):
     """Create/edit — staff for any section; a coordinator for their own
     projects' configuration & field data, scoped on both the object and the
@@ -254,6 +269,8 @@ class ConsoleFormView(UserPassesTestMixin, View):
         instance = _scoped_get(request.user, m, key, pk) if pk else None
         form = self._form_class(m)(instance=instance)
         _restrict_form_to_scope(form, request.user)
+        if instance is None:
+            _default_use_case(form, request)
         return render(request, "console/form.html", _base_ctx(m) | {"form": form, "instance": instance})
 
     def post(self, request, key, pk=None):
