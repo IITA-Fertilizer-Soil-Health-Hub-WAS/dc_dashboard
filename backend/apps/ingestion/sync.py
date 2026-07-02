@@ -144,6 +144,7 @@ def sync_use_case(use_case: UseCase, backend=None, client=None) -> SyncStats:
                 _upsert_enumerator(use_case, mapped, test_ids, stats)
             else:
                 _upsert_household(use_case, mapped, stats)
+                _upsert_collection_unit(use_case, mapped)  # merge: unit is the future of household
 
     # 2) Validation forms -> immutable Submissions + authoritative values.
     for form in [f for f in forms if f.role in VALIDATION_ROLES]:
@@ -200,6 +201,33 @@ def _upsert_household(use_case, mapped, stats) -> None:
     stats.households += 1
 
 
+def _upsert_collection_unit(use_case, mapped) -> None:
+    """Merge target: mirror the registration into the generic CollectionUnit
+    (``code`` = HHID / plot id). Runs alongside the Household upsert while reads
+    still use Household; becomes the sole write once the merge completes.
+
+    Never overwrites the coordinates of a unit whose farmer anchor is already
+    captured (a plot-election unit) — that lat/lon is the frozen spatial reference."""
+    hhid = mapped.get("HHID")
+    if not hhid:
+        return
+    from apps.fieldwork.models import CollectionUnit
+
+    enumerator = None
+    enid = mapped.get("ENID")
+    if enid:
+        enumerator = Enumerator.objects.filter(use_case=use_case, enid=enid).first()
+    unit, _created = CollectionUnit.objects.get_or_create(use_case=use_case, code=hhid)
+    unit.enumerator = enumerator
+    unit.alt = _num(mapped.get("ALT"))
+    unit.country = mapped.get("Country") or unit.country
+    unit.site_selection_date = _to_date(mapped.get("today")) or unit.site_selection_date
+    if not unit.anchor_captured:  # don't stomp a frozen election anchor
+        unit.lat = _num(mapped.get("LAT"))
+        unit.lon = _num(mapped.get("LON"))
+    unit.save()
+
+
 @transaction.atomic
 def _upsert_submission(use_case, form, raw_rec, mapped, crop_by_name, test_ids, stats) -> None:
     enid = mapped.get("ENID")
@@ -234,7 +262,7 @@ def _upsert_submission(use_case, form, raw_rec, mapped, crop_by_name, test_ids, 
         )
     crop = crop_by_name.get(mapped.get("Crop")) if mapped.get("Crop") else None
     collected_by = _resolve_collector(mapped, enumerator)
-    collection_unit = _resolve_collection_unit(use_case, hhid)
+    collection_unit = _resolve_or_create_unit(use_case, hhid, enumerator)
     lat, lon = _resolve_location(raw_rec, mapped, household)
 
     existing = Submission.objects.filter(use_case=use_case, ona_uuid=ona_uuid).first()
@@ -269,14 +297,18 @@ def _upsert_submission(use_case, form, raw_rec, mapped, crop_by_name, test_ids, 
         stats.updated += 1
 
 
-def _resolve_collection_unit(use_case, hhid):
-    """Match a submission to its planned collection unit by id (HHID / plot id).
-    Only matches existing units — jobs/units are planned ahead of collection."""
+def _resolve_or_create_unit(use_case, hhid, enumerator=None):
+    """The submission's collection unit, keyed by id (HHID / plot id). Matches a
+    pre-planned unit (plot election) or creates one on the fly (household-style
+    collection) — since a unit now IS the household/farm/plot the merge unifies."""
     if not hhid:
         return None
     from apps.fieldwork.models import CollectionUnit
 
-    return CollectionUnit.objects.filter(use_case=use_case, code=hhid).first()
+    unit, _ = CollectionUnit.objects.get_or_create(
+        use_case=use_case, code=hhid, defaults={"enumerator": enumerator}
+    )
+    return unit
 
 
 def submission_location(raw_rec: dict, mapped: dict):
