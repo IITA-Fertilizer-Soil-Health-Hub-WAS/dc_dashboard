@@ -119,6 +119,9 @@ class UseCase(BaseModel):
 
     class Meta:
         ordering = ["code"]
+        # Internally "use case" (legacy from the R app); user-facing it's a Project.
+        verbose_name = "project"
+        verbose_name_plural = "projects"
 
     def __str__(self) -> str:
         return self.code

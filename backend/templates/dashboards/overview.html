@@ -2,7 +2,7 @@
 {% block title %}Overview · {{ SITE_NAME }}{% endblock %}
 {% block crumbs %}<span class="sep">/</span><span class="cur">Overview</span>{% endblock %}
 {% block content %}
-  <div class="page-head"><h2>Overview</h2><span class="pill">{{ rows|length }} use cases</span></div>
+  <div class="page-head"><h2>Overview</h2><span class="pill">{{ rows|length }} projects</span></div>
   <p class="subtle" style="margin:.1rem 0 1.2rem;">Monitoring and review status across all projects you can see.</p>
 
   <div class="cards" style="margin-bottom:1.2rem;">
@@ -17,7 +17,7 @@
     <div class="table-wrap">
     <table>
       <thead>
-        <tr><th scope="col">Use case</th><th scope="col">Submissions</th><th scope="col">Approved</th><th scope="col">In review</th>
+        <tr><th scope="col">Project</th><th scope="col">Submissions</th><th scope="col">Approved</th><th scope="col">In review</th>
           <th scope="col">Open issues</th><th scope="col">WB pending</th><th scope="col">WB failed</th></tr>
       </thead>
       <tbody>
@@ -33,7 +33,7 @@
             <td>{% if r.wb_failed %}<span class="pill" style="background:#fdecea;color:#a33617;">{{ r.wb_failed }}</span>{% else %}—{% endif %}</td>
           </tr>
         {% empty %}
-          <tr><td colspan="7"><div class="empty" style="border:none;">No use cases yet.</div></td></tr>
+          <tr><td colspan="7"><div class="empty" style="border:none;">No projects yet.</div></td></tr>
         {% endfor %}
       </tbody>
     </table>
