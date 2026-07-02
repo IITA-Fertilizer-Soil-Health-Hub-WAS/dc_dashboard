@@ -385,17 +385,21 @@
              class="{% if active_tab == 'review' %}active{% endif %}">
             <span class="msym">rate_review</span>Review
           </a>
-          <a href="{% url 'dashboards:usecase' active_uc.code %}?tab=issues"
-             class="{% if active_tab == 'issues' %}active{% endif %}">
-            <span class="msym">flag</span>Issues
-          </a>
           <a href="{% url 'dashboards:usecase' active_uc.code %}?tab=enumerators"
              class="{% if active_tab == 'enumerators' %}active{% endif %}">
             <span class="msym">badge</span>Enumerators
           </a>
+          <a href="{% url 'dashboards:usecase' active_uc.code %}?tab=issues"
+             class="{% if active_tab == 'issues' %}active{% endif %}">
+            <span class="msym">flag</span>Issues
+          </a>
           <a href="{% url 'dashboards:usecase' active_uc.code %}?tab=data"
              class="{% if active_tab == 'data' %}active{% endif %}">
             <span class="msym">table_rows</span>Data
+          </a>
+          <a href="{% url 'dashboards:usecase' active_uc.code %}?tab=final"
+             class="{% if active_tab == 'final' %}active{% endif %}">
+            <span class="msym">verified_user</span>Final data
           </a>
           <a href="{% url 'kpi:project' active_uc.code %}"
              class="{% if request.resolver_match.app_name == 'kpi' %}active{% endif %}">

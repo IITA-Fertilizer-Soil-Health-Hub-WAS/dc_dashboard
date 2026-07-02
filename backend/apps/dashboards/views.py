@@ -149,6 +149,21 @@ def export_audit(request, code):
 
 WORKSPACE_TABS = {"summary", "review", "enumerators", "issues", "data", "final"}
 
+# Each project section's content partial (loaded into the page body). The sidebar
+# is the single navigation surface — there is no in-page tab bar.
+TAB_URL_NAMES = {
+    "summary": "dashboards:tab_summary",
+    "review": "dashboards:tab_review",
+    "enumerators": "dashboards:tab_enumerators",
+    "issues": "dashboards:tab_issues",
+    "data": "dashboards:tab_data",
+    "final": "dashboards:tab_final",
+}
+TAB_LABELS = {
+    "summary": "Dashboard", "review": "Review", "enumerators": "Enumerators",
+    "issues": "Issues", "data": "Data", "final": "Final data",
+}
+
 
 @login_required
 def usecase_detail(request, code):
@@ -156,10 +171,16 @@ def usecase_detail(request, code):
     # The project is the workspace: remember it as the user's current context so
     # the sidebar scopes to it until they switch.
     request.session["active_project"] = uc.code
+    from django.urls import reverse
+
     tab = request.GET.get("tab", "summary")
     if tab not in WORKSPACE_TABS:
         tab = "summary"
-    return render(request, "dashboards/usecase.html", {"uc": uc, "active_tab": tab})
+    return render(request, "dashboards/usecase.html", {
+        "uc": uc, "active_tab": tab,
+        "tab_url": reverse(TAB_URL_NAMES[tab], args=[uc.code]),
+        "tab_label": TAB_LABELS[tab],
+    })
 
 
 # --- Tab partials (HTMX) -----------------------------------------------------

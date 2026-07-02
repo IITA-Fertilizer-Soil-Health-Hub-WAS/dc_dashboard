@@ -6,57 +6,17 @@
 {% endblock %}
 {% block content %}
   <div class="page-head">
-    <h2>{{ uc.name }}</h2>
+    <h2>{{ uc.name }} <span class="subtle" style="font-weight:400;">· {{ tab_label }}</span></h2>
     <span class="pill">{{ uc.code }}</span>
     {% if uc.countries %}<span class="subtle">{{ uc.countries|join:", " }}</span>{% endif %}
     <span style="flex:1"></span>
     <a class="subtle" style="font-size:.82rem;" href="{% url 'dashboards:export_audit' uc.code %}">Audit log (CSV)</a>
   </div>
 
-  <nav class="tabs" id="tabs" role="tablist" aria-label="{{ uc.name }} sections">
-    <button data-tab="summary" class="{% if active_tab == 'summary' %}active{% endif %}" role="tab"
-            aria-selected="{% if active_tab == 'summary' %}true{% else %}false{% endif %}" aria-controls="tabbody"
-            hx-get="{% url 'dashboards:tab_summary' uc.code %}"
-            hx-target="#tabbody" hx-on::after-request="setActive(this)">Summary</button>
-    <button data-tab="review" class="{% if active_tab == 'review' %}active{% endif %}" role="tab"
-            aria-selected="{% if active_tab == 'review' %}true{% else %}false{% endif %}" aria-controls="tabbody"
-            hx-get="{% url 'dashboards:tab_review' uc.code %}"
-            hx-target="#tabbody" hx-on::after-request="setActive(this)">Review</button>
-    <button data-tab="enumerators" class="{% if active_tab == 'enumerators' %}active{% endif %}" role="tab"
-            aria-selected="{% if active_tab == 'enumerators' %}true{% else %}false{% endif %}" aria-controls="tabbody"
-            hx-get="{% url 'dashboards:tab_enumerators' uc.code %}"
-            hx-target="#tabbody" hx-on::after-request="setActive(this)">Enumerators</button>
-    <button data-tab="issues" class="{% if active_tab == 'issues' %}active{% endif %}" role="tab"
-            aria-selected="{% if active_tab == 'issues' %}true{% else %}false{% endif %}" aria-controls="tabbody"
-            hx-get="{% url 'dashboards:tab_issues' uc.code %}"
-            hx-target="#tabbody" hx-on::after-request="setActive(this)">Issues</button>
-    <button data-tab="data" class="{% if active_tab == 'data' %}active{% endif %}" role="tab"
-            aria-selected="{% if active_tab == 'data' %}true{% else %}false{% endif %}" aria-controls="tabbody"
-            hx-get="{% url 'dashboards:tab_data' uc.code %}"
-            hx-target="#tabbody" hx-on::after-request="setActive(this)">Data Preview</button>
-    <button data-tab="final" class="{% if active_tab == 'final' %}active{% endif %}" role="tab"
-            aria-selected="{% if active_tab == 'final' %}true{% else %}false{% endif %}" aria-controls="tabbody"
-            hx-get="{% url 'dashboards:tab_final' uc.code %}"
-            hx-target="#tabbody" hx-on::after-request="setActive(this)">Final data</button>
-  </nav>
-
-  <div id="tabbody" role="tabpanel" tabindex="-1">
+  {# The sidebar is the single navigation surface — it drives every project #}
+  {# section, so the page just loads the chosen section's content here. #}
+  <div id="tabbody" role="region" aria-label="{{ tab_label }}" tabindex="-1"
+       hx-get="{{ tab_url }}" hx-trigger="load" hx-target="this">
     <div class="subtle" style="padding:1.4rem 0;">Loading…</div>
   </div>
-
-  <script>
-    function setActive(btn){
-      document.querySelectorAll('#tabs button').forEach(function(b){
-        b.classList.remove('active');
-        b.setAttribute('aria-selected', 'false');
-      });
-      btn.classList.add('active');
-      btn.setAttribute('aria-selected', 'true');
-    }
-    document.addEventListener('DOMContentLoaded', function(){
-      var btn = document.querySelector('#tabs button[data-tab="{{ active_tab }}"]')
-                || document.querySelector('#tabs button');
-      if (btn) btn.click();
-    });
-  </script>
 {% endblock %}

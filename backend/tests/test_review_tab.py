@@ -98,8 +98,14 @@ def test_review_action_scoped_to_use_case(client, django_user_model, world):
     assert s.review.state == ReviewState.IN_REVIEW
 
 
-def test_usecase_page_has_review_tab(client, world):
+def test_usecase_page_loads_selected_section(client, world):
+    # The sidebar is the single nav; the page loads only the chosen section's
+    # content (?tab=review → the review partial URL), not a full tab bar.
     client.force_login(world["tc"])
-    resp = client.get(reverse("dashboards:usecase", args=[world["uc"].code]))
+    resp = client.get(reverse("dashboards:usecase", args=[world["uc"].code]), {"tab": "review"})
     assert resp.status_code == 200
     assert reverse("dashboards:tab_review", args=[world["uc"].code]).encode() in resp.content
+    # Default (no tab) loads Summary, not Review.
+    home = client.get(reverse("dashboards:usecase", args=[world["uc"].code]))
+    assert reverse("dashboards:tab_summary", args=[world["uc"].code]).encode() in home.content
+    assert reverse("dashboards:tab_review", args=[world["uc"].code]).encode() not in home.content
