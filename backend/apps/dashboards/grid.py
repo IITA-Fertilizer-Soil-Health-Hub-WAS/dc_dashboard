@@ -19,22 +19,22 @@ def build_event_grid(use_case) -> dict[str, Any]:
 
     subs = list(
         Submission.objects.filter(use_case=use_case).select_related(
-            "household", "enumerator", "crop"
+            "collection_unit", "enumerator", "crop"
         )
     )
 
     households: dict[Any, dict[str, Any]] = {}
     for s in subs:
-        if s.household_id is None:
+        if s.collection_unit_id is None:
             continue
         hh = households.setdefault(
-            s.household_id,
+            s.collection_unit_id,
             {
-                "id": s.household_id,
-                "hhid": s.household.hhid if s.household else "",
+                "id": s.collection_unit_id,
+                "hhid": s.collection_unit.code if s.collection_unit else "",
                 "enid": s.enumerator.enid if s.enumerator else "",
                 "crop": s.crop.name if s.crop else None,
-                "site": s.household.site_selection_date if s.household else None,
+                "site": s.collection_unit.site_selection_date if s.collection_unit else None,
                 "submitted": {},
                 "event1": None,
             },

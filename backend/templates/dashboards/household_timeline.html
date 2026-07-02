@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}{{ hh.hhid }} timeline · {{ uc.code }} · {{ SITE_NAME }}{% endblock %}
-{% block crumbs %}<span class="sep">/</span><a href="{% url 'dashboards:usecase' uc.code %}">{{ uc.code }}</a><span class="sep">/</span><span class="cur">{{ hh.hhid }}</span>{% endblock %}
+{% block title %}{{ hh.code }} timeline · {{ uc.code }} · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<span class="sep">/</span><a href="{% url 'dashboards:usecase' uc.code %}">{{ uc.code }}</a><span class="sep">/</span><span class="cur">{{ hh.code }}</span>{% endblock %}
 {% block extrahead %}<style>
   .tl{list-style:none;margin:0;padding:0;}
   .tl li{position:relative;padding:0 0 1.1rem 1.6rem;border-left:2px solid var(--line);}
@@ -13,7 +13,7 @@
 </style>{% endblock %}
 {% block content %}
   <div class="page-head">
-    <h2>{{ hh.hhid }}</h2><span class="pill">{{ uc.code }}</span>
+    <h2>{{ hh.code }}</h2><span class="pill">{{ uc.code }}</span>
     {% if crop %}<span class="pill">{{ crop }}</span>{% endif %}
   </div>
   <p class="lede">{{ submitted_count }} of {{ event_count }} scheduled event{{ event_count|pluralize }} collected.

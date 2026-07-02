@@ -8,8 +8,9 @@ import pytest
 from django.urls import reverse
 from django.utils import timezone
 
+from apps.fieldwork.models import CollectionUnit
 from apps.ingestion.media_hash import hash_submission_media
-from apps.submissions.models import Enumerator, Household, Submission
+from apps.submissions.models import Enumerator, Submission
 from apps.usecases.models import FormDefinition, Organization, UseCase
 from apps.validation.engine import run_for_use_case
 from apps.validation.models import ValidationFlag, ValidationRule
@@ -35,12 +36,12 @@ def _sub(world, uuid, **kw):
 
 def test_photo_reuse_flags_shared_image_across_households(world):
     uc = world["uc"]
-    h1 = Household.objects.create(use_case=uc, hhid="H1")
-    h2 = Household.objects.create(use_case=uc, hhid="H2")
-    h3 = Household.objects.create(use_case=uc, hhid="H3")
-    _sub(world, "a", household=h1, media_hashes=["deadbeef"])
-    _sub(world, "b", household=h2, media_hashes=["deadbeef"])   # same photo, other farmer
-    _sub(world, "c", household=h3, media_hashes=["c0ffee"])     # unique
+    h1 = CollectionUnit.objects.create(use_case=uc, code="H1")
+    h2 = CollectionUnit.objects.create(use_case=uc, code="H2")
+    h3 = CollectionUnit.objects.create(use_case=uc, code="H3")
+    _sub(world, "a", collection_unit=h1, media_hashes=["deadbeef"])
+    _sub(world, "b", collection_unit=h2, media_hashes=["deadbeef"])   # same photo, other farmer
+    _sub(world, "c", collection_unit=h3, media_hashes=["c0ffee"])     # unique
 
     ValidationRule.objects.create(
         use_case=uc, code="photo", rule_type=ValidationRule.RuleType.PHOTO_REUSE)
@@ -52,9 +53,9 @@ def test_photo_reuse_flags_shared_image_across_households(world):
 
 def test_photo_reuse_ignores_same_household(world):
     uc = world["uc"]
-    h1 = Household.objects.create(use_case=uc, hhid="H1")
-    _sub(world, "e1", household=h1, media_hashes=["shared"])
-    _sub(world, "e2", household=h1, media_hashes=["shared"])  # same HH across events
+    h1 = CollectionUnit.objects.create(use_case=uc, code="H1")
+    _sub(world, "e1", collection_unit=h1, media_hashes=["shared"])
+    _sub(world, "e2", collection_unit=h1, media_hashes=["shared"])  # same HH across events
     ValidationRule.objects.create(
         use_case=uc, code="photo", rule_type=ValidationRule.RuleType.PHOTO_REUSE)
     run_for_use_case(uc)

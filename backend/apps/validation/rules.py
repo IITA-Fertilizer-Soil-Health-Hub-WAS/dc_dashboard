@@ -165,12 +165,12 @@ def geo_duplicate(use_case, params) -> list[FlagResult]:
     cells: dict[tuple, list] = {}
     for s in Submission.objects.filter(
         use_case=use_case, lat__isnull=False, lon__isnull=False
-    ).values("id", "lat", "lon", "household_id"):
+    ).values("id", "lat", "lon", "collection_unit_id"):
         key = (round(float(s["lat"]), precision), round(float(s["lon"]), precision))
         cells.setdefault(key, []).append(s)
     out: list[FlagResult] = []
     for (lat, lon), rows in cells.items():
-        households = {r["household_id"] for r in rows if r["household_id"] is not None}
+        households = {r["collection_unit_id"] for r in rows if r["collection_unit_id"] is not None}
         if len(households) < 2:
             continue
         msg = params.get(
@@ -233,15 +233,15 @@ def photo_reuse(use_case, params) -> list[FlagResult]:
     params: {message?}."""
     by_hash: dict[str, list] = {}
     for s in Submission.objects.filter(
-        use_case=use_case, household__isnull=False
-    ).exclude(media_hashes=[]).values("id", "household_id", "media_hashes"):
+        use_case=use_case, collection_unit__isnull=False
+    ).exclude(media_hashes=[]).values("id", "collection_unit_id", "media_hashes"):
         for h in s["media_hashes"] or []:
             by_hash.setdefault(h, []).append(s)
 
     seen: set = set()
     out: list[FlagResult] = []
     for _h, rows in by_hash.items():
-        households = {r["household_id"] for r in rows}
+        households = {r["collection_unit_id"] for r in rows}
         if len(households) < 2:
             continue
         msg = params.get(
@@ -265,10 +265,10 @@ def event_sequence(use_case, params) -> list[FlagResult]:
     if not order:
         return []
     out: list[FlagResult] = []
-    subs = Submission.objects.filter(use_case=use_case).select_related("household")
+    subs = Submission.objects.filter(use_case=use_case).select_related("collection_unit")
     by_hh: dict[Any, list[Submission]] = {}
     for s in subs:
-        by_hh.setdefault(s.household_id, []).append(s)
+        by_hh.setdefault(s.collection_unit_id, []).append(s)
 
     for hh_subs in by_hh.values():
         present = {s.event_key for s in hh_subs if s.event_key in order}
@@ -296,16 +296,16 @@ def date_window(use_case, params, today: date | None = None) -> list[FlagResult]
     out: list[FlagResult] = []
 
     subs = list(
-        Submission.objects.filter(use_case=use_case).select_related("household", "crop")
+        Submission.objects.filter(use_case=use_case).select_related("collection_unit", "crop")
     )
-    # Group submissions per household; track submitted events, Event1 date, and a
-    # representative submission (latest) to carry the household's overdue flags.
+    # Group submissions per unit; track submitted events, Event1 date, and a
+    # representative submission (latest) to carry the unit's overdue flags.
     by_hh: dict[Any, dict[str, Any]] = {}
     for s in subs:
-        if s.household_id is None:
+        if s.collection_unit_id is None:
             continue
         hh = by_hh.setdefault(
-            s.household_id,
+            s.collection_unit_id,
             {"submitted": {}, "event1": None, "rep": s, "crop": None, "site": None},
         )
         hh["submitted"][s.event_key] = s.event_date
@@ -313,8 +313,8 @@ def date_window(use_case, params, today: date | None = None) -> list[FlagResult]
             hh["event1"] = s.event_date
         if s.crop:
             hh["crop"] = s.crop.name
-        if s.household and s.household.site_selection_date:
-            hh["site"] = s.household.site_selection_date
+        if s.collection_unit and s.collection_unit.site_selection_date:
+            hh["site"] = s.collection_unit.site_selection_date
         # Keep the latest-dated submission as representative.
         if s.event_date and (hh["rep"].event_date is None or s.event_date > hh["rep"].event_date):
             hh["rep"] = s

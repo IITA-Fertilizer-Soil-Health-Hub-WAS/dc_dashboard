@@ -82,7 +82,7 @@ def my_submissions(request):
         Submission.objects.filter(
             Q(collected_by=user) | Q(enumerator__user=user)
         )
-        .select_related("use_case", "form", "enumerator", "household", "review")
+        .select_related("use_case", "form", "enumerator", "collection_unit", "review")
         .annotate(open_flags=Count("flags", filter=Q(flags__status=ValidationFlag.Status.OPEN)))
         .order_by("-event_date", "-ona_submission_time")
     )
@@ -194,22 +194,22 @@ def usecase_detail(request, code):
 def tab_summary(request, code):
     uc = get_scoped_use_case(request, code)
     submissions = list(
-        Submission.objects.filter(use_case=uc).select_related("household", "enumerator")
+        Submission.objects.filter(use_case=uc).select_related("collection_unit", "enumerator")
     )
-    # Plot the submissions' own collected locations; fall back to household points
-    # for projects whose data predates geo capture.
+    # Plot the submissions' own collected locations; fall back to unit points for
+    # projects whose data predates geo capture.
     points = [
         {"lat": s.lat, "lon": s.lon, "color": "#0d5c3f",
          "label": " · ".join(p for p in [
              s.enumerator.enid if s.enumerator else "",
-             s.household.hhid if s.household else "",
+             s.collection_unit.code if s.collection_unit else "",
              s.event_key, str(s.event_date or "")] if p)}
         for s in submissions if s.lat is not None and s.lon is not None
     ]
     if points:
         map_html = points_map_html(points)
     else:
-        map_html = trials_map_html(list(uc.households.all()))
+        map_html = trials_map_html(list(uc.collection_units.all()))
     trend = monthly_submission_counts(submissions)
     ctx = {
         "uc": uc,
@@ -277,7 +277,7 @@ def tab_review(request, code):
     uc = get_scoped_use_case(request, code)
     can_endorse = user_can(request.user, "endorse", uc)
     can_validate = user_can(request.user, "final_approve", uc)
-    sel = ("enumerator", "household", "review", "review__endorsed_by", "review__assigned_to")
+    sel = ("enumerator", "collection_unit", "review", "review__endorsed_by", "review__assigned_to")
 
     to_validate = list(
         Submission.objects.filter(use_case=uc, review__state=ReviewState.QC_PENDING)
@@ -354,22 +354,23 @@ def my_performance(request):
 
 @login_required
 def household_timeline(request, code, hh_id):
-    """One household's whole season on a page: every scheduled event in order, with
-    its submission date, review state and a few captured values — and the gaps
-    (missing / overdue events) highlighted. The per-household drill-down that
-    complements the project-wide event grid."""
+    """One unit's whole season on a page: every scheduled event in order, with its
+    submission date, review state and a few captured values — and the gaps (missing
+    / overdue events) highlighted. The per-unit drill-down that complements the
+    project-wide event grid."""
     from django.utils import timezone
 
-    from apps.submissions.models import Household, SubmissionValue
+    from apps.fieldwork.models import CollectionUnit
+    from apps.submissions.models import SubmissionValue
     from apps.validation.status import event_status, status_color
 
     uc = get_scoped_use_case(request, code)
-    hh = get_object_or_404(Household, pk=hh_id, use_case=uc)
+    hh = get_object_or_404(CollectionUnit, pk=hh_id, use_case=uc)
     schedule = list(uc.schedule.all())
 
     subs = {
         s.event_key: s
-        for s in Submission.objects.filter(use_case=uc, household=hh)
+        for s in Submission.objects.filter(use_case=uc, collection_unit=hh)
         .select_related("review", "enumerator", "crop").order_by("event_date")
     }
     event1 = subs.get("Event1")
@@ -406,7 +407,7 @@ def household_timeline(request, code, hh_id):
         })
 
     return render(request, "dashboards/household_timeline.html", {
-        "uc": uc, "hh": hh, "steps": steps, "crop": crop,
+        "uc": uc, "hh": hh, "unit": hh, "steps": steps, "crop": crop,
         "submitted_count": len(subs), "event_count": len(schedule),
     })
 
@@ -442,7 +443,7 @@ def qc_signoff(request, code):
 
     pending = list(
         Submission.objects.filter(use_case=uc, review__state=ReviewState.QC_PENDING)
-        .select_related("enumerator", "household", "review", "review__endorsed_by",
+        .select_related("enumerator", "collection_unit", "review", "review__endorsed_by",
                         "collection_unit")
         .order_by("review__updated_at")[:300]
     )
@@ -494,7 +495,7 @@ def tab_data(request, code):
     uc = get_scoped_use_case(request, code)
     submissions = list(
         Submission.objects.filter(use_case=uc)
-        .select_related("enumerator", "household", "review", "collected_by")
+        .select_related("enumerator", "collection_unit", "review", "collected_by")
         .prefetch_related("values")
         .order_by("-event_date", "-ona_submission_time")[:100]
     )
@@ -556,7 +557,7 @@ def export_final(request, code):
         record = {
             "ona_uuid": s.ona_uuid,
             "ENID": s.enumerator.enid if s.enumerator else "",
-            "HHID": s.household.hhid if s.household else "",
+            "HHID": s.collection_unit.code if s.collection_unit else "",
             "collected_by": s.collected_by.user_id if s.collected_by else "",
             "event": s.event_key,
             "crop": s.crop.name if s.crop else "",
@@ -609,7 +610,7 @@ def submission_review(request, code, submission_id):
     """Full review screen: edit field values and run workflow actions."""
     uc = get_scoped_use_case(request, code)
     submission = get_object_or_404(
-        Submission.objects.select_related("enumerator", "household", "crop", "review", "form"),
+        Submission.objects.select_related("enumerator", "collection_unit", "crop", "review", "form"),
         use_case=uc, pk=submission_id,
     )
     error = ok = None
@@ -849,13 +850,13 @@ def _issues_context(request, uc) -> dict:
     flags = (
         ValidationFlag.objects.filter(rule__use_case=uc, status=ValidationFlag.Status.OPEN)
         .select_related("submission", "submission__review", "submission__enumerator",
-                        "submission__household", "rule")
+                        "submission__collection_unit", "rule")
         .order_by("submission__ona_uuid")
     )
     if f["q"]:
         flags = flags.filter(
             Q(submission__enumerator__enid__icontains=f["q"])
-            | Q(submission__household__hhid__icontains=f["q"])
+            | Q(submission__collection_unit__code__icontains=f["q"])
             | Q(message__icontains=f["q"])
         )
     if f["event"]:

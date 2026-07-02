@@ -56,7 +56,7 @@ def approved_dataset(use_case, days: str = "all"):
         record = {
             "ona_uuid": s.ona_uuid,
             "ENID": s.enumerator.enid if s.enumerator else "",
-            "HHID": s.household.hhid if s.household else "",
+            "HHID": s.collection_unit.code if s.collection_unit else "",
             "collected_by": s.collected_by.user_id if s.collected_by else "",
             "event": s.event_key,
             "crop": s.crop.name if s.crop else "",

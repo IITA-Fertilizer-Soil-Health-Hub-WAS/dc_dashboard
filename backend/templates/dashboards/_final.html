@@ -18,7 +18,7 @@
       {% for row in rows %}
         {% with s=row.submission %}
         <tr>
-          <td>{{ s.household.hhid|default:"—" }}</td>
+          <td>{{ s.collection_unit.code|default:"—" }}</td>
           <td>{{ s.enumerator.enid|default:"—" }}</td>
           <td>{{ s.event_key }}</td>
           <td>{{ s.crop.name|default:"—" }}</td>

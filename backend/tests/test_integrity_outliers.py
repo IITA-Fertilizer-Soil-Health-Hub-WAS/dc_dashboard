@@ -8,8 +8,9 @@ import pytest
 from django.urls import reverse
 from django.utils import timezone
 
+from apps.fieldwork.models import CollectionUnit
 from apps.rbac.models import Role, UseCaseMembership
-from apps.submissions.models import Enumerator, Household, Submission, SubmissionValue
+from apps.submissions.models import Enumerator, Submission, SubmissionValue
 from apps.usecases.models import EventScheduleItem, FormDefinition, Organization, UseCase
 from apps.validation.engine import run_for_use_case
 from apps.validation.models import ValidationFlag, ValidationRule
@@ -70,14 +71,14 @@ def test_numeric_outlier_silent_below_min_n(world):
 
 def test_geo_duplicate_flags_shared_point_across_households(world):
     uc = world["uc"]
-    h1 = Household.objects.create(use_case=uc, hhid="H1")
-    h2 = Household.objects.create(use_case=uc, hhid="H2")
+    h1 = CollectionUnit.objects.create(use_case=uc, code="H1")
+    h2 = CollectionUnit.objects.create(use_case=uc, code="H2")
     # Two different households at the exact same GPS → never moved.
-    _sub(world, "a", household=h1, lat="-1.2900", lon="36.8000")
-    _sub(world, "b", household=h2, lat="-1.2900", lon="36.8000")
+    _sub(world, "a", collection_unit=h1, lat="-1.2900", lon="36.8000")
+    _sub(world, "b", collection_unit=h2, lat="-1.2900", lon="36.8000")
     # A third household, elsewhere → not flagged.
-    h3 = Household.objects.create(use_case=uc, hhid="H3")
-    _sub(world, "c", household=h3, lat="-1.5000", lon="36.9000")
+    h3 = CollectionUnit.objects.create(use_case=uc, code="H3")
+    _sub(world, "c", collection_unit=h3, lat="-1.5000", lon="36.9000")
 
     ValidationRule.objects.create(
         use_case=uc, code="dup-gps", rule_type=ValidationRule.RuleType.GEO_DUPLICATE)
@@ -89,9 +90,9 @@ def test_geo_duplicate_flags_shared_point_across_households(world):
 
 def test_geo_duplicate_ignores_same_household_revisits(world):
     uc = world["uc"]
-    h1 = Household.objects.create(use_case=uc, hhid="H1")
-    _sub(world, "e1", household=h1, lat="-1.2900", lon="36.8000")
-    _sub(world, "e2", household=h1, lat="-1.2900", lon="36.8000")  # same HH, later event
+    h1 = CollectionUnit.objects.create(use_case=uc, code="H1")
+    _sub(world, "e1", collection_unit=h1, lat="-1.2900", lon="36.8000")
+    _sub(world, "e2", collection_unit=h1, lat="-1.2900", lon="36.8000")  # same HH, later event
     ValidationRule.objects.create(
         use_case=uc, code="dup-gps", rule_type=ValidationRule.RuleType.GEO_DUPLICATE)
     run_for_use_case(uc)
@@ -130,8 +131,8 @@ def test_household_timeline_orders_events_and_shows_gaps(client, world, django_u
     UseCaseMembership.objects.create(user=coord, use_case=uc, role=Role.TRIAL_COORDINATOR)
     EventScheduleItem.objects.create(use_case=uc, event_key="Event1", sequence=1)
     EventScheduleItem.objects.create(use_case=uc, event_key="Event2", sequence=2)
-    hh = Household.objects.create(use_case=uc, hhid="H-42")
-    _sub(world, "ev1", household=hh, event_key="Event1", event_date=timezone.localdate())
+    hh = CollectionUnit.objects.create(use_case=uc, code="H-42")
+    _sub(world, "ev1", collection_unit=hh, event_key="Event1", event_date=timezone.localdate())
     # Event2 deliberately missing → a gap in the timeline.
 
     client.force_login(coord)

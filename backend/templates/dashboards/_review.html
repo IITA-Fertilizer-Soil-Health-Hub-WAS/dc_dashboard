@@ -24,7 +24,7 @@
           {% for s in to_validate %}
             <tr>
               <td>{{ s.enumerator.enid|default:"—" }}</td>
-              <td>{{ s.household.hhid|default:"—" }}</td>
+              <td>{{ s.collection_unit.code|default:"—" }}</td>
               <td>{{ s.event_key|default:"—" }}</td>
               <td class="subtle">{{ s.review.endorsed_by.email|default:"—" }}</td>
               <td style="text-align:right; white-space:nowrap;">
@@ -57,7 +57,7 @@
           {% for s in to_endorse %}
             <tr>
               <td>{{ s.enumerator.enid|default:"—" }}</td>
-              <td>{{ s.household.hhid|default:"—" }}</td>
+              <td>{{ s.collection_unit.code|default:"—" }}</td>
               <td>{{ s.event_key|default:"—" }}</td>
               <td><span class="pill {% if s.review.state == 'FLAGGED' %}warn{% else %}neutral{% endif %}">{{ s.review.get_state_display }}</span></td>
               <td style="text-align:right; white-space:nowrap;">

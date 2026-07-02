@@ -67,7 +67,7 @@
           <tr>
             <td><input type="checkbox" name="ids" value="{{ sid }}"></td>
             <td>{{ flag.submission.enumerator.enid|default:"—" }}</td>
-            <td>{{ flag.submission.household.hhid|default:"—" }}</td>
+            <td>{{ flag.submission.collection_unit.code|default:"—" }}</td>
             <td>{{ flag.message }}{% if flag.field_key %} <span class="pill">{{ flag.field_key }}</span>{% endif %}</td>
             <td><span class="pill {% if flag.severity == 'ERROR' %}danger{% elif flag.severity == 'WARNING' %}warn{% else %}info{% endif %}">{{ flag.severity|lower }}</span></td>
             <td><span class="pill neutral">{{ flag.submission.review.get_state_display }}</span></td>

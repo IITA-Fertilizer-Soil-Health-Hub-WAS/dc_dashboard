@@ -129,8 +129,10 @@ def monthly_submission_counts(submissions) -> list[dict]:
     return [{"month": m, "n": counts[m]} for m in sorted(counts)]
 
 
-def trials_map_html(households) -> str:
-    """Folium map of household/plot locations (was the leaflet 'Trials by Location')."""
+def trials_map_html(units) -> str:
+    """Folium map of collection-unit (household / farm / plot) locations
+    (was the leaflet 'Trials by Location')."""
+    households = units
     pts = [(float(h.lat), float(h.lon)) for h in households if h.lat is not None and h.lon is not None]
     if pts:
         center = (sum(p[0] for p in pts) / len(pts), sum(p[1] for p in pts) / len(pts))
@@ -147,6 +149,6 @@ def trials_map_html(households) -> str:
             color=AMBER,
             fill=True,
             fill_opacity=0.8,
-            popup=f"{h.hhid}",
+            popup=f"{h.code}",
         ).add_to(m)
     return m._repr_html_()
