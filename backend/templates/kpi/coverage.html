@@ -9,6 +9,11 @@
   .jrow .v{flex:0 0 92px;text-align:right;font-size:.84rem;font-variant-numeric:tabular-nums;}
   .legend{display:flex;gap:1.1rem;font-size:.8rem;margin-top:.6rem;color:var(--muted);}
   .legend i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:.3rem;vertical-align:middle;}
+  .arow{display:flex;align-items:center;gap:.6rem;margin:.4rem 0;}
+  .arow .nm{flex:0 0 180px;font-size:.86rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .arow .track{flex:1;height:16px;background:var(--line);border-radius:8px;overflow:hidden;}
+  .arow .track > i{display:block;height:100%;}
+  .arow .v{flex:0 0 96px;text-align:right;font-size:.82rem;font-variant-numeric:tabular-nums;}
 </style>{% endblock %}
 {% block content %}
   <div class="page-head">
@@ -22,6 +27,18 @@
     <div class="card infobox"><div class="n">{{ collected_units }}</div><div class="l">Collected</div></div>
     <div class="card infobox"><div class="n">{{ pending_units }}</div><div class="l">Pending</div></div>
     <div class="card infobox"><div class="n">{{ coverage_pct }}%</div><div class="l">Coverage</div></div>
+  </div>
+
+  <div class="card" style="margin-top:1.1rem;">
+    <h3 style="margin-bottom:.6rem;">Coverage by area</h3>
+    <p class="subtle" style="margin:0 0 .7rem;font-size:.82rem;">Behind-most first — where to push the field team next.</p>
+    {% for a in areas %}
+      <div class="arow">
+        <span class="nm" title="{{ a.area }}">{{ a.area }}</span>
+        <div class="track"><i style="width:{{ a.pct }}%;background:{% if a.pct >= 80 %}#55b047{% elif a.pct >= 50 %}#fdb415{% else %}#c3531f{% endif %};"></i></div>
+        <span class="v">{{ a.collected }}/{{ a.total }} · {{ a.pct }}%</span>
+      </div>
+    {% empty %}<div class="empty" style="border:none;">No units to break down yet.</div>{% endfor %}
   </div>
 
   <div class="cards" style="margin-top:1.1rem;align-items:flex-start;">

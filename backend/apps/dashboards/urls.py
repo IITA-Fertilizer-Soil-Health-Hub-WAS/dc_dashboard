@@ -25,6 +25,7 @@ urlpatterns = [
     path("usecase/<slug:code>/tab/summary/", views.tab_summary, name="tab_summary"),
     path("usecase/<slug:code>/tab/review/", views.tab_review, name="tab_review"),
     path("usecase/<slug:code>/tab/review/action/", views.tab_review_action, name="tab_review_action"),
+    path("usecase/<slug:code>/qc-signoff/", views.qc_signoff, name="qc_signoff"),
     path("usecase/<slug:code>/tab/enumerators/", views.tab_enumerators, name="tab_enumerators"),
     path("usecase/<slug:code>/tab/issues/", views.tab_issues, name="tab_issues"),
     path("usecase/<slug:code>/tab/data/", views.tab_data, name="tab_data"),

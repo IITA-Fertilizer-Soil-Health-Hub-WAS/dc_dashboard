@@ -229,9 +229,32 @@ def quality_metrics(use_case, days: str = "30") -> dict:
     }
 
 
+# On-time = collected data reaches the server within this many days of the field
+# event. GPS-error target mirrors the GEO_DISTANCE rule's default (metres).
+ONTIME_LAG_DAYS = 2
+GPS_ERR_TARGET_M = 100
+
+
+def _quality_score(approval_pct, on_time_pct, flag_pct, gps_err) -> int:
+    """SDMT-style composite (0–100): a transparent blend of the four quality
+    signals, so the leaderboard ranks by *data quality*, not raw volume. Missing
+    signals (no dated subs / no GPS) score neutral so nobody is punished for gaps.
+
+        40% approval · 25% on-time · 15% GPS accuracy · 20% flag-free
+    """
+    q_approval = approval_pct
+    q_ontime = on_time_pct if on_time_pct is not None else 100
+    q_gps = 100 if gps_err is None else max(0, 100 - gps_err)  # 1 pt per metre over 0
+    q_flags = max(0, 100 - flag_pct)
+    return max(0, min(100, round(
+        0.40 * q_approval + 0.25 * q_ontime + 0.15 * q_gps + 0.20 * q_flags
+    )))
+
+
 def enumerator_metrics(use_case, days: str = "30") -> dict:
-    """Per-enumerator leaderboard: volume, approval rate, open issues and last
-    activity, plus the geo-points the project has collected (for the map)."""
+    """Per-enumerator scorecard: volume, approval / reject rate, on-time delivery,
+    average GPS error and open issues, ranked by a composite quality score (not raw
+    volume) — SDMT's field-team-management view. Plus the collected geo-points."""
     since = _since(days)
     subs = Submission.objects.filter(use_case=use_case, enumerator__isnull=False)
     if since:
@@ -246,6 +269,7 @@ def enumerator_metrics(use_case, days: str = "30") -> dict:
         .annotate(
             n=Count("id"),
             approved=Count("id", filter=Q(review__state=ReviewState.APPROVED)),
+            declined=Count("id", filter=Q(review__state=ReviewState.DECLINED)),
             last_active=Max("event_date"),
         )
         .order_by("-n")
@@ -259,10 +283,24 @@ def enumerator_metrics(use_case, days: str = "30") -> dict:
         .values_list("submission__enumerator_id")
         .annotate(n=Count("id"))
     )
+    on_time = _on_time_by_enum(subs)
+    gps_err = _gps_error_by_enum(subs)
     for r in rows:
-        r["open_flags"] = open_by_enum.get(r["enumerator_id"], 0)
-        r["approval_pct"] = round(r["approved"] / r["n"] * 100) if r["n"] else 0
-    leaderboard_max = rows[0]["n"] if rows else 0
+        eid = r["enumerator_id"]
+        n = r["n"] or 0
+        r["open_flags"] = open_by_enum.get(eid, 0)
+        r["approval_pct"] = round(r["approved"] / n * 100) if n else 0
+        r["reject_pct"] = round(r["declined"] / n * 100) if n else 0
+        r["flag_pct"] = round(r["open_flags"] / n * 100) if n else 0
+        dated, ontime_n = on_time.get(eid, (0, 0))
+        r["on_time_pct"] = round(ontime_n / dated * 100) if dated else None
+        tot_m, cnt_m = gps_err.get(eid, (0.0, 0))
+        r["gps_err_m"] = round(tot_m / cnt_m) if cnt_m else None
+        r["quality_score"] = _quality_score(
+            r["approval_pct"], r["on_time_pct"], r["flag_pct"], r["gps_err_m"]
+        )
+    rows.sort(key=lambda r: (-r["quality_score"], -r["n"]))
+    leaderboard_max = max((r["n"] for r in rows), default=0)
 
     # Collection points (units the project's submissions touched), for the map.
     points = [
@@ -279,6 +317,34 @@ def enumerator_metrics(use_case, days: str = "30") -> dict:
         "active_count": len([r for r in rows if r["n"]]),
         "points": points,
     }
+
+
+def _on_time_by_enum(subs) -> dict:
+    """{enumerator_id: (dated_count, on_time_count)} — a submission is on-time when
+    it reached the server within ONTIME_LAG_DAYS of its field event date."""
+    out: dict = {}
+    for s in subs.filter(
+        event_date__isnull=False, ona_submission_time__isnull=False
+    ).values("enumerator_id", "event_date", "ona_submission_time"):
+        dated, ontime = out.get(s["enumerator_id"], (0, 0))
+        lag = (s["ona_submission_time"].date() - s["event_date"]).days
+        out[s["enumerator_id"]] = (dated + 1, ontime + (1 if lag <= ONTIME_LAG_DAYS else 0))
+    return out
+
+
+def _gps_error_by_enum(subs) -> dict:
+    """{enumerator_id: (total_metres, count)} over submissions that have both a GPS
+    point and a located unit — averaged into the scorecard's mean GPS error."""
+    out: dict = {}
+    for s in subs.filter(
+        lat__isnull=False, lon__isnull=False, collection_unit__isnull=False
+    ).select_related("collection_unit"):
+        d = s.distance_to_unit_m
+        if d is None:
+            continue
+        tot, cnt = out.get(s.enumerator_id, (0.0, 0))
+        out[s.enumerator_id] = (tot + d, cnt + 1)
+    return out
 
 
 def _collected_units(use_case):
@@ -324,5 +390,28 @@ def coverage_metrics(use_case) -> dict:
         "coverage_pct": round(collected / total_units * 100) if total_units else 0,
         "jobs": jobs,
         "points": points,
+        "areas": _coverage_by_area(units),
         "unmapped": total_units - mapped.count(),
     }
+
+
+def _coverage_by_area(units) -> list[dict]:
+    """Collection coverage broken down by the finest admin area a unit carries
+    (district → region → country), worst-covered first — the 'where are we behind'
+    spatial picture. Units with no geography roll into an 'Unassigned' bucket."""
+    buckets: dict[str, dict] = {}
+    for u in units.values("district", "region", "country").annotate(
+        total=Count("id", distinct=True),
+        collected=Count("id", distinct=True, filter=Q(submissions__isnull=False)),
+    ):
+        name = u["district"] or u["region"] or u["country"] or "Unassigned"
+        b = buckets.setdefault(name, {"area": name, "total": 0, "collected": 0})
+        b["total"] += u["total"]
+        b["collected"] += u["collected"]
+    rows = []
+    for b in buckets.values():
+        b["pending"] = b["total"] - b["collected"]
+        b["pct"] = round(b["collected"] / b["total"] * 100) if b["total"] else 0
+        rows.append(b)
+    rows.sort(key=lambda r: (r["pct"], -r["total"]))  # behind-most first
+    return rows

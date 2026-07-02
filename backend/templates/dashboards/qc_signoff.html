@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}QC sign-off · {{ uc.code }} · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<span class="sep">/</span><a href="{% url 'dashboards:usecase' uc.code %}">{{ uc.code }}</a><span class="sep">/</span><span class="cur">QC sign-off</span>{% endblock %}
+{% block extrahead %}<style>
+  .qc-row{padding:.7rem .2rem;border-top:1px solid var(--line);}
+  .qc-row:first-child{border-top:none;}
+  .qc-meta{display:flex;gap:.6rem;align-items:baseline;flex-wrap:wrap;}
+  .qc-acts{display:flex;gap:.4rem;align-items:center;margin-top:.5rem;flex-wrap:wrap;}
+  .qc-acts input[type=text]{flex:1;min-width:180px;}
+</style>{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h2>{{ uc.name }} — QC sign-off</h2><span class="pill">{{ uc.code }}</span>
+  </div>
+  <p class="lede">Gate 2 · agronomic validation. Submissions endorsed by a coordinator wait here for
+     your final sign-off before they are approved. <strong>{{ pending_count }}</strong> awaiting ·
+     {{ approved_count }} already approved.</p>
+
+  {% if messages %}{% for msg in messages %}<div class="pill" style="margin-bottom:.7rem;">{{ msg }}</div>{% endfor %}{% endif %}
+
+  <div class="card" style="padding:.4rem .9rem;">
+    {% for s in pending %}
+      <div class="qc-row">
+        <div class="qc-meta">
+          <a href="{% url 'dashboards:submission_review' uc.code s.id %}"><strong class="mono">{{ s.ona_uuid|slice:":8" }}</strong></a>
+          {% if s.enumerator %}<span class="subtle">by {{ s.enumerator.enid }}{% if s.enumerator.first_name %} · {{ s.enumerator.first_name }} {{ s.enumerator.surname }}{% endif %}</span>{% endif %}
+          {% if s.collection_unit %}<span class="pill">{{ s.collection_unit.code }}</span>{% endif %}
+          {% if s.event_date %}<span class="subtle">{{ s.event_date }}</span>{% endif %}
+          {% if s.review.endorsed_by %}<span class="subtle">endorsed by {{ s.review.endorsed_by.email }}</span>{% endif %}
+        </div>
+        <form method="post" class="qc-acts">
+          {% csrf_token %}
+          <input type="hidden" name="submission" value="{{ s.id }}">
+          <input type="text" name="note" class="input" placeholder="Note (required to decline / request edit)">
+          <button class="btn" type="submit" name="action" value="QC_APPROVE" style="background:#eaf6ea;color:#2f7d32;">Validate</button>
+          <button class="btn" type="submit" name="action" value="REQUEST_EDIT">Request edit</button>
+          <button class="btn" type="submit" name="action" value="DECLINE" style="background:#fbe7df;color:#c3531f;">Decline</button>
+        </form>
+      </div>
+    {% empty %}
+      <div class="empty" style="border:none;">Nothing awaiting sign-off — the Gate-2 queue is clear.</div>
+    {% endfor %}
+  </div>
+{% endblock %}

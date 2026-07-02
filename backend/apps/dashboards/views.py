@@ -9,10 +9,11 @@ from __future__ import annotations
 import csv
 
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q
 from django.http import Http404, HttpResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from apps.rbac.permissions import user_can, visible_use_cases
@@ -286,6 +287,50 @@ def tab_review_action(request, code):
         except (ReviewPermissionDenied, TransitionError):
             pass
     return tab_review(request, code)
+
+
+@login_required
+def qc_signoff(request, code):
+    """Agronomist QC sign-off — a dedicated, focused Gate-2 queue.
+
+    After a coordinator endorses a submission (Gate 1 → QC_PENDING), the quality
+    checker / agronomist signs off its agronomic validity here before it becomes
+    APPROVED. Its own screen (not buried in the Review tab's dual list) so the
+    validator works one clean backlog. Guarded by the `final_approve` right."""
+    uc = get_scoped_use_case(request, code)
+    if not user_can(request.user, "final_approve", uc):
+        raise Http404("You are not a validator on this project.")
+
+    if request.method == "POST":
+        submission = Submission.objects.filter(
+            use_case=uc, pk=request.POST.get("submission")
+        ).first()
+        fn = {
+            ReviewAction.QC_APPROVE: services.qc_approve,
+            ReviewAction.DECLINE: services.decline,
+            ReviewAction.REQUEST_EDIT: services.request_edit,
+        }.get(request.POST.get("action"))
+        if submission is not None and fn is not None:
+            try:
+                fn(request.user, submission, note=(request.POST.get("note") or "").strip())
+                messages.success(request, f"Submission {submission.ona_uuid[:8]} updated.")
+            except (ReviewPermissionDenied, TransitionError) as e:
+                messages.error(request, str(e))
+        return redirect("dashboards:qc_signoff", code=uc.code)
+
+    pending = list(
+        Submission.objects.filter(use_case=uc, review__state=ReviewState.QC_PENDING)
+        .select_related("enumerator", "household", "review", "review__endorsed_by",
+                        "collection_unit")
+        .order_by("review__updated_at")[:300]
+    )
+    approved = Submission.objects.filter(
+        use_case=uc, review__state=ReviewState.APPROVED
+    ).count()
+    return render(request, "dashboards/qc_signoff.html", {
+        "uc": uc, "pending": pending, "pending_count": len(pending),
+        "approved_count": approved,
+    })
 
 
 @login_required

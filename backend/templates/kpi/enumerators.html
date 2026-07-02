@@ -13,13 +13,17 @@
       {% for k, label in periods.items %}<a class="seg {% if days == k %}on{% endif %}" href="?days={{ k }}">{{ label }}</a>{% endfor %}
     </div>
   </div>
-  <p class="lede">{{ active_count }} active enumerator{{ active_count|pluralize }} — {{ period_label|lower }}.</p>
+  <p class="lede">{{ active_count }} active enumerator{{ active_count|pluralize }} — {{ period_label|lower }}. Ranked by quality score (approval, on-time delivery, GPS accuracy, flag-free).</p>
   {% include "kpi/_subnav.html" %}
 
   <div class="card" style="padding:0;overflow:hidden;">
     <div class="table-wrap">
     <table>
-      <thead><tr><th scope="col">Enumerator</th><th scope="col">Submissions</th><th scope="col">Approved</th><th scope="col">Open issues</th><th scope="col">Last active</th></tr></thead>
+      <thead><tr>
+        <th scope="col">Enumerator</th><th scope="col">Quality</th><th scope="col">Coll.</th>
+        <th scope="col">Approved</th><th scope="col">Reject</th><th scope="col">On-time</th>
+        <th scope="col">GPS err</th><th scope="col">Open issues</th><th scope="col">Last active</th>
+      </tr></thead>
       <tbody>
         {% for e in leaderboard %}
           <tr>
@@ -27,12 +31,16 @@
               <strong>{{ e.enumerator__enid }}</strong>{% if e.enumerator__first_name %} · {{ e.enumerator__first_name }} {{ e.enumerator__surname }}{% endif %}
               <span class="lead-bar"><i style="width:{% widthratio e.n leaderboard_max 100 %}%;"></i></span>
             </td>
+            <td><span class="pill" style="{% if e.quality_score >= 80 %}background:#eaf6ea;color:#2f7d32;{% elif e.quality_score >= 60 %}background:#fef6e0;color:#8a6d00;{% else %}background:#fbe7df;color:#c3531f;{% endif %}font-variant-numeric:tabular-nums;">{{ e.quality_score }}</span></td>
             <td style="font-variant-numeric:tabular-nums;">{{ e.n }}</td>
-            <td><span class="pill" title="{{ e.approved }} approved">{{ e.approval_pct }}%</span></td>
+            <td><span title="{{ e.approved }} approved">{{ e.approval_pct }}%</span></td>
+            <td>{% if e.reject_pct %}<span style="color:#c3531f;">{{ e.reject_pct }}%</span>{% else %}<span class="subtle">0%</span>{% endif %}</td>
+            <td>{% if e.on_time_pct is None %}<span class="subtle">—</span>{% else %}{{ e.on_time_pct }}%{% endif %}</td>
+            <td class="subtle" style="font-variant-numeric:tabular-nums;">{% if e.gps_err_m is None %}—{% else %}{{ e.gps_err_m }} m{% endif %}</td>
             <td>{% if e.open_flags %}<span class="pill" style="background:#fbe7df;color:#c3531f;">{{ e.open_flags }}</span>{% else %}<span class="subtle">0</span>{% endif %}</td>
             <td class="subtle">{{ e.last_active|default:"—" }}</td>
           </tr>
-        {% empty %}<tr><td colspan="5"><div class="empty" style="border:none;">No enumerator activity in this period.</div></td></tr>{% endfor %}
+        {% empty %}<tr><td colspan="9"><div class="empty" style="border:none;">No enumerator activity in this period.</div></td></tr>{% endfor %}
       </tbody>
     </table>
     </div>

@@ -401,6 +401,12 @@
              class="{% if request.resolver_match.app_name == 'kpi' %}active{% endif %}">
             <span class="msym">insights</span>M&amp;E
           </a>
+          {% if can_validate_active %}
+          <a href="{% url 'dashboards:qc_signoff' active_uc.code %}"
+             class="{% if request.resolver_match.url_name == 'qc_signoff' %}active{% endif %}">
+            <span class="msym">verified</span>QC sign-off
+          </a>
+          {% endif %}
 
           {% if show_my_assignments %}
             <div class="lbl">My work</div>

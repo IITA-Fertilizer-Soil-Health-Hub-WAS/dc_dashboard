@@ -63,6 +63,14 @@ def navigation(request):
     if code:
         active_uc = visible.filter(code=code).first()
 
+    # Gate-2 validators (agronomic QC sign-off) get a dedicated queue link in the
+    # active project.
+    can_validate_active = False
+    if active_uc is not None:
+        from apps.rbac.permissions import user_can
+
+        can_validate_active = user_can(user, "final_approve", active_uc)
+
     from apps.accounts.models import UserProfile
 
     profile_complete = UserProfile.objects.filter(
@@ -73,6 +81,7 @@ def navigation(request):
         "nav_use_cases": nav_use_cases,
         "nav_use_cases_total": nav_use_cases_total,
         "active_uc": active_uc,
+        "can_validate_active": can_validate_active,
         "profile_incomplete": not profile_complete,
         "console_groups": console_groups,
         "console_active_group": active_group,
