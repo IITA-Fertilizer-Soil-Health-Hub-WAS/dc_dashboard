@@ -24,6 +24,7 @@ PER_SUBMISSION = {
     ValidationRule.RuleType.REQUIRED_FIELD: rule_impls.required_field,
     ValidationRule.RuleType.NUMERIC_RANGE: rule_impls.numeric_range,
     ValidationRule.RuleType.GEO_DISTANCE: rule_impls.geo_distance,
+    ValidationRule.RuleType.GEO_CONTAINMENT: rule_impls.geo_containment,
 }
 # Rules evaluated once per use case (need the whole timeline).
 PER_USE_CASE = {

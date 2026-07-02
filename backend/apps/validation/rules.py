@@ -88,6 +88,26 @@ def geo_distance(submission, params) -> list[FlagResult]:
     return [FlagResult(submission.id, msg, "", {"distance_m": round(dist, 1), "max_m": max_m})]
 
 
+def geo_containment(submission, params) -> list[FlagResult]:
+    """Flag a submission whose GPS falls OUTSIDE the elected plot boundary of its
+    collection unit — the field team registered the farmer off the elected plot.
+    No flag when there's no boundary or no submission GPS (nothing to test).
+
+    params: {message?}.
+    """
+    from apps.common.geo import point_in_polygon
+
+    unit = submission.collection_unit
+    if unit is None or not getattr(unit, "boundary", None):
+        return []
+    if submission.lat is None or submission.lon is None:
+        return []
+    if point_in_polygon(submission.lat, submission.lon, unit.boundary):
+        return []
+    msg = params.get("message", "Collected outside the elected plot boundary")
+    return [FlagResult(submission.id, msg, "", {"outside_boundary": True})]
+
+
 # --- Per-household rules (need the whole event timeline) ----------------------
 
 def event_sequence(use_case, params) -> list[FlagResult]:

@@ -31,6 +31,7 @@ class ValidationRule(BaseModel):
         REQUIRED_FIELD = "REQUIRED_FIELD", "Required field present"
         CROSS_FIELD = "CROSS_FIELD", "Cross-field check"
         GEO_DISTANCE = "GEO_DISTANCE", "GPS distance from assigned plot"
+        GEO_CONTAINMENT = "GEO_CONTAINMENT", "GPS inside the elected plot boundary"
         PLUGIN = "PLUGIN", "Plugin-provided check"
 
     class Severity(models.TextChoices):
