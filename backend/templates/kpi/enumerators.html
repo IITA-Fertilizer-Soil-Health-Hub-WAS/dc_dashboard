@@ -28,7 +28,7 @@
         {% for e in leaderboard %}
           <tr>
             <td>
-              <strong>{{ e.enumerator__enid }}</strong>{% if e.enumerator__first_name %} · {{ e.enumerator__first_name }} {{ e.enumerator__surname }}{% endif %}
+              <a href="{% url 'kpi:enumerator_detail' uc.code e.enumerator_id %}"><strong>{{ e.enumerator__enid }}</strong></a>{% if e.enumerator__first_name %} · {{ e.enumerator__first_name }} {{ e.enumerator__surname }}{% endif %}
               <span class="lead-bar"><i style="width:{% widthratio e.n leaderboard_max 100 %}%;"></i></span>
             </td>
             <td><span class="pill" style="{% if e.quality_score >= 80 %}background:#eaf6ea;color:#2f7d32;{% elif e.quality_score >= 60 %}background:#fef6e0;color:#8a6d00;{% else %}background:#fbe7df;color:#c3531f;{% endif %}font-variant-numeric:tabular-nums;">{{ e.quality_score }}</span></td>

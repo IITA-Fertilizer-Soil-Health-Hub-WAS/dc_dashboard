@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Enumerator · {{ uc.code }} · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<span class="sep">/</span><a href="{% url 'kpi:overview' %}">M&amp;E</a><span class="sep">/</span><a href="{% url 'kpi:project' uc.code %}">{{ uc.code }}</a><span class="sep">/</span><a href="{% url 'kpi:enumerators' uc.code %}">Enumerators</a><span class="sep">/</span><span class="cur">{% if trend.enumerator %}{{ trend.enumerator.enid }}{% else %}detail{% endif %}</span>{% endblock %}
+{% block extrahead %}<style>
+  .trend{display:flex;align-items:flex-end;gap:4px;height:150px;margin:.6rem 0 .3rem;}
+  .trend .col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;}
+  .trend .bar{width:70%;border-radius:3px 3px 0 0;min-height:2px;}
+  .trend .wk{font-size:.6rem;color:var(--muted);margin-top:.2rem;}
+  .scg{display:flex;gap:1.4rem;flex-wrap:wrap;}
+  .scg .m .v{font-size:1.2rem;font-weight:500;font-variant-numeric:tabular-nums;}
+  .scg .m .l{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+</style>{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h2>{% if trend.enumerator %}{{ trend.enumerator.enid }}{% if trend.enumerator.first_name %} · {{ trend.enumerator.first_name }} {{ trend.enumerator.surname }}{% endif %}{% else %}Enumerator{% endif %}</h2>
+    <span class="pill">{{ uc.code }}</span>
+    <span style="flex:1"></span>
+    <div class="tabs">
+      {% for k, label in periods.items %}<a class="seg {% if days == k %}on{% endif %}" href="?days={{ k }}">{{ label }}</a>{% endfor %}
+    </div>
+  </div>
+
+  {% if row %}
+  <div class="card">
+    <div class="scg">
+      <div class="m"><div class="v">{{ row.quality_score }}</div><div class="l">Quality</div></div>
+      <div class="m"><div class="v">{{ row.n }}</div><div class="l">Collected</div></div>
+      <div class="m"><div class="v">{{ row.approval_pct }}%</div><div class="l">Approved</div></div>
+      <div class="m"><div class="v">{{ row.reject_pct }}%</div><div class="l">Rejected</div></div>
+      <div class="m"><div class="v">{% if row.on_time_pct is None %}—{% else %}{{ row.on_time_pct }}%{% endif %}</div><div class="l">On-time</div></div>
+      <div class="m"><div class="v">{% if row.gps_err_m is None %}—{% else %}{{ row.gps_err_m }} m{% endif %}</div><div class="l">GPS error</div></div>
+      <div class="m"><div class="v">{{ row.open_flags }}</div><div class="l">Open issues</div></div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card" style="margin-top:1rem;">
+    <div style="display:flex;align-items:center;gap:.6rem;">
+      <h3 style="margin:0;">Flag rate over time</h3>
+      {% if trend.direction == 'worsening' %}<span class="pill" style="background:#fbe7df;color:#c3531f;">▲ worsening</span>
+      {% elif trend.direction == 'improving' %}<span class="pill" style="background:#eaf6ea;color:#2f7d32;">▼ improving</span>
+      {% else %}<span class="pill">stable</span>{% endif %}
+      {% if trend.early_pct is not None %}<span class="subtle" style="font-size:.82rem;">{{ trend.early_pct }}% → {{ trend.recent_pct }}% (earlier vs recent half)</span>{% endif %}
+    </div>
+    <p class="subtle" style="margin:.3rem 0 0;font-size:.82rem;">Share of each week's submissions that drew an open flag — last {{ trend.weeks }} weeks.</p>
+    {% if trend.total_n %}
+      <div class="trend">
+        {% for s in trend.series %}
+          <div class="col" title="Week {{ s.week }}: {{ s.n }} submissions{% if s.flag_pct is not None %}, {{ s.flag_pct }}% flagged{% endif %}">
+            <div class="bar" style="height:{% if s.flag_pct %}{% widthratio s.flag_pct trend.max_pct 100 %}{% else %}0{% endif %}%;background:{% if s.flag_pct >= 50 %}#c3531f{% elif s.flag_pct >= 20 %}#fdb415{% else %}#55b047{% endif %};{% if s.n == 0 %}opacity:.2;{% endif %}"></div>
+            <span class="wk">{{ s.week }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty" style="border:none;">No submissions in the trend window.</div>
+    {% endif %}
+  </div>
+{% endblock %}

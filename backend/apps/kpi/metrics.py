@@ -369,6 +369,72 @@ def _gps_error_by_enum(subs) -> dict:
     return out
 
 
+def enumerator_trend(use_case, enumerator_id, weeks: int = 12) -> dict:
+    """One enumerator's flag rate over time — weekly buckets — so a coordinator can
+    catch *degrading* quality early rather than only seeing a period average. Each
+    bucket: submissions and how many drew an open flag. A first-half vs second-half
+    comparison labels the direction (improving / worsening / stable)."""
+    from apps.submissions.models import Enumerator
+
+    enum = Enumerator.objects.filter(pk=enumerator_id, use_case=use_case).first()
+    start = date.today() - timedelta(weeks=weeks)
+
+    subs = list(
+        Submission.objects.filter(use_case=use_case, enumerator_id=enumerator_id)
+        .filter(
+            Q(event_date__gte=start)
+            | Q(event_date__isnull=True, ona_submission_time__date__gte=start)
+        )
+        .values("id", "event_date", "ona_submission_time")
+    )
+    flagged_ids = set(
+        ValidationFlag.objects.filter(
+            submission__enumerator_id=enumerator_id, status=ValidationFlag.Status.OPEN,
+        ).values_list("submission_id", flat=True)
+    )
+
+    buckets = [{"n": 0, "flagged": 0} for _ in range(weeks)]
+    for s in subs:
+        d = s["event_date"] or (s["ona_submission_time"].date() if s["ona_submission_time"] else None)
+        if d is None:
+            continue
+        idx = min(weeks - 1, max(0, (d - start).days // 7))
+        buckets[idx]["n"] += 1
+        if s["id"] in flagged_ids:
+            buckets[idx]["flagged"] += 1
+
+    series = []
+    for i, b in enumerate(buckets):
+        pct = round(b["flagged"] / b["n"] * 100) if b["n"] else None
+        series.append({"week": i + 1, "n": b["n"], "flagged": b["flagged"], "flag_pct": pct})
+
+    # Direction: mean flag % of the recent half vs the earlier half (only weeks with
+    # data count, so sparse collection doesn't fake a trend).
+    def _mean(rows):
+        vals = [r["flag_pct"] for r in rows if r["flag_pct"] is not None]
+        return sum(vals) / len(vals) if vals else None
+
+    half = weeks // 2
+    early, recent = _mean(series[:half]), _mean(series[half:])
+    direction = "stable"
+    if early is not None and recent is not None:
+        if recent >= early + 10:
+            direction = "worsening"
+        elif recent <= early - 10:
+            direction = "improving"
+
+    return {
+        "enumerator": enum,
+        "series": series,
+        "max_pct": max((s["flag_pct"] or 0 for s in series), default=0),
+        "total_n": sum(b["n"] for b in buckets),
+        "direction": direction,
+        "early_pct": None if early is None else round(early),
+        "recent_pct": None if recent is None else round(recent),
+        "weeks": weeks,
+    }
+
+
 def _collected_units(use_case):
     from apps.fieldwork.models import CollectionUnit
 

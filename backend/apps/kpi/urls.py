@@ -12,6 +12,7 @@ urlpatterns = [
     path("<slug:code>/", views.kpi_project, name="project"),
     path("<slug:code>/quality/", views.kpi_quality, name="quality"),
     path("<slug:code>/enumerators/", views.kpi_enumerators, name="enumerators"),
+    path("<slug:code>/enumerators/<uuid:enum_id>/", views.kpi_enumerator_detail, name="enumerator_detail"),
     path("<slug:code>/coverage/", views.kpi_coverage, name="coverage"),
     path("<slug:code>/export/<slug:kind>/", views.kpi_export, name="export"),
 ]

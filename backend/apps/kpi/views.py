@@ -11,6 +11,7 @@ from .metrics import (
     PERIODS,
     coverage_metrics,
     enumerator_metrics,
+    enumerator_trend,
     overview_metrics,
     project_metrics,
     quality_metrics,
@@ -52,6 +53,23 @@ def kpi_enumerators(request, code):
     m = enumerator_metrics(uc, _days(request))
     ctx = m | {"uc": uc, "periods": PERIODS, "map_html": points_map_html(m["points"])}
     return render(request, "kpi/enumerators.html", ctx)
+
+
+@login_required
+def kpi_enumerator_detail(request, code, enum_id):
+    """One enumerator's scorecard row + their flag-rate-over-time trend, so a
+    coordinator can spot degrading quality early (not just a period average)."""
+    from django.http import Http404
+
+    uc = get_scoped_use_case(request, code)
+    m = enumerator_metrics(uc, _days(request))
+    row = next((r for r in m["leaderboard"] if str(r["enumerator_id"]) == str(enum_id)), None)
+    trend = enumerator_trend(uc, enum_id)
+    if row is None and trend["enumerator"] is None:
+        raise Http404("No such enumerator on this project.")
+    return render(request, "kpi/enumerator_detail.html", {
+        "uc": uc, "row": row, "trend": trend, "days": _days(request), "periods": PERIODS,
+    })
 
 
 @login_required
