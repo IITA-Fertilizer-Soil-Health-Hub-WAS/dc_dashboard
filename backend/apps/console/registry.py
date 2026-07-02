@@ -153,13 +153,14 @@ _ENTRIES: list[Managed] = [
                          "status", "assigned_to"],
             search_fields=["name"], icon="assignment",
             description="Data-collection assignments — form, target, deadline, enumerators."),
-    # ---- Field data: the records being monitored ----
-    Managed("collection-units", CollectionUnit, "Collection units", "Field data",
+    # Collection units are a top-level project workspace link (same level as
+    # Dashboard), so the section is routable but not repeated in a console group.
+    Managed("collection-units", CollectionUnit, "Collection units", "Operations",
             list_display=["use_case", "code", "name", "country", "region", "district"],
             form_fields=["use_case", "code", "name", "lat", "lon", "country", "region",
                          "district", "attributes"],
             search_fields=["code", "name"], icon="place",
-            description="Plots / farmers-households planned for collection."),
+            description="The units data is collected on — farmers / households / plots."),
     # The enumerator roster is edited from the project's Enumerators tab ("Manage
     # roster"), so it's a single sidebar concept — group kept outside GROUPS
     # (routable + editable, not a second "Enumerators" console item).
@@ -300,7 +301,7 @@ ORG_FILTER_PATHS: dict[str, str] = {
 }
 
 # Group order for sidebar rendering.
-GROUPS: list[str] = ["Tenancy", "Geography", "Configuration", "Accounts & roles", "Field data"]
+GROUPS: list[str] = ["Tenancy", "Geography", "Configuration", "Accounts & roles"]
 
 
 def grouped() -> list[tuple[str, list[Managed]]]:

@@ -56,8 +56,12 @@ def test_member_cannot_open_edit_form(client, world):
     assert resp.status_code != 200                      # blocked from the edit screen
 
 
-def test_member_grouped_for_is_readonly_field_data(world):
-    groups = dict(grouped_for(world["viewer"]))
-    assert set(groups) == {"Field data"}
-    keys = {m.key for m in groups["Field data"]}
-    assert keys <= {"enumerators", "collection-units"}
+def test_member_reaches_field_data_via_workspace_not_console_groups(world):
+    from apps.console.registry import console_key_allowed
+
+    # Field data (enumerators, collection units) is reached from the project
+    # workspace now, so a member has no console *groups* — but the sections stay
+    # routable read-only (the workspace links point at them).
+    assert dict(grouped_for(world["viewer"])) == {}
+    assert console_key_allowed(world["viewer"], "collection-units")
+    assert console_key_allowed(world["viewer"], "enumerators")

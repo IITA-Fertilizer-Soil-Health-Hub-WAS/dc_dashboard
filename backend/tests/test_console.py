@@ -70,22 +70,19 @@ def test_new_form_defaults_use_case_to_active_project(client, staff, uc):
     assert f'value="{uc.pk}" selected' in body
 
 
-def test_field_data_group_has_no_duplicates(staff):
+def test_field_data_has_no_console_group_only_workspace_links(staff):
     from apps.console.registry import REGISTRY, console_key_allowed, grouped_for
 
     groups = dict(grouped_for(staff))
-    field = {m.key for m in groups.get("Field data", [])}
     # Readonly mirrors of the project Data / Issues tabs are removed entirely.
     assert "submissions" not in REGISTRY and "validation-flags" not in REGISTRY
-    # Jobs lives in the Manage section, not the console sidebar — routable + editable
-    # but never listed under a console group.
-    # Jobs and Enumerators live in the sidebar (Manage / the project tab), not the
-    # console groups — routable + editable, but not a second listing.
-    for key in ("jobs", "enumerators"):
+    # The field-data sections all live in the sidebar workspace / Manage — routable
+    # and editable, but never repeated in a console group. There is no "Field data"
+    # console group any more.
+    assert "Field data" not in groups
+    for key in ("jobs", "enumerators", "collection-units"):
         assert all(key not in {m.key for m in items} for items in groups.values())
         assert key in REGISTRY and console_key_allowed(staff, key)
-    # What remains under Field data has no duplicate elsewhere in the sidebar.
-    assert field == {"collection-units"}
 
 
 def test_readonly_section_blocks_writes(client, staff, uc):

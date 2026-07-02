@@ -389,6 +389,10 @@
              class="{% if active_tab == 'enumerators' %}active{% endif %}">
             <span class="msym">badge</span>Enumerators
           </a>
+          <a href="{% url 'console:list' 'collection-units' %}?use_case={{ active_uc.code }}"
+             class="{% if request.resolver_match.kwargs.key == 'collection-units' %}active{% endif %}">
+            <span class="msym">place</span>Collection units
+          </a>
           <a href="{% url 'dashboards:usecase' active_uc.code %}?tab=issues"
              class="{% if active_tab == 'issues' %}active{% endif %}">
             <span class="msym">flag</span>Issues
