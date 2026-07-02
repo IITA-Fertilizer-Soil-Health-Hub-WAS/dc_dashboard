@@ -36,9 +36,18 @@ class CollectionUnit(BaseModel):
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
         related_name="captured_anchors",
     )
+    alt = models.DecimalField(max_digits=12, decimal_places=3, null=True, blank=True)
     country = models.CharField(max_length=64, blank=True)
     region = models.CharField(max_length=64, blank=True)
     district = models.CharField(max_length=64, blank=True)
+    # The schedule anchor (the household "site selection" / verification date) —
+    # DATE_WINDOW offsets are counted from here for units that carry it.
+    site_selection_date = models.DateField(null=True, blank=True)
+    # The field-staff member who registered this unit (denormalised from ingest).
+    enumerator = models.ForeignKey(
+        "submissions.Enumerator", null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="collection_units",
+    )
     attributes = models.JSONField(default=dict, blank=True)
 
     class Meta:
