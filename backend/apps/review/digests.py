@@ -1,21 +1,15 @@
 """Periodic digest of pending reviews, emailed to a use case's reviewers."""
 from __future__ import annotations
 
-import logging
-
-from django.conf import settings
-from django.core.mail import send_mail
-
+from apps.common.email import send_safe_email
 from apps.rbac.models import Role, UseCaseMembership
 from apps.submissions.models import Submission
 from apps.usecases.models import UseCase
 from apps.validation.models import ValidationFlag
 
-from .models import ReviewState
+from .models import REVIEW_CLOSED_STATES
 
-logger = logging.getLogger(__name__)
-
-CLOSED = [ReviewState.APPROVED, ReviewState.DECLINED]
+CLOSED = REVIEW_CLOSED_STATES
 # Who gets the pending-review digest: the coordinators (the reviewers).
 REVIEWER_ROLES = [
     Role.TRIAL_COORDINATOR,
@@ -48,7 +42,6 @@ def send_review_digests() -> int:
     """Email each use case's reviewers a summary of work awaiting them.
     Returns the number of emails sent. Skips use cases with nothing pending."""
     sent = 0
-    sender = getattr(settings, "DEFAULT_FROM_EMAIL", "no-reply@fieldbase.local")
     for uc in UseCase.objects.filter(is_active=True):
         summary = pending_summary(uc)
         if not summary["pending"] and not summary["open_issues"]:
@@ -62,9 +55,6 @@ def send_review_digests() -> int:
             f"and {summary['open_issues']} issue(s) are open.\n\n"
             f"Open the dashboard to review them."
         )
-        try:
-            send_mail(subject, body, sender, recipients, fail_silently=True)
+        if send_safe_email(subject, body, recipients, context=f"review digest {uc.code}"):
             sent += 1
-        except Exception:  # pragma: no cover - defensive
-            logger.exception("Failed to send review digest for %s", uc.code)
     return sent

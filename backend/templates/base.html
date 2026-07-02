@@ -412,21 +412,7 @@
           </a>
           {% endif %}
 
-          {% if show_my_assignments %}
-            <div class="lbl">My work</div>
-            <a href="{% url 'dashboards:my_assignments' %}"
-               class="{% if request.resolver_match.url_name == 'my_assignments' %}active{% endif %}">
-              <span class="msym">assignment_turned_in</span>My assignments
-            </a>
-            <a href="{% url 'dashboards:my_submissions' %}"
-               class="{% if request.resolver_match.url_name == 'my_submissions' %}active{% endif %}">
-              <span class="msym">fact_check</span>My submissions
-            </a>
-            <a href="{% url 'dashboards:my_performance' %}"
-               class="{% if request.resolver_match.url_name == 'my_performance' %}active{% endif %}">
-              <span class="msym">workspace_premium</span>My performance
-            </a>
-          {% endif %}
+          {% include "_my_work_nav.html" %}
 
           {% if can_manage_access %}
             <div class="lbl">Manage</div>
@@ -504,21 +490,7 @@
             <div class="muted-note">No projects yet — <a href="{% url 'dashboards:projects' %}?scope=all" style="color:#cfe2d6;text-decoration:underline;">browse to request access</a>.</div>
           {% endif %}
 
-          {% if show_my_assignments %}
-            <div class="lbl">My work</div>
-            <a href="{% url 'dashboards:my_assignments' %}"
-               class="{% if request.resolver_match.url_name == 'my_assignments' %}active{% endif %}">
-              <span class="msym">assignment_turned_in</span>My assignments
-            </a>
-            <a href="{% url 'dashboards:my_submissions' %}"
-               class="{% if request.resolver_match.url_name == 'my_submissions' %}active{% endif %}">
-              <span class="msym">fact_check</span>My submissions
-            </a>
-            <a href="{% url 'dashboards:my_performance' %}"
-               class="{% if request.resolver_match.url_name == 'my_performance' %}active{% endif %}">
-              <span class="msym">workspace_premium</span>My performance
-            </a>
-          {% endif %}
+          {% include "_my_work_nav.html" %}
 
           {% if user.is_staff and console_groups %}
             <div class="lbl">Administration</div>

@@ -1,13 +1,13 @@
 {% extends "base.html" %}
-{% block title %}Enumerators · {{ uc.code }} · {{ SITE_NAME }}{% endblock %}
-{% block crumbs %}<span class="sep">/</span><a href="{% url 'kpi:overview' %}">M&amp;E</a><span class="sep">/</span><a href="{% url 'kpi:project' uc.code %}">{{ uc.code }}</a><span class="sep">/</span><span class="cur">Enumerators</span>{% endblock %}
+{% block title %}Team quality · {{ uc.code }} · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<span class="sep">/</span><a href="{% url 'kpi:overview' %}">M&amp;E</a><span class="sep">/</span><a href="{% url 'kpi:project' uc.code %}">{{ uc.code }}</a><span class="sep">/</span><span class="cur">Team quality</span>{% endblock %}
 {% block extrahead %}<style>
   .lead-bar{display:block;height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:.25rem;}
   .lead-bar > i{display:block;height:100%;background:linear-gradient(90deg,var(--brand),#3f9142);}
 </style>{% endblock %}
 {% block content %}
   <div class="page-head">
-    <h2>{{ uc.name }} — enumerators</h2><span class="pill">{{ uc.code }}</span>
+    <h2>{{ uc.name }} — team quality</h2><span class="pill">{{ uc.code }}</span>
     <span style="flex:1"></span>
     <div class="tabs">
       {% for k, label in periods.items %}<a class="seg {% if days == k %}on{% endif %}" href="?days={{ k }}">{{ label }}</a>{% endfor %}

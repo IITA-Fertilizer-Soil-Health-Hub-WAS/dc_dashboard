@@ -1,12 +1,7 @@
 """Field-work notifications. Email failures must never break the field action."""
 from __future__ import annotations
 
-import logging
-
-from django.conf import settings
-from django.core.mail import send_mail
-
-logger = logging.getLogger(__name__)
+from apps.common.email import send_safe_email
 
 
 def notify_plot_ready(unit) -> None:
@@ -28,11 +23,4 @@ def notify_plot_ready(unit) -> None:
         f"captured, so the plot is now ready. You can register the farmer there.\n\n"
         f"Open Fieldbase to see your assigned plots."
     )
-    try:
-        send_mail(
-            subject, body,
-            getattr(settings, "DEFAULT_FROM_EMAIL", "no-reply@fieldbase.local"),
-            sorted(emails), fail_silently=True,
-        )
-    except Exception:  # pragma: no cover - defensive
-        logger.exception("Failed to send plot-ready notification")
+    send_safe_email(subject, body, sorted(emails), context="plot-ready notification")

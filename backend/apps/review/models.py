@@ -49,6 +49,11 @@ class ReviewState(models.TextChoices):
     SUPERSEDED = "SUPERSEDED", "Superseded"
 
 
+# Terminal review states — a submission whose review has been finalised. Shared by
+# the dashboards, projects landing and digests so the "in review" filter agrees.
+REVIEW_CLOSED_STATES = [ReviewState.APPROVED, ReviewState.DECLINED]
+
+
 class ReviewAction(models.TextChoices):
     OPEN_REVIEW = "OPEN_REVIEW", "Open review"
     REQUEST_EDIT = "REQUEST_EDIT", "Request edit"

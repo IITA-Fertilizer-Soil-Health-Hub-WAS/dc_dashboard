@@ -1,0 +1,17 @@
+{% comment %}Personal "My work" sidebar links — included in both the project-workspace
+and all-projects sidebar variants (see base.html) so the block is defined once.{% endcomment %}
+{% if show_my_assignments %}
+  <div class="lbl">My work</div>
+  <a href="{% url 'dashboards:my_assignments' %}"
+     class="{% if request.resolver_match.url_name == 'my_assignments' %}active{% endif %}">
+    <span class="msym">assignment_turned_in</span>My assignments
+  </a>
+  <a href="{% url 'dashboards:my_submissions' %}"
+     class="{% if request.resolver_match.url_name == 'my_submissions' %}active{% endif %}">
+    <span class="msym">fact_check</span>My submissions
+  </a>
+  <a href="{% url 'dashboards:my_performance' %}"
+     class="{% if request.resolver_match.url_name == 'my_performance' %}active{% endif %}">
+    <span class="msym">workspace_premium</span>My performance
+  </a>
+{% endif %}

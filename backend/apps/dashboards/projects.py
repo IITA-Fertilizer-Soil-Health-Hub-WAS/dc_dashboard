@@ -36,14 +36,14 @@ def _home_summary(user, member_ids):
         out["assignments"] = {"total": total, "collected": collected,
                               "pending": total - collected, "pct": pct}
     if can_manage_access(user) and member_ids:
-        from apps.review.models import ReviewState
+        from apps.review.models import REVIEW_CLOSED_STATES
         from apps.submissions.models import Submission
         from apps.validation.models import ValidationFlag
 
         ids = list(member_ids)
         out["awaiting_review"] = (
             Submission.objects.filter(use_case_id__in=ids)
-            .exclude(review__state__in=[ReviewState.APPROVED, ReviewState.DECLINED]).count()
+            .exclude(review__state__in=REVIEW_CLOSED_STATES).count()
         )
         out["open_issues"] = ValidationFlag.objects.filter(
             rule__use_case_id__in=ids, status=ValidationFlag.Status.OPEN

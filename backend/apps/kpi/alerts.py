@@ -12,19 +12,15 @@ Runs on Beat (hourly) and can be triggered after an aggregate rebuild.
 """
 from __future__ import annotations
 
-import logging
 from datetime import date, timedelta
 
-from django.conf import settings
-from django.core.mail import send_mail
 from django.db.models import Sum
 
+from apps.common.email import send_safe_email
 from apps.usecases.models import UseCase
 from apps.validation.models import ValidationFlag
 
 from .models import AlertEvent, AlertRule, ProjectKpiDaily
-
-logger = logging.getLogger(__name__)
 
 # Human labels for the supported metrics (also used by the rule admin/help).
 METRICS = {
@@ -168,7 +164,6 @@ def run_alerts() -> dict[str, int]:
     events fired and emails sent."""
     fired = 0
     emailed = 0
-    sender = getattr(settings, "DEFAULT_FROM_EMAIL", "no-reply@fieldbase.local")
     for rule in AlertRule.objects.filter(is_enabled=True).select_related("use_case"):
         targets = [rule.use_case] if rule.use_case_id else list(
             UseCase.objects.filter(is_active=True)
@@ -181,13 +176,9 @@ def run_alerts() -> dict[str, int]:
                 continue
             fired += 1
             recipients = [e for e in (rule.notify_emails or []) if e]
-            if recipients:
-                try:
-                    send_mail(
-                        f"[{rule.severity}] {uc.code}: {rule.name}",
-                        event.message, sender, recipients, fail_silently=True,
-                    )
-                    emailed += 1
-                except Exception:  # pragma: no cover - defensive
-                    logger.exception("Failed to send alert email for %s", rule.name)
+            if send_safe_email(
+                f"[{rule.severity}] {uc.code}: {rule.name}", event.message, recipients,
+                context=f"alert {rule.name}",
+            ):
+                emailed += 1
     return {"events": fired, "emails": emailed}

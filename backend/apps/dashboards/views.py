@@ -18,7 +18,12 @@ from django.views.decorators.http import require_POST
 
 from apps.rbac.permissions import user_can, visible_use_cases
 from apps.review import services
-from apps.review.models import ReviewAction, ReviewActionLog, ReviewState
+from apps.review.models import (
+    REVIEW_CLOSED_STATES,
+    ReviewAction,
+    ReviewActionLog,
+    ReviewState,
+)
 from apps.review.state_machine import ReviewPermissionDenied, TransitionError
 from apps.submissions.models import Enumerator, Submission
 from apps.validation.models import ValidationFlag
@@ -94,7 +99,7 @@ def overview(request):
     """Cross-use-case overview: key metrics for every use case I can see."""
     from apps.validation.models import ValidationFlag
 
-    closed = [ReviewState.APPROVED, ReviewState.DECLINED]
+    closed = REVIEW_CLOSED_STATES
     rows = []
     totals = {"total": 0, "approved": 0, "in_review": 0, "open_issues": 0,
               "wb_pending": 0, "wb_failed": 0}
@@ -249,7 +254,7 @@ def _health_counts(uc) -> dict:
     from apps.review.models import ReviewState
 
     subs = Submission.objects.filter(use_case=uc)
-    closed = [ReviewState.APPROVED, ReviewState.DECLINED]
+    closed = REVIEW_CLOSED_STATES
     return {
         "approved": subs.filter(review__state=ReviewState.APPROVED).count(),
         "declined": subs.filter(review__state=ReviewState.DECLINED).count(),
