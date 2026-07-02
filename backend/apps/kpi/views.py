@@ -114,7 +114,10 @@ def kpi_alerts(request):
         AlertRule.objects.filter(use_case_id__in=uc_ids, is_enabled=True)
         .select_related("use_case")
     )
+    from .alerts import METRICS
+
     return render(request, "kpi/alerts.html", {
         "events": events,
         "active_rules": rules.count(),
+        "supported_metrics": METRICS,
     })

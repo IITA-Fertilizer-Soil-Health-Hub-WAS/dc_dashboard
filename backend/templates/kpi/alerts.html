@@ -33,4 +33,16 @@
       </tbody>
     </table>
   </div>
+
+  {% if supported_metrics %}
+  <div class="card" style="margin-top:1rem;">
+    <h3 style="margin:0 0 .4rem;">Metrics you can alert on</h3>
+    <p class="subtle" style="margin:0 0 .6rem;font-size:.82rem;">Use one of these keys in a rule's <code>metric</code> field.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:.5rem;">
+      {% for key, label in supported_metrics.items %}
+        <span class="pill" title="{{ label }}"><code>{{ key }}</code> · {{ label }}</span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
 {% endblock %}

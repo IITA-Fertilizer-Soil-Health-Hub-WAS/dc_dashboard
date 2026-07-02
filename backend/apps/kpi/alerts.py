@@ -32,7 +32,12 @@ METRICS = {
     "open_flags": "Open quality flags",
     "coverage_pct": "Coverage %",
     "active_enumerators": "Active enumerators (latest day)",
+    "worsening_enumerators": "Enumerators with worsening quality",
 }
+
+# An enumerator needs at least this many submissions in the trend window before a
+# "worsening" direction is trusted (a couple of flagged records isn't a trend).
+MIN_TREND_VOLUME = 8
 
 _CMP = {
     AlertRule.Comparator.LT: lambda v, t: v < t,
@@ -62,6 +67,25 @@ def _coverage_pct(use_case) -> float:
     from .metrics import coverage_metrics
 
     return coverage_metrics(use_case)["coverage_pct"]
+
+
+def _worsening_enumerators(use_case) -> list[str]:
+    """Enumerators whose flag-rate trend is worsening (with enough volume to trust),
+    each as 'ENID (early%→recent%)' — the early-warning list the alert reports."""
+    from apps.submissions.models import Enumerator
+
+    from .metrics import enumerator_trend
+
+    out: list[str] = []
+    enums = (
+        Enumerator.objects.filter(use_case=use_case, is_test=False, submissions__isnull=False)
+        .distinct()
+    )
+    for enum in enums:
+        t = enumerator_trend(use_case, enum.id)
+        if t["direction"] == "worsening" and t["total_n"] >= MIN_TREND_VOLUME:
+            out.append(f"{enum.enid} ({t['early_pct']}%→{t['recent_pct']}%)")
+    return out
 
 
 def evaluate_rule_for_use_case(rule: AlertRule, use_case) -> AlertEvent | None:
@@ -98,6 +122,12 @@ def evaluate_rule_for_use_case(rule: AlertRule, use_case) -> AlertEvent | None:
         if not _breaches(observed, rule.comparator, rule.threshold):
             return None
         detail = f"{observed:g} active enumerator(s) on the latest day"
+    elif metric == "worsening_enumerators":
+        worsening = _worsening_enumerators(use_case)
+        observed = float(len(worsening))
+        if not _breaches(observed, rule.comparator, rule.threshold):
+            return None
+        detail = "worsening: " + (", ".join(worsening) if worsening else "none")
     else:  # unknown metric — skip safely
         return None
 
