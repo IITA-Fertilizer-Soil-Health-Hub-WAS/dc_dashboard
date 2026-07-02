@@ -25,6 +25,25 @@
     <div class="card" style="margin-bottom:1rem;display:flex;gap:1.5rem;">
       <div><div style="font-size:1.4rem;font-weight:500;">{{ progress.elected }} / {{ progress.trials }}</div><div class="subtle" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;">Elected</div></div>
       <div><div style="font-size:1.4rem;font-weight:500;">{{ progress.pending }}</div><div class="subtle" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;">Pending</div></div>
+      <div><div style="font-size:1.4rem;font-weight:500;">{{ pending_anchors }}</div><div class="subtle" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;">Awaiting anchor</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
+      <div style="max-width:60ch;">
+        <div style="font-weight:500;">Coordinator plot-anchor form</div>
+        <p class="subtle" style="margin:.25rem 0 0;font-size:.82rem;">
+          Publish a small ODK form covering the {{ pending_anchors }} elected plot{{ pending_anchors|pluralize }}
+          still awaiting a field anchor. Fill it in ODK Collect standing on each farmer field, then
+          pull the captured points back — each is checked against its elected plot boundary before it is frozen.
+          {% if anchor_form %}<br><span class="mono" style="font-size:.76rem;">Last published: {{ anchor_form.title }} · v{{ anchor_form.version|default:"—" }}{% if anchor_form.published_at %} · {{ anchor_form.published_at|date:"Y-m-d H:i" }}{% endif %}</span>{% endif %}
+        </p>
+      </div>
+      <div style="display:flex;gap:.5rem;">
+        <form method="post"><input type="hidden" name="use_case" value="{{ uc.code }}"><input type="hidden" name="action" value="publish_anchor_form">
+          <button class="btn" type="submit">Publish anchor form</button></form>
+        <form method="post"><input type="hidden" name="use_case" value="{{ uc.code }}"><input type="hidden" name="action" value="sync_anchors">
+          <button class="btn" type="submit">Sync captured anchors</button></form>
+      </div>
     </div>
 
     <div class="table-wrap">

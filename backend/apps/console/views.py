@@ -852,15 +852,44 @@ class PlotElectionQueueView(ManageMixin, View):
     candidate plots and which (if any) is elected. Scoped to editable projects."""
 
     def get(self, request):
+        from apps.fieldwork.anchor_form import anchor_form_for, pending_anchor_trials
         from apps.fieldwork.election import election_progress, trial_rows
 
         use_cases = _editable_use_cases(request.user)
         uc = use_cases.filter(code=request.GET.get("use_case")).first() or use_cases.first()
-        ctx = {"use_cases": use_cases, "uc": uc, "rows": [], "progress": None}
+        ctx = {"use_cases": use_cases, "uc": uc, "rows": [], "progress": None,
+               "anchor_form": None, "pending_anchors": 0}
         if uc is not None:
             ctx["rows"] = trial_rows(uc)
             ctx["progress"] = election_progress(uc)
+            ctx["anchor_form"] = anchor_form_for(uc)
+            ctx["pending_anchors"] = len(pending_anchor_trials(uc))
         return render(request, "console/plot_election.html", ctx)
+
+    def post(self, request):
+        """Coordinator anchor-form actions: publish the field micro-form, or pull
+        captured anchors back onto the units."""
+        from django.urls import reverse
+
+        from apps.fieldwork.anchor_form import apply_anchor_submissions, publish_anchor_form
+
+        use_cases = _editable_use_cases(request.user)
+        uc = get_object_or_404(use_cases, code=request.POST.get("use_case"))
+        action = request.POST.get("action")
+        if action == "publish_anchor_form":
+            form, result = publish_anchor_form(uc)
+            if result.ok:
+                messages.success(request, f"Anchor form published to the server ({result.title}).")
+            else:
+                messages.error(request, f"Could not publish anchor form: {result.message}")
+        elif action == "sync_anchors":
+            stats = apply_anchor_submissions(uc, request.user)
+            messages.success(
+                request,
+                f"Anchor sync: {stats.captured} captured, {stats.outside} outside boundary, "
+                f"{stats.skipped} skipped.",
+            )
+        return redirect(f"{reverse('console:plot_election')}?use_case={uc.code}")
 
 
 class PlotElectionView(ManageMixin, View):

@@ -32,4 +32,11 @@ def capture_anchor(user, unit, lat, lon) -> tuple[bool, str]:
         "lat", "lon", "anchor_captured", "anchor_captured_at", "anchor_captured_by",
         "updated_at",
     ])
+    # The plot is now field-ready: ping any enumerators already assigned to it.
+    try:
+        from apps.fieldwork.notifications import notify_plot_ready
+
+        notify_plot_ready(unit)
+    except Exception:  # pragma: no cover - defensive
+        pass
     return True, "Farmer-field anchor captured."

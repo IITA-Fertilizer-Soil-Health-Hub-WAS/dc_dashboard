@@ -93,6 +93,15 @@ def elect_candidate(user, candidate: CandidatePlot, note: str = "") -> Collectio
             c.elected_at = None
         c.save(update_fields=["status", "elected_by", "elected_at", "election_note",
                               "collection_unit", "updated_at"])
+    # Fold the promoted unit into the project's standing registration job so the
+    # coordinator has one place to assign an enumerator (the ping waits for the
+    # field anchor). Best-effort — never let dispatch break an election.
+    try:
+        from apps.fieldwork.dispatch import dispatch_registration_job
+
+        dispatch_registration_job(uc, unit, actor)
+    except Exception:  # pragma: no cover - defensive
+        pass
     return unit
 
 
