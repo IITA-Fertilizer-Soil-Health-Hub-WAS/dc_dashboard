@@ -845,3 +845,64 @@ class JobAssignmentsView(UserPassesTestMixin, View):
                 if enum:
                     job.assigned_to.add(enum)
         return redirect("console:job_assignments", pk=job.pk)
+
+
+class PlotElectionQueueView(ManageMixin, View):
+    """The coordinator's election backlog for a project: one row per trial, with its
+    candidate plots and which (if any) is elected. Scoped to editable projects."""
+
+    def get(self, request):
+        from apps.fieldwork.election import election_progress, trial_rows
+
+        use_cases = _editable_use_cases(request.user)
+        uc = use_cases.filter(code=request.GET.get("use_case")).first() or use_cases.first()
+        ctx = {"use_cases": use_cases, "uc": uc, "rows": [], "progress": None}
+        if uc is not None:
+            ctx["rows"] = trial_rows(uc)
+            ctx["progress"] = election_progress(uc)
+        return render(request, "console/plot_election.html", ctx)
+
+
+class PlotElectionView(ManageMixin, View):
+    """Elect one candidate plot for a single trial (or flag no-valid-plot)."""
+
+    def _uc(self, request, code):
+        return get_object_or_404(_editable_use_cases(request.user), code=code)
+
+    def get(self, request, code, trial_key):
+        from apps.dashboards.charts import candidate_plots_map_html
+        from apps.fieldwork.models import CandidatePlot
+
+        uc = self._uc(request, code)
+        cands = list(CandidatePlot.objects.filter(use_case=uc, trial_key=trial_key))
+        if not cands:
+            raise Http404("No candidates for this trial.")
+        return render(request, "console/plot_elect.html", {
+            "uc": uc, "trial_key": trial_key, "candidates": cands,
+            "map_html": candidate_plots_map_html(cands),
+        })
+
+    def post(self, request, code, trial_key):
+        from apps.fieldwork.election import elect_candidate, mark_no_valid_plot
+        from apps.fieldwork.models import CandidatePlot
+
+        from django.urls import reverse
+
+        uc = self._uc(request, code)
+        note = (request.POST.get("note") or "").strip()
+        queue_url = f"{reverse('console:plot_election')}?use_case={uc.code}"
+        if request.POST.get("action") == "no_valid_plot":
+            n = mark_no_valid_plot(request.user, uc, trial_key, note=note)
+            messages.success(request, f"Trial {trial_key}: flagged no valid plot ({n} candidates).")
+            return redirect(queue_url)
+        chosen = CandidatePlot.objects.filter(
+            use_case=uc, trial_key=trial_key, pk=request.POST.get("candidate")).first()
+        if chosen is None:
+            messages.error(request, "Pick a candidate to elect.")
+            return redirect("console:plot_elect", code=uc.code, trial_key=trial_key)
+        if chosen.role == CandidatePlot.Role.BACKUP and not note:
+            messages.error(request, "A reason is required when electing the backup plot.")
+            return redirect("console:plot_elect", code=uc.code, trial_key=trial_key)
+        elect_candidate(request.user, chosen, note=note)
+        messages.success(request, f"Trial {trial_key}: elected plot {chosen.candidate_ref}.")
+        return redirect(queue_url)

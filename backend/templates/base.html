@@ -426,6 +426,10 @@
               {% if pending_approvals_count %}<span class="pill" style="margin-left:auto;font-size:.66rem;">{{ pending_approvals_count }}</span>{% endif %}
             </a>
             {% if can_manage_access %}
+              <a href="{% url 'console:plot_election' %}?use_case={{ active_uc.code }}"
+                 class="{% if request.resolver_match.url_name == 'plot_election' or request.resolver_match.url_name == 'plot_elect' %}active{% endif %}">
+                <span class="msym">where_to_vote</span>Plot election
+              </a>
               <a href="{% url 'console:writeback' %}"
                  class="{% if request.resolver_match.url_name == 'writeback' %}active{% endif %}">
                 <span class="msym">sync</span>Write-back queue

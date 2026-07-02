@@ -1,0 +1,49 @@
+{% extends "console/base.html" %}
+{% block title %}Plot election · Manage · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<span class="sep">/</span><span class="cur">Manage</span><span class="sep">/</span><span class="cur">Plot election</span>{% endblock %}
+{% block console_main %}
+  <div class="page-head"><h2>Plot election</h2></div>
+  <p class="subtle" style="margin:.1rem 0 1rem;max-width:70ch;">
+    For each trial, review the GIS-proposed candidate plots and elect the one to
+    use. Electing promotes the chosen plot to a collection unit; the farmer is then
+    registered there and the field-captured anchor is checked against it.
+  </p>
+
+  {% if messages %}{% for msg in messages %}<div class="pill" style="margin-bottom:.7rem;">{{ msg }}</div>{% endfor %}{% endif %}
+
+  <form method="get" style="margin-bottom:1rem;">
+    <select name="use_case" class="input" onchange="this.form.submit()" style="min-width:280px;">
+      {% for u in use_cases %}<option value="{{ u.code }}" {% if u == uc %}selected{% endif %}>{{ u.code }} — {{ u.name }}</option>{% endfor %}
+    </select>
+  </form>
+
+  {% if not uc %}
+    <div class="empty">No projects you can manage yet.</div>
+  {% elif not rows %}
+    <div class="empty">No candidate plots imported for {{ uc.code }}. Import a GeoJSON with <code>manage.py import_candidate_plots {{ uc.code }} plots.geojson</code>.</div>
+  {% else %}
+    <div class="card" style="margin-bottom:1rem;display:flex;gap:1.5rem;">
+      <div><div style="font-size:1.4rem;font-weight:500;">{{ progress.elected }} / {{ progress.trials }}</div><div class="subtle" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;">Elected</div></div>
+      <div><div style="font-size:1.4rem;font-weight:500;">{{ progress.pending }}</div><div class="subtle" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;">Pending</div></div>
+    </div>
+
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">Trial</th><th scope="col">Candidates</th><th scope="col">Status</th><th scope="col"></th></tr></thead>
+      <tbody>
+        {% for r in rows %}
+          <tr>
+            <td class="mono">{{ r.trial_key }}</td>
+            <td class="subtle">{{ r.count }} plot{{ r.count|pluralize }}</td>
+            <td>
+              {% if r.elected %}<span class="pill" style="background:#eaf6ea;color:#2f7d32;">elected · {{ r.elected.candidate_ref }}</span>
+              {% else %}<span class="pill">pending</span>{% endif %}
+            </td>
+            <td style="text-align:right;"><a class="btn" href="{% url 'console:plot_elect' uc.code r.trial_key %}">{% if r.elected %}Review{% else %}Elect{% endif %}</a></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  {% endif %}
+{% endblock %}

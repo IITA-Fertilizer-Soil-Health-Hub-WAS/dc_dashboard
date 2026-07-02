@@ -1,0 +1,50 @@
+{% extends "console/base.html" %}
+{% block title %}Elect plot · {{ trial_key }} · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<span class="sep">/</span><span class="cur">Manage</span><span class="sep">/</span><a href="{% url 'console:plot_election' %}?use_case={{ uc.code }}">Plot election</a><span class="sep">/</span><span class="cur">{{ trial_key }}</span>{% endblock %}
+{% block console_main %}
+  <div class="page-head"><h2>Elect plot — trial {{ trial_key }}</h2></div>
+  <p class="subtle" style="margin:.1rem 0 1rem;max-width:70ch;">
+    {{ uc.code }} · pick the plot to use for this trial. This is a provisional plan —
+    the coordinator confirms and captures the farmer-field anchor on the ground.
+  </p>
+
+  {% if messages %}{% for msg in messages %}<div class="pill" style="margin-bottom:.7rem;">{{ msg }}</div>{% endfor %}{% endif %}
+
+  {% if map_html %}
+    <div class="card" style="padding:0;overflow:hidden;margin-bottom:1rem;">
+      <div style="padding:.6rem .9rem;border-bottom:1px solid var(--line);font-size:.72rem;color:var(--muted);">
+        <span style="color:#55b047;">▬</span> elected/top &nbsp; <span style="color:#fdb415;">▬</span> candidate &nbsp; <span style="color:#888780;">▬</span> not selected
+      </div>
+      <div>{{ map_html|safe }}</div>
+    </div>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="elect">
+    <div style="display:flex;flex-direction:column;gap:.6rem;">
+      {% for c in candidates %}
+        <label class="card" style="display:flex;align-items:center;gap:.8rem;cursor:pointer;{% if c.status == 'ELECTED' %}border:2px solid #55b047;{% endif %}">
+          <input type="radio" name="candidate" value="{{ c.pk }}" {% if c.status == 'ELECTED' %}checked{% endif %}>
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:.5rem;">
+              <span style="font-weight:500;">Plot {{ c.candidate_ref }}</span>
+              {% if c.role == 'BACKUP' %}<span class="pill" style="font-size:.66rem;">backup</span>{% else %}<span class="pill neutral" style="font-size:.66rem;">rank {{ c.rank|default:'—' }}</span>{% endif %}
+              {% if c.status == 'ELECTED' %}<span class="pill" style="background:#eaf6ea;color:#2f7d32;font-size:.66rem;">elected</span>{% endif %}
+            </div>
+            <div class="subtle" style="font-size:.78rem;">{{ c.cropping_region|default:'—' }}{% if c.accessibility %} · access: {{ c.accessibility }}{% endif %}</div>
+          </div>
+        </label>
+      {% endfor %}
+    </div>
+
+    <div style="margin-top:.9rem;">
+      <input name="note" class="input" style="width:100%;" placeholder="Election note (required when electing the backup plot)">
+    </div>
+    <div style="margin-top:.8rem;display:flex;gap:.6rem;align-items:center;">
+      <button class="btn btn-open" type="submit">Elect &amp; create unit</button>
+      <button class="btn" type="submit" name="action" value="no_valid_plot"
+              onclick="return confirm('Flag this trial as having no valid plot? All candidates are marked not-selected.');">No valid plot</button>
+    </div>
+  </form>
+{% endblock %}

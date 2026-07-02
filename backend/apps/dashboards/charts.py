@@ -13,6 +13,38 @@ GREEN = "#55b047"
 RED = "#c3531f"
 
 
+def candidate_plots_map_html(candidates, elected_id=None) -> str:
+    """Map of a trial's candidate plot polygons for the election screen. The elected
+    (or, absent one, the top-ranked) candidate is drawn in green; others in amber;
+    not-selected in grey. Returns "" if no candidate has usable geometry."""
+    from apps.common.geo import polygon_centroid
+
+    drawn = []
+    for c in candidates:
+        centroid = polygon_centroid(c.geometry)
+        if centroid:
+            drawn.append((c, centroid))
+    if not drawn:
+        return ""
+    center = (sum(p[1][0] for p in drawn) / len(drawn),
+              sum(p[1][1] for p in drawn) / len(drawn))
+    m = folium.Map(location=center, zoom_start=15, tiles="OpenStreetMap")
+    for c, _ in drawn:
+        if str(c.id) == str(elected_id) or c.status == "ELECTED":
+            color = GREEN
+        elif c.status == "NOT_SELECTED":
+            color = "#888780"
+        else:
+            color = AMBER
+        folium.GeoJson(
+            {"type": "Feature", "geometry": c.geometry, "properties": {}},
+            style_function=lambda _f, col=color: {
+                "color": col, "weight": 2, "fillColor": col, "fillOpacity": 0.25},
+            tooltip=f"Plot {c.candidate_ref} · rank {c.rank or '—'} · {c.accessibility or 'n/a'}",
+        ).add_to(m)
+    return m._repr_html_()
+
+
 def submission_plot_map_html(submission) -> str:
     """A per-submission map: where it was collected (green) vs its assigned plot
     (amber), joined by a line, so a reviewer sees the GPS mismatch at a glance.
