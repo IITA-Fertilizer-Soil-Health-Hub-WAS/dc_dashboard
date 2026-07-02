@@ -48,3 +48,49 @@ def polygon_centroid(geometry) -> tuple[float, float] | None:
     except (TypeError, ValueError):
         return None
     return (lat, lon)
+
+
+def _point_in_ring(lat: float, lon: float, ring) -> bool:
+    """Ray-casting test: is (lat, lon) inside this GeoJSON ring? Ring coords are
+    [lon, lat]."""
+    inside = False
+    n = len(ring)
+    j = n - 1
+    for i in range(n):
+        try:
+            xi, yi = float(ring[i][0]), float(ring[i][1])
+            xj, yj = float(ring[j][0]), float(ring[j][1])
+        except (TypeError, ValueError, IndexError):
+            j = i
+            continue
+        if ((yi > lat) != (yj > lat)) and (
+            lon < (xj - xi) * (lat - yi) / ((yj - yi) or 1e-15) + xi
+        ):
+            inside = not inside
+        j = i
+    return inside
+
+
+def point_in_polygon(lat, lon, geometry) -> bool:
+    """Is the point (lat, lon) inside a GeoJSON Polygon / MultiPolygon? Honours
+    holes (a point in a hole is outside). Returns False on missing/invalid input —
+    the caller treats "can't tell" as "not contained"."""
+    try:
+        lat, lon = float(lat), float(lon)
+    except (TypeError, ValueError):
+        return False
+    polys: list = []
+    if isinstance(geometry, dict):
+        gtype, coords = geometry.get("type"), geometry.get("coordinates")
+        if gtype == "Polygon" and coords:
+            polys = [coords]
+        elif gtype == "MultiPolygon" and coords:
+            polys = list(coords)
+    for poly in polys:
+        if not poly:
+            continue
+        if _point_in_ring(lat, lon, poly[0]):
+            in_hole = any(_point_in_ring(lat, lon, hole) for hole in poly[1:])
+            if not in_hole:
+                return True
+    return False

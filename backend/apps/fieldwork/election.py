@@ -65,12 +65,15 @@ def elect_candidate(user, candidate: CandidatePlot, note: str = "") -> Collectio
             "name": f"Trial {candidate.trial_key} · plot {candidate.candidate_ref}",
             "lat": candidate.centroid_lat,
             "lon": candidate.centroid_lon,
+            "boundary": candidate.geometry,
+            # Re-election resets the anchor — the elected outline changed.
+            "anchor_captured": False,
+            "anchor_captured_at": None,
+            "anchor_captured_by": None,
             "attributes": {
                 "elected_candidate": candidate.candidate_ref,
                 "accessibility": candidate.accessibility,
                 "cropping_region": candidate.cropping_region,
-                "geometry": candidate.geometry,
-                "anchor_captured": False,
             },
         },
     )

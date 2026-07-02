@@ -24,8 +24,18 @@ class CollectionUnit(BaseModel):
     )
     code = models.CharField(max_length=64)  # matches a submission ID field (e.g. HHID/plot id)
     name = models.CharField(max_length=255, blank=True)
+    # Operative point: the GIS centroid until the coordinator captures the farmer
+    # anchor in the field, then the captured anchor (the spatial-check reference).
     lat = models.DecimalField(max_digits=12, decimal_places=7, null=True, blank=True)
     lon = models.DecimalField(max_digits=12, decimal_places=7, null=True, blank=True)
+    # Elected plot outline (GeoJSON), for the point-in-polygon containment check.
+    boundary = models.JSONField(default=dict, blank=True)
+    anchor_captured = models.BooleanField(default=False)
+    anchor_captured_at = models.DateTimeField(null=True, blank=True)
+    anchor_captured_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="captured_anchors",
+    )
     country = models.CharField(max_length=64, blank=True)
     region = models.CharField(max_length=64, blank=True)
     district = models.CharField(max_length=64, blank=True)

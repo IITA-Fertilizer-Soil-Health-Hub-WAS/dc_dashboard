@@ -877,20 +877,36 @@ class PlotElectionView(ManageMixin, View):
         cands = list(CandidatePlot.objects.filter(use_case=uc, trial_key=trial_key))
         if not cands:
             raise Http404("No candidates for this trial.")
+        elected = next((c for c in cands if c.status == CandidatePlot.Status.ELECTED), None)
         return render(request, "console/plot_elect.html", {
             "uc": uc, "trial_key": trial_key, "candidates": cands,
             "map_html": candidate_plots_map_html(cands),
+            "elected": elected,
+            "unit": elected.collection_unit if elected else None,
         })
 
     def post(self, request, code, trial_key):
+        from django.urls import reverse
+
+        from apps.fieldwork.anchor import capture_anchor
         from apps.fieldwork.election import elect_candidate, mark_no_valid_plot
         from apps.fieldwork.models import CandidatePlot
-
-        from django.urls import reverse
 
         uc = self._uc(request, code)
         note = (request.POST.get("note") or "").strip()
         queue_url = f"{reverse('console:plot_election')}?use_case={uc.code}"
+        elect_url = redirect("console:plot_elect", code=uc.code, trial_key=trial_key)
+        if request.POST.get("action") == "capture_anchor":
+            elected = CandidatePlot.objects.filter(
+                use_case=uc, trial_key=trial_key, status=CandidatePlot.Status.ELECTED
+            ).select_related("collection_unit").first()
+            if elected is None or elected.collection_unit is None:
+                messages.error(request, "Elect a plot before capturing its anchor.")
+                return elect_url
+            ok, msg = capture_anchor(request.user, elected.collection_unit,
+                                     request.POST.get("lat"), request.POST.get("lon"))
+            (messages.success if ok else messages.error)(request, msg)
+            return elect_url
         if request.POST.get("action") == "no_valid_plot":
             n = mark_no_valid_plot(request.user, uc, trial_key, note=note)
             messages.success(request, f"Trial {trial_key}: flagged no valid plot ({n} candidates).")

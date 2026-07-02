@@ -43,7 +43,7 @@ def test_elect_promotes_to_unit_and_marks_siblings(world):
     unit = elect_candidate(world["coord"], world["a"], note="")
     assert isinstance(unit, CollectionUnit) and unit.code == "T1"
     assert unit.attributes["elected_candidate"] == "A"
-    assert unit.attributes["geometry"]["type"] == "Polygon"
+    assert unit.boundary["type"] == "Polygon"
     world["a"].refresh_from_db()
     world["b"].refresh_from_db()
     assert world["a"].status == CandidatePlot.Status.ELECTED

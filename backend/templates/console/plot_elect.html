@@ -47,4 +47,39 @@
               onclick="return confirm('Flag this trial as having no valid plot? All candidates are marked not-selected.');">No valid plot</button>
     </div>
   </form>
+
+  {% if elected and unit %}
+    <div class="card" style="margin-top:1.2rem;">
+      <h3 style="margin:0 0 .3rem;">Farmer-field anchor</h3>
+      <p class="subtle" style="font-size:.78rem;margin:0 0 .7rem;max-width:66ch;">
+        Capture the single point where the trial sits, on the ground and inside plot
+        {{ elected.candidate_ref }}. It must fall within the elected boundary; once
+        captured it becomes the reference every submission is distance-checked against.
+      </p>
+      {% if unit.anchor_captured %}
+        <div class="pill" style="background:#eaf6ea;color:#2f7d32;">✓ Anchor captured at {{ unit.lat }}, {{ unit.lon }}{% if unit.anchor_captured_by %} · by {{ unit.anchor_captured_by.full_name|default:unit.anchor_captured_by.email }}{% endif %}</div>
+      {% endif %}
+      <form method="post" style="margin-top:.7rem;display:flex;gap:.5rem;align-items:end;flex-wrap:wrap;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="capture_anchor">
+        <div class="field"><label>Latitude</label><input name="lat" id="anchor-lat" class="input" style="width:150px;" value="{% if unit.anchor_captured %}{{ unit.lat }}{% endif %}" required></div>
+        <div class="field"><label>Longitude</label><input name="lon" id="anchor-lon" class="input" style="width:150px;" value="{% if unit.anchor_captured %}{{ unit.lon }}{% endif %}" required></div>
+        <button class="btn" type="button" onclick="fbUseLocation()">Use my location</button>
+        <button class="btn btn-open" type="submit">{% if unit.anchor_captured %}Re-capture{% else %}Capture anchor{% endif %}</button>
+      </form>
+      <div id="anchor-geo-msg" class="subtle" style="font-size:.72rem;margin-top:.35rem;"></div>
+    </div>
+    <script>
+      function fbUseLocation(){
+        var msg=document.getElementById('anchor-geo-msg');
+        if(!navigator.geolocation){msg.textContent='Geolocation not available in this browser.';return;}
+        msg.textContent='Locating…';
+        navigator.geolocation.getCurrentPosition(function(p){
+          document.getElementById('anchor-lat').value=p.coords.latitude.toFixed(7);
+          document.getElementById('anchor-lon').value=p.coords.longitude.toFixed(7);
+          msg.textContent='Filled from device GPS (±'+Math.round(p.coords.accuracy)+' m). Review, then capture.';
+        },function(){msg.textContent='Could not read your location.';},{enableHighAccuracy:true,timeout:10000});
+      }
+    </script>
+  {% endif %}
 {% endblock %}
