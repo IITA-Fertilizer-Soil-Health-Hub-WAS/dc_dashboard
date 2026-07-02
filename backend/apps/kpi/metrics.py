@@ -213,6 +213,7 @@ def quality_metrics(use_case, days: str = "30") -> dict:
         ValidationRule.RuleType.GEO_DUPLICATE: "Shared GPS across households",
         ValidationRule.RuleType.SUBMISSION_SPEED: "Implausible submission pace",
         ValidationRule.RuleType.NUMERIC_OUTLIER: "Statistical outliers",
+        ValidationRule.RuleType.PHOTO_REUSE: "Reused photos",
     }
     integ_counts = dict(
         ValidationFlag.objects.filter(

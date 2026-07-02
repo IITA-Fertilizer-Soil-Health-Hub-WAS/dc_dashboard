@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}My performance · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<span class="sep">/</span><span class="cur">My performance</span>{% endblock %}
+{% block extrahead %}<style>
+  .scg{display:flex;gap:1.4rem;flex-wrap:wrap;margin-top:.6rem;}
+  .scg .m{min-width:84px;}
+  .scg .m .v{font-size:1.25rem;font-weight:500;font-variant-numeric:tabular-nums;}
+  .scg .m .l{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+  .qbadge{display:inline-flex;align-items:center;justify-content:center;width:54px;height:54px;border-radius:50%;font-size:1.3rem;font-weight:600;}
+</style>{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h2>My performance</h2>
+    <span style="flex:1"></span>
+    <div class="tabs">
+      {% for k, label in periods.items %}<a class="seg {% if days == k %}on{% endif %}" href="?days={{ k }}">{{ label }}</a>{% endfor %}
+    </div>
+  </div>
+  <p class="lede">Your data-quality scorecard — the same measures your coordinator sees. {{ period_label }}.</p>
+
+  {% for c in cards %}
+    <div class="card" style="margin-bottom:1rem;">
+      <div style="display:flex;align-items:center;gap:1rem;">
+        <span class="qbadge" style="{% if c.row.quality_score >= 80 %}background:#eaf6ea;color:#2f7d32;{% elif c.row.quality_score >= 60 %}background:#fef6e0;color:#8a6d00;{% else %}background:#fbe7df;color:#c3531f;{% endif %}">{{ c.row.quality_score }}</span>
+        <div>
+          <div style="font-weight:600;">{{ c.uc.name }} <span class="pill">{{ c.uc.code }}</span></div>
+          <div class="subtle" style="font-size:.85rem;">Quality score · ranked <strong>{{ c.rank }}</strong> of {{ c.of }} on this project</div>
+        </div>
+      </div>
+      <div class="scg">
+        <div class="m"><div class="v">{{ c.row.n }}</div><div class="l">Collected</div></div>
+        <div class="m"><div class="v">{{ c.row.approval_pct }}%</div><div class="l">Approved</div></div>
+        <div class="m"><div class="v">{{ c.row.reject_pct }}%</div><div class="l">Rejected</div></div>
+        <div class="m"><div class="v">{% if c.row.on_time_pct is None %}—{% else %}{{ c.row.on_time_pct }}%{% endif %}</div><div class="l">On-time</div></div>
+        <div class="m"><div class="v">{% if c.row.gps_err_m is None %}—{% else %}{{ c.row.gps_err_m }} m{% endif %}</div><div class="l">GPS error</div></div>
+        <div class="m"><div class="v">{{ c.row.open_flags }}</div><div class="l">Open issues</div></div>
+      </div>
+    </div>
+  {% empty %}
+    <div class="empty">
+      {% if has_identity %}No collection recorded for you in this period.{% else %}You have no enumerator identity yet — once you start collecting, your scorecard appears here.{% endif %}
+    </div>
+  {% endfor %}
+{% endblock %}

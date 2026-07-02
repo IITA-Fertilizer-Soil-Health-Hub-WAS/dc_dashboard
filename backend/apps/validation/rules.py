@@ -223,6 +223,38 @@ def submission_speed(use_case, params) -> list[FlagResult]:
     return out
 
 
+def photo_reuse(use_case, params) -> list[FlagResult]:
+    """Data-integrity / curbstoning signal: the same photo (identical image bytes)
+    submitted for DIFFERENT households — a fabricated visit reusing an earlier
+    picture. Relies on `Submission.media_hashes` (populated by the media-hashing
+    task); a hash shared by two or more households flags every submission carrying
+    it. Same household reusing an image across its own events is ignored.
+
+    params: {message?}."""
+    by_hash: dict[str, list] = {}
+    for s in Submission.objects.filter(
+        use_case=use_case, household__isnull=False
+    ).exclude(media_hashes=[]).values("id", "household_id", "media_hashes"):
+        for h in s["media_hashes"] or []:
+            by_hash.setdefault(h, []).append(s)
+
+    seen: set = set()
+    out: list[FlagResult] = []
+    for _h, rows in by_hash.items():
+        households = {r["household_id"] for r in rows}
+        if len(households) < 2:
+            continue
+        msg = params.get(
+            "message", f"Photo reused across {len(households)} households"
+        )
+        for r in rows:
+            if r["id"] in seen:
+                continue
+            seen.add(r["id"])
+            out.append(FlagResult(r["id"], msg, "", {"households": len(households)}))
+    return out
+
+
 # --- Per-household rules (need the whole event timeline) ----------------------
 
 def event_sequence(use_case, params) -> list[FlagResult]:

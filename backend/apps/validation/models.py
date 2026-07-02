@@ -35,6 +35,7 @@ class ValidationRule(BaseModel):
         NUMERIC_OUTLIER = "NUMERIC_OUTLIER", "Numeric statistical outlier"
         GEO_DUPLICATE = "GEO_DUPLICATE", "Shared GPS across households (integrity)"
         SUBMISSION_SPEED = "SUBMISSION_SPEED", "Implausible submission pace (integrity)"
+        PHOTO_REUSE = "PHOTO_REUSE", "Reused photo across households (integrity)"
         PLUGIN = "PLUGIN", "Plugin-provided check"
 
     class Severity(models.TextChoices):

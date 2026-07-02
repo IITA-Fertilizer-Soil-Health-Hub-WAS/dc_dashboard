@@ -290,6 +290,43 @@ def tab_review_action(request, code):
 
 
 @login_required
+def my_performance(request):
+    """An enumerator's own quality scorecard — the same composite the coordinator
+    sees, shown back to the person who earned it, per project they collect on, with
+    where they rank. Self-service so field staff can watch their own quality."""
+    from apps.kpi.metrics import PERIODS, enumerator_metrics
+    from apps.submissions.models import Enumerator
+
+    user = request.user
+    days = request.GET.get("days", "90")
+    if days not in PERIODS:
+        days = "90"
+
+    # The projects this user collects on, via their enumerator identity.
+    identities = (
+        Enumerator.objects.filter(user=user)
+        .select_related("use_case").order_by("use_case__code")
+    )
+    by_uc: dict = {}
+    for e in identities:
+        by_uc.setdefault(e.use_case, set()).add(e.id)
+
+    cards = []
+    for uc, enum_ids in by_uc.items():
+        m = enumerator_metrics(uc, days)
+        board = m["leaderboard"]
+        for pos, row in enumerate(board, start=1):
+            if row["enumerator_id"] in enum_ids:
+                cards.append({"uc": uc, "row": row, "rank": pos, "of": len(board)})
+    cards.sort(key=lambda c: -c["row"]["quality_score"])
+
+    return render(request, "dashboards/my_performance.html", {
+        "cards": cards, "days": days, "periods": PERIODS,
+        "period_label": PERIODS.get(days), "has_identity": bool(identities),
+    })
+
+
+@login_required
 def household_timeline(request, code, hh_id):
     """One household's whole season on a page: every scheduled event in order, with
     its submission date, review state and a few captured values — and the gaps

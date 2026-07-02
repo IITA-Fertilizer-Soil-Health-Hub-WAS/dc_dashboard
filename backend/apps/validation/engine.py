@@ -33,6 +33,7 @@ PER_USE_CASE = {
     ValidationRule.RuleType.NUMERIC_OUTLIER: rule_impls.numeric_outlier,
     ValidationRule.RuleType.GEO_DUPLICATE: rule_impls.geo_duplicate,
     ValidationRule.RuleType.SUBMISSION_SPEED: rule_impls.submission_speed,
+    ValidationRule.RuleType.PHOTO_REUSE: rule_impls.photo_reuse,
 }
 
 

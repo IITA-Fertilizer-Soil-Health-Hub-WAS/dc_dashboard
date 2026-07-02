@@ -119,6 +119,11 @@ class Submission(BaseModel):
 
     ingested_at = models.DateTimeField(auto_now_add=True)
 
+    # SHA-256 of each photo/media attachment's bytes, computed on demand by the
+    # media-hashing task. Powers the PHOTO_REUSE integrity check (the same image
+    # reused across different farmers is a curbstoning signal). Empty until hashed.
+    media_hashes = models.JSONField(default=list, blank=True)
+
     # Write-back: propagating reviewer edits back to the source collection server.
     class WriteBackStatus(models.TextChoices):
         NONE = "NONE", "Not attempted"

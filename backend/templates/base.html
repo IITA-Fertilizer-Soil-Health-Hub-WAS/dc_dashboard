@@ -418,6 +418,10 @@
                class="{% if request.resolver_match.url_name == 'my_submissions' %}active{% endif %}">
               <span class="msym">fact_check</span>My submissions
             </a>
+            <a href="{% url 'dashboards:my_performance' %}"
+               class="{% if request.resolver_match.url_name == 'my_performance' %}active{% endif %}">
+              <span class="msym">workspace_premium</span>My performance
+            </a>
           {% endif %}
 
           {% if can_manage_access %}
@@ -505,6 +509,10 @@
             <a href="{% url 'dashboards:my_submissions' %}"
                class="{% if request.resolver_match.url_name == 'my_submissions' %}active{% endif %}">
               <span class="msym">fact_check</span>My submissions
+            </a>
+            <a href="{% url 'dashboards:my_performance' %}"
+               class="{% if request.resolver_match.url_name == 'my_performance' %}active{% endif %}">
+              <span class="msym">workspace_premium</span>My performance
             </a>
           {% endif %}
 

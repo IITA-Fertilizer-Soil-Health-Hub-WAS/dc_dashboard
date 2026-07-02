@@ -1,0 +1,32 @@
+"""Hash a project's photo/media bytes so the PHOTO_REUSE integrity check can run.
+
+    manage.py hash_media PROJ-A                 # only submissions not yet hashed
+    manage.py hash_media PROJ-A --limit 200     # cap the batch (network-bound)
+    manage.py hash_media PROJ-A --all           # re-hash everything
+"""
+from __future__ import annotations
+
+from django.core.management.base import BaseCommand, CommandError
+
+from apps.ingestion.media_hash import hash_use_case_media
+from apps.usecases.models import UseCase
+
+
+class Command(BaseCommand):
+    help = "Compute SHA-256 hashes of submission media for a project."
+
+    def add_arguments(self, parser):
+        parser.add_argument("use_case", help="UseCase code")
+        parser.add_argument("--limit", type=int, default=None, help="Max submissions to process")
+        parser.add_argument("--all", action="store_true", help="Re-hash already-hashed submissions")
+
+    def handle(self, *args, **opts):
+        try:
+            uc = UseCase.objects.get(code=opts["use_case"])
+        except UseCase.DoesNotExist as e:
+            raise CommandError(f"No use case with code {opts['use_case']!r}") from e
+
+        stats = hash_use_case_media(uc, limit=opts["limit"], only_new=not opts["all"])
+        self.stdout.write(self.style.SUCCESS(
+            f"Hashed {stats.processed} submission(s); {stats.with_media} carried media."
+        ))
