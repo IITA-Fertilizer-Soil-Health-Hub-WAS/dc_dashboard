@@ -14,7 +14,7 @@ from apps.fieldwork.models import CollectionUnit, Job
 from apps.kpi.models import AlertEvent, AlertRule
 from apps.rbac.models import UseCaseAccessRequest, UseCaseMembership
 from apps.review.models import RejectionReason
-from apps.submissions.models import Enumerator, Household, Submission
+from apps.submissions.models import Enumerator, Household
 from apps.usecases.models import (
     Country,
     Crop,
@@ -27,7 +27,7 @@ from apps.usecases.models import (
     Trial,
     UseCase,
 )
-from apps.validation.models import ValidationFlag, ValidationRule
+from apps.validation.models import ValidationRule
 
 from .actions import USECASE_ACTIONS, USER_ACTIONS, Action
 
@@ -144,13 +144,16 @@ _ENTRIES: list[Managed] = [
                           "completed_at"],
             search_fields=["user__email", "first_name", "family_name"], readonly=True,
             icon="badge", description="The register-once identity profiles (read-only)."),
-    # ---- Field data: the records being monitored ----
-    Managed("jobs", Job, "Jobs", "Field data",
+    # Jobs live in the sidebar's Manage section ("Jobs & assignments"), not the
+    # config console — so their group is intentionally outside GROUPS (routable +
+    # editable, but not repeated in the Field data list). Same pattern as Monitoring.
+    Managed("jobs", Job, "Jobs", "Operations",
             list_display=["use_case", "name", "form", "status", "target_count", "deadline"],
             form_fields=["use_case", "name", "form", "target_count", "start_date", "deadline",
                          "status", "assigned_to"],
             search_fields=["name"], icon="assignment",
             description="Data-collection assignments — form, target, deadline, enumerators."),
+    # ---- Field data: the records being monitored ----
     Managed("collection-units", CollectionUnit, "Collection units", "Field data",
             list_display=["use_case", "code", "name", "country", "region", "district"],
             form_fields=["use_case", "code", "name", "lat", "lon", "country", "region",
@@ -169,16 +172,8 @@ _ENTRIES: list[Managed] = [
                          "site_selection_date"],
             search_fields=["hhid"], icon="home_work",
             description="Households / plots enrolled in trials."),
-    Managed("submissions", Submission, "Submissions", "Field data",
-            list_display=["use_case", "ona_uuid", "enumerator", "collected_by", "household",
-                          "event_key", "event_date", "ingested_at"],
-            search_fields=["ona_uuid"], readonly=True, ordering=["-ingested_at"],
-            icon="inventory_2",
-            description="Raw submissions ingested from ONA (read-only)."),
-    Managed("validation-flags", ValidationFlag, "Validation flags", "Field data",
-            list_display=["submission", "rule", "message", "severity", "status"],
-            search_fields=["message"], readonly=True, icon="flag",
-            description="Open issues raised by validation rules (read-only)."),
+    # Raw submissions and validation flags are viewed richly on the project's Data
+    # and Issues tabs — no duplicate console section for them.
     # ---- Monitoring: M&E threshold alerts ----
     Managed("alert-rules", AlertRule, "Alert rules", "Monitoring",
             list_display=["use_case", "name", "metric", "comparator", "threshold",
@@ -202,7 +197,7 @@ REGISTRY: dict[str, Managed] = {m.key: m for m in _ENTRIES}
 COORDINATOR_CONSOLE_KEYS: set[str] = {
     "forms", "field-mappings", "event-schedule", "crops", "trials", "stages",
     "validation-rules", "rejection-reasons", "jobs", "collection-units",
-    "enumerators", "households", "submissions", "validation-flags",
+    "enumerators", "households",
     "alert-rules", "alert-events",
 }
 
@@ -210,7 +205,7 @@ COORDINATOR_CONSOLE_KEYS: set[str] = {
 # and scoped to projects they belong to. They already see this data via the project
 # tabs; this surfaces it in the console rail. Never editable for a plain member.
 MEMBER_READ_KEYS: set[str] = {
-    "submissions", "validation-flags", "enumerators", "collection-units", "households",
+    "enumerators", "collection-units", "households",
 }
 
 # ORM lookup from each coordinator-visible section to its use case id, used to
@@ -228,8 +223,6 @@ USECASE_FILTER_PATHS: dict[str, str] = {
     "collection-units": "use_case",
     "enumerators": "use_case",
     "households": "use_case",
-    "submissions": "use_case",
-    "validation-flags": "submission__use_case",
     "alert-rules": "use_case",
     "alert-events": "use_case",
     "access-requests": "use_case",
@@ -308,8 +301,6 @@ ORG_FILTER_PATHS: dict[str, str] = {
     "users": "organization",
     "enumerators": "use_case__organization",
     "households": "use_case__organization",
-    "submissions": "use_case__organization",
-    "validation-flags": "submission__use_case__organization",
     "access-requests": "use_case__organization",
 }
 

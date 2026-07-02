@@ -30,7 +30,7 @@ def test_member_may_view_field_data_but_not_edit(world):
     v = world["viewer"]
     assert console_key_allowed(v, "enumerators")        # field data: view ok
     assert not console_can_edit(v, "enumerators")       # but never edit
-    assert console_key_allowed(v, "submissions")
+    assert console_key_allowed(v, "households")
     assert not console_key_allowed(v, "forms")          # config stays coordinator+
     assert not console_key_allowed(v, "users")          # accounts stay staff
 

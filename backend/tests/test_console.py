@@ -70,10 +70,25 @@ def test_new_form_defaults_use_case_to_active_project(client, staff, uc):
     assert f'value="{uc.pk}" selected' in body
 
 
+def test_field_data_group_has_no_duplicates(staff):
+    from apps.console.registry import REGISTRY, console_key_allowed, grouped_for
+
+    groups = dict(grouped_for(staff))
+    field = {m.key for m in groups.get("Field data", [])}
+    # Readonly mirrors of the project Data / Issues tabs are removed entirely.
+    assert "submissions" not in REGISTRY and "validation-flags" not in REGISTRY
+    # Jobs lives in the Manage section, not the console sidebar — routable + editable
+    # but never listed under a console group.
+    assert all("jobs" not in {m.key for m in items} for items in groups.values())
+    assert "jobs" in REGISTRY and console_key_allowed(staff, "jobs")
+    # What remains under Field data has no duplicate elsewhere in the sidebar.
+    assert field == {"collection-units", "enumerators", "households"}
+
+
 def test_readonly_section_blocks_writes(client, staff, uc):
     client.force_login(staff)
-    assert client.get("/manage/submissions/").status_code == 200       # list allowed
-    assert client.get("/manage/submissions/new/").status_code == 403    # create blocked
+    assert client.get("/manage/alert-events/").status_code == 200       # list allowed
+    assert client.get("/manage/alert-events/new/").status_code == 403    # create blocked
 
 
 def test_membership_stamps_granted_by(client, staff, uc, django_user_model):
