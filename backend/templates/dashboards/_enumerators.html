@@ -61,7 +61,7 @@
     <tbody>
       {% for row in grid.rows %}
         <tr>
-          <td>{{ row.hhid }}</td><td>{{ row.enid }}</td>
+          <td>{% if row.id %}<a href="{% url 'dashboards:household_timeline' uc.code row.id %}">{{ row.hhid }}</a>{% else %}{{ row.hhid }}{% endif %}</td><td>{{ row.enid }}</td>
           {% for c in row.cells %}
             <td title="{{ c.event_key }}: {{ c.status }} {{ c.date }}">
               <span class="cell" style="background:{{ c.color }}"></span>

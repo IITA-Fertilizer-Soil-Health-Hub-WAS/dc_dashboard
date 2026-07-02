@@ -26,10 +26,13 @@ PER_SUBMISSION = {
     ValidationRule.RuleType.GEO_DISTANCE: rule_impls.geo_distance,
     ValidationRule.RuleType.GEO_CONTAINMENT: rule_impls.geo_containment,
 }
-# Rules evaluated once per use case (need the whole timeline).
+# Rules evaluated once per use case (need the whole timeline / distribution).
 PER_USE_CASE = {
     ValidationRule.RuleType.EVENT_SEQUENCE: rule_impls.event_sequence,
     ValidationRule.RuleType.DATE_WINDOW: rule_impls.date_window,
+    ValidationRule.RuleType.NUMERIC_OUTLIER: rule_impls.numeric_outlier,
+    ValidationRule.RuleType.GEO_DUPLICATE: rule_impls.geo_duplicate,
+    ValidationRule.RuleType.SUBMISSION_SPEED: rule_impls.submission_speed,
 }
 
 

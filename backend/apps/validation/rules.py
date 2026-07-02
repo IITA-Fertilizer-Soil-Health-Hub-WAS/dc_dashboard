@@ -108,6 +108,121 @@ def geo_containment(submission, params) -> list[FlagResult]:
     return [FlagResult(submission.id, msg, "", {"outside_boundary": True})]
 
 
+# --- Per-use-case rules (need the whole distribution / cross-submission view) --
+
+def numeric_outlier(use_case, params) -> list[FlagResult]:
+    """Flag numeric values that are statistical outliers for their field across the
+    whole project — a value that may sit *inside* the allowed range yet lies far from
+    the norm (a unit slip or data-entry error a fixed range waves through). The
+    field's mean/σ is learned from the collected data, so there is no threshold to
+    hand-set; complements (does not replace) NUMERIC_RANGE / form constraints.
+
+    params: {field, z?: 3.0, min_n?: 20}. No flag until at least min_n numeric values
+    exist (too few to trust the distribution) or when every value is identical."""
+    import statistics
+
+    field_key = params["field"]
+    z_thresh = float(params.get("z", 3.0))
+    min_n = int(params.get("min_n", 20))
+
+    pairs: list[tuple] = []
+    for sid, raw in SubmissionValue.objects.filter(
+        submission__use_case=use_case, field_key=field_key
+    ).values_list("submission_id", "current_value"):
+        try:
+            pairs.append((sid, float(raw)))
+        except (TypeError, ValueError):
+            continue
+    if len(pairs) < min_n:
+        return []
+    values = [v for _, v in pairs]
+    mean = statistics.fmean(values)
+    stdev = statistics.pstdev(values)
+    if stdev == 0:
+        return []
+    out: list[FlagResult] = []
+    for sid, val in pairs:
+        z = (val - mean) / stdev
+        if abs(z) >= z_thresh:
+            msg = params.get(
+                "message", f"{field_key} = {val:g} is a statistical outlier (z={z:+.1f})"
+            )
+            out.append(FlagResult(sid, msg, field_key, {
+                "value": val, "z": round(z, 2),
+                "mean": round(mean, 2), "stdev": round(stdev, 2),
+            }))
+    return out
+
+
+def geo_duplicate(use_case, params) -> list[FlagResult]:
+    """Data-integrity / curbstoning signal: submissions from DIFFERENT households at
+    the same GPS point — an enumerator who never actually moved. Submissions are
+    snapped onto a small grid; any cell holding more than one household flags every
+    submission in it. (Same household revisited across events is fine.)
+
+    params: {precision?: 4 (decimal places; 4 ≈ 11 m at the equator), message?}."""
+    precision = int(params.get("precision", 4))
+    cells: dict[tuple, list] = {}
+    for s in Submission.objects.filter(
+        use_case=use_case, lat__isnull=False, lon__isnull=False
+    ).values("id", "lat", "lon", "household_id"):
+        key = (round(float(s["lat"]), precision), round(float(s["lon"]), precision))
+        cells.setdefault(key, []).append(s)
+    out: list[FlagResult] = []
+    for (lat, lon), rows in cells.items():
+        households = {r["household_id"] for r in rows if r["household_id"] is not None}
+        if len(households) < 2:
+            continue
+        msg = params.get(
+            "message", f"Shared GPS point {lat},{lon} across {len(households)} households"
+        )
+        for r in rows:
+            out.append(FlagResult(
+                r["id"], msg, "", {"lat": lat, "lon": lon, "households": len(households)}
+            ))
+    return out
+
+
+def submission_speed(use_case, params) -> list[FlagResult]:
+    """Data-integrity / curbstoning signal: an enumerator filing more than `max`
+    submissions inside a short window — faster than genuine field interviews allow.
+    Uses the server receipt time; a sliding window flags every submission caught in
+    a burst.
+
+    params: {max?: 6, window_min?: 30, message?}."""
+    from datetime import timedelta
+
+    max_n = int(params.get("max", 6))
+    window_min = int(params.get("window_min", 30))
+    window = timedelta(minutes=window_min)
+
+    by_enum: dict = {}
+    for s in Submission.objects.filter(
+        use_case=use_case, enumerator__isnull=False, ona_submission_time__isnull=False
+    ).values("id", "enumerator_id", "ona_submission_time"):
+        by_enum.setdefault(s["enumerator_id"], []).append(s)
+
+    flagged: dict = {}  # submission_id -> peak burst size it appeared in
+    for rows in by_enum.values():
+        rows.sort(key=lambda r: r["ona_submission_time"])
+        left = 0
+        for right in range(len(rows)):
+            while rows[right]["ona_submission_time"] - rows[left]["ona_submission_time"] > window:
+                left += 1
+            count = right - left + 1
+            if count > max_n:
+                for j in range(left, right + 1):
+                    sid = rows[j]["id"]
+                    flagged[sid] = max(flagged.get(sid, 0), count)
+    out: list[FlagResult] = []
+    for sid, count in flagged.items():
+        msg = params.get(
+            "message", f"{count} submissions within {window_min} min — implausible pace"
+        )
+        out.append(FlagResult(sid, msg, "", {"burst_count": count, "window_min": window_min}))
+    return out
+
+
 # --- Per-household rules (need the whole event timeline) ----------------------
 
 def event_sequence(use_case, params) -> list[FlagResult]:

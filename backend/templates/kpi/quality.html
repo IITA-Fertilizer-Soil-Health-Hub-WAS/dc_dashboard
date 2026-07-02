@@ -28,6 +28,17 @@
     <div class="card infobox"><div class="n">{{ resolution_rate }}%</div><div class="l">Resolution rate</div></div>
   </div>
 
+  <div class="card" style="margin-top:1.1rem;{% if integrity_total %}border-left:3px solid #c3531f;{% endif %}">
+    <h3 style="margin-bottom:.3rem;">Data integrity <span class="subtle" style="font-weight:400;font-size:.82rem;">· curbstoning & outlier signals</span></h3>
+    <p class="subtle" style="margin:0 0 .7rem;font-size:.82rem;">Open flags from the integrity checks (shared GPS across households, implausible submission pace, statistical outliers). These appear in the Issues queue too.</p>
+    <div style="display:flex;gap:1.6rem;flex-wrap:wrap;">
+      {% for i in integrity %}
+        <div><div style="font-size:1.3rem;font-weight:500;{% if i.n %}color:#c3531f;{% endif %}">{{ i.n }}</div><div class="subtle" style="font-size:.74rem;">{{ i.label }}</div></div>
+      {% endfor %}
+    </div>
+    {% if not integrity_total %}<p class="subtle" style="margin:.6rem 0 0;font-size:.8rem;">No integrity flags open — enable the checks per project to run them.</p>{% endif %}
+  </div>
+
   <div class="cards" style="margin-top:1.1rem;align-items:flex-start;">
     <div class="card" style="flex:1;min-width:340px;">
       <h3 style="margin-bottom:.8rem;">Flags by severity</h3>

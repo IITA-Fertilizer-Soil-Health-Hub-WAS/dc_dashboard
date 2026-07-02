@@ -32,6 +32,9 @@ class ValidationRule(BaseModel):
         CROSS_FIELD = "CROSS_FIELD", "Cross-field check"
         GEO_DISTANCE = "GEO_DISTANCE", "GPS distance from assigned plot"
         GEO_CONTAINMENT = "GEO_CONTAINMENT", "GPS inside the elected plot boundary"
+        NUMERIC_OUTLIER = "NUMERIC_OUTLIER", "Numeric statistical outlier"
+        GEO_DUPLICATE = "GEO_DUPLICATE", "Shared GPS across households (integrity)"
+        SUBMISSION_SPEED = "SUBMISSION_SPEED", "Implausible submission pace (integrity)"
         PLUGIN = "PLUGIN", "Plugin-provided check"
 
     class Severity(models.TextChoices):

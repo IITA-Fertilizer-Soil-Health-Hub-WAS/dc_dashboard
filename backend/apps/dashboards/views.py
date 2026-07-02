@@ -290,6 +290,65 @@ def tab_review_action(request, code):
 
 
 @login_required
+def household_timeline(request, code, hh_id):
+    """One household's whole season on a page: every scheduled event in order, with
+    its submission date, review state and a few captured values — and the gaps
+    (missing / overdue events) highlighted. The per-household drill-down that
+    complements the project-wide event grid."""
+    from django.utils import timezone
+
+    from apps.submissions.models import Household, SubmissionValue
+    from apps.validation.status import event_status, status_color
+
+    uc = get_scoped_use_case(request, code)
+    hh = get_object_or_404(Household, pk=hh_id, use_case=uc)
+    schedule = list(uc.schedule.all())
+
+    subs = {
+        s.event_key: s
+        for s in Submission.objects.filter(use_case=uc, household=hh)
+        .select_related("review", "enumerator", "crop").order_by("event_date")
+    }
+    event1 = subs.get("Event1")
+    event1_date = event1.event_date if event1 else None
+    crop = next((s.crop.name for s in subs.values() if s.crop), None)
+    today = timezone.localdate()
+
+    # A compact set of captured values per submission (first handful, labelled).
+    value_map = {}
+    for ev, s in subs.items():
+        value_map[ev] = list(
+            SubmissionValue.objects.filter(submission=s)
+            .exclude(current_value__in=["", None])
+            .values("field_key", "current_value")[:6]
+        )
+
+    steps = []
+    for item in schedule:
+        s = subs.get(item.event_key)
+        anchor = hh.site_selection_date if item.anchor == item.Anchor.SITE_SELECTION else event1_date
+        st = event_status(
+            event_date=s.event_date if s else None,
+            anchor_date=anchor,
+            offset_days=item.target_offset_for_crop(crop),
+            grace_days=item.grace_days,
+            today=today,
+        )
+        steps.append({
+            "event_key": item.event_key,
+            "submission": s,
+            "status": st,
+            "color": status_color(st),
+            "values": value_map.get(item.event_key, []),
+        })
+
+    return render(request, "dashboards/household_timeline.html", {
+        "uc": uc, "hh": hh, "steps": steps, "crop": crop,
+        "submitted_count": len(subs), "event_count": len(schedule),
+    })
+
+
+@login_required
 def qc_signoff(request, code):
     """Agronomist QC sign-off — a dedicated, focused Gate-2 queue.
 

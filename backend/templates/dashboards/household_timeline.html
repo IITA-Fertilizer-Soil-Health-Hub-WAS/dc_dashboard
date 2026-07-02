@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{{ hh.hhid }} timeline · {{ uc.code }} · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<span class="sep">/</span><a href="{% url 'dashboards:usecase' uc.code %}">{{ uc.code }}</a><span class="sep">/</span><span class="cur">{{ hh.hhid }}</span>{% endblock %}
+{% block extrahead %}<style>
+  .tl{list-style:none;margin:0;padding:0;}
+  .tl li{position:relative;padding:0 0 1.1rem 1.6rem;border-left:2px solid var(--line);}
+  .tl li:last-child{border-left-color:transparent;}
+  .tl .dot{position:absolute;left:-8px;top:2px;width:14px;height:14px;border-radius:50%;border:2px solid var(--bg,#fff);}
+  .tl .ev{font-weight:600;}
+  .tl .vals{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.4rem;}
+  .tl .vals .kv{font-size:.76rem;background:var(--line);border-radius:5px;padding:.1rem .4rem;}
+  .tl .kv b{font-weight:600;}
+</style>{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h2>{{ hh.hhid }}</h2><span class="pill">{{ uc.code }}</span>
+    {% if crop %}<span class="pill">{{ crop }}</span>{% endif %}
+  </div>
+  <p class="lede">{{ submitted_count }} of {{ event_count }} scheduled event{{ event_count|pluralize }} collected.
+    {% if hh.site_selection_date %}Site selected {{ hh.site_selection_date }}.{% endif %}</p>
+
+  <div class="card">
+    <ul class="tl">
+      {% for st in steps %}
+        <li>
+          <span class="dot" style="background:{{ st.color }};"></span>
+          <div style="display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap;">
+            <span class="ev">{{ st.event_key }}</span>
+            <span class="pill" style="text-transform:capitalize;">{{ st.status }}</span>
+            {% if st.submission %}
+              <a class="subtle" href="{% url 'dashboards:submission_review' uc.code st.submission.id %}">{{ st.submission.event_date|default:"—" }}
+                {% if st.submission.review %}· {{ st.submission.review.get_state_display }}{% endif %}</a>
+              {% if st.submission.enumerator %}<span class="subtle">by {{ st.submission.enumerator.enid }}</span>{% endif %}
+            {% else %}
+              <span class="subtle">not collected</span>
+            {% endif %}
+          </div>
+          {% if st.values %}
+            <div class="vals">
+              {% for v in st.values %}<span class="kv"><b>{{ v.field_key }}</b> {{ v.current_value }}</span>{% endfor %}
+            </div>
+          {% endif %}
+        </li>
+      {% empty %}
+        <li style="border:none;padding-left:0;"><div class="empty" style="border:none;">No event schedule defined for this project.</div></li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endblock %}

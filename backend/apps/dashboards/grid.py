@@ -30,6 +30,7 @@ def build_event_grid(use_case) -> dict[str, Any]:
         hh = households.setdefault(
             s.household_id,
             {
+                "id": s.household_id,
                 "hhid": s.household.hhid if s.household else "",
                 "enid": s.enumerator.enid if s.enumerator else "",
                 "crop": s.crop.name if s.crop else None,
@@ -66,7 +67,7 @@ def build_event_grid(use_case) -> dict[str, Any]:
                     "date": submitted_date.isoformat() if submitted_date else "",
                 }
             )
-        rows.append({"hhid": info["hhid"], "enid": info["enid"], "cells": cells})
+        rows.append({"id": info["id"], "hhid": info["hhid"], "enid": info["enid"], "cells": cells})
 
     rows.sort(key=lambda r: r["hhid"])
     return {"event_keys": event_keys, "rows": rows}

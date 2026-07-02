@@ -207,9 +207,30 @@ def quality_metrics(use_case, days: str = "30") -> dict:
     )
     rej_max = max((r["n"] for r in rejections), default=0)
 
+    # Data-integrity roll-up: open flags from the curbstoning / outlier checks,
+    # grouped by rule type, so the fraud signals stand apart from ordinary issues.
+    integrity_types = {
+        ValidationRule.RuleType.GEO_DUPLICATE: "Shared GPS across households",
+        ValidationRule.RuleType.SUBMISSION_SPEED: "Implausible submission pace",
+        ValidationRule.RuleType.NUMERIC_OUTLIER: "Statistical outliers",
+    }
+    integ_counts = dict(
+        ValidationFlag.objects.filter(
+            rule__use_case=use_case, status=ValidationFlag.Status.OPEN,
+            rule__rule_type__in=list(integrity_types),
+        ).values_list("rule__rule_type").annotate(n=Count("id"))
+    )
+    integrity = [
+        {"label": label, "n": integ_counts.get(rt, 0)}
+        for rt, label in integrity_types.items()
+    ]
+    integrity_total = sum(integ_counts.values())
+
     return {
         "days": days,
         "period_label": PERIODS.get(days, "Last 30 days"),
+        "integrity": integrity,
+        "integrity_total": integrity_total,
         "rejections_by_reason": rejections,
         "rej_max": rej_max,
         "total_flags": total,
