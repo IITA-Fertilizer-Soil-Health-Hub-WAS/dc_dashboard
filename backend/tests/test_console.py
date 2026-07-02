@@ -85,7 +85,7 @@ def test_field_data_group_has_no_duplicates(staff):
         assert all(key not in {m.key for m in items} for items in groups.values())
         assert key in REGISTRY and console_key_allowed(staff, key)
     # What remains under Field data has no duplicate elsewhere in the sidebar.
-    assert field == {"collection-units", "households"}
+    assert field == {"collection-units"}
 
 
 def test_readonly_section_blocks_writes(client, staff, uc):

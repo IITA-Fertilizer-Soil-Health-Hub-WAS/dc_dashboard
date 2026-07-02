@@ -13,8 +13,9 @@ from django.conf import settings
 from django.utils import timezone
 
 from apps.config_admin.loader import import_config, load_yaml
+from apps.fieldwork.models import CollectionUnit
 from apps.ingestion.sync import sync_use_case
-from apps.submissions.models import Enumerator, Household, Submission, SubmissionValue
+from apps.submissions.models import Enumerator, Submission, SubmissionValue
 from apps.usecases.models import FormDefinition, UseCase
 
 pytestmark = pytest.mark.django_db
@@ -39,7 +40,7 @@ def test_auto_map_on_sync_populates_unmapped_form():
     assert {"ENID", "HHID"} <= targets
     sub = Submission.objects.get(use_case=uc, ona_uuid="u1")
     assert sub.enumerator.enid == "EN1"
-    assert sub.household.hhid == "HH1"
+    assert sub.collection_unit.code == "HH1"
 
 SNS_PATH = Path(settings.USECASE_CONFIG_DIR) / "sns-rwanda.yaml"
 
@@ -113,7 +114,7 @@ def test_full_sync_builds_entities(use_case):
     assert Enumerator.objects.get(enid="RSENRW000001").is_test is True
 
     # Household built with geopoint split + country + site-selection date.
-    hh = Household.objects.get(hhid="RSHHRW000999")
+    hh = CollectionUnit.objects.get(code="RSHHRW000999")
     assert float(hh.lat) == pytest.approx(-1.95)
     assert hh.country == "Rwanda"
     assert hh.site_selection_date.isoformat() == "2026-01-10"
@@ -128,7 +129,7 @@ def test_full_sync_builds_entities(use_case):
     assert s1.crop.name == "potato"
     assert s1.event_key == "Event1"
     assert s1.enumerator.enid == "RSENRW000123"
-    assert s1.household.hhid == "RSHHRW000999"
+    assert s1.collection_unit.code == "RSHHRW000999"
     assert s1.event_date.isoformat() == "2026-01-24"
 
     # Values: raw == current at ingest.

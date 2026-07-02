@@ -30,7 +30,7 @@ def test_member_may_view_field_data_but_not_edit(world):
     v = world["viewer"]
     assert console_key_allowed(v, "enumerators")        # field data: view ok
     assert not console_can_edit(v, "enumerators")       # but never edit
-    assert console_key_allowed(v, "households")
+    assert console_key_allowed(v, "collection-units")
     assert not console_key_allowed(v, "forms")          # config stays coordinator+
     assert not console_key_allowed(v, "users")          # accounts stay staff
 
@@ -60,5 +60,4 @@ def test_member_grouped_for_is_readonly_field_data(world):
     groups = dict(grouped_for(world["viewer"]))
     assert set(groups) == {"Field data"}
     keys = {m.key for m in groups["Field data"]}
-    assert keys <= {"submissions", "validation-flags", "enumerators",
-                    "collection-units", "households"}
+    assert keys <= {"enumerators", "collection-units"}

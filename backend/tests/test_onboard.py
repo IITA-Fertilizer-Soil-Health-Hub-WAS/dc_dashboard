@@ -92,8 +92,9 @@ def test_wizard_has_no_forced_role_dropdown(client, staff):
 
 def test_identities_derived_without_registration_form(django_user_model):
     """A project with only data forms (no registration form) still gets
-    enumerators/households auto-created from the submission data."""
-    from apps.submissions.models import Enumerator, Household
+    enumerators/units auto-created from the submission data."""
+    from apps.fieldwork.models import CollectionUnit
+    from apps.submissions.models import Enumerator
     from apps.usecases.models import FieldMapping, FormDefinition, UseCase
 
     uc = UseCase.objects.create(code="AID", name="AID")
@@ -109,7 +110,7 @@ def test_identities_derived_without_registration_form(django_user_model):
     from apps.ingestion.sync import sync_use_case
     sync_use_case(uc, client=Fake())
     assert Enumerator.objects.filter(use_case=uc, enid="EN1").exists()
-    hh = Household.objects.get(use_case=uc, hhid="HH1")
+    hh = CollectionUnit.objects.get(use_case=uc, code="HH1")
     assert hh.enumerator.enid == "EN1"
 
 

@@ -610,7 +610,7 @@ class WriteBackQueueView(ManageMixin, View):
         qs = Submission.objects.filter(writeback_status__in=[status.PENDING, status.FAILED])
         if not request.user.is_staff:
             qs = qs.filter(use_case_id__in=_coordinator_uc_ids(request.user))
-        return qs.select_related("use_case", "enumerator", "household").order_by(
+        return qs.select_related("use_case", "enumerator", "collection_unit").order_by(
             "writeback_status", "-updated_at"
         )
 

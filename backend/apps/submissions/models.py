@@ -41,27 +41,6 @@ class Enumerator(BaseModel):
         return self.enid
 
 
-class Household(BaseModel):
-    use_case = models.ForeignKey(UseCase, on_delete=models.CASCADE, related_name="households")
-    hhid = models.CharField(max_length=64)
-    enumerator = models.ForeignKey(
-        Enumerator, null=True, blank=True, on_delete=models.SET_NULL, related_name="households"
-    )
-    lat = models.DecimalField(max_digits=12, decimal_places=7, null=True, blank=True)
-    lon = models.DecimalField(max_digits=12, decimal_places=7, null=True, blank=True)
-    alt = models.DecimalField(max_digits=12, decimal_places=3, null=True, blank=True)
-    country = models.CharField(max_length=64, blank=True)
-    # The schedule anchor (was "Site Selection" = HH verification date in R).
-    site_selection_date = models.DateField(null=True, blank=True)
-
-    class Meta:
-        unique_together = ("use_case", "hhid")
-        ordering = ["hhid"]
-
-    def __str__(self) -> str:
-        return self.hhid
-
-
 class Submission(BaseModel):
     """One ONA submission, immutable after ingest. Denormalized fields support
     fast dashboard filtering without re-parsing the payload."""
@@ -80,9 +59,6 @@ class Submission(BaseModel):
     # Normalized / denormalized for filtering.
     enumerator = models.ForeignKey(
         Enumerator, null=True, blank=True, on_delete=models.SET_NULL, related_name="submissions"
-    )
-    household = models.ForeignKey(
-        Household, null=True, blank=True, on_delete=models.SET_NULL, related_name="submissions"
     )
     crop = models.ForeignKey(Crop, null=True, blank=True, on_delete=models.SET_NULL)
     trial = models.ForeignKey(Trial, null=True, blank=True, on_delete=models.SET_NULL)

@@ -14,7 +14,7 @@ from apps.fieldwork.models import CollectionUnit, Job
 from apps.kpi.models import AlertEvent, AlertRule
 from apps.rbac.models import UseCaseAccessRequest, UseCaseMembership
 from apps.review.models import RejectionReason
-from apps.submissions.models import Enumerator, Household
+from apps.submissions.models import Enumerator
 from apps.usecases.models import (
     Country,
     Crop,
@@ -169,12 +169,6 @@ _ENTRIES: list[Managed] = [
                          "is_test"],
             search_fields=["enid", "first_name", "surname"], icon="badge",
             description="Field staff collecting data, linked to platform accounts."),
-    Managed("households", Household, "Households", "Field data",
-            list_display=["use_case", "hhid", "enumerator", "country", "site_selection_date"],
-            form_fields=["use_case", "hhid", "enumerator", "lat", "lon", "country",
-                         "site_selection_date"],
-            search_fields=["hhid"], icon="home_work",
-            description="Households / plots enrolled in trials."),
     # Raw submissions and validation flags are viewed richly on the project's Data
     # and Issues tabs — no duplicate console section for them.
     # ---- Monitoring: M&E threshold alerts ----
@@ -200,7 +194,7 @@ REGISTRY: dict[str, Managed] = {m.key: m for m in _ENTRIES}
 COORDINATOR_CONSOLE_KEYS: set[str] = {
     "forms", "field-mappings", "event-schedule", "crops", "trials", "stages",
     "validation-rules", "rejection-reasons", "jobs", "collection-units",
-    "enumerators", "households",
+    "enumerators",
     "alert-rules", "alert-events",
 }
 
@@ -208,7 +202,7 @@ COORDINATOR_CONSOLE_KEYS: set[str] = {
 # and scoped to projects they belong to. They already see this data via the project
 # tabs; this surfaces it in the console rail. Never editable for a plain member.
 MEMBER_READ_KEYS: set[str] = {
-    "enumerators", "collection-units", "households",
+    "enumerators", "collection-units",
 }
 
 # ORM lookup from each coordinator-visible section to its use case id, used to
@@ -225,7 +219,6 @@ USECASE_FILTER_PATHS: dict[str, str] = {
     "jobs": "use_case",
     "collection-units": "use_case",
     "enumerators": "use_case",
-    "households": "use_case",
     "alert-rules": "use_case",
     "alert-events": "use_case",
     "access-requests": "use_case",
@@ -303,7 +296,6 @@ ORG_FILTER_PATHS: dict[str, str] = {
     "collection-units": "use_case__organization",
     "users": "organization",
     "enumerators": "use_case__organization",
-    "households": "use_case__organization",
     "access-requests": "use_case__organization",
 }
 

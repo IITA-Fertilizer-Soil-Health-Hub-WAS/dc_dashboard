@@ -1,7 +1,7 @@
 """Ingestion orchestrator — the generic engine that replaces dataprocessing.R.
 
 For a use case it: pulls each ONA form, normalizes records via config-driven
-FieldMappings, upserts Enumerators/Households from the registration forms, and
+FieldMappings, upserts Enumerators/CollectionUnits from the registration forms, and
 upserts immutable Submissions + their authoritative SubmissionValues from the
 validation forms. Idempotent: keyed on (use_case, ona_uuid) with a content hash
 so unchanged records are skipped and reviewer edits are never clobbered.
@@ -17,7 +17,7 @@ from typing import Any
 from django.db import transaction
 from django.utils import timezone
 
-from apps.submissions.models import Enumerator, Household, Submission, SubmissionValue
+from apps.submissions.models import Enumerator, Submission, SubmissionValue
 from apps.usecases.models import FormDefinition, UseCase
 
 from .backends.registry import get_backend_for
@@ -37,7 +37,7 @@ VALIDATION_ROLES = {
 class SyncStats:
     use_case: str
     enumerators: int = 0
-    households: int = 0
+    units: int = 0
     created: int = 0
     updated: int = 0
     unchanged: int = 0
@@ -48,7 +48,7 @@ class SyncStats:
         return {
             "use_case": self.use_case,
             "enumerators": self.enumerators,
-            "households": self.households,
+            "units": self.units,
             "created": self.created,
             "updated": self.updated,
             "unchanged": self.unchanged,
@@ -132,7 +132,7 @@ def sync_use_case(use_case: UseCase, backend=None, client=None) -> SyncStats:
             form.field_schema = schema
             form.save(update_fields=["field_schema"])
 
-    # 1) Registration forms first (enumerators + households are FKs for submissions).
+    # 1) Registration forms first (enumerators + units are FKs for submissions).
     for form in [f for f in forms if f.role in REGISTRATION_ROLES]:
         records = plugin.pre_ingest(form, _fetch(source, form.server_ref))
         if not form.mappings.exists() and records:
@@ -143,8 +143,7 @@ def sync_use_case(use_case: UseCase, backend=None, client=None) -> SyncStats:
             if form.role == FormDefinition.Role.ENUM_REG:
                 _upsert_enumerator(use_case, mapped, test_ids, stats)
             else:
-                _upsert_household(use_case, mapped, stats)
-                _upsert_collection_unit(use_case, mapped)  # merge: unit is the future of household
+                _upsert_collection_unit(use_case, mapped, stats)
 
     # 2) Validation forms -> immutable Submissions + authoritative values.
     for form in [f for f in forms if f.role in VALIDATION_ROLES]:
@@ -178,36 +177,11 @@ def _upsert_enumerator(use_case, mapped, test_ids, stats) -> None:
     stats.enumerators += 1
 
 
-def _upsert_household(use_case, mapped, stats) -> None:
-    hhid = mapped.get("HHID")
-    if not hhid:
-        return
-    enumerator = None
-    enid = mapped.get("ENID")
-    if enid:
-        enumerator = Enumerator.objects.filter(use_case=use_case, enid=enid).first()
-    Household.objects.update_or_create(
-        use_case=use_case,
-        hhid=hhid,
-        defaults={
-            "enumerator": enumerator,
-            "lat": _num(mapped.get("LAT")),
-            "lon": _num(mapped.get("LON")),
-            "alt": _num(mapped.get("ALT")),
-            "country": mapped.get("Country") or "",
-            "site_selection_date": _to_date(mapped.get("today")),
-        },
-    )
-    stats.households += 1
-
-
-def _upsert_collection_unit(use_case, mapped) -> None:
-    """Merge target: mirror the registration into the generic CollectionUnit
-    (``code`` = HHID / plot id). Runs alongside the Household upsert while reads
-    still use Household; becomes the sole write once the merge completes.
-
-    Never overwrites the coordinates of a unit whose farmer anchor is already
-    captured (a plot-election unit) — that lat/lon is the frozen spatial reference."""
+def _upsert_collection_unit(use_case, mapped, stats) -> None:
+    """Upsert the collection unit (household / farm / plot) a registration form
+    describes (``code`` = HHID / plot id). Never overwrites the coordinates of a
+    unit whose farmer anchor is already captured (a plot-election unit) — that
+    lat/lon is the frozen spatial reference."""
     hhid = mapped.get("HHID")
     if not hhid:
         return
@@ -226,6 +200,7 @@ def _upsert_collection_unit(use_case, mapped) -> None:
         unit.lat = _num(mapped.get("LAT"))
         unit.lon = _num(mapped.get("LON"))
     unit.save()
+    stats.units += 1
 
 
 @transaction.atomic
@@ -255,15 +230,10 @@ def _upsert_submission(use_case, form, raw_rec, mapped, crop_by_name, test_ids, 
             use_case=use_case, enid=enid, defaults={"is_test": enid in test_ids}
         )
     hhid = mapped.get("HHID")
-    household = None
-    if hhid:
-        household, _ = Household.objects.get_or_create(
-            use_case=use_case, hhid=hhid, defaults={"enumerator": enumerator}
-        )
     crop = crop_by_name.get(mapped.get("Crop")) if mapped.get("Crop") else None
     collected_by = _resolve_collector(mapped, enumerator)
     collection_unit = _resolve_or_create_unit(use_case, hhid, enumerator)
-    lat, lon = _resolve_location(raw_rec, mapped, household)
+    lat, lon = _resolve_location(raw_rec, mapped, collection_unit)
 
     existing = Submission.objects.filter(use_case=use_case, ona_uuid=ona_uuid).first()
     if existing and existing.content_hash == content_hash:
@@ -278,7 +248,6 @@ def _upsert_submission(use_case, form, raw_rec, mapped, crop_by_name, test_ids, 
         "raw_payload": raw_rec,
         "content_hash": content_hash,
         "enumerator": enumerator,
-        "household": household,
         "crop": crop,
         "collected_by": collected_by,
         "collection_unit": collection_unit,
@@ -325,12 +294,12 @@ def submission_location(raw_rec: dict, mapped: dict):
     return _num(mapped.get("LAT")), _num(mapped.get("LON"))
 
 
-def _resolve_location(raw_rec, mapped, household):
-    """The submission's own location, falling back to its household's so older
-    household-anchored forms still map."""
+def _resolve_location(raw_rec, mapped, unit):
+    """The submission's own location, falling back to its collection unit's so
+    older unit-anchored forms still map."""
     lat, lon = submission_location(raw_rec, mapped)
-    if lat is None and household is not None and household.lat is not None:
-        return household.lat, household.lon
+    if lat is None and unit is not None and unit.lat is not None:
+        return unit.lat, unit.lon
     return lat, lon
 
 

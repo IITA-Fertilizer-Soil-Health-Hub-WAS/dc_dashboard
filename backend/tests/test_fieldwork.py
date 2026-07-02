@@ -81,12 +81,13 @@ def test_submission_creates_its_unit_when_none_planned(django_user_model):
 
 
 def test_upsert_unit_mirrors_household_and_guards_anchor():
-    from apps.ingestion.sync import _upsert_collection_unit
+    from apps.ingestion.sync import SyncStats, _upsert_collection_unit
 
     uc = UseCase.objects.create(code="UC", name="UC")
+    stats = SyncStats(use_case=uc.code)
     # A household-style unit: registration fields are mirrored onto the unit.
     _upsert_collection_unit(uc, {"HHID": "H1", "LAT": "-1.29", "LON": "36.80",
-                                 "today": "2026-03-01"})
+                                 "today": "2026-03-01"}, stats)
     u = CollectionUnit.objects.get(use_case=uc, code="H1")
     assert float(u.lat) == -1.29 and str(u.site_selection_date) == "2026-03-01"
 
@@ -95,7 +96,7 @@ def test_upsert_unit_mirrors_household_and_guards_anchor():
     e = CollectionUnit.objects.create(use_case=uc, code="H2", lat="-1.0", lon="36.0",
                                       anchor_captured=True)
     _upsert_collection_unit(uc, {"HHID": "H2", "LAT": "-9.9", "LON": "9.9",
-                                 "today": "2026-04-01"})
+                                 "today": "2026-04-01"}, stats)
     e.refresh_from_db()
     assert float(e.lat) == -1.0  # frozen anchor preserved
     assert str(e.site_selection_date) == "2026-04-01"

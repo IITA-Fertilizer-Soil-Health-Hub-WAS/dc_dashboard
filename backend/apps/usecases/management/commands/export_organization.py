@@ -23,9 +23,10 @@ from apps.usecases.models import Organization
 def _collect(org):
     """Gather every object owned by an organization, parents before children."""
     from apps.accounts.models import User
+    from apps.fieldwork.models import CollectionUnit
     from apps.rbac.models import UseCaseMembership
     from apps.review.models import Review, ReviewActionLog
-    from apps.submissions.models import Enumerator, Household, Submission, SubmissionValue
+    from apps.submissions.models import Enumerator, Submission, SubmissionValue
     from apps.usecases.models import (
         Country,
         Crop,
@@ -65,7 +66,7 @@ def _collect(org):
     )
     # Field data.
     objs += list(Enumerator.objects.filter(use_case__in=ucs))
-    objs += list(Household.objects.filter(use_case__in=ucs))
+    objs += list(CollectionUnit.objects.filter(use_case__in=ucs))
     objs += list(subs)
     objs += list(SubmissionValue.objects.filter(submission__in=subs))
     objs += list(Review.objects.filter(submission__in=subs))
