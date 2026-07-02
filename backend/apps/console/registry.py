@@ -160,7 +160,10 @@ _ENTRIES: list[Managed] = [
                          "district", "attributes"],
             search_fields=["code", "name"], icon="place",
             description="Plots / farmers-households planned for collection."),
-    Managed("enumerators", Enumerator, "Enumerators", "Field data",
+    # The enumerator roster is edited from the project's Enumerators tab ("Manage
+    # roster"), so it's a single sidebar concept — group kept outside GROUPS
+    # (routable + editable, not a second "Enumerators" console item).
+    Managed("enumerators", Enumerator, "Enumerators", "Operations",
             list_display=["use_case", "enid", "first_name", "surname", "user", "is_test"],
             form_fields=["use_case", "enid", "first_name", "surname", "phone", "user",
                          "is_test"],

@@ -1,9 +1,13 @@
 <div class="cards" style="margin-top:1rem; align-items:flex-start;">
   <div class="card" style="flex:1; min-width:300px;">
-    <h3>Enumerator ranking</h3>
-    <div class="table-wrap">
+    <div style="display:flex;align-items:center;gap:.6rem;">
+      <h3 style="margin:0;">Enumerator ranking</h3>
+      <span style="flex:1"></span>
+      {% if can_manage_access %}<a class="seg" href="{% url 'console:list' 'enumerators' %}?use_case={{ uc.code }}">Manage roster</a>{% endif %}
+    </div>
+    <div class="table-wrap" style="margin-top:.6rem;">
     <table>
-      <thead><tr><th scope="col">Enumerator</th><th scope="col">Name</th><th scope="col">Account</th><th scope="col">Submissions</th></tr></thead>
+      <thead><tr><th scope="col">Enumerator</th><th scope="col">Name</th><th scope="col">Account</th><th scope="col">Submissions</th>{% if can_manage_access %}<th scope="col"></th>{% endif %}</tr></thead>
       <tbody>
         {% for e in ranking %}
           <tr>
@@ -14,9 +18,10 @@
               {% else %}<span class="pill neutral" title="Not linked to a platform account">unlinked</span>{% endif %}
             </td>
             <td>{{ e.n }}</td>
+            {% if can_manage_access %}<td style="text-align:right;"><a class="subtle" href="{% url 'console:edit' 'enumerators' e.id %}">Edit</a></td>{% endif %}
           </tr>
         {% empty %}
-          <tr><td colspan="4">No enumerators yet.</td></tr>
+          <tr><td colspan="{% if can_manage_access %}5{% else %}4{% endif %}">No enumerators yet.</td></tr>
         {% endfor %}
       </tbody>
     </table>
