@@ -86,7 +86,6 @@ def build_config(post) -> dict[str, Any]:
         },
         "crops": [{"name": c} for c in _csv(post.get("crops"))],
         "trials": [{"name": t} for t in _csv(post.get("trials"))],
-        "stages": _csv(post.get("stages")) or ["Validation"],
         "forms": [],
         "event_schedule": [],
         "validation_rules": [],

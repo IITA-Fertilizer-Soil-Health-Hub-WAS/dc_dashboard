@@ -20,7 +20,6 @@ from apps.usecases.models import (
     EventScheduleItem,
     FieldMapping,
     FormDefinition,
-    Stage,
     Trial,
     UseCase,
 )
@@ -119,7 +118,6 @@ def import_config(data: dict[str, Any]) -> UseCase:
     # Replace-all for child collections keeps import deterministic and idempotent.
     uc.crops.all().delete()
     uc.trials.all().delete()
-    uc.stages.all().delete()
     uc.schedule.all().delete()
     uc.forms.all().delete()  # cascades to FieldMapping
     uc.rules.all().delete()
@@ -133,10 +131,6 @@ def import_config(data: dict[str, Any]) -> UseCase:
 
     for t in data.get("trials", []) or []:
         Trial.objects.create(use_case=uc, name=t["name"], code=t.get("code", ""))
-
-    for s in data.get("stages", []) or []:
-        name = s if isinstance(s, str) else s["name"]
-        Stage.objects.create(use_case=uc, name=name)
 
     for ev in data.get("event_schedule", []) or []:
         EventScheduleItem.objects.create(
@@ -201,7 +195,6 @@ def export_config(uc: UseCase) -> dict[str, Any]:
         },
         "crops": [{"name": c.name, "aliases": c.aliases} for c in uc.crops.all()],
         "trials": [{"name": t.name, "code": t.code} for t in uc.trials.all()],
-        "stages": [s.name for s in uc.stages.all()],
         **(
             {"data_source": {
                 "backend": uc.data_source.backend,

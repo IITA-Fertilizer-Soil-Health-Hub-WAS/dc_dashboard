@@ -35,7 +35,6 @@ def _collect(org):
         FieldMapping,
         FormDefinition,
         Region,
-        Stage,
         Trial,
         UseCase,
     )
@@ -50,7 +49,6 @@ def _collect(org):
     objs += list(Country.objects.filter(region__organization=org))
     objs += list(ucs)
     objs += list(DataSource.objects.filter(use_case__in=ucs))
-    objs += list(Stage.objects.filter(use_case__in=ucs))
     objs += list(Crop.objects.filter(use_case__in=ucs))
     objs += list(Trial.objects.filter(use_case__in=ucs))
     objs += list(forms)

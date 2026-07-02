@@ -231,6 +231,7 @@ def _upsert_submission(use_case, form, raw_rec, mapped, crop_by_name, test_ids, 
         )
     hhid = mapped.get("HHID")
     crop = crop_by_name.get(mapped.get("Crop")) if mapped.get("Crop") else None
+    trial = _resolve_trial(use_case, mapped.get("Trial"))
     collected_by = _resolve_collector(mapped, enumerator)
     collection_unit = _resolve_or_create_unit(use_case, hhid, enumerator)
     lat, lon = _resolve_location(raw_rec, mapped, collection_unit)
@@ -249,6 +250,7 @@ def _upsert_submission(use_case, form, raw_rec, mapped, crop_by_name, test_ids, 
         "content_hash": content_hash,
         "enumerator": enumerator,
         "crop": crop,
+        "trial": trial,
         "collected_by": collected_by,
         "collection_unit": collection_unit,
         "event_key": mapped.get("event_key") or "",
@@ -264,6 +266,18 @@ def _upsert_submission(use_case, form, raw_rec, mapped, crop_by_name, test_ids, 
         stats.created += 1
     else:
         stats.updated += 1
+
+
+def _resolve_trial(use_case, name):
+    """The trial (experiment type) a submission belongs to, keyed by name and scoped
+    to the project. Matches a configured trial or creates one from the data, so the
+    trial dimension is always linked to its project."""
+    if not name:
+        return None
+    from apps.usecases.models import Trial
+
+    trial, _ = Trial.objects.get_or_create(use_case=use_case, name=name)
+    return trial
 
 
 def _resolve_or_create_unit(use_case, hhid, enumerator=None):

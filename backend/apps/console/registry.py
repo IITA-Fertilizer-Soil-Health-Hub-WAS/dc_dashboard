@@ -23,7 +23,6 @@ from apps.usecases.models import (
     FormDefinition,
     Organization,
     Region,
-    Stage,
     Trial,
     UseCase,
 )
@@ -85,7 +84,9 @@ _ENTRIES: list[Managed] = [
                          "season", "system_vars_drop"],
             search_fields=["server_form_id", "title"], icon="description",
             description="Forms feeding each use case (onboarded or published)."),
-    Managed("field-mappings", FieldMapping, "Field mappings", "Configuration",
+    # Field mappings are edited inline per form (Forms → Mappings), so the flat
+    # console section is routable but not a separate Configuration nav item.
+    Managed("field-mappings", FieldMapping, "Field mappings", "Operations",
             list_display=["form", "target_field", "transform", "required", "order"],
             form_fields=["form", "target_field", "source_paths", "transform",
                          "transform_args", "required", "order"],
@@ -104,11 +105,7 @@ _ENTRIES: list[Managed] = [
     Managed("trials", Trial, "Trials", "Configuration",
             list_display=["use_case", "name", "code"],
             form_fields=["use_case", "name", "code"], search_fields=["name"], icon="science",
-            description="Trial / experiment types."),
-    Managed("stages", Stage, "Stages", "Configuration",
-            list_display=["use_case", "name"],
-            form_fields=["use_case", "name"], search_fields=["name"], icon="timeline",
-            description="Research / Validation / Piloting."),
+            description="Trial / experiment types (linked to submissions at ingest)."),
     Managed("validation-rules", ValidationRule, "Validation rules", "Configuration",
             list_display=["use_case", "code", "rule_type", "severity", "is_enabled"],
             form_fields=["use_case", "code", "rule_type", "params", "severity",
@@ -193,7 +190,7 @@ REGISTRY: dict[str, Managed] = {m.key: m for m in _ENTRIES}
 # (staff) only; coordinators handle access through the in-app Team & access screen
 # (so access-requests is intentionally NOT a separate console section for them).
 COORDINATOR_CONSOLE_KEYS: set[str] = {
-    "forms", "field-mappings", "event-schedule", "crops", "trials", "stages",
+    "forms", "field-mappings", "event-schedule", "crops", "trials",
     "validation-rules", "rejection-reasons", "jobs", "collection-units",
     "enumerators",
     "alert-rules", "alert-events",
@@ -214,7 +211,6 @@ USECASE_FILTER_PATHS: dict[str, str] = {
     "event-schedule": "use_case",
     "crops": "use_case",
     "trials": "use_case",
-    "stages": "use_case",
     "validation-rules": "use_case",
     "rejection-reasons": "use_case",
     "jobs": "use_case",
@@ -291,7 +287,6 @@ ORG_FILTER_PATHS: dict[str, str] = {
     "event-schedule": "use_case__organization",
     "crops": "use_case__organization",
     "trials": "use_case__organization",
-    "stages": "use_case__organization",
     "validation-rules": "use_case__organization",
     "jobs": "use_case__organization",
     "collection-units": "use_case__organization",

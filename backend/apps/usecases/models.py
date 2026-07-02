@@ -150,20 +150,6 @@ class DataSource(BaseModel):
         return f"{self.use_case.code} via {self.backend}"
 
 
-class Stage(BaseModel):
-    """Research / Validation / Piloting."""
-
-    use_case = models.ForeignKey(UseCase, on_delete=models.CASCADE, related_name="stages")
-    name = models.CharField(max_length=64)
-
-    class Meta:
-        unique_together = ("use_case", "name")
-        ordering = ["name"]
-
-    def __str__(self) -> str:
-        return self.name
-
-
 class Crop(BaseModel):
     """maize, potato, rice, banana, cassava, legumes, yam, soy. Aliases handle
     inconsistent ONA values (e.g. 'potatoIrish' == potato)."""

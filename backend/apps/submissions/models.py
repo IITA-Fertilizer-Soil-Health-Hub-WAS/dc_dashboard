@@ -12,7 +12,7 @@ from django.conf import settings
 from django.db import models
 
 from apps.common.models import BaseModel
-from apps.usecases.models import Crop, FormDefinition, Stage, Trial, UseCase
+from apps.usecases.models import Crop, FormDefinition, Trial, UseCase
 
 
 class Enumerator(BaseModel):
@@ -62,7 +62,6 @@ class Submission(BaseModel):
     )
     crop = models.ForeignKey(Crop, null=True, blank=True, on_delete=models.SET_NULL)
     trial = models.ForeignKey(Trial, null=True, blank=True, on_delete=models.SET_NULL)
-    stage = models.ForeignKey(Stage, null=True, blank=True, on_delete=models.SET_NULL)
     event_key = models.CharField(max_length=32, blank=True)
     event_date = models.DateField(null=True, blank=True)
 

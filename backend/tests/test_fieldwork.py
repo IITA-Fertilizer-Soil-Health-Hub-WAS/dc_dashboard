@@ -64,6 +64,24 @@ def test_submission_matched_to_planned_unit(django_user_model):
     assert sub.collection_unit == unit  # matched by HHID -> unit code
 
 
+def test_submission_linked_to_its_trial_scoped_to_project():
+    # Trial is wired at ingest and always scoped to the project (business logic).
+    uc = UseCase.objects.create(code="UC", name="UC")
+    form = FormDefinition.objects.create(use_case=uc, ona_form_id=9,
+                                         role=FormDefinition.Role.VALIDATION)
+    for order, (t, s) in enumerate([("HHID", "hhid"), ("Trial", "trial")]):
+        FieldMapping.objects.create(form=form, target_field=t, source_paths=[s], order=order)
+
+    class Fake:
+        def get_data(self, fid):
+            return [{"_uuid": "t1", "hhid": "H1", "trial": "Fertilizer Recommendation"}]
+
+    sync_use_case(uc, client=Fake())
+    sub = Submission.objects.get(use_case=uc, ona_uuid="t1")
+    assert sub.trial is not None
+    assert sub.trial.name == "Fertilizer Recommendation" and sub.trial.use_case == uc
+
+
 def test_submission_creates_its_unit_when_none_planned(django_user_model):
     # Household→unit merge: a submission whose id has no pre-planned unit now
     # creates one on the fly (a unit IS the household/farm/plot).
