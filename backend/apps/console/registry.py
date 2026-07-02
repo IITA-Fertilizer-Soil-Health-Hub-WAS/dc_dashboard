@@ -46,10 +46,6 @@ class Managed:
     icon: str = "table_rows"
     description: str = ""  # shown as a tooltip in the sidebar
     actions: tuple[Action, ...] = ()
-    # Hidden from the sidebar nav (still a valid section, reachable by URL / deep
-    # link) when the workspace already surfaces this data richly — avoids the
-    # sidebar repeating Enumerators / Issues / Data / Jobs.
-    hide_in_nav: bool = False
 
     @property
     def singular(self) -> str:
@@ -153,7 +149,7 @@ _ENTRIES: list[Managed] = [
             list_display=["use_case", "name", "form", "status", "target_count", "deadline"],
             form_fields=["use_case", "name", "form", "target_count", "start_date", "deadline",
                          "status", "assigned_to"],
-            search_fields=["name"], icon="assignment", hide_in_nav=True,
+            search_fields=["name"], icon="assignment",
             description="Data-collection assignments — form, target, deadline, enumerators."),
     Managed("collection-units", CollectionUnit, "Collection units", "Field data",
             list_display=["use_case", "code", "name", "country", "region", "district"],
@@ -165,7 +161,7 @@ _ENTRIES: list[Managed] = [
             list_display=["use_case", "enid", "first_name", "surname", "user", "is_test"],
             form_fields=["use_case", "enid", "first_name", "surname", "phone", "user",
                          "is_test"],
-            search_fields=["enid", "first_name", "surname"], icon="badge", hide_in_nav=True,
+            search_fields=["enid", "first_name", "surname"], icon="badge",
             description="Field staff collecting data, linked to platform accounts."),
     Managed("households", Household, "Households", "Field data",
             list_display=["use_case", "hhid", "enumerator", "country", "site_selection_date"],
@@ -177,11 +173,11 @@ _ENTRIES: list[Managed] = [
             list_display=["use_case", "ona_uuid", "enumerator", "collected_by", "household",
                           "event_key", "event_date", "ingested_at"],
             search_fields=["ona_uuid"], readonly=True, ordering=["-ingested_at"],
-            icon="inventory_2", hide_in_nav=True,
+            icon="inventory_2",
             description="Raw submissions ingested from ONA (read-only)."),
     Managed("validation-flags", ValidationFlag, "Validation flags", "Field data",
             list_display=["submission", "rule", "message", "severity", "status"],
-            search_fields=["message"], readonly=True, icon="flag", hide_in_nav=True,
+            search_fields=["message"], readonly=True, icon="flag",
             description="Open issues raised by validation rules (read-only)."),
     # ---- Monitoring: M&E threshold alerts ----
     Managed("alert-rules", AlertRule, "Alert rules", "Monitoring",
@@ -282,12 +278,13 @@ def grouped_for(user) -> list[tuple[str, list[Managed]]]:
     """Sidebar groups visible to `user`: everything for staff; the coordinator
     manage subset; or read-only field data for an ordinary project member."""
     keys = _visible_console_keys(user)
+    if keys is None:
+        return grouped()
+    if not keys:
+        return []
     out = []
     for group, items in grouped():
-        # Hide sidebar-suppressed sections (workspace already surfaces them richly);
-        # they remain reachable by URL and via console permissions.
-        nav_items = [m for m in items if not m.hide_in_nav]
-        vis = nav_items if keys is None else [m for m in nav_items if m.key in keys]
+        vis = [m for m in items if m.key in keys]
         if vis:
             out.append((group, vis))
     return out

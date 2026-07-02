@@ -70,21 +70,6 @@ def test_new_form_defaults_use_case_to_active_project(client, staff, uc):
     assert f'value="{uc.pk}" selected' in body
 
 
-def test_field_data_duplicates_hidden_from_nav_but_reachable(client, staff, uc):
-    from apps.console.registry import console_key_allowed, grouped_for
-
-    nav_keys = {m.key for _, items in grouped_for(staff) for m in items}
-    # These are surfaced richly by the project workspace / Manage — not repeated
-    # in the sidebar, but still valid sections reachable by URL.
-    for dup in ("jobs", "enumerators", "submissions", "validation-flags"):
-        assert dup not in nav_keys
-        assert console_key_allowed(staff, dup)
-    # Sections with no workspace equivalent stay in the nav.
-    assert "collection-units" in nav_keys and "households" in nav_keys
-    client.force_login(staff)
-    assert client.get("/manage/enumerators/").status_code == 200
-
-
 def test_readonly_section_blocks_writes(client, staff, uc):
     client.force_login(staff)
     assert client.get("/manage/submissions/").status_code == 200       # list allowed
