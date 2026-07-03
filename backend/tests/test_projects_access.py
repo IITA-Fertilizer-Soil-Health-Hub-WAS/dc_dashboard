@@ -5,7 +5,7 @@ import pytest
 from django.urls import reverse
 
 from apps.projects.models import Country, Organization, Project, Region
-from apps.rbac.models import ProjectAccessRequest, ProjectMembership, Role
+from apps.rbac.models import Membership, ProjectAccessRequest, Role
 from apps.rbac.permissions import visible_projects
 
 pytestmark = pytest.mark.django_db
@@ -20,10 +20,10 @@ def org_world(django_user_model):
     uc_b = Project.objects.create(code="UC-B", name="Project B", organization=org, country=country)
 
     member = django_user_model.objects.create_user("m@x.org", "pw", is_active=True, organization=org)
-    ProjectMembership.objects.create(user=member, project=uc_a, role=Role.VIEWER)
+    Membership.objects.create(user=member, project=uc_a, role=Role.VIEWER)
     # A coordinator who administers UC-A (can approve requests on it).
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True, organization=org)
-    ProjectMembership.objects.create(user=coord, country=country, role=Role.COUNTRY_COORDINATOR)
+    Membership.objects.create(user=coord, country=country, role=Role.COUNTRY_COORDINATOR)
     return {"org": org, "uc_a": uc_a, "uc_b": uc_b, "member": member, "coord": coord}
 
 
@@ -95,7 +95,7 @@ def test_coordinator_approves_request_grants_access(client, org_world):
     assert resp.status_code == 302
     req.refresh_from_db()
     assert req.status == ProjectAccessRequest.Status.APPROVED
-    assert ProjectMembership.objects.filter(
+    assert Membership.objects.filter(
         user=member, project=uc_b, role=Role.ENUMERATOR
     ).exists()
     # The requester now sees the project.
@@ -110,7 +110,7 @@ def test_coordinator_declines_request(client, org_world):
                 {"request": str(req.pk), "decision": "decline"})
     req.refresh_from_db()
     assert req.status == ProjectAccessRequest.Status.DECLINED
-    assert not ProjectMembership.objects.filter(user=member, project=uc_b).exists()
+    assert not Membership.objects.filter(user=member, project=uc_b).exists()
 
 
 def test_request_outside_authority_not_listed(client, django_user_model, org_world):
@@ -121,7 +121,7 @@ def test_request_outside_authority_not_listed(client, django_user_model, org_wor
     outsider = django_user_model.objects.create_user(
         "o@x.org", "pw", is_active=True, organization=org_world["org"]
     )
-    ProjectMembership.objects.create(user=outsider, project=org_world["uc_a"],
+    Membership.objects.create(user=outsider, project=org_world["uc_a"],
                                      role=Role.TRIAL_COORDINATOR)
     client.force_login(outsider)
     resp = client.get(reverse("dashboards:team"))

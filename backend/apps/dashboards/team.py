@@ -17,7 +17,7 @@ from django.views.decorators.http import require_POST
 
 from apps.accounts.models import User
 from apps.projects.models import Project
-from apps.rbac.models import ProjectAccessRequest, ProjectMembership, Role
+from apps.rbac.models import Membership, ProjectAccessRequest, Role
 from apps.rbac.permissions import (
     can_grant,
     can_manage_access,
@@ -122,7 +122,7 @@ def team_request_decision(request):
         role = request.POST.get("role") or Role.VIEWER
         if role not in dict(Role.choices) or not can_grant(request.user, req.project, role):
             raise PermissionDenied("That grant exceeds your authority.")
-        ProjectMembership.objects.get_or_create(
+        Membership.objects.get_or_create(
             user=req.user, project=req.project, role=role,
             defaults={"granted_by": request.user},
         )
@@ -176,7 +176,7 @@ def team_grant(request):
         raise PermissionDenied("That user belongs to a different institution.")
 
     field = _SCOPE_FIELD[request.POST["scope"].split(":", 1)[0]]
-    _, created = ProjectMembership.objects.get_or_create(
+    _, created = Membership.objects.get_or_create(
         user=target, role=role, **{field: scope_obj},
         defaults={"granted_by": request.user},
     )
@@ -239,7 +239,7 @@ def team_invite(request):
         )
         return redirect("dashboards:team")
 
-    _, created = ProjectMembership.objects.get_or_create(
+    _, created = Membership.objects.get_or_create(
         user=target, project=scope_obj, role=role,
         defaults={"granted_by": request.user},
     )
@@ -258,7 +258,7 @@ def team_revoke(request):
     """Revoke a membership — only if it falls within the revoker's authority."""
     _require_access(request.user)
 
-    membership = get_object_or_404(ProjectMembership, pk=request.POST.get("membership"))
+    membership = get_object_or_404(Membership, pk=request.POST.get("membership"))
     if not manageable_memberships(request.user).filter(pk=membership.pk).exists():
         raise PermissionDenied("That membership is outside your authority.")
 

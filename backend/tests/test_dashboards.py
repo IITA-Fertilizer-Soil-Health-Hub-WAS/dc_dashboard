@@ -10,7 +10,7 @@ from django.urls import reverse
 from apps.config_admin.loader import import_config, load_yaml
 from apps.ingestion.sync import sync_project
 from apps.projects.models import Project
-from apps.rbac.models import ProjectMembership, Role
+from apps.rbac.models import Membership, Role
 from apps.submissions.models import Submission, SubmissionValue
 from apps.validation.engine import run_for_project
 from tests.test_ingestion import FakeOnaClient, _records
@@ -32,8 +32,8 @@ def setup(django_user_model):
     other = Project.objects.create(code="KALRO", name="KALRO", is_active=True)
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True)
     viewer = django_user_model.objects.create_user("v@x.org", "pw", is_active=True)
-    ProjectMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
-    ProjectMembership.objects.create(user=viewer, project=uc, role=Role.VIEWER)
+    Membership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
+    Membership.objects.create(user=viewer, project=uc, role=Role.VIEWER)
     return uc, other, coord, viewer, s
 
 

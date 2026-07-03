@@ -8,7 +8,7 @@ from django.conf import settings
 
 from apps.config_admin.loader import import_config, load_yaml
 from apps.ingestion.sync import sync_project
-from apps.rbac.models import ProjectMembership, Role
+from apps.rbac.models import Membership, Role
 from apps.review import services
 from apps.review.models import Review, ReviewActionLog, ReviewState
 from apps.review.state_machine import ReviewPermissionDenied, TransitionError
@@ -30,10 +30,10 @@ def synced(django_user_model):
     qc = django_user_model.objects.create_user("q@x.org", "pw", is_active=True)
     viewer = django_user_model.objects.create_user("v@x.org", "pw", is_active=True)
     regional = django_user_model.objects.create_user("r@x.org", "pw", is_active=True)
-    ProjectMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
-    ProjectMembership.objects.create(user=qc, project=uc, role=Role.COUNTRY_COORDINATOR)
-    ProjectMembership.objects.create(user=viewer, project=uc, role=Role.VIEWER)
-    ProjectMembership.objects.create(user=regional, project=uc, role=Role.REGIONAL_COORDINATOR)
+    Membership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
+    Membership.objects.create(user=qc, project=uc, role=Role.COUNTRY_COORDINATOR)
+    Membership.objects.create(user=viewer, project=uc, role=Role.VIEWER)
+    Membership.objects.create(user=regional, project=uc, role=Role.REGIONAL_COORDINATOR)
     # coord/qc = Gate 1 (endorse); regional = Gate 2 (final validation).
     return uc, submission, coord, qc, viewer, regional
 
@@ -109,8 +109,8 @@ def test_country_coordinator_fallback_validates_when_no_regional(django_user_mod
     sub = Submission.objects.create(project=uc, form=form, ona_uuid="nr", content_hash="h")
     a = django_user_model.objects.create_user("a@x.org", "pw", is_active=True)
     b = django_user_model.objects.create_user("b@x.org", "pw", is_active=True)
-    ProjectMembership.objects.create(user=a, project=uc, role=Role.COUNTRY_COORDINATOR)
-    ProjectMembership.objects.create(user=b, project=uc, role=Role.COUNTRY_COORDINATOR)
+    Membership.objects.create(user=a, project=uc, role=Role.COUNTRY_COORDINATOR)
+    Membership.objects.create(user=b, project=uc, role=Role.COUNTRY_COORDINATOR)
 
     services.endorse(a, sub)  # Gate 1
     review = services.qc_approve(b, sub)  # Gate 2 fallback (a different person)
@@ -122,8 +122,8 @@ def test_same_person_cannot_endorse_and_validate(synced, django_user_model):
     """Two-person rule: holding both roles still can't self-approve both gates."""
     uc, submission, *_ = synced
     both = django_user_model.objects.create_user("both@x.org", "pw", is_active=True)
-    ProjectMembership.objects.create(user=both, project=uc, role=Role.COUNTRY_COORDINATOR)
-    ProjectMembership.objects.create(user=both, project=uc, role=Role.REGIONAL_COORDINATOR)
+    Membership.objects.create(user=both, project=uc, role=Role.COUNTRY_COORDINATOR)
+    Membership.objects.create(user=both, project=uc, role=Role.REGIONAL_COORDINATOR)
     services.endorse(both, submission)
     with pytest.raises(ReviewPermissionDenied):
         services.qc_approve(both, submission)
@@ -181,7 +181,7 @@ def test_cross_project_isolation(synced, django_user_model):
 
     other = Project.objects.create(code="KALRO", name="KALRO")
     intruder = django_user_model.objects.create_user("i@x.org", "pw", is_active=True)
-    ProjectMembership.objects.create(user=intruder, project=other, role=Role.TRIAL_COORDINATOR)
+    Membership.objects.create(user=intruder, project=other, role=Role.TRIAL_COORDINATOR)
     # Coordinator of KALRO cannot act on an SNS-RWANDA submission.
     with pytest.raises(ReviewPermissionDenied):
         services.decline(intruder, submission)

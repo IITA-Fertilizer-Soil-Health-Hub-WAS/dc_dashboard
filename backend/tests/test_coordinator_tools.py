@@ -6,7 +6,7 @@ import pytest
 from django.urls import reverse
 
 from apps.projects.models import FormDefinition, Organization, Project
-from apps.rbac.models import ProjectMembership, Role
+from apps.rbac.models import Membership, Role
 from apps.submissions.linking import link_enumerators
 from apps.submissions.models import Enumerator, Submission
 
@@ -24,9 +24,9 @@ def world(django_user_model):
     Submission.objects.create(project=mine, form=fm, ona_uuid="m1", content_hash="h", writeback_status=pend)
     Submission.objects.create(project=other, form=fo, ona_uuid="o1", content_hash="h", writeback_status=pend)
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True, organization=org)
-    ProjectMembership.objects.create(user=coord, project=mine, role=Role.TRIAL_COORDINATOR)
+    Membership.objects.create(user=coord, project=mine, role=Role.TRIAL_COORDINATOR)
     viewer = django_user_model.objects.create_user("v@x.org", "pw", is_active=True, organization=org)
-    ProjectMembership.objects.create(user=viewer, project=mine, role=Role.VIEWER)
+    Membership.objects.create(user=viewer, project=mine, role=Role.VIEWER)
     return {"mine": mine, "other": other, "coord": coord, "viewer": viewer}
 
 

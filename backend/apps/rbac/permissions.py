@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 
 from django.db.models import Q
 
-from .models import ProjectMembership, Role
+from .models import Membership, Role
 
 if TYPE_CHECKING:
     from apps.projects.models import Project
@@ -66,7 +66,7 @@ def roles_for(user, project: Project) -> set[str]:
         if project.country.region_id:
             scope |= Q(region_id=project.country.region_id)
     return set(
-        ProjectMembership.objects.filter(scope, user=user).values_list("role", flat=True)
+        Membership.objects.filter(scope, user=user).values_list("role", flat=True)
     )
 
 
@@ -111,7 +111,7 @@ def _regional_validator_exists(project) -> bool:
         scope |= Q(country_id=project.country_id)
         if project.country.region_id:
             scope |= Q(region_id=project.country.region_id)
-    return ProjectMembership.objects.filter(
+    return Membership.objects.filter(
         scope, role=Role.REGIONAL_COORDINATOR, user__is_active=True
     ).exists()
 
@@ -183,7 +183,7 @@ def _authority(user) -> tuple[set, set, set]:
     region_ids: set = set()
     country_ids: set = set()
     uc_ids: set = set()
-    rows = ProjectMembership.objects.filter(user=user, role__in=COORDINATORS).values(
+    rows = Membership.objects.filter(user=user, role__in=COORDINATORS).values(
         "region_id", "country_id", "project_id"
     )
     for r in rows:
@@ -200,7 +200,7 @@ def _max_grant_rank(user) -> int:
     """The highest role rank a user is entitled to confer."""
     if getattr(user, "is_platform_admin", False):
         return ROLE_RANK[Role.PLATFORM_ADMIN]
-    roles = ProjectMembership.objects.filter(user=user, role__in=COORDINATORS).values_list(
+    roles = Membership.objects.filter(user=user, role__in=COORDINATORS).values_list(
         "role", flat=True
     )
     return max((ROLE_RANK.get(r, 0) for r in roles), default=0)
@@ -212,7 +212,7 @@ def can_manage_access(user) -> bool:
         return False
     if getattr(user, "is_platform_admin", False):
         return True
-    return ProjectMembership.objects.filter(user=user, role__in=COORDINATORS).exists()
+    return Membership.objects.filter(user=user, role__in=COORDINATORS).exists()
 
 
 def grantable_roles(user) -> list[str]:
@@ -288,8 +288,8 @@ def grantable_scopes(user) -> dict:
 def manageable_memberships(user):
     """Memberships `user` may view/revoke — those whose scope their authority covers."""
     if not can_manage_access(user):
-        return ProjectMembership.objects.none()
-    qs = ProjectMembership.objects.select_related(
+        return Membership.objects.none()
+    qs = Membership.objects.select_related(
         "user", "project", "country", "region", "granted_by"
     )
     if getattr(user, "is_platform_admin", False):

@@ -7,7 +7,7 @@ from django.urls import reverse
 from apps.fieldwork.models import CollectionUnit, Job, UnitAssignment
 from apps.fieldwork.services import job_progress
 from apps.projects.models import FormDefinition, Organization, Project
-from apps.rbac.models import ProjectMembership, Role
+from apps.rbac.models import Membership, Role
 from apps.review.models import RejectionReason, Review, ReviewState
 from apps.review.services import decline
 from apps.submissions.models import Submission, SubmissionValue
@@ -21,8 +21,8 @@ def world(django_user_model):
     uc = Project.objects.create(code="PROJ-A", name="A", organization=org)
     form = FormDefinition.objects.create(project=uc, ona_form_id=1, role=FormDefinition.Role.VALIDATION)
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True, organization=org)
-    ProjectMembership.objects.create(user=coord, project=uc, role=Role.REGIONAL_COORDINATOR)
-    ProjectMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
+    Membership.objects.create(user=coord, project=uc, role=Role.REGIONAL_COORDINATOR)
+    Membership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
     return {"uc": uc, "form": form, "coord": coord}
 
 

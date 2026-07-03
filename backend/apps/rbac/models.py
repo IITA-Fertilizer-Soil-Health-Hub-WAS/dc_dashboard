@@ -23,7 +23,7 @@ class Role(models.TextChoices):
     VIEWER = "VIEWER", "Viewer"
 
 
-class ProjectMembership(BaseModel):
+class Membership(BaseModel):
     """Grants a user a role at one scope level: a project, a country, or a region.
 
     The unit of authorization. A country grant cascades to every project in that

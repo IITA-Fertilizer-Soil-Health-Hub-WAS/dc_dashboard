@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from apps.fieldwork.models import CollectionUnit
 from apps.projects.models import EventScheduleItem, FormDefinition, Organization, Project
-from apps.rbac.models import ProjectMembership, Role
+from apps.rbac.models import Membership, Role
 from apps.submissions.models import Enumerator, Submission, SubmissionValue
 from apps.validation.engine import run_for_project
 from apps.validation.models import ValidationFlag, ValidationRule
@@ -128,7 +128,7 @@ def test_household_timeline_orders_events_and_shows_gaps(client, world, django_u
     uc = world["uc"]
     coord = django_user_model.objects.create_user(
         "c@x.org", "pw", is_active=True, organization=world["org"])
-    ProjectMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
+    Membership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
     EventScheduleItem.objects.create(project=uc, event_key="Event1", sequence=1)
     EventScheduleItem.objects.create(project=uc, event_key="Event2", sequence=2)
     hh = CollectionUnit.objects.create(project=uc, code="H-42")

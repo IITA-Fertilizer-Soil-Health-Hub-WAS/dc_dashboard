@@ -7,7 +7,7 @@ from apps.common.geo import haversine_m
 from apps.dashboards.charts import submission_plot_map_html
 from apps.fieldwork.models import CollectionUnit
 from apps.projects.models import FormDefinition, Organization, Project
-from apps.rbac.models import ProjectMembership, Role
+from apps.rbac.models import Membership, Role
 from apps.submissions.models import Submission
 from apps.validation.engine import run_for_project
 from apps.validation.models import ValidationFlag, ValidationRule
@@ -82,7 +82,7 @@ def test_review_screen_shows_distance_badge(client, world, django_user_model):
     far = _sub(world, "-1.3100", "36.8500", "f")
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True,
                                                    organization=world["uc"].organization)
-    ProjectMembership.objects.create(user=coord, project=world["uc"],
+    Membership.objects.create(user=coord, project=world["uc"],
                                      role=Role.TRIAL_COORDINATOR)
     client.force_login(coord)
     from django.urls import reverse

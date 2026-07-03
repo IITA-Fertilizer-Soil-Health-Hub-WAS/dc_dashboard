@@ -5,7 +5,7 @@ import pytest
 from django.urls import reverse
 
 from apps.projects.models import Organization, Project
-from apps.rbac.models import ProjectMembership, Role
+from apps.rbac.models import Membership, Role
 
 pytestmark = pytest.mark.django_db
 
@@ -13,7 +13,7 @@ pytestmark = pytest.mark.django_db
 def _member(dj, org, *projects):
     u = dj.objects.create_user(f"u{id(projects)}@x.org", "pw", is_active=True, organization=org)
     for uc in projects:
-        ProjectMembership.objects.create(user=u, project=uc, role=Role.VIEWER)
+        Membership.objects.create(user=u, project=uc, role=Role.VIEWER)
     return u
 
 

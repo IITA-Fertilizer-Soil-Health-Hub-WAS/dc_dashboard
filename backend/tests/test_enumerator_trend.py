@@ -8,7 +8,7 @@ from django.urls import reverse
 
 from apps.kpi.metrics import enumerator_trend, project_quality_trend
 from apps.projects.models import FormDefinition, Organization, Project
-from apps.rbac.models import ProjectMembership, Role
+from apps.rbac.models import Membership, Role
 from apps.submissions.models import Enumerator, Submission
 from apps.validation.models import ValidationFlag, ValidationRule
 
@@ -83,7 +83,7 @@ def test_project_quality_trend_detects_systemic_slide(world):
 def test_enumerator_detail_view_renders(client, world, django_user_model):
     coord = django_user_model.objects.create_user(
         "c@x.org", "pw", is_active=True, organization=world["org"])
-    ProjectMembership.objects.create(user=coord, project=world["uc"], role=Role.TRIAL_COORDINATOR)
+    Membership.objects.create(user=coord, project=world["uc"], role=Role.TRIAL_COORDINATOR)
     _sub(world, "s1", days_ago=5, flagged=True)
     client.force_login(coord)
     resp = client.get(reverse("kpi:enumerator_detail", args=["PROJ-A", world["enum"].id]))

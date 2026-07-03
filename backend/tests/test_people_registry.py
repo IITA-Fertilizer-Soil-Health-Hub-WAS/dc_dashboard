@@ -10,7 +10,7 @@ import pytest
 from django.db import IntegrityError
 
 from apps.projects.models import Country, Project, Region
-from apps.rbac.models import ProjectMembership, Role
+from apps.rbac.models import Membership, Role
 from apps.rbac.permissions import user_can, visible_projects
 
 pytestmark = pytest.mark.django_db
@@ -75,10 +75,10 @@ def project():
 
 def test_country_coordinator_has_coordinator_powers(django_user_model, project):
     u = django_user_model.objects.create_user("cc@x.org", "pw", is_active=True)
-    ProjectMembership.objects.create(user=u, project=project, role=Role.COUNTRY_COORDINATOR)
+    Membership.objects.create(user=u, project=project, role=Role.COUNTRY_COORDINATOR)
     # A Regional covers this project, so Gate 2 belongs to them.
     reg = django_user_model.objects.create_user("reg@x.org", "pw", is_active=True)
-    ProjectMembership.objects.create(user=reg, project=project, role=Role.REGIONAL_COORDINATOR)
+    Membership.objects.create(user=reg, project=project, role=Role.REGIONAL_COORDINATOR)
     assert user_can(u, "decline", project)
     assert user_can(u, "edit", project)
     assert user_can(u, "endorse", project)  # Gate 1
@@ -87,21 +87,21 @@ def test_country_coordinator_has_coordinator_powers(django_user_model, project):
 
 def test_country_coordinator_validates_when_no_regional(django_user_model, project):
     u = django_user_model.objects.create_user("cc-solo@x.org", "pw", is_active=True)
-    ProjectMembership.objects.create(user=u, project=project, role=Role.COUNTRY_COORDINATOR)
+    Membership.objects.create(user=u, project=project, role=Role.COUNTRY_COORDINATOR)
     # No Regional assigned -> the Country Coordinator may validate (fallback).
     assert user_can(u, "final_approve", project)
 
 
 def test_regional_coordinator_has_coordinator_powers(django_user_model, project):
     u = django_user_model.objects.create_user("rc@x.org", "pw", is_active=True)
-    ProjectMembership.objects.create(user=u, project=project, role=Role.REGIONAL_COORDINATOR)
+    Membership.objects.create(user=u, project=project, role=Role.REGIONAL_COORDINATOR)
     assert user_can(u, "sync", project)
     assert user_can(u, "request_edit", project)
 
 
 def test_trial_coordinator_is_gate1_reviewer(django_user_model, project):
     u = django_user_model.objects.create_user("tc@x.org", "pw", is_active=True)
-    ProjectMembership.objects.create(user=u, project=project, role=Role.TRIAL_COORDINATOR)
+    Membership.objects.create(user=u, project=project, role=Role.TRIAL_COORDINATOR)
     # Gate 1 reviewer: full workflow + endorse + sync, but not final validation.
     for action in ("view", "open_review", "request_edit", "edit", "decline", "endorse", "sync"):
         assert user_can(u, action, project), action
@@ -110,14 +110,14 @@ def test_trial_coordinator_is_gate1_reviewer(django_user_model, project):
 
 def test_regional_coordinator_is_gate2_validator(django_user_model, project):
     u = django_user_model.objects.create_user("rc2@x.org", "pw", is_active=True)
-    ProjectMembership.objects.create(user=u, project=project, role=Role.REGIONAL_COORDINATOR)
+    Membership.objects.create(user=u, project=project, role=Role.REGIONAL_COORDINATOR)
     assert user_can(u, "final_approve", project)  # Gate 2
     assert not user_can(u, "endorse", project)    # not Gate 1
 
 
 def test_enumerator_is_read_only(django_user_model, project):
     u = django_user_model.objects.create_user("en@x.org", "pw", is_active=True)
-    ProjectMembership.objects.create(user=u, project=project, role=Role.ENUMERATOR)
+    Membership.objects.create(user=u, project=project, role=Role.ENUMERATOR)
     assert user_can(u, "view", project)
     assert not user_can(u, "edit", project)
     assert not user_can(u, "endorse", project)
@@ -148,7 +148,7 @@ def geo_projects():
 
 def test_country_grant_cascades_to_its_projects(django_user_model, geo_projects):
     cc = django_user_model.objects.create_user("cc2@x.org", "pw", is_active=True)
-    ProjectMembership.objects.create(
+    Membership.objects.create(
         user=cc, country=geo_projects["rwanda"], role=Role.COUNTRY_COORDINATOR
     )
     # Cascades to the Rwanda project...
@@ -163,7 +163,7 @@ def test_country_grant_cascades_to_its_projects(django_user_model, geo_projects)
 
 def test_region_grant_cascades_to_all_countries(django_user_model, geo_projects):
     rc = django_user_model.objects.create_user("rc2@x.org", "pw", is_active=True)
-    ProjectMembership.objects.create(
+    Membership.objects.create(
         user=rc, region=geo_projects["region"], role=Role.REGIONAL_COORDINATOR
     )
     # Both projects in the region are reachable...
@@ -178,7 +178,7 @@ def test_region_grant_cascades_to_all_countries(django_user_model, geo_projects)
 
 def test_direct_project_grant_still_works(django_user_model, geo_projects):
     u = django_user_model.objects.create_user("d2@x.org", "pw", is_active=True)
-    ProjectMembership.objects.create(
+    Membership.objects.create(
         user=u, project=geo_projects["uc_ke"], role=Role.TRIAL_COORDINATOR
     )
     assert user_can(u, "edit", geo_projects["uc_ke"])
@@ -192,7 +192,7 @@ def test_membership_requires_exactly_one_scope(django_user_model, geo_projects):
     u = django_user_model.objects.create_user("bad@x.org", "pw", is_active=True)
     # Two scopes set at once violates the check constraint.
     with pytest.raises(IE):
-        ProjectMembership.objects.create(
+        Membership.objects.create(
             user=u, project=geo_projects["uc_rw"], country=geo_projects["rwanda"],
             role=Role.VIEWER,
         )
@@ -203,4 +203,4 @@ def test_membership_no_scope_rejected(django_user_model):
 
     u = django_user_model.objects.create_user("bad2@x.org", "pw", is_active=True)
     with pytest.raises(IE):
-        ProjectMembership.objects.create(user=u, role=Role.VIEWER)
+        Membership.objects.create(user=u, role=Role.VIEWER)

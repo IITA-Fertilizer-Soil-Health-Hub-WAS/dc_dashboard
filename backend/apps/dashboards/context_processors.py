@@ -15,13 +15,13 @@ def navigation(request):
         return {"nav_projects": [], "console_groups": []}
 
     from apps.fieldwork.models import UnitAssignment
-    from apps.rbac.models import ProjectMembership, Role
+    from apps.rbac.models import Membership, Role
 
     # Anyone holding the enumerator role gets the link as their entry point —
     # not only once they already have an assignment (otherwise a freshly
     # onboarded enumerator sees no path to their own work).
     show_my_assignments = (
-        ProjectMembership.objects.filter(user=user, role=Role.ENUMERATOR).exists()
+        Membership.objects.filter(user=user, role=Role.ENUMERATOR).exists()
         or UnitAssignment.objects.filter(enumerator=user).exists()
     )
 

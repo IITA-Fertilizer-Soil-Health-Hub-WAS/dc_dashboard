@@ -7,7 +7,7 @@ from django.urls import reverse
 
 from apps.console.registry import console_can_edit, console_key_allowed, grouped_for
 from apps.projects.models import Organization, Project
-from apps.rbac.models import ProjectMembership, Role
+from apps.rbac.models import Membership, Role
 from apps.submissions.models import Enumerator
 
 pytestmark = pytest.mark.django_db
@@ -21,7 +21,7 @@ def world(django_user_model):
     Enumerator.objects.create(project=mine, enid="EN-MINE")
     Enumerator.objects.create(project=other, enid="EN-OTHER")
     viewer = django_user_model.objects.create_user("v@x.org", "pw", is_active=True, organization=org)
-    ProjectMembership.objects.create(user=viewer, project=mine, role=Role.VIEWER)
+    Membership.objects.create(user=viewer, project=mine, role=Role.VIEWER)
     stranger = django_user_model.objects.create_user("s@x.org", "pw", is_active=True, organization=org)
     return {"mine": mine, "other": other, "viewer": viewer, "stranger": stranger}
 

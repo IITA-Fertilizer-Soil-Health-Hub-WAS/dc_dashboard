@@ -97,6 +97,6 @@ def test_membership_stamps_granted_by(client, staff, uc, django_user_model):
     r = client.post("/manage/memberships/new/",
                     {"user": str(target.pk), "project": str(uc.pk), "role": "VIEWER"})
     assert r.status_code == 302
-    from apps.rbac.models import ProjectMembership
-    m = ProjectMembership.objects.get(user=target, project=uc)
+    from apps.rbac.models import Membership
+    m = Membership.objects.get(user=target, project=uc)
     assert m.granted_by == staff  # auto-stamped

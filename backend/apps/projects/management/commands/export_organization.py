@@ -35,7 +35,7 @@ def _collect(org):
         Region,
         Trial,
     )
-    from apps.rbac.models import ProjectMembership
+    from apps.rbac.models import Membership
     from apps.review.models import Review, ReviewActionLog
     from apps.submissions.models import Enumerator, Submission, SubmissionValue
     from apps.validation.models import ValidationFlag, ValidationRule
@@ -58,9 +58,9 @@ def _collect(org):
     # Identity + access (only this org's people and the grants over its scopes).
     objs += list(User.objects.filter(organization=org))
     objs += list(
-        ProjectMembership.objects.filter(project__in=ucs)
-        | ProjectMembership.objects.filter(country__region__organization=org)
-        | ProjectMembership.objects.filter(region__organization=org)
+        Membership.objects.filter(project__in=ucs)
+        | Membership.objects.filter(country__region__organization=org)
+        | Membership.objects.filter(region__organization=org)
     )
     # Field data.
     objs += list(Enumerator.objects.filter(project__in=ucs))

@@ -8,7 +8,7 @@ from django.urls import reverse
 
 from apps.ingestion.sync import submission_location
 from apps.projects.models import FormDefinition, Organization, Project
-from apps.rbac.models import ProjectMembership, Role
+from apps.rbac.models import Membership, Role
 from apps.submissions.models import Enumerator, Submission
 
 pytestmark = pytest.mark.django_db
@@ -40,7 +40,7 @@ def world(django_user_model):
     Submission.objects.create(project=uc, form=form, ona_uuid="g2", content_hash="h",
                               enumerator=en)  # no geo
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True, organization=org)
-    ProjectMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
+    Membership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
     return {"uc": uc, "coord": coord}
 
 

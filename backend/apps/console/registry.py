@@ -23,7 +23,7 @@ from apps.projects.models import (
     Region,
     Trial,
 )
-from apps.rbac.models import ProjectAccessRequest, ProjectMembership
+from apps.rbac.models import Membership, ProjectAccessRequest
 from apps.review.models import RejectionReason
 from apps.submissions.models import Enumerator
 from apps.validation.models import ValidationRule
@@ -125,7 +125,7 @@ _ENTRIES: list[Managed] = [
                          "email_verified", "is_staff", "is_superuser"],
             search_fields=["user_id", "email", "full_name"], ordering=["email"], icon="person",
             actions=USER_ACTIONS, description="People and account approval status."),
-    Managed("memberships", ProjectMembership, "Memberships", "Accounts & roles",
+    Managed("memberships", Membership, "Memberships", "Accounts & roles",
             list_display=["user", "project", "country", "region", "role", "granted_by",
                           "created_at"],
             form_fields=["user", "project", "country", "region", "role"],

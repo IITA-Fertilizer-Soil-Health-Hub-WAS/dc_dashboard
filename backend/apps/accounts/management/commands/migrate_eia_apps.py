@@ -15,7 +15,7 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 
 from apps.projects.models import Project
-from apps.rbac.models import ProjectMembership, Role
+from apps.rbac.models import Membership, Role
 
 User = get_user_model()
 
@@ -42,14 +42,14 @@ class Command(BaseCommand):
                     unknown += 1
                     self.stderr.write(self.style.WARNING(f"  ? unknown project '{code}' for {user.email}"))
                     continue
-                exists = ProjectMembership.objects.filter(
+                exists = Membership.objects.filter(
                     user=user, project=uc, role=Role.VIEWER
                 ).exists()
                 if exists:
                     skipped += 1
                     continue
                 if not options["dry_run"]:
-                    ProjectMembership.objects.create(user=user, project=uc, role=Role.VIEWER)
+                    Membership.objects.create(user=user, project=uc, role=Role.VIEWER)
                 created += 1
 
         prefix = "[dry-run] " if options["dry_run"] else ""

@@ -6,7 +6,7 @@ from django.urls import reverse
 
 from apps.projects.models import Country, Organization, Project, Region
 from apps.projects.tenancy import default_organization, resolve_organization
-from apps.rbac.models import ProjectMembership, Role
+from apps.rbac.models import Membership, Role
 from apps.rbac.permissions import organization_of, visible_projects
 
 pytestmark = pytest.mark.django_db
@@ -24,9 +24,9 @@ def two_orgs(django_user_model):
     ucb = Project.objects.create(code="B-BIO", name="B BioSSA", organization=b, country=cb)
 
     coord_a = django_user_model.objects.create_user("a@x.org", "pw", is_active=True, organization=a)
-    ProjectMembership.objects.create(user=coord_a, country=ca, role=Role.COUNTRY_COORDINATOR)
+    Membership.objects.create(user=coord_a, country=ca, role=Role.COUNTRY_COORDINATOR)
     coord_b = django_user_model.objects.create_user("b@x.org", "pw", is_active=True, organization=b)
-    ProjectMembership.objects.create(user=coord_b, country=cb, role=Role.COUNTRY_COORDINATOR)
+    Membership.objects.create(user=coord_b, country=cb, role=Role.COUNTRY_COORDINATOR)
     return {
         "a": a, "b": b, "ra": ra, "rb": rb, "ca": ca, "cb": cb,
         "uca": uca, "ucb": ucb, "coord_a": coord_a, "coord_b": coord_b,
@@ -75,7 +75,7 @@ def test_cannot_grant_to_other_orgs_user(client, two_orgs):
         "role": Role.VIEWER,
     })
     assert resp.status_code == 403
-    assert not ProjectMembership.objects.filter(
+    assert not Membership.objects.filter(
         user=two_orgs["coord_b"], project=two_orgs["uca"]
     ).exists()
 
@@ -108,7 +108,7 @@ def test_invite_external_collaborator_to_one_project(client, two_orgs):
     })
     assert resp.status_code == 302
     b = two_orgs["coord_b"]
-    assert ProjectMembership.objects.filter(
+    assert Membership.objects.filter(
         user=b, project=two_orgs["uca"], role=Role.VIEWER
     ).exists()
     # B's home institution is unchanged...
@@ -127,21 +127,21 @@ def test_collaboration_only_on_project_not_region(client, two_orgs):
         "role": Role.VIEWER,
     })
     assert resp.status_code == 302  # redirected with an error message
-    assert not ProjectMembership.objects.filter(
+    assert not Membership.objects.filter(
         user=two_orgs["coord_b"], region=two_orgs["ra"]
     ).exists()
 
 
 def test_invite_unknown_email_does_nothing(client, two_orgs):
     client.force_login(two_orgs["coord_a"])
-    before = ProjectMembership.objects.count()
+    before = Membership.objects.count()
     resp = client.post(reverse("dashboards:team_invite"), {
         "email": "nobody@x.org",
         "scope": f"project:{two_orgs['uca'].pk}",
         "role": Role.VIEWER,
     })
     assert resp.status_code == 302
-    assert ProjectMembership.objects.count() == before
+    assert Membership.objects.count() == before
 
 
 def test_invite_outside_authority_rejected(client, django_user_model, two_orgs):
@@ -154,7 +154,7 @@ def test_invite_outside_authority_rejected(client, django_user_model, two_orgs):
         "role": Role.VIEWER,
     })
     assert resp.status_code == 403
-    assert not ProjectMembership.objects.filter(user=outsider).exists()
+    assert not Membership.objects.filter(user=outsider).exists()
 
 
 def test_default_organization_single_tenant():

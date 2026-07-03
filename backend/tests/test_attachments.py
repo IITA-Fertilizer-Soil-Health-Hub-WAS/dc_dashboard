@@ -6,7 +6,7 @@ from django.urls import reverse
 
 from apps.ingestion.attachments import parse_attachments
 from apps.projects.models import FormDefinition, Organization, Project
-from apps.rbac.models import ProjectMembership, Role
+from apps.rbac.models import Membership, Role
 from apps.submissions.models import Submission
 
 pytestmark = pytest.mark.django_db
@@ -45,7 +45,7 @@ def world(django_user_model):
     sub = Submission.objects.create(project=uc, form=form, ona_uuid="m1",
                                     content_hash="h", raw_payload=PAYLOAD)
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True, organization=org)
-    ProjectMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
+    Membership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
     return {"uc": uc, "sub": sub, "coord": coord}
 
 

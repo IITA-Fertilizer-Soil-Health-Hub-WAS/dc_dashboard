@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 
 from apps.projects.models import FormDefinition, Project
-from apps.rbac.models import ProjectMembership, Role
+from apps.rbac.models import Membership, Role
 from apps.review import services
 from apps.submissions.models import Submission
 
@@ -25,7 +25,7 @@ def form(uc):
 @pytest.fixture
 def coordinator(django_user_model, uc):
     u = django_user_model.objects.create_user("c@x.org", "pw", is_active=True)
-    ProjectMembership.objects.create(user=u, project=uc, role=Role.TRIAL_COORDINATOR)
+    Membership.objects.create(user=u, project=uc, role=Role.TRIAL_COORDINATOR)
     return u
 
 
