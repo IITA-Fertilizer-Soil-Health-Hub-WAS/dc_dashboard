@@ -1,4 +1,4 @@
-"""Validation engine: run a use case's enabled rules and reconcile flags.
+"""Validation engine: run a project's enabled rules and reconcile flags.
 
 Per rule, it computes the set of flags that *should* exist now, then upserts
 them and auto-resolves any prior flags from that rule that no longer fire
@@ -26,7 +26,7 @@ PER_SUBMISSION = {
     ValidationRule.RuleType.GEO_DISTANCE: rule_impls.geo_distance,
     ValidationRule.RuleType.GEO_CONTAINMENT: rule_impls.geo_containment,
 }
-# Rules evaluated once per use case (need the whole timeline / distribution).
+# Rules evaluated once per project (need the whole timeline / distribution).
 PER_USE_CASE = {
     ValidationRule.RuleType.EVENT_SEQUENCE: rule_impls.event_sequence,
     ValidationRule.RuleType.DATE_WINDOW: rule_impls.date_window,

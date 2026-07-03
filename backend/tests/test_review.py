@@ -99,7 +99,7 @@ def test_final_validation_requires_endorsement_first(synced):
 
 
 def test_country_coordinator_fallback_validates_when_no_regional(django_user_model):
-    """With no Regional on the use case, a second Country Coordinator validates."""
+    """With no Regional on the project, a second Country Coordinator validates."""
     from apps.projects.models import FormDefinition, Project
 
     uc = Project.objects.create(code="NOREG", name="No Regional")

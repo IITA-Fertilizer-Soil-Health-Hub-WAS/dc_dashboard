@@ -1,4 +1,4 @@
-"""Rebuild the daily KPI aggregates (all projects, or one with --use-case)."""
+"""Rebuild the daily KPI aggregates (all projects, or one with --project)."""
 from __future__ import annotations
 
 from django.core.management.base import BaseCommand, CommandError
@@ -11,13 +11,13 @@ class Command(BaseCommand):
     help = "Materialise the daily KPI aggregates from ingested submissions."
 
     def add_arguments(self, parser):
-        parser.add_argument("--use-case", dest="project", help="Limit to one Project code.")
+        parser.add_argument("--project", dest="project", help="Limit to one Project code.")
 
     def handle(self, *args, **options):
         if options["project"]:
             uc = Project.objects.filter(code=options["project"]).first()
             if uc is None:
-                raise CommandError(f"Unknown use case: {options['project']}")
+                raise CommandError(f"Unknown project: {options['project']}")
             result = rebuild_project_kpis(uc)
         else:
             result = rebuild_all_kpis()

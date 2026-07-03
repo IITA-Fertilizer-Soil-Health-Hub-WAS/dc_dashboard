@@ -1,6 +1,6 @@
 """Onboarding a new project to monitor — both the guided wizard and YAML import.
 
-Reflects the ONA model: a project == a use case; its forms == the entries.
+Reflects the ONA model: a project == a project; its forms == the entries.
 """
 from __future__ import annotations
 

@@ -320,7 +320,7 @@ UNFOLD = {
         },
     },
     # The admin holds only system-level models now (review/audit + Django/3rd-party
-    # system tables); all use-case config, access and field data live in the in-app
+    # system tables); all project config, access and field data live in the in-app
     # console. Let unfold auto-build the nav from whatever stays registered.
     "SIDEBAR": {
         "show_search": True,
@@ -339,5 +339,5 @@ UNFOLD = {
     },
 }
 
-# Path where per-use-case YAML config seeds live.
+# Path where per-project YAML config seeds live.
 PROJECT_CONFIG_DIR = BASE_DIR / "config" / "projects"

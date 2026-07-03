@@ -1,4 +1,4 @@
-"""Use-case config actions (export-to-YAML, validate) — now console actions."""
+"""Project config actions (export-to-YAML, validate) — now console actions."""
 from __future__ import annotations
 
 from pathlib import Path

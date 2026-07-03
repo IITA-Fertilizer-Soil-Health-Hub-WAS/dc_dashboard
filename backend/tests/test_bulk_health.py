@@ -1,4 +1,4 @@
-"""Bulk review actions + per-use-case review/write-back health on Summary."""
+"""Bulk review actions + per-project review/write-back health on Summary."""
 from __future__ import annotations
 
 import pytest

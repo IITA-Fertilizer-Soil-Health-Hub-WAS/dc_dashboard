@@ -1,4 +1,4 @@
-"""Periodic digest of pending reviews, emailed to a use case's reviewers."""
+"""Periodic digest of pending reviews, emailed to a project's reviewers."""
 from __future__ import annotations
 
 from apps.common.email import send_safe_email
@@ -39,8 +39,8 @@ def reviewer_emails(project) -> list[str]:
 
 
 def send_review_digests() -> int:
-    """Email each use case's reviewers a summary of work awaiting them.
-    Returns the number of emails sent. Skips use cases with nothing pending."""
+    """Email each project's reviewers a summary of work awaiting them.
+    Returns the number of emails sent. Skips projects with nothing pending."""
     sent = 0
     for uc in Project.objects.filter(is_active=True):
         summary = pending_summary(uc)

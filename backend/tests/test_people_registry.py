@@ -1,7 +1,7 @@
 """People registry: platform UserID stamping, geo hierarchy, expanded roles.
 
 Proves Stage 1 of making this platform the identity registry — every user gets
-a stable UserID for stamping submissions, use cases hang off a Region → Country
+a stable UserID for stamping submissions, projects hang off a Region → Country
 hierarchy, and the coordinator/quality roles map to the right review actions.
 """
 from __future__ import annotations
@@ -76,7 +76,7 @@ def project():
 def test_country_coordinator_has_coordinator_powers(django_user_model, project):
     u = django_user_model.objects.create_user("cc@x.org", "pw", is_active=True)
     UseCaseMembership.objects.create(user=u, project=project, role=Role.COUNTRY_COORDINATOR)
-    # A Regional covers this use case, so Gate 2 belongs to them.
+    # A Regional covers this project, so Gate 2 belongs to them.
     reg = django_user_model.objects.create_user("reg@x.org", "pw", is_active=True)
     UseCaseMembership.objects.create(user=reg, project=project, role=Role.REGIONAL_COORDINATOR)
     assert user_can(u, "decline", project)
@@ -129,7 +129,7 @@ def test_enumerator_is_read_only(django_user_model, project):
 
 @pytest.fixture
 def geo_projects():
-    """Two countries in one region, each with a use case; plus an unrelated region."""
+    """Two countries in one region, each with a project; plus an unrelated region."""
     region = Region.objects.create(code="EA", name="East Africa")
     rwanda = Country.objects.create(region=region, code="RW", name="Rwanda")
     kenya = Country.objects.create(region=region, code="KE", name="Kenya")
@@ -151,7 +151,7 @@ def test_country_grant_cascades_to_its_projects(django_user_model, geo_projects)
     UseCaseMembership.objects.create(
         user=cc, country=geo_projects["rwanda"], role=Role.COUNTRY_COORDINATOR
     )
-    # Cascades to the Rwanda use case...
+    # Cascades to the Rwanda project...
     assert user_can(cc, "edit", geo_projects["uc_rw"])
     # ...but not Kenya (same region, different country) or Nigeria.
     assert not user_can(cc, "edit", geo_projects["uc_ke"])
@@ -166,10 +166,10 @@ def test_region_grant_cascades_to_all_countries(django_user_model, geo_projects)
     UseCaseMembership.objects.create(
         user=rc, region=geo_projects["region"], role=Role.REGIONAL_COORDINATOR
     )
-    # Both use cases in the region are reachable...
+    # Both projects in the region are reachable...
     assert user_can(rc, "sync", geo_projects["uc_rw"])
     assert user_can(rc, "sync", geo_projects["uc_ke"])
-    # ...but the other region's use case is not.
+    # ...but the other region's project is not.
     assert not user_can(rc, "view", geo_projects["uc_ng"])
 
     visible = set(visible_projects(rc).values_list("code", flat=True))

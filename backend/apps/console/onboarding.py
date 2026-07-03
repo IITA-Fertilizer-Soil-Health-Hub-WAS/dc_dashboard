@@ -64,7 +64,7 @@ def _csv(value: str | None) -> list[str]:
 
 
 def build_config(post) -> dict[str, Any]:
-    """Assemble a use-case config dict from wizard POST data."""
+    """Assemble a project config dict from wizard POST data."""
     enid_patterns = _csv(post.get("enid_patterns"))
     hhid_patterns = _csv(post.get("hhid_patterns"))
 

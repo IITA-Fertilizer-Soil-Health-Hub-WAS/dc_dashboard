@@ -4,12 +4,12 @@ The tool is not ONA-specific: any collection server/tool (ONA, KoboToolbox, ODK
 Central, SurveyCTO, a plain REST/CSV endpoint, …) is a `CollectionBackend`. A
 backend can:
 
-* **discover** projects (each project == a use case here) and their forms,
+* **discover** projects (each project == a project here) and their forms,
 * **fetch** submissions for a form,
 * **sample** a form's field paths (to auto-suggest mappings), and
 * **push** an edited submission back to the source (write-back), when supported.
 
-One use case is bound to one backend via apps.projects.models.DataSource.
+One project is bound to one backend via apps.projects.models.DataSource.
 """
 from __future__ import annotations
 

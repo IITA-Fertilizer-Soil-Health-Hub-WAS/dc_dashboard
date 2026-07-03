@@ -1,7 +1,7 @@
 """Plugin hook test: BioSSA explodes a nested-repeat record into multiple rows.
 
 Proves the optional Python escape hatch works end-to-end through the generic
-engine — the use case is still defined by config; only `normalize` is custom.
+engine — the project is still defined by config; only `normalize` is custom.
 """
 from __future__ import annotations
 

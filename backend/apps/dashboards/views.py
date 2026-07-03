@@ -1,6 +1,6 @@
 """Dashboard views — feature parity with the R Shiny app, RBAC-scoped.
 
-Per use case: Summary (info boxes, trials map, submission trend), Enumerators
+Per project: Summary (info boxes, trials map, submission trend), Enumerators
 (ranking + colour-coded event-completion grid), Issues (validation flags with
 inline, role-gated review actions), and Data Preview. Tabs load as HTMX partials.
 """
@@ -96,7 +96,7 @@ def my_submissions(request):
 
 @login_required
 def overview(request):
-    """Cross-use-case overview: key metrics for every use case I can see."""
+    """Cross-project overview: key metrics for every project I can see."""
     from apps.validation.models import ValidationFlag
 
     closed = REVIEW_CLOSED_STATES
@@ -127,7 +127,7 @@ def overview(request):
 
 @login_required
 def export_audit(request, code):
-    """CSV of the review audit trail for a use case."""
+    """CSV of the review audit trail for a project."""
     uc = get_scoped_project(request, code)
     logs = (
         ReviewActionLog.objects.filter(submission__project=uc)
@@ -233,7 +233,7 @@ def _jobs_progress(uc):
 
 
 def _attribution_stats(uc) -> dict:
-    """How much of a use case's data traces to a registered platform account.
+    """How much of a project's data traces to a registered platform account.
 
     Tracks migration off the ONA-era ENID bridge toward stamped UserIDs — the
     closer to 100%, the more of the data is owned by a known collector.
@@ -250,7 +250,7 @@ def _attribution_stats(uc) -> dict:
 
 
 def _health_counts(uc) -> dict:
-    """Per-use-case review + write-back health for the Summary tab."""
+    """Per-project review + write-back health for the Summary tab."""
     from apps.review.models import ReviewState
 
     subs = Submission.objects.filter(project=uc)
@@ -717,7 +717,7 @@ def _list_media(uc, submission) -> list[dict]:
 def submission_media(request, code, submission_id, name):
     """Stream one submission photo/media through the app, using the backend's own
     credentials — collection-server attachments aren't publicly fetchable. Scoped to
-    a member of the use case; the file must belong to this submission's record."""
+    a member of the project; the file must belong to this submission's record."""
     uc = get_scoped_project(request, code)
     submission = get_object_or_404(Submission, project=uc, pk=submission_id)
     match = next((a for a in _list_media(uc, submission) if a.get("name") == name), None)

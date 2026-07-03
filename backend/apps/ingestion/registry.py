@@ -1,7 +1,7 @@
-"""Resolve a use case's optional Python plugin from its ``plugin_path``.
+"""Resolve a project's optional Python plugin from its ``plugin_path``.
 
 Format: "dotted.module:ClassName" (e.g. "plugins.biossa:BioSSAPlugin").
-Returns a no-op base plugin when a use case declares none, so callers never
+Returns a no-op base plugin when a project declares none, so callers never
 branch on whether a plugin exists.
 """
 from __future__ import annotations

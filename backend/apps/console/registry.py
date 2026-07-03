@@ -59,7 +59,7 @@ _ENTRIES: list[Managed] = [
             form_fields=["code", "name", "is_active", "database_alias"],
             search_fields=["code", "name"], icon="domain",
             description="Institutions (tenants) — each owns its own data."),
-    # ---- Geography: the region → country hierarchy use cases hang off ----
+    # ---- Geography: the region → country hierarchy projects hang off ----
     Managed("regions", Region, "Regions", "Geography",
             list_display=["organization", "code", "name"],
             form_fields=["organization", "code", "name"], search_fields=["code", "name"],
@@ -68,7 +68,7 @@ _ENTRIES: list[Managed] = [
             list_display=["name", "code", "region"],
             form_fields=["region", "code", "name"], search_fields=["code", "name"],
             icon="flag", description="Countries within a region."),
-    # ---- Configuration: how a use case is defined & ingested ----
+    # ---- Configuration: how a project is defined & ingested ----
     Managed("projects", Project, "Projects", "Configuration",
             list_display=["code", "name", "organization", "country", "is_active",
                           "config_version", "plugin_path"],
@@ -83,7 +83,7 @@ _ENTRIES: list[Managed] = [
             form_fields=["project", "title", "ona_form_id", "server_form_id", "role", "crop",
                          "season", "system_vars_drop"],
             search_fields=["server_form_id", "title"], icon="description",
-            description="Forms feeding each use case (onboarded or published)."),
+            description="Forms feeding each project (onboarded or published)."),
     # Field mappings are edited inline per form (Forms → Mappings), so the flat
     # console section is routable but not a separate Configuration nav item.
     Managed("field-mappings", FieldMapping, "Field mappings", "Operations",
@@ -130,7 +130,7 @@ _ENTRIES: list[Managed] = [
                           "created_at"],
             form_fields=["user", "project", "country", "region", "role"],
             search_fields=["user__email", "project__code"], icon="group",
-            description="Who can access which use case / country / region, and their role."),
+            description="Who can access which project / country / region, and their role."),
     Managed("access-requests", UseCaseAccessRequest, "Access requests", "Accounts & roles",
             list_display=["user", "project", "status", "decided_by", "decided_at",
                           "created_at"],
@@ -203,7 +203,7 @@ MEMBER_READ_KEYS: set[str] = {
     "enumerators", "collection-units",
 }
 
-# ORM lookup from each coordinator-visible section to its use case id, used to
+# ORM lookup from each coordinator-visible section to its project id, used to
 # scope the list to the coordinator's own projects.
 PROJECT_FILTER_PATHS: dict[str, str] = {
     "forms": "project",

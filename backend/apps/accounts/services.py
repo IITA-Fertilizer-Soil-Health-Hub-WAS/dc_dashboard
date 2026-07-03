@@ -28,9 +28,9 @@ def claim_admin_available(user) -> bool:
 
 
 def sync_memberships_from_eia_apps(user) -> int:
-    """Create VIEWER memberships for each use case in the user's legacy_eia_apps.
+    """Create VIEWER memberships for each project in the user's legacy_eia_apps.
 
-    Idempotent. Returns the number of memberships created. Unknown use-case codes
+    Idempotent. Returns the number of memberships created. Unknown project codes
     are ignored (a Platform Admin can grant access explicitly later). Higher roles
     (Coordinator) are always admin-assigned, never inferred.
     """

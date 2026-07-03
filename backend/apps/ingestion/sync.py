@@ -1,6 +1,6 @@
 """Ingestion orchestrator — the generic engine that replaces dataprocessing.R.
 
-For a use case it: pulls each ONA form, normalizes records via config-driven
+For a project it: pulls each ONA form, normalizes records via config-driven
 FieldMappings, upserts Enumerators/CollectionUnits from the registration forms, and
 upserts immutable Submissions + their authoritative SubmissionValues from the
 validation forms. Idempotent: keyed on (project, ona_uuid) with a content hash
@@ -102,10 +102,10 @@ def auto_map_form(form, sample_record: dict) -> int:
 
 
 def sync_project(project: Project, backend=None, client=None) -> SyncStats:
-    """Sync all of a use case's forms via its data-collection backend.
+    """Sync all of a project's forms via its data-collection backend.
 
     `backend` (or legacy `client`) may be injected for testing; otherwise the
-    backend bound to the use case's DataSource is used.
+    backend bound to the project's DataSource is used.
     """
     source = backend or client or get_backend_for(project)
     stats = SyncStats(project=project.code)

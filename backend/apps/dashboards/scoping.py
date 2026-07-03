@@ -1,9 +1,9 @@
-"""Use-case scoping for dashboard views.
+"""Project scoping for dashboard views.
 
-Every dashboard queryset is filtered to the use cases a user may view (their
+Every dashboard queryset is filtered to the projects a user may view (their
 memberships, or all for a Platform Admin) — the replacement for the R app's
 `eia_apps ∩ active_project_list`. `get_scoped_project` 404s on anything the
-user may not see, so URL tampering cannot cross use-case boundaries.
+user may not see, so URL tampering cannot cross project boundaries.
 """
 from __future__ import annotations
 

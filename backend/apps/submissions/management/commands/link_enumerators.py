@@ -4,7 +4,7 @@ Dry-run by default — prints the proposed links. Pass --apply to persist. After
 applying, the next sync stamps Submission.collected_by for the linked collectors.
 
     python manage.py link_enumerators                     # preview all
-    python manage.py link_enumerators --use-case SNS-RWANDA --apply
+    python manage.py link_enumerators --project SNS-RWANDA --apply
     python manage.py link_enumerators --by phone --apply   # phone only
 """
 from __future__ import annotations
@@ -19,7 +19,7 @@ class Command(BaseCommand):
     help = "Link Enumerators to User accounts by phone/name so collected_by populates."
 
     def add_arguments(self, parser):
-        parser.add_argument("--use-case", dest="project", help="Limit to one Project code.")
+        parser.add_argument("--project", dest="project", help="Limit to one Project code.")
         parser.add_argument(
             "--by", default=",".join(MATCH_KEYS),
             help="Comma-separated match keys in priority order (phone,name).",
@@ -38,7 +38,7 @@ class Command(BaseCommand):
         if options["project"]:
             project = Project.objects.filter(code=options["project"]).first()
             if project is None:
-                raise CommandError(f"Unknown use case: {options['project']}")
+                raise CommandError(f"Unknown project: {options['project']}")
 
         keys = tuple(k.strip() for k in options["by"].split(",") if k.strip())
         unknown = set(keys) - set(MATCH_KEYS)

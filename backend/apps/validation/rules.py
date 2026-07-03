@@ -1,6 +1,6 @@
 """Pluggable validation rule implementations.
 
-Each rule turns a use case's data into a list of FlagResult. Rules operate on the
+Each rule turns a project's data into a list of FlagResult. Rules operate on the
 authoritative (edited) values via the helper `value_of`. The engine maps a
 ValidationRule.rule_type to one of these and persists the results as flags.
 """
@@ -108,7 +108,7 @@ def geo_containment(submission, params) -> list[FlagResult]:
     return [FlagResult(submission.id, msg, "", {"outside_boundary": True})]
 
 
-# --- Per-use-case rules (need the whole distribution / cross-submission view) --
+# --- Per-project rules (need the whole distribution / cross-submission view) --
 
 def numeric_outlier(project, params) -> list[FlagResult]:
     """Flag numeric values that are statistical outliers for their field across the

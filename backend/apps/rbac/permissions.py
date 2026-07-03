@@ -2,7 +2,7 @@
 
 `user_can(user, action, project)` is the single entry point for permission
 checks across views, templates, DRF, and the review state machine. It maps
-abstract actions to the roles allowed to perform them, scoped to a use case.
+abstract actions to the roles allowed to perform them, scoped to a project.
 Keeping this in one place means the review state machine, the dashboards, and
 the API all agree on who can do what.
 """
@@ -17,9 +17,9 @@ from .models import Role, UseCaseMembership
 if TYPE_CHECKING:
     from apps.projects.models import Project
 
-# Action -> set of use-case-scoped roles that may perform it.
+# Action -> set of project-scoped roles that may perform it.
 # Coordinator roles share the trial-coordinator powers, just at a wider scope
-# (region/country grants cascade to use cases — see roles_for).
+# (region/country grants cascade to projects — see roles_for).
 COORDINATORS = {Role.TRIAL_COORDINATOR, Role.COUNTRY_COORDINATOR, Role.REGIONAL_COORDINATOR}
 # Two-level review: Trial/Country coordinators do the first-level review and
 # endorsement (Gate 1); only a Regional Coordinator gives final validation (Gate 2).
@@ -30,7 +30,7 @@ GATE2_VALIDATOR = {Role.REGIONAL_COORDINATOR}
 # reviewers — they hold the domain expertise and run the review workflow end to
 # end (there is no separate domain-expert / quality role).
 ACTION_ROLES: dict[str, set[str]] = {
-    # Read access to a use case's data/dashboards.
+    # Read access to a project's data/dashboards.
     "view": {Role.VIEWER, Role.ENUMERATOR} | COORDINATORS,
     # Review workflow — open / triage / correct is shared by all coordinators.
     "open_review": COORDINATORS,
@@ -47,16 +47,16 @@ ACTION_ROLES: dict[str, set[str]] = {
     "sync": COORDINATORS,
 }
 
-# Actions only the Platform Admin may perform (no use-case scope).
+# Actions only the Platform Admin may perform (no project scope).
 GLOBAL_ADMIN_ACTIONS: set[str] = {"manage_config", "manage_users", "manage_projects"}
 
 
 def roles_for(user, project: Project) -> set[str]:
-    """All roles a user holds for a use case, including cascaded country/region grants.
+    """All roles a user holds for a project, including cascaded country/region grants.
 
-    A grant on the use case's country (or region) confers the same role as a direct
-    use-case grant — that's how a Country/Regional Coordinator gets coordinator
-    powers across every use case beneath them without per-use-case rows.
+    A grant on the project's country (or region) confers the same role as a direct
+    project grant — that's how a Country/Regional Coordinator gets coordinator
+    powers across every project beneath them without per-project rows.
     """
     if not user.is_authenticated:
         return set()
@@ -87,12 +87,12 @@ def user_can(user, action: str, project: Project | None = None) -> bool:
         raise ValueError(f"Unknown action: {action!r}")
 
     if project is None:
-        return False  # scoped actions require a use case
+        return False  # scoped actions require a project
 
     held = roles_for(user, project)
 
     # Gate 2 fallback: a Country Coordinator may give final validation only when
-    # no Regional Coordinator covers this use case — so a use case without a
+    # no Regional Coordinator covers this project — so a project without a
     # Regional assigned doesn't stall, while a Regional always takes precedence.
     if (
         action == "final_approve"
@@ -105,7 +105,7 @@ def user_can(user, action: str, project: Project | None = None) -> bool:
 
 
 def _regional_validator_exists(project) -> bool:
-    """Whether any active Regional Coordinator has authority over this use case."""
+    """Whether any active Regional Coordinator has authority over this project."""
     scope = Q(project=project)
     if project.country_id:
         scope |= Q(country_id=project.country_id)
@@ -119,7 +119,7 @@ def _regional_validator_exists(project) -> bool:
 def visible_projects(user):
     """Projects a user may view — replaces the R `eia_apps ∩ active_project_list`.
 
-    Platform Admin sees all active use cases; everyone else sees only use cases
+    Platform Admin sees all active projects; everyone else sees only projects
     where they hold a membership.
     """
     from apps.projects.models import Project
@@ -134,7 +134,7 @@ def visible_projects(user):
     cascade = Q(country__memberships__user=user) | Q(country__region__memberships__user=user)
     if own_org:
         cascade &= Q(organization_id=own_org)
-    # A direct use-case membership grants visibility even across the org
+    # A direct project membership grants visibility even across the org
     # boundary: that is exactly how an owner shares one project with an outside
     # collaborator (see team.team_invite). Everything else stays in-tenant.
     return Project.objects.filter(
@@ -160,7 +160,7 @@ def organization_of(scope_obj):
 #
 # Two independent limits bound every grant:
 #   1. SCOPE — you may only grant at a scope your coordinator authority covers
-#      (region covers its countries + use cases; country covers its use cases).
+#      (region covers its countries + projects; country covers its projects).
 #   2. ROLE CEILING — you may only assign a role at or below your own rank, and
 #      never Platform Admin (that is the Django superuser flag, set elsewhere).
 # can_grant() enforces both and is the single check every POST must pass.
@@ -261,7 +261,7 @@ def can_grant(user, scope_obj, role: str) -> bool:
 
 
 def grantable_scopes(user) -> dict:
-    """Scopes (regions/countries/use cases) `user` may grant within, for menus."""
+    """Scopes (regions/countries/projects) `user` may grant within, for menus."""
     from apps.projects.models import Country, Project, Region
 
     if getattr(user, "is_platform_admin", False):

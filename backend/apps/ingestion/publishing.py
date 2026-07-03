@@ -1,4 +1,4 @@
-"""Publish an uploaded XLSForm to a use case's collection server, then record it.
+"""Publish an uploaded XLSForm to a project's collection server, then record it.
 
 Ties the backend `publish_form` primitive (Stage A1) to a FormDefinition: on a
 successful server-side conversion + publish, create/refresh the form row, store
@@ -19,7 +19,7 @@ from .backends.registry import get_backend_for
 def publish_xlsform(
     project, xlsx: bytes, *, filename: str, role: str, title: str = ""
 ) -> tuple[FormDefinition | None, PublishResult]:
-    """Push an XLSForm to the use case's server and record the resulting form."""
+    """Push an XLSForm to the project's server and record the resulting form."""
     backend = get_backend_for(project)
     if not getattr(backend, "supports_publish", False):
         return None, PublishResult(

@@ -2,11 +2,11 @@
 
 Local email+password signup and login are turned off (see settings + the
 redirects in eia_dcmt/urls.py). Authentication happens via Auth0 (OIDC); this
-app owns authorization (use-case roles/memberships).
+app owns authorization (project roles/memberships).
 
 On Auth0 login the social adapter: activates the user (Auth0 vetted identity),
 snapshots the `eia_apps` / `sub` claims, and syncs VIEWER memberships so the user
-immediately sees the use cases Auth0 granted them. Coordinator
+immediately sees the projects Auth0 granted them. Coordinator
 roles remain admin-assigned.
 """
 from __future__ import annotations

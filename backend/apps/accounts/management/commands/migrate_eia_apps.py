@@ -1,6 +1,6 @@
-"""Migrate legacy Auth0 `eia_apps` access into per-use-case memberships.
+"""Migrate legacy Auth0 `eia_apps` access into per-project memberships.
 
-The R app had no roles — Auth0 metadata `eia_apps` simply listed the use cases a
+The R app had no roles — Auth0 metadata `eia_apps` simply listed the projects a
 user could see. On first OIDC login we snapshot that claim into
 `User.legacy_eia_apps`; this command turns each entry into a VIEWER membership.
 Admins then upgrade specific users to Trial Coordinator.
@@ -40,7 +40,7 @@ class Command(BaseCommand):
                 uc = Project.objects.filter(code=code).first()
                 if uc is None:
                     unknown += 1
-                    self.stderr.write(self.style.WARNING(f"  ? unknown use case '{code}' for {user.email}"))
+                    self.stderr.write(self.style.WARNING(f"  ? unknown project '{code}' for {user.email}"))
                     continue
                 exists = UseCaseMembership.objects.filter(
                     user=user, project=uc, role=Role.VIEWER
@@ -55,5 +55,5 @@ class Command(BaseCommand):
         prefix = "[dry-run] " if options["dry_run"] else ""
         self.stdout.write(self.style.SUCCESS(
             f"{prefix}{created} memberships created, {skipped} already existed, "
-            f"{unknown} unknown use cases"
+            f"{unknown} unknown projects"
         ))

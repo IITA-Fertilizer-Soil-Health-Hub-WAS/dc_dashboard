@@ -1,9 +1,9 @@
-"""Seed a couple of use cases + users + memberships for manual exploration.
+"""Seed a couple of projects + users + memberships for manual exploration.
 
     python manage.py seed_demo
 
 Creates an admin and one user per non-admin role, scoped to SNS-RWANDA, so you
-can log into /admin and see per-use-case RBAC in action. Idempotent.
+can log into /admin and see per-project RBAC in action. Idempotent.
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ DEMO_PASSWORD = "demo-pass-12345"
 
 
 class Command(BaseCommand):
-    help = "Seed demo use cases, users and memberships."
+    help = "Seed demo projects, users and memberships."
 
     def handle(self, *args, **options):
         rwanda, _ = Project.objects.get_or_create(
@@ -58,7 +58,7 @@ class Command(BaseCommand):
             )
 
         self.stdout.write(self.style.SUCCESS(
-            f"Seeded use cases [{rwanda.code}, {kalro.code}] and users "
+            f"Seeded projects [{rwanda.code}, {kalro.code}] and users "
             f"(password='{DEMO_PASSWORD}'): admin@fieldbase.local, coordinator@fieldbase.local, "
             f"agronomist@fieldbase.local, viewer@fieldbase.local"
         ))

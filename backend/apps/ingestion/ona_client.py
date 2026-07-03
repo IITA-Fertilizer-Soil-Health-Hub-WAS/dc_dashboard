@@ -84,7 +84,7 @@ class OnaClient:
         return forms
 
     def list_projects(self) -> list[dict[str, Any]]:
-        """List ONA projects (each maps to a use case here) with their forms.
+        """List ONA projects (each maps to a project here) with their forms.
 
         Returns: [{projectid, name, forms: [{formid, title}]}].
         """

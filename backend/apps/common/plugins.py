@@ -1,11 +1,11 @@
-"""Plugin contract for per-use-case Python hooks.
+"""Plugin contract for per-project Python hooks.
 
-Most use cases are fully declarative (YAML/DB config). A small number (e.g.
+Most projects are fully declarative (YAML/DB config). A small number (e.g.
 BioSSA's nested multi-crop repeat groups) need imperative logic that does not
 fit a declarative mapping. Those provide a plugin implementing this Protocol;
 the ingestion/validation engines call the hooks around the generic pipeline.
 
-A use case opts in via ``Project.plugin_path`` (e.g. ``plugins.biossa:BioSSAPlugin``).
+A project opts in via ``Project.plugin_path`` (e.g. ``plugins.biossa:BioSSAPlugin``).
 """
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ if TYPE_CHECKING:  # avoid import cycles at runtime
 
 @runtime_checkable
 class UseCasePlugin(Protocol):
-    """Optional per-use-case overrides around the generic pipeline."""
+    """Optional per-project overrides around the generic pipeline."""
 
     def pre_ingest(
         self, form: FormDefinition, raw_records: list[dict]

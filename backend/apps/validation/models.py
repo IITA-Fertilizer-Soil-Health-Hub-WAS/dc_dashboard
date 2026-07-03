@@ -1,6 +1,6 @@
 """Validation configuration.
 
-ValidationRule is part of a use case's declarative config (authored via YAML or
+ValidationRule is part of a project's declarative config (authored via YAML or
 the Admin UI). The engine that executes these rules and produces ValidationFlag
 rows lands in Phase 6; ValidationFlag (which references a Submission) is added
 once the submissions models exist.
@@ -16,7 +16,7 @@ from apps.submissions.models import Submission
 
 
 class ValidationRule(BaseModel):
-    """A declarative validation rule for a use case.
+    """A declarative validation rule for a project.
 
     Reproduces and extends the R checks: REGEX_ID (was `!grepl(patternissues,...)`),
     EVENT_SEQUENCE (out-of-order events), DATE_WINDOW (the green/amber/red/purple

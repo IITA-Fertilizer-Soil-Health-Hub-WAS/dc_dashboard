@@ -15,7 +15,7 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture
 def attributed(django_user_model):
-    """A use case with one submission collected by a linked account, approved."""
+    """A project with one submission collected by a linked account, approved."""
     collector = django_user_model.objects.create_user(
         "collector@x.org", "pw", full_name="Field Collector", is_active=True
     )

@@ -46,9 +46,9 @@ def _user(dj, email, active=True):
 def test_country_coordinator_can_grant_within_country(django_user_model, geo):
     cc = _user(django_user_model, "cc@x.org")
     UseCaseMembership.objects.create(user=cc, country=geo["rwanda"], role=Role.COUNTRY_COORDINATOR)
-    assert can_grant(cc, geo["uc_rw"], Role.ENUMERATOR)  # use case in their country
+    assert can_grant(cc, geo["uc_rw"], Role.ENUMERATOR)  # project in their country
     assert can_grant(cc, geo["rwanda"], Role.TRIAL_COORDINATOR)  # the country itself
-    # Not another country, nor a use case elsewhere, nor the region above them.
+    # Not another country, nor a project elsewhere, nor the region above them.
     assert not can_grant(cc, geo["uc_ke"], Role.VIEWER)
     assert not can_grant(cc, geo["kenya"], Role.VIEWER)
     assert not can_grant(cc, geo["ea"], Role.VIEWER)
@@ -156,7 +156,7 @@ def test_view_rejects_out_of_scope_grant(client, django_user_model, geo):
     target = _user(django_user_model, "t@x.org", active=False)
     client.force_login(cc)
 
-    # Tamper: try to grant on a use case in another country.
+    # Tamper: try to grant on a project in another country.
     resp = client.post(reverse("dashboards:team_grant"), {
         "user": str(target.pk),
         "scope": f"project:{geo['uc_ke'].pk}",

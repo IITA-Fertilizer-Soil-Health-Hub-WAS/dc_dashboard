@@ -1,9 +1,9 @@
-"""Use-case configuration models.
+"""Project configuration models.
 
 These tables hold everything the R app hardcoded across okapi.R / dataprocessing.R
-/ support_fun.R / app.R. A use case is fully described by data: its ONA forms,
+/ support_fun.R / app.R. A project is fully described by data: its ONA forms,
 how each form's fields map to canonical names, its event schedule (day offsets),
-its crops/trials/stages, and its ID patterns. Adding a use case = inserting rows
+its crops/trials/stages, and its ID patterns. Adding a project = inserting rows
 (via YAML import or the Admin UI), not editing code.
 """
 from __future__ import annotations
@@ -19,7 +19,7 @@ from apps.common.models import BaseModel
 
 class Organization(BaseModel):
     """A tenant — one institution using the platform. The top of the ownership
-    tree: every region, use case, user, and (through them) every enumerator and
+    tree: every region, project, user, and (through them) every enumerator and
     submission belongs to exactly one Organization. Data never crosses this
     boundary — the scoping facade filters by it so one institution can never see
     another's data (see apps.rbac.permissions). On a self-hosted single-tenant
@@ -59,7 +59,7 @@ class Region(BaseModel):
 
 
 class Country(BaseModel):
-    """A country within a region. A Country Coordinator oversees its use cases."""
+    """A country within a region. A Country Coordinator oversees its projects."""
 
     region = models.ForeignKey(Region, on_delete=models.CASCADE, related_name="countries")
     code = models.CharField(max_length=8)  # ISO-ish
@@ -103,7 +103,7 @@ class Project(BaseModel):
     enid_patterns = models.JSONField(default=list, blank=True)
     hhid_patterns = models.JSONField(default=list, blank=True)
 
-    # Optional per-use-case Python plugin, e.g. "plugins.biossa:BioSSAPlugin".
+    # Optional per-project Python plugin, e.g. "plugins.biossa:BioSSAPlugin".
     plugin_path = models.CharField(max_length=255, blank=True)
 
     # Bumped on every published config edit (Admin UI / YAML import).
@@ -119,7 +119,7 @@ class Project(BaseModel):
 
     class Meta:
         ordering = ["code"]
-        # Internally "use case" (legacy from the R app); user-facing it's a Project.
+        # Internally "project" (legacy from the R app); user-facing it's a Project.
         verbose_name = "project"
         verbose_name_plural = "projects"
 
@@ -132,11 +132,11 @@ class Project(BaseModel):
 
 
 class DataSource(BaseModel):
-    """The data-collection server a use case is pulled from (and written back to).
+    """The data-collection server a project is pulled from (and written back to).
 
     Makes the engine generic: ONA is one backend; KoboToolbox, ODK Central,
     SurveyCTO, a REST/CSV endpoint, etc. are added by registering more backends
-    (see apps.ingestion.backends). One source per use case.
+    (see apps.ingestion.backends). One source per project.
     """
 
     project = models.OneToOneField(Project, on_delete=models.CASCADE, related_name="data_source")
@@ -185,7 +185,7 @@ class Trial(BaseModel):
 
 
 class FormDefinition(BaseModel):
-    """One form belonging to a use case. Either onboarded by id, or published to
+    """One form belonging to a project. Either onboarded by id, or published to
     the server from an uploaded XLSForm (see apps.ingestion.backends.publish_form)."""
 
     class Role(models.TextChoices):
@@ -250,7 +250,7 @@ class FormDefinition(BaseModel):
 
 
 class FieldMapping(BaseModel):
-    """Maps raw ONA field path(s) -> a canonical field. Replaces the per-use-case
+    """Maps raw ONA field path(s) -> a canonical field. Replaces the per-project
     rename()/coalesce()/separate() spaghetti in dataprocessing.R."""
 
     class Transform(models.TextChoices):
@@ -278,7 +278,7 @@ class FieldMapping(BaseModel):
 
 
 class EventScheduleItem(BaseModel):
-    """One event in a use case's timeline. Replaces the hardcoded day offsets in
+    """One event in a project's timeline. Replaces the hardcoded day offsets in
     support_fun.R dynamic_colorcodeS (Event1 = SiteSelection+14, Event2=+29, ...,
     potato +57 / rice +64, etc.). Drives the green/amber/red/purple status."""
 

@@ -32,8 +32,8 @@ def build_backend(backend_type: str = DEFAULT_BACKEND, *, base_url: str = "",
 
 
 def get_backend_for(project) -> CollectionBackend:
-    """Resolve the backend bound to a use case via its DataSource, or fall back
-    to ONA configured from global settings (back-compat for existing use cases)."""
+    """Resolve the backend bound to a project via its DataSource, or fall back
+    to ONA configured from global settings (back-compat for existing projects)."""
     ds = getattr(project, "data_source", None)
     if ds is None:
         return OnaBackend()

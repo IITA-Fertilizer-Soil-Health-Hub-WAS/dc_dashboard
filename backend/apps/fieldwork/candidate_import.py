@@ -50,7 +50,7 @@ def _role_of(props: dict, ref: str) -> str:
 
 
 def import_candidates(project, geojson: dict, *, trial_prop: str | None = None) -> ImportStats:
-    """Upsert candidate plots for a use case from a GeoJSON FeatureCollection.
+    """Upsert candidate plots for a project from a GeoJSON FeatureCollection.
 
     `trial_prop` overrides which property carries the trial key (else auto-detect
     from `_TRIAL_KEYS`). Features without a trial key, ref, or polygon are skipped

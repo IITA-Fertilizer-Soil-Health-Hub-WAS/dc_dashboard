@@ -1,4 +1,4 @@
-"""Sync a use case's ONA data into the database (ops / backfill / CI).
+"""Sync a project's ONA data into the database (ops / backfill / CI).
 
     python manage.py sync_project SNS-RWANDA
     python manage.py sync_project --all
@@ -13,11 +13,11 @@ from apps.validation.engine import run_for_project
 
 
 class Command(BaseCommand):
-    help = "Pull ONA data for a use case and upsert submissions."
+    help = "Pull ONA data for a project and upsert submissions."
 
     def add_arguments(self, parser):
         parser.add_argument("code", nargs="?", help="Project code")
-        parser.add_argument("--all", action="store_true", help="Sync all active use cases")
+        parser.add_argument("--all", action="store_true", help="Sync all active projects")
 
     def handle(self, *args, **options):
         if options["all"]:
@@ -25,9 +25,9 @@ class Command(BaseCommand):
         elif options["code"]:
             qs = Project.objects.filter(code=options["code"])
             if not qs.exists():
-                raise CommandError(f"Unknown use case: {options['code']}")
+                raise CommandError(f"Unknown project: {options['code']}")
         else:
-            raise CommandError("Provide a use case code or --all")
+            raise CommandError("Provide a project code or --all")
 
         for uc in qs:
             stats = sync_project(uc)

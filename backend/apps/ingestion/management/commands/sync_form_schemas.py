@@ -13,11 +13,11 @@ from apps.projects.models import Project
 
 
 class Command(BaseCommand):
-    help = "Fetch + cache form field schemas (labels/groups) for a use case."
+    help = "Fetch + cache form field schemas (labels/groups) for a project."
 
     def add_arguments(self, parser):
         parser.add_argument("code", nargs="?", help="Project code")
-        parser.add_argument("--all", action="store_true", help="All active use cases")
+        parser.add_argument("--all", action="store_true", help="All active projects")
 
     def handle(self, *args, **options):
         if options["all"]:
@@ -25,9 +25,9 @@ class Command(BaseCommand):
         elif options["code"]:
             qs = Project.objects.filter(code=options["code"])
             if not qs.exists():
-                raise CommandError(f"Unknown use case: {options['code']}")
+                raise CommandError(f"Unknown project: {options['code']}")
         else:
-            raise CommandError("Provide a use case code or --all")
+            raise CommandError("Provide a project code or --all")
 
         for uc in qs:
             result = sync_project_schemas(uc)

@@ -1,6 +1,6 @@
 """Projects directory — scalable browse + self-service access requests.
 
-Replaces the dump-every-use-case landing page. A user sees their own projects by
+Replaces the dump-every-project landing page. A user sees their own projects by
 default, can search/filter across all projects in their institution, and request
 access to ones they are not yet a member of. Built to stay usable at thousands of
 projects: one paginated, indexed query — never a per-project fan-out.
@@ -52,7 +52,7 @@ def _home_summary(user, member_ids):
 
 
 def _org_projects(user):
-    """Active use cases the user may see in the directory: their institution's
+    """Active projects the user may see in the directory: their institution's
     (a hub operator sees all; a user with no institution yet sees none)."""
     qs = Project.objects.filter(is_active=True).select_related("country", "organization")
     if getattr(user, "is_platform_admin", False):

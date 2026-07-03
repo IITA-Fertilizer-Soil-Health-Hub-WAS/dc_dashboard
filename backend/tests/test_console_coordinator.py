@@ -59,7 +59,7 @@ def test_coordinator_sees_only_their_projects_forms(client, world):
     client.force_login(world["coord"])
     resp = client.get(reverse("console:list", args=["forms"]))
     assert resp.status_code == 200
-    # Scoped: only the coordinator's use case appears.
+    # Scoped: only the coordinator's project appears.
     assert b"MINE" in resp.content
     assert b"OTHER" not in resp.content
 

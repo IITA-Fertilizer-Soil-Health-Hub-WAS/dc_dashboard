@@ -1,6 +1,6 @@
-"""Declarative use-case config <-> database round-trip.
+"""Declarative project config <-> database round-trip.
 
-One YAML document fully describes a use case: its meta, crops/trials/stages,
+One YAML document fully describes a project: its meta, crops/trials/stages,
 ONA forms + field mappings, event schedule, and validation rules. `import_config`
 upserts all of that into the DB (idempotent, transactional, bumps config_version);
 `export_config` reproduces the document from the DB. The Admin UI edits the same
@@ -50,7 +50,7 @@ def validate_config(data: dict[str, Any]) -> list[str]:
 
     # Forms only need an id here. Roles, field mappings and event modelling vary
     # by project (events can come from a column or from separate forms) and are
-    # configured per use case after onboarding — so we don't force them.
+    # configured per project after onboarding — so we don't force them.
     forms = data.get("forms", []) or []
     if not forms:
         problems.append("at least one form is expected")
@@ -75,14 +75,14 @@ def validate_config(data: dict[str, Any]) -> list[str]:
 
 @transaction.atomic
 def import_config(data: dict[str, Any]) -> Project:
-    """Upsert a use case + all children from a config dict. Idempotent."""
+    """Upsert a project + all children from a config dict. Idempotent."""
     meta = data.get("project") or {}
     code = meta.get("code")
     if not code:
         raise ConfigError("project.code is required")
 
     uc, created = Project.objects.get_or_create(code=code, defaults={"name": meta.get("name", code)})
-    # Every use case belongs to a tenant: honour an explicit organization code,
+    # Every project belongs to a tenant: honour an explicit organization code,
     # else fall back to the default org (single-tenant deployments).
     from apps.projects.tenancy import resolve_organization
 
@@ -102,7 +102,7 @@ def import_config(data: dict[str, Any]) -> Project:
         uc.config_version += 1
     uc.save()
 
-    # Data source (which collection server this use case is pulled from).
+    # Data source (which collection server this project is pulled from).
     ds = data.get("data_source")
     if ds:
         DataSource.objects.update_or_create(

@@ -60,7 +60,7 @@ def test_export_organization_roundtrip(django_user_model):
     assert "projects.formdefinition" in models
     assert "submissions.enumerator" in models
     assert "accounts.user" in models
-    # The use case row carries its organization FK so the import stays owned.
+    # The project row carries its organization FK so the import stays owned.
     uc_row = next(r for r in payload if r["model"] == "projects.project")
     assert uc_row["fields"]["organization"] == str(org.pk)
 

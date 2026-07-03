@@ -1,4 +1,4 @@
-"""Import GIS candidate plots (GeoJSON) for a use case.
+"""Import GIS candidate plots (GeoJSON) for a project.
 
     python manage.py import_candidate_plots SNS-RWANDA path/to/candidates.geojson
     python manage.py import_candidate_plots SNS-RWANDA plots.geojson --trial-prop area_id
@@ -14,7 +14,7 @@ from apps.projects.models import Project
 
 
 class Command(BaseCommand):
-    help = "Import GIS-proposed candidate plots (GeoJSON FeatureCollection) for a use case."
+    help = "Import GIS-proposed candidate plots (GeoJSON FeatureCollection) for a project."
 
     def add_arguments(self, parser):
         parser.add_argument("code", help="Project code")
@@ -26,7 +26,7 @@ class Command(BaseCommand):
         try:
             uc = Project.objects.get(code=options["code"])
         except Project.DoesNotExist:
-            raise CommandError(f"Unknown use case: {options['code']}") from None
+            raise CommandError(f"Unknown project: {options['code']}") from None
         try:
             with open(options["geojson"], encoding="utf-8") as fh:
                 geojson = json.load(fh)

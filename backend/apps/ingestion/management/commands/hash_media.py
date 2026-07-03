@@ -24,7 +24,7 @@ class Command(BaseCommand):
         try:
             uc = Project.objects.get(code=opts["project"])
         except Project.DoesNotExist as e:
-            raise CommandError(f"No use case with code {opts['project']!r}") from e
+            raise CommandError(f"No project with code {opts['project']!r}") from e
 
         stats = hash_project_media(uc, limit=opts["limit"], only_new=not opts["all"])
         self.stdout.write(self.style.SUCCESS(

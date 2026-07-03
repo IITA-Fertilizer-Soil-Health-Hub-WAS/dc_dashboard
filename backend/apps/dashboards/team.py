@@ -56,7 +56,7 @@ def _role_options(user) -> list[dict]:
 
 
 def _project_options(user) -> list[dict]:
-    """Only the use-case scopes (collaboration is shared per project, never wider)."""
+    """Only the project scopes (collaboration is shared per project, never wider)."""
     return [
         {"value": f"project:{uc.pk}", "label": uc.code}
         for uc in grantable_scopes(user)["projects"]
@@ -86,7 +86,7 @@ def team(request):
     active = User.objects.filter(is_active=True)
     if request.user.organization_id:
         active = active.filter(organization_id=request.user.organization_id)
-    # Self-service join requests on the use cases this person administers.
+    # Self-service join requests on the projects this person administers.
     grantable_uc_ids = grantable_scopes(request.user)["projects"].values_list("id", flat=True)
     access_requests = (
         UseCaseAccessRequest.objects.filter(
@@ -132,7 +132,7 @@ def team_request_decision(request):
         req.status = UseCaseAccessRequest.Status.APPROVED
         messages.success(request, f"Granted {req.user.email} {role} on {req.project.code}.")
     elif decision == "decline":
-        # Only someone with authority over the use case may decline it.
+        # Only someone with authority over the project may decline it.
         if not can_grant(request.user, req.project, Role.VIEWER):
             raise PermissionDenied("Outside your authority.")
         req.status = UseCaseAccessRequest.Status.DECLINED
@@ -212,11 +212,11 @@ def team_grant(request):
 def team_invite(request):
     """Invite an external collaborator to one of your projects — opt-in, owner-led.
 
-    Cross-institution sharing, but only ever on a single use case (never a region
+    Cross-institution sharing, but only ever on a single project (never a region
     or country). The invitee must already be an active user of another
     institution; they keep their home institution and simply gain access to this
     one project until the owner revokes it. The owner alone administers the share
-    (their org has authority over the use case, the invitee's does not).
+    (their org has authority over the project, the invitee's does not).
     """
     _require_access(request.user)
     email = (request.POST.get("email") or "").strip().lower()

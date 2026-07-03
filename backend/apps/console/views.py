@@ -15,7 +15,7 @@ from .registry import REGISTRY, Managed, grouped
 
 
 class StaffMixin(UserPassesTestMixin):
-    """Console is staff-only (Platform Admins). RBAC for use-case data lives in
+    """Console is staff-only (Platform Admins). RBAC for project data lives in
     the dashboards; the console manages configuration and access."""
 
     def test_func(self) -> bool:
@@ -341,9 +341,9 @@ class PublishFormView(StaffMixin, View):
 class OnboardProjectView(StaffMixin, View):
     """Onboard a new project to monitor, end to end, from inside the app:
 
-    1. Define the use case (paste/upload a YAML config, or start from a template).
+    1. Define the project (paste/upload a YAML config, or start from a template).
     2. It is created with its forms, mappings, schedule and rules.
-    3. Hit "Sync now" on the use case to pull ONA submissions and start monitoring.
+    3. Hit "Sync now" on the project to pull ONA submissions and start monitoring.
 
     Also surfaces ONA form discovery so you can see which forms the token can reach.
     """

@@ -28,7 +28,7 @@ def test_migrate_eia_apps_creates_viewer_memberships(django_user_model):
     )
     assert (rwanda.code, Role.VIEWER) in roles
     assert (kalro.code, Role.VIEWER) in roles
-    # Unknown use case is skipped, not created.
+    # Unknown project is skipped, not created.
     assert not UseCaseMembership.objects.filter(project__code="GHOST-UC").exists()
 
 

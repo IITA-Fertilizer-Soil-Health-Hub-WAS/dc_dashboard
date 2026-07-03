@@ -14,7 +14,7 @@ def test_healthcheck_ok(client):
 
 @pytest.mark.django_db
 def test_index_requires_login(client):
-    # The landing page is the RBAC-scoped use-case list; anonymous users are
+    # The landing page is the RBAC-scoped project list; anonymous users are
     # redirected to the /login/ entry point (the only sign-in path).
     resp = client.get("/")
     assert resp.status_code == 302

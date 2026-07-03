@@ -1,4 +1,4 @@
-"""Import use-case config from YAML into the database.
+"""Import project config from YAML into the database.
 
     python manage.py load_project config/projects/sns-rwanda.yaml
     python manage.py load_project --all          # load every file in config/projects/
@@ -19,7 +19,7 @@ from apps.config_admin.loader import (
 
 
 class Command(BaseCommand):
-    help = "Load use-case configuration from YAML file(s)."
+    help = "Load project configuration from YAML file(s)."
 
     def add_arguments(self, parser):
         parser.add_argument("paths", nargs="*", help="YAML config file paths")

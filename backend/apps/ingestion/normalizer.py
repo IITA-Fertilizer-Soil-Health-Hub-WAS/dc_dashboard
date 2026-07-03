@@ -1,4 +1,4 @@
-"""Generic field normalizer — the config-driven replacement for the per-use-case
+"""Generic field normalizer — the config-driven replacement for the per-project
 rename()/coalesce()/separate()/mutate() blocks in dataprocessing.R.
 
 Given a FormDefinition's FieldMapping rows and one raw ONA record, produce a flat

@@ -54,7 +54,7 @@ def test_import_is_idempotent_and_bumps_version():
     uc1 = import_config(data)
     v1 = uc1.config_version
     uc2 = import_config(data)
-    # Same single use case, no duplicate children, version incremented.
+    # Same single project, no duplicate children, version incremented.
     assert Project.objects.filter(code="SNS-RWANDA").count() == 1
     assert uc2.config_version == v1 + 1
     assert uc2.forms.count() == 3

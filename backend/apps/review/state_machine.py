@@ -63,7 +63,7 @@ TRANSITIONS: dict[str, Transition] = {
     ),
     # System auto-flag from validation (INGESTED -> FLAGGED), no user permission.
     A.SYSTEM_FLAG: Transition(frozenset({S.INGESTED}), S.FLAGGED, None),
-    # COMMENT does not change state; viewable by anyone who can view the use case.
+    # COMMENT does not change state; viewable by anyone who can view the project.
     A.COMMENT: Transition(frozenset(s for s in S.values), None, "view"),
     # SUPERSEDE is system-driven (raw re-ingested over an edit); no user perm.
     A.SUPERSEDE: Transition(frozenset(s for s in S.values), S.SUPERSEDED, None),

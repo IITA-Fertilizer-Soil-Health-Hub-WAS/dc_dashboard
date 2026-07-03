@@ -7,7 +7,7 @@ from apps.rbac.permissions import can_manage_access, pending_users, visible_proj
 def navigation(request):
     """Expose nav data for the single green app rail:
 
-    * the user's accessible use cases (monitoring mode), and
+    * the user's accessible projects (monitoring mode), and
     * the management console sections (Manage mode, staff only).
     """
     user = getattr(request, "user", None)

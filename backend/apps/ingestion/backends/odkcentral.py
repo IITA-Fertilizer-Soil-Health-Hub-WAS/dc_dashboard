@@ -1,7 +1,7 @@
 """ODK Central backend.
 
 ODK Central groups forms under numeric projects (maps cleanly to our project ==
-use case). Discovery + fetch use the REST/OData API; write-back reuses the shared
+project). Discovery + fetch use the REST/OData API; write-back reuses the shared
 ODK edit flow (Central accepts edited submissions with a deprecatedID via the
 OpenRosa submission endpoint). Auth uses a bearer token (App User / session).
 

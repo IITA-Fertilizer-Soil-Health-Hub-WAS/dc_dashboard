@@ -23,7 +23,7 @@ class Command(BaseCommand):
         try:
             uc = Project.objects.get(code=opts["project"])
         except Project.DoesNotExist as e:
-            raise CommandError(f"No use case with code {opts['project']!r}") from e
+            raise CommandError(f"No project with code {opts['project']!r}") from e
 
         if opts["publish"]:
             _, result = publish_anchor_form(uc)

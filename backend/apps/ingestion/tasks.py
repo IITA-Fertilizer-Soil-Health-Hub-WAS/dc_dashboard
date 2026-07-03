@@ -2,7 +2,7 @@
 
 Replaces the R daily cron (`Rscript dataprocessing.R`). `sync_all_projects` is
 wired to Celery Beat (daily); `sync_project_task` backs the Admin "Sync now"
-button. Validation is enqueued per use case once the engine lands in Phase 6.
+button. Validation is enqueued per project once the engine lands in Phase 6.
 """
 from __future__ import annotations
 

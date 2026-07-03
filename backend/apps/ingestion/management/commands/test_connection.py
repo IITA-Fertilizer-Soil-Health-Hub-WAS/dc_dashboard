@@ -1,10 +1,10 @@
-"""Test a use case's data-collection backend connection (discovery).
+"""Test a project's data-collection backend connection (discovery).
 
     python manage.py test_connection SNS-RWANDA
 
 Works for any backend (ONA, KoboToolbox, ODK Central, …). For Kobo/ODK Central
 this is also how you validate discovery against a real instance: configure the
-use case's DataSource (backend, base_url, token, config.project_id) and run this.
+project's DataSource (backend, base_url, token, config.project_id) and run this.
 """
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from apps.projects.models import Project
 
 
 class Command(BaseCommand):
-    help = "Test a use case's backend connection by listing its projects/forms."
+    help = "Test a project's backend connection by listing its projects/forms."
 
     def add_arguments(self, parser):
         parser.add_argument("code", help="Project code")
@@ -24,7 +24,7 @@ class Command(BaseCommand):
         try:
             uc = Project.objects.get(code=options["code"])
         except Project.DoesNotExist as exc:
-            raise CommandError(f"Unknown use case: {options['code']}") from exc
+            raise CommandError(f"Unknown project: {options['code']}") from exc
 
         backend = get_backend_for(uc)
         self.stdout.write(f"{uc.code}: backend = {backend.label} ({backend.type})")

@@ -1,8 +1,8 @@
-"""Role-based access control, scoped per use case.
+"""Role-based access control, scoped per project.
 
-The R app had no roles: Auth0 `eia_apps` metadata simply listed which use cases
+The R app had no roles: Auth0 `eia_apps` metadata simply listed which projects
 a user could see. Here, access is a (user, project, role) triple. Platform
-Admin is global (Django superuser). All other roles are granted per use case.
+Admin is global (Django superuser). All other roles are granted per project.
 """
 from __future__ import annotations
 
@@ -24,10 +24,10 @@ class Role(models.TextChoices):
 
 
 class UseCaseMembership(BaseModel):
-    """Grants a user a role at one scope level: a use case, a country, or a region.
+    """Grants a user a role at one scope level: a project, a country, or a region.
 
-    The unit of authorization. A country grant cascades to every use case in that
-    country; a region grant cascades to every use case in the region. Exactly one
+    The unit of authorization. A country grant cascades to every project in that
+    country; a region grant cascades to every project in the region. Exactly one
     of ``project`` / ``country`` / ``region`` is set (enforced by a check
     constraint). The cascade is resolved in ``permissions.roles_for`` /
     ``visible_projects`` so views never special-case the scope level.
@@ -87,7 +87,7 @@ class UseCaseMembership(BaseModel):
 
     @property
     def scope(self):
-        """The object this membership is scoped to (use case, country, or region)."""
+        """The object this membership is scoped to (project, country, or region)."""
         return self.project or self.country or self.region
 
     def __str__(self) -> str:
@@ -95,8 +95,8 @@ class UseCaseMembership(BaseModel):
 
 
 class UseCaseAccessRequest(BaseModel):
-    """A user's self-service request to join a use case they can see in their
-    institution. A coordinator with authority over that use case approves (which
+    """A user's self-service request to join a project they can see in their
+    institution. A coordinator with authority over that project approves (which
     creates the membership) or declines it from Team & access."""
 
     class Status(models.TextChoices):
@@ -124,7 +124,7 @@ class UseCaseAccessRequest(BaseModel):
     class Meta:
         ordering = ["-created_at"]
         constraints = [
-            # At most one open request per user per use case.
+            # At most one open request per user per project.
             models.UniqueConstraint(
                 fields=["user", "project"],
                 condition=Q(status="PENDING"),

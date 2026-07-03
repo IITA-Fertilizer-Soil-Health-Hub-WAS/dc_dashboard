@@ -1,4 +1,4 @@
-"""RBAC scoping tests — a role grant in one use case must not leak to another."""
+"""RBAC scoping tests — a role grant in one project must not leak to another."""
 from __future__ import annotations
 
 import pytest
@@ -62,7 +62,7 @@ def test_country_coordinator_is_gate1(users, projects):
 
 
 def test_country_coordinator_validates_when_no_regional(users, projects):
-    """Fallback: with no Regional covering the use case, a Country Coordinator
+    """Fallback: with no Regional covering the project, a Country Coordinator
     may give the final validation so reviews don't stall."""
     _, person, _, _ = users
     rwanda, _ = projects

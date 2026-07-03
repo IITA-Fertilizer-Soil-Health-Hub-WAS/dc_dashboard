@@ -57,7 +57,7 @@ def label_map(schema: list[dict]) -> dict:
 
 
 def sync_project_schemas(project) -> dict:
-    """Fetch + cache each form's field schema for one use case, so submissions
+    """Fetch + cache each form's field schema for one project, so submissions
     render with human question labels. Returns {form_server_ref: field_count};
     a backend that doesn't support schema fetch (returns []) leaves the form as-is.
     """

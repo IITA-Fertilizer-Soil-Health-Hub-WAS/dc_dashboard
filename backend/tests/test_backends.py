@@ -1,4 +1,4 @@
-"""Generic data-collection backend abstraction + per-use-case DataSource."""
+"""Generic data-collection backend abstraction + per-project DataSource."""
 from __future__ import annotations
 
 import pytest

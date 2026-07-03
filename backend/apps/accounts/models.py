@@ -1,7 +1,7 @@
 """Custom user model — email login, admin-approval gating, Auth0 migration fields.
 
 Replaces the R app's Auth0-only identity. A new user is inactive until they
-verify their email AND a Platform Admin approves them and assigns use-case
+verify their email AND a Platform Admin approves them and assigns project
 roles (see apps.rbac.UseCaseMembership). The ``legacy_eia_apps`` / ``auth0_sub``
 fields support the one-time migration off Auth0 (see Phase 9).
 """
