@@ -64,44 +64,60 @@
   {% endif %}
 
   {# ---- Pending approvals ---- #}
-  {% for u in pending %}
-    <form id="approve-{{ u.pk }}" method="post" action="{% url 'dashboards:team_grant' %}">
-      {% csrf_token %}<input type="hidden" name="user" value="{{ u.pk }}">
+  {% for p in pending %}
+    <form id="approve-{{ p.user.pk }}" method="post" action="{% url 'dashboards:team_grant' %}">
+      {% csrf_token %}<input type="hidden" name="user" value="{{ p.user.pk }}">
     </form>
   {% endfor %}
   <div class="section">
     <div class="st">
       <h3><span class="msym">how_to_reg</span>Pending approval</h3>
-      <div class="desc">People who signed in and are waiting for access. Approving sets their role and home institution in one step.</div>
+      <div class="desc">People who signed in and are waiting for access. Review the profile they submitted, then approve — which sets their role and home institution in one step.</div>
     </div>
   </div>
   <div class="card" style="padding:0; overflow:hidden;">
     <div class="table-wrap">
     <table>
-      <thead><tr><th scope="col">Person</th><th scope="col">Grant scope</th><th scope="col">Role</th><th scope="col"></th></tr></thead>
+      <thead><tr><th scope="col">Person &amp; submitted profile</th><th scope="col">Grant scope</th><th scope="col">Role</th><th scope="col"></th></tr></thead>
       <tbody>
-        {% for u in pending %}
+        {% for p in pending %}
           <tr>
             <td>
               <div class="idcell">
-                <span class="av">{{ u.full_name|default:u.email|slice:":1"|upper }}</span>
-                <div><div class="nm">{{ u.full_name|default:u.email }}</div><div class="sub">{{ u.email }}</div></div>
+                <span class="av">{{ p.user.full_name|default:p.user.email|slice:":1"|upper }}</span>
+                <div>
+                  <div class="nm">{{ p.user.full_name|default:p.user.email }}</div>
+                  <div class="sub">{{ p.user.email }}</div>
+                  {% if p.profile %}
+                    <div class="sub" style="margin-top:.35rem;line-height:1.5;">
+                      {% if p.profile.get_gender_display %}{{ p.profile.get_gender_display }}{% endif %}{% if p.profile.age %} · {{ p.profile.age }}y{% endif %}{% if p.profile.country %} · {{ p.profile.country }}{% endif %}<br>
+                      {% if p.profile.get_education_level_display %}{{ p.profile.get_education_level_display }}{% endif %}{% if p.profile.experience_years %} · {{ p.profile.experience_years }}y experience{% endif %}
+                      {% if p.user.phone %}<br>{{ p.user.phone }}{% endif %}
+                    </div>
+                  {% else %}
+                    <div class="sub" style="margin-top:.35rem;"><span class="pill warn">no profile yet</span></div>
+                  {% endif %}
+                </div>
               </div>
             </td>
             <td>
-              <select name="scope" form="approve-{{ u.pk }}" required class="input" style="max-width:260px;">
+              <select name="scope" form="approve-{{ p.user.pk }}" required class="input" style="max-width:260px;"{% if not p.profile %} disabled{% endif %}>
                 <option value="">Choose scope…</option>
                 {% for o in scope_options %}<option value="{{ o.value }}">{{ o.label }}</option>{% endfor %}
               </select>
             </td>
             <td>
-              <select name="role" form="approve-{{ u.pk }}" required class="input" style="max-width:200px;">
+              <select name="role" form="approve-{{ p.user.pk }}" required class="input" style="max-width:200px;"{% if not p.profile %} disabled{% endif %}>
                 <option value="">Choose role…</option>
                 {% for o in role_options %}<option value="{{ o.value }}">{{ o.label }}</option>{% endfor %}
               </select>
             </td>
             <td style="text-align:right;">
-              <button class="btn btn-approve" type="submit" form="approve-{{ u.pk }}">Approve &amp; grant</button>
+              {% if p.profile %}
+                <button class="btn btn-approve" type="submit" form="approve-{{ p.user.pk }}">Approve &amp; grant</button>
+              {% else %}
+                <span class="subtle" title="They must submit their profile before you can approve.">Awaiting profile</span>
+              {% endif %}
             </td>
           </tr>
         {% empty %}

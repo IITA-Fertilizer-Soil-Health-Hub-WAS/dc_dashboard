@@ -105,6 +105,9 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Keeps not-yet-approved users on the profile / pending pages until an admin
+    # reviews their submitted profile (must sit after AuthenticationMiddleware).
+    "apps.accounts.middleware.ApprovalGateMiddleware",
 ]
 
 ROOT_URLCONF = "eia_dcmt.urls"

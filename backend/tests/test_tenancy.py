@@ -81,7 +81,12 @@ def test_cannot_grant_to_other_orgs_user(client, two_orgs):
 
 
 def test_approval_binds_user_to_granter_org(client, django_user_model, two_orgs):
+    from django.utils import timezone
+
+    from apps.accounts.models import UserProfile
+
     pending = django_user_model.objects.create_user("new@x.org", "pw", is_active=False)
+    UserProfile.objects.create(user=pending, completed_at=timezone.now())  # submitted for review
     assert pending.organization_id is None
     client.force_login(two_orgs["coord_a"])
     resp = client.post(reverse("dashboards:team_grant"), {

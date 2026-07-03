@@ -29,16 +29,34 @@ def test_new_user_is_inactive_until_approved(django_user_model):
 
 
 def test_approve_action_activates_and_audits(django_user_model):
+    from django.utils import timezone
+
+    from apps.accounts.models import UserProfile
+
     admin_user = django_user_model.objects.create_superuser("admin@x.org", "pw")
     pending = django_user_model.objects.create_user("pending@x.org", "pw")
-    assert pending.is_active is False
+    assert pending.is_approved is False
+    # Approval reviews a submitted profile — give the pending user one.
+    UserProfile.objects.create(user=pending, completed_at=timezone.now())
 
     user_approve(_request(admin_user), pending)
 
     pending.refresh_from_db()
+    assert pending.is_approved is True
     assert pending.is_active is True
     assert pending.approved_by == admin_user
     assert pending.approved_at is not None
+
+
+def test_approve_refused_without_submitted_profile(django_user_model):
+    admin_user = django_user_model.objects.create_superuser("admin2@x.org", "pw")
+    pending = django_user_model.objects.create_user("noprofile@x.org", "pw")
+
+    msg = user_approve(_request(admin_user), pending)
+
+    pending.refresh_from_db()
+    assert pending.is_approved is False       # not approved without a profile
+    assert "profile" in msg.lower()
 
 
 def test_deactivate_action_revokes(django_user_model):

@@ -15,7 +15,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from apps.accounts.models import User
+from apps.accounts.models import User, UserProfile
 from apps.projects.models import Project
 from apps.rbac.models import Membership, ProjectAccessRequest, Role
 from apps.rbac.permissions import (
@@ -35,6 +35,18 @@ _SCOPE_FIELD = {"region": "region", "country": "country", "project": "project"}
 def _require_access(user):
     if not can_manage_access(user):
         raise PermissionDenied("You do not manage access.")
+
+
+def _submitted_profile(user):
+    """The user's completed profile if they've submitted one, else None. Approval
+    is gated on this — an approver reviews the profile before signing off."""
+    return UserProfile.objects.filter(user=user, completed_at__isnull=False).first()
+
+
+def _pending_review(users) -> list[dict]:
+    """Pending users paired with their submitted profile (for the approver to
+    review). Users who haven't filled a profile yet are flagged, not approvable."""
+    return [{"user": u, "profile": _submitted_profile(u)} for u in users]
 
 
 def _scope_options(user) -> list[dict]:
@@ -83,7 +95,7 @@ def team(request):
     )
     # Existing users you can grant to: only your own institution's people (a hub
     # operator with no org spans all). Pending users have no org yet.
-    active = User.objects.filter(is_active=True)
+    active = User.objects.filter(is_approved=True)
     if request.user.organization_id:
         active = active.filter(organization_id=request.user.organization_id)
     # Self-service join requests on the projects this person administers.
@@ -96,7 +108,7 @@ def team(request):
         .order_by("created_at")
     )
     ctx = {
-        "pending": pending_users(),
+        "pending": _pending_review(pending_users()),
         "memberships": memberships,
         "access_requests": access_requests,
         "scope_options": _scope_options(request.user),
@@ -175,6 +187,16 @@ def team_grant(request):
     if target.organization_id and scope_org_id and target.organization_id != scope_org_id:
         raise PermissionDenied("That user belongs to a different institution.")
 
+    # Approving requires a profile to review: don't grant a first role (which
+    # activates the account) to someone who hasn't submitted their details yet.
+    if not target.is_approved and _submitted_profile(target) is None:
+        messages.error(
+            request,
+            f"{target.email} hasn't submitted their profile yet — ask them to "
+            "complete it before you approve.",
+        )
+        return redirect("dashboards:team")
+
     field = _SCOPE_FIELD[request.POST["scope"].split(":", 1)[0]]
     _, created = Membership.objects.get_or_create(
         user=target, role=role, **{field: scope_obj},
@@ -186,12 +208,14 @@ def team_grant(request):
         target.organization_id = scope_org_id
 
     newly_approved = False
-    if not target.is_active:
+    if not target.is_approved:
         target.is_active = True
+        target.is_approved = True
         target.approved_by = request.user
         target.approved_at = timezone.now()
         target.save(update_fields=[
-            "is_active", "approved_by", "approved_at", "organization", "updated_at",
+            "is_active", "is_approved", "approved_by", "approved_at",
+            "organization", "updated_at",
         ])
         newly_approved = True
     elif scope_org_id and target.organization_id == scope_org_id:
@@ -232,10 +256,12 @@ def team_invite(request):
     if not can_grant(request.user, scope_obj, role):
         raise PermissionDenied("That grant exceeds your authority.")
 
-    target = User.objects.filter(email__iexact=email, is_active=True).first()
+    target = User.objects.filter(email__iexact=email, is_approved=True).first()
     if target is None:
         messages.error(
-            request, f"No active account found for {email}. They must sign in once first."
+            request,
+            f"No approved account found for {email}. They must sign in and be "
+            "approved once first.",
         )
         return redirect("dashboards:team")
 

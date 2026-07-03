@@ -34,7 +34,7 @@ def reviewer_emails(project) -> list[str]:
     )
     return sorted({
         m.user.email for m in members
-        if m.user and m.user.is_active and m.user.email
+        if m.user and m.user.is_approved and m.user.email
     })
 
 

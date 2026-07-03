@@ -131,9 +131,14 @@ def test_manageable_memberships_scoped(django_user_model, geo):
 
 
 def test_approve_pending_user_via_view(client, django_user_model, geo):
+    from django.utils import timezone
+
+    from apps.accounts.models import UserProfile
+
     cc = _user(django_user_model, "cc4@x.org")
     Membership.objects.create(user=cc, country=geo["rwanda"], role=Role.COUNTRY_COORDINATOR)
     pending = _user(django_user_model, "newbie@x.org", active=False)
+    UserProfile.objects.create(user=pending, completed_at=timezone.now())  # submitted for review
     client.force_login(cc)
 
     resp = client.post(reverse("dashboards:team_grant"), {

@@ -170,6 +170,13 @@ def profile(request):
             request.user.save(update_fields=["phone", "full_name", "updated_at"])
             obj.save()
             obj.mark_complete()
+            # A not-yet-approved user has just submitted their profile for review
+            # — send them to the waiting page instead of back to the form.
+            if request.user.awaiting_approval:
+                messages.success(
+                    request, "Thanks — your profile has been submitted for approval."
+                )
+                return redirect("pending")
             messages.success(request, "Your profile has been saved. You won't need to re-enter this.")
             return redirect("profile")
     else:
@@ -182,3 +189,16 @@ def profile(request):
                 initial["family_name"] = bits[-1]
         form = ProfileForm(instance=prof, user=request.user, initial=initial)
     return render(request, "accounts/profile.html", {"form": form, "profile": prof})
+
+
+@login_required
+def pending(request):
+    """Waiting room for a user who has submitted their profile but isn't approved
+    yet. Approved users (and superusers) are bounced to the app."""
+    if not request.user.awaiting_approval:
+        return redirect("dashboards:index")
+    prof = UserProfile.objects.filter(user=request.user).first()
+    # No profile yet → they still need to fill it before they can wait for review.
+    if prof is None or not prof.is_complete:
+        return redirect("profile")
+    return render(request, "accounts/pending.html", {"profile": prof})

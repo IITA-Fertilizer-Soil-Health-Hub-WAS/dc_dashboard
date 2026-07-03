@@ -72,7 +72,7 @@ def roles_for(user, project: Project) -> set[str]:
 
 def user_can(user, action: str, project: Project | None = None) -> bool:
     """Return True if `user` may perform `action` (optionally within `project`)."""
-    if not getattr(user, "is_authenticated", False) or not user.is_active:
+    if not getattr(user, "is_authenticated", False) or not getattr(user, "has_access", False):
         return False
 
     # Platform Admin can do everything.
@@ -112,7 +112,7 @@ def _regional_validator_exists(project) -> bool:
         if project.country.region_id:
             scope |= Q(region_id=project.country.region_id)
     return Membership.objects.filter(
-        scope, role=Role.REGIONAL_COORDINATOR, user__is_active=True
+        scope, role=Role.REGIONAL_COORDINATOR, user__is_approved=True
     ).exists()
 
 
@@ -208,7 +208,7 @@ def _max_grant_rank(user) -> int:
 
 def can_manage_access(user) -> bool:
     """Whether a user can administer access at all (Platform Admin or any coordinator)."""
-    if not getattr(user, "is_authenticated", False) or not user.is_active:
+    if not getattr(user, "is_authenticated", False) or not getattr(user, "has_access", False):
         return False
     if getattr(user, "is_platform_admin", False):
         return True
@@ -306,7 +306,8 @@ def manageable_memberships(user):
 
 
 def pending_users():
-    """Users awaiting approval (inactive). Visible to any access manager."""
+    """Users awaiting approval: logged-in (active) but not yet approved. A
+    disabled (is_active=False) account is not pending — it was turned off."""
     from apps.accounts.models import User
 
-    return User.objects.filter(is_active=False).order_by("created_at")
+    return User.objects.filter(is_active=True, is_approved=False).order_by("created_at")
