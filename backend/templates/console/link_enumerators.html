@@ -12,11 +12,35 @@
     <strong>phone</strong> or <strong>name</strong>, so historical submissions trace to a user.
     Once linked, <code>collected_by</code> populates on the next sync. This is a
     <strong>preview</strong> — nothing is written until you apply. Only one-to-one matches
-    are linked; ambiguous ones are left for you to resolve under
-    <a href="{% url 'console:list' 'enumerators' %}">Enumerators</a>.
+    are auto-linked; ambiguous or unmatched ones you link yourself below.
   </p>
 
   {% if messages %}{% for msg in messages %}<div class="pill" style="margin-bottom:.7rem;">{{ msg }}</div>{% endfor %}{% endif %}
+
+  {% if unlinked %}
+  <div class="card" style="margin-bottom:1rem;">
+    <h3 style="margin:0 0 .3rem;">Link manually</h3>
+    <p class="subtle" style="margin:0 0 .7rem;font-size:.82rem;">
+      For enumerators the auto-matcher can't place, pick the account yourself.
+      {{ unlinked|length }} enumerator{{ unlinked|length|pluralize }} still unlinked.
+    </p>
+    <form method="post" style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="link_one">
+      <select name="enumerator" class="input" required style="min-width:240px;">
+        <option value="">Enumerator…</option>
+        {% for e in unlinked %}<option value="{{ e.pk }}">{{ e.enid }} · {{ e.project.code }}{% if e.first_name %} · {{ e.first_name }} {{ e.surname }}{% endif %}</option>{% endfor %}
+      </select>
+      <span class="subtle">→</span>
+      <select name="user" class="input" required style="min-width:240px;">
+        <option value="">Account…</option>
+        {% for a in accounts %}<option value="{{ a.pk }}">{{ a.user_id|default:a.email }}{% if a.full_name %} · {{ a.full_name }}{% endif %}</option>{% endfor %}
+      </select>
+      <button class="btn btn-open" type="submit">Link</button>
+    </form>
+    {% if not accounts %}<p class="subtle" style="margin:.5rem 0 0;font-size:.8rem;">No active accounts in this institution yet to link to.</p>{% endif %}
+  </div>
+  {% endif %}
 
   <div class="toolbar">
     <span class="subtle" style="flex:1;font-size:.82rem;">
