@@ -15,7 +15,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from apps.accounts.models import User, UserProfile
+from apps.accounts.models import User
 from apps.projects.models import Project
 from apps.rbac.models import Membership, ProjectAccessRequest, Role
 from apps.rbac.permissions import (
@@ -38,14 +38,15 @@ def _require_access(user):
 
 
 def _submitted_profile(user):
-    """The user's completed profile if they've submitted one, else None. Approval
-    is gated on this — an approver reviews the profile before signing off."""
+    """The user's completed profile if they submitted one at signup, else None —
+    what the approver reviews before granting access."""
+    from apps.accounts.models import UserProfile
+
     return UserProfile.objects.filter(user=user, completed_at__isnull=False).first()
 
 
 def _pending_review(users) -> list[dict]:
-    """Pending users paired with their submitted profile (for the approver to
-    review). Users who haven't filled a profile yet are flagged, not approvable."""
+    """Pending users paired with the profile they submitted, for review."""
     return [{"user": u, "profile": _submitted_profile(u)} for u in users]
 
 
@@ -95,7 +96,7 @@ def team(request):
     )
     # Existing users you can grant to: only your own institution's people (a hub
     # operator with no org spans all). Pending users have no org yet.
-    active = User.objects.filter(is_approved=True)
+    active = User.objects.filter(is_active=True)
     if request.user.organization_id:
         active = active.filter(organization_id=request.user.organization_id)
     # Self-service join requests on the projects this person administers.
@@ -187,13 +188,13 @@ def team_grant(request):
     if target.organization_id and scope_org_id and target.organization_id != scope_org_id:
         raise PermissionDenied("That user belongs to a different institution.")
 
-    # Approving requires a profile to review: don't grant a first role (which
-    # activates the account) to someone who hasn't submitted their details yet.
-    if not target.is_approved and _submitted_profile(target) is None:
+    # Approving reviews a submitted profile: don't activate a first-time account
+    # that has none (shouldn't happen via signup, but guards manual/legacy cases).
+    if not target.is_active and _submitted_profile(target) is None:
         messages.error(
             request,
             f"{target.email} hasn't submitted their profile yet — ask them to "
-            "complete it before you approve.",
+            "complete registration before you approve.",
         )
         return redirect("dashboards:team")
 
@@ -208,14 +209,12 @@ def team_grant(request):
         target.organization_id = scope_org_id
 
     newly_approved = False
-    if not target.is_approved:
+    if not target.is_active:
         target.is_active = True
-        target.is_approved = True
         target.approved_by = request.user
         target.approved_at = timezone.now()
         target.save(update_fields=[
-            "is_active", "is_approved", "approved_by", "approved_at",
-            "organization", "updated_at",
+            "is_active", "approved_by", "approved_at", "organization", "updated_at",
         ])
         newly_approved = True
     elif scope_org_id and target.organization_id == scope_org_id:
@@ -256,12 +255,10 @@ def team_invite(request):
     if not can_grant(request.user, scope_obj, role):
         raise PermissionDenied("That grant exceeds your authority.")
 
-    target = User.objects.filter(email__iexact=email, is_approved=True).first()
+    target = User.objects.filter(email__iexact=email, is_active=True).first()
     if target is None:
         messages.error(
-            request,
-            f"No approved account found for {email}. They must sign in and be "
-            "approved once first.",
+            request, f"No active account found for {email}. They must sign in once first."
         )
         return redirect("dashboards:team")
 

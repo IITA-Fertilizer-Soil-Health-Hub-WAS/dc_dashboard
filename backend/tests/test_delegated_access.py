@@ -138,7 +138,7 @@ def test_approve_pending_user_via_view(client, django_user_model, geo):
     cc = _user(django_user_model, "cc4@x.org")
     Membership.objects.create(user=cc, country=geo["rwanda"], role=Role.COUNTRY_COORDINATOR)
     pending = _user(django_user_model, "newbie@x.org", active=False)
-    UserProfile.objects.create(user=pending, completed_at=timezone.now())  # submitted for review
+    UserProfile.objects.create(user=pending, completed_at=timezone.now())  # submitted at signup
     client.force_login(cc)
 
     resp = client.post(reverse("dashboards:team_grant"), {

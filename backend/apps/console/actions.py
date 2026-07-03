@@ -54,10 +54,10 @@ def uc_export(request, uc):
 def user_approve(request, user):
     from apps.accounts.models import UserProfile
 
-    if user.is_approved:
-        return f"{user.email} is already approved."
-    # Approval is a review of the profile the user submitted — refuse if there's
-    # nothing to review yet.
+    if user.is_active:
+        return f"{user.email} is already active."
+    # Approval is a review of the profile submitted at registration — refuse if
+    # there's nothing to review yet.
     if not UserProfile.objects.filter(user=user, completed_at__isnull=False).exists():
         return f"{user.email} hasn't submitted their profile yet — can't approve."
     user.approve(by=request.user)
@@ -78,7 +78,7 @@ PROJECT_ACTIONS = (
 
 USER_ACTIONS = (
     Action("approve", "Approve", user_approve, "btn-approve",
-           applies=lambda u: not u.is_approved),
+           applies=lambda u: not u.is_active),
     Action("deactivate", "Deactivate", user_deactivate, "btn-decline",
            applies=lambda u: u.is_active),
 )

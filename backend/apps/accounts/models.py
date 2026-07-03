@@ -30,17 +30,12 @@ class UserManager(BaseUserManager):
         extra.setdefault("is_staff", False)
         extra.setdefault("is_superuser", False)
         extra.setdefault("is_active", False)  # pending approval by default
-        # Approval mirrors activeness unless a caller sets it explicitly (the
-        # Auth0 adapter provisions is_active=True + is_approved=False so a
-        # not-yet-approved user can still log in to fill their profile).
-        extra.setdefault("is_approved", extra["is_active"])
         return self._create_user(email, password, **extra)
 
     def create_superuser(self, email: str, password: str | None = None, **extra):
         extra.setdefault("is_staff", True)
         extra.setdefault("is_superuser", True)
         extra.setdefault("is_active", True)
-        extra.setdefault("is_approved", True)
         extra.setdefault("email_verified", True)
         if extra.get("is_staff") is not True or extra.get("is_superuser") is not True:
             raise ValueError("Superuser must have is_staff=True and is_superuser=True")
@@ -64,13 +59,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     phone = models.CharField(max_length=32, blank=True)
 
     is_staff = models.BooleanField(default=False)
-    # is_active is Django's "account not disabled" flag — it governs whether the
-    # user may hold a session at all. A brand-new Auth0 user is active (so they
-    # can log in to fill their profile) but NOT yet approved.
+    # Inactive until email-verified AND admin-approved.
     is_active = models.BooleanField(default=False)
-    # The business approval gate: an admin/coordinator reviews the submitted
-    # profile and flips this on. Authorization keys off this, not is_active.
-    is_approved = models.BooleanField(default=False)
     email_verified = models.BooleanField(default=False)
 
     approved_by = models.ForeignKey(
@@ -112,26 +102,11 @@ class User(AbstractBaseUser, PermissionsMixin):
         """Platform Admin = Django superuser (global control)."""
         return self.is_superuser
 
-    @property
-    def has_access(self) -> bool:
-        """The single authorization gate: a live, approved account (superusers
-        are implicitly approved so the first admin can bootstrap the system)."""
-        return bool(self.is_active and (self.is_approved or self.is_superuser))
-
-    @property
-    def awaiting_approval(self) -> bool:
-        """Logged in, not banned, but not yet approved (and not a superuser) —
-        the state the profile-gate traps until an approver signs off."""
-        return bool(self.is_active and not self.is_approved and not self.is_superuser)
-
     def approve(self, by: User) -> None:
         self.is_active = True
-        self.is_approved = True
         self.approved_by = by
         self.approved_at = timezone.now()
-        self.save(update_fields=[
-            "is_active", "is_approved", "approved_by", "approved_at", "updated_at",
-        ])
+        self.save(update_fields=["is_active", "approved_by", "approved_at", "updated_at"])
 
 
 class UserProfile(models.Model):

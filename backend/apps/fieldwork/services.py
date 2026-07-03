@@ -18,7 +18,7 @@ def project_enumerators(project):
         if project.country.region_id:
             covers |= Q(memberships__region_id=project.country.region_id)
     return (
-        User.objects.filter(Q(memberships__role=Role.ENUMERATOR) & covers, is_approved=True)
+        User.objects.filter(Q(memberships__role=Role.ENUMERATOR) & covers, is_active=True)
         .distinct()
         .order_by("email")
     )

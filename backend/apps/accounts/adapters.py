@@ -66,17 +66,15 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
         user = super().save_user(request, sociallogin, form)
         self._apply_claims(user, sociallogin.account.extra_data or {})
         user.email_verified = True  # Auth0 verified the email
-        # Auth0 vetted the identity, so the account is active (may log in) — but
-        # it stays UN-approved until an admin reviews the profile the user is now
-        # required to fill. Authorization keys off is_approved, not is_active.
-        user.is_active = True
-        user.is_approved = not REQUIRE_ADMIN_APPROVAL_FOR_AUTH0
+        if not REQUIRE_ADMIN_APPROVAL_FOR_AUTH0:
+            user.is_active = True
         # Bootstrap: the very first account on a system with no Platform Admin is
-        # auto-approved so it can reach the in-app "claim Platform Admin" page.
-        # Only the first account — everyone after stays pending until approved.
+        # auto-activated so it can reach the in-app "claim Platform Admin" page
+        # (an inactive user never gets a logged-in session). Only the first
+        # account — everyone after stays pending until approved.
         first_account = not User.objects.exclude(pk=user.pk).exists()
         if first_account and not platform_admin_exists():
-            user.is_approved = True
+            user.is_active = True
         user.save()
         sync_memberships_from_eia_apps(user)
         return user

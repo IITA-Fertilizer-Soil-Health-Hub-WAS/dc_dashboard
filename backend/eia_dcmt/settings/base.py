@@ -105,9 +105,6 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    # Keeps not-yet-approved users on the profile / pending pages until an admin
-    # reviews their submitted profile (must sit after AuthenticationMiddleware).
-    "apps.accounts.middleware.ApprovalGateMiddleware",
 ]
 
 ROOT_URLCONF = "eia_dcmt.urls"
@@ -185,6 +182,10 @@ AUTH0_LOGIN_URL = "/accounts/oidc/auth0/login/"
 ENTRA_LOGIN_URL = "/accounts/oidc/entra/login/"
 ACCOUNT_LOGOUT_ON_GET = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
+# Don't silently auto-create the account on first Auth0 login: show the one-step
+# signup form (below) so the user fills their profile before the account exists.
+SOCIALACCOUNT_AUTO_SIGNUP = False
+SOCIALACCOUNT_FORMS = {"signup": "apps.accounts.forms.SocialSignupForm"}
 
 ACCOUNT_ADAPTER = "apps.accounts.adapters.AccountAdapter"
 SOCIALACCOUNT_ADAPTER = "apps.accounts.adapters.SocialAccountAdapter"

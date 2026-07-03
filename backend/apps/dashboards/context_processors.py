@@ -14,12 +14,6 @@ def navigation(request):
     if user is None or not user.is_authenticated:
         return {"nav_projects": [], "console_groups": []}
 
-    # A not-yet-approved user is trapped on the profile / pending pages by the
-    # approval-gate middleware; give the shell no navigation so nothing they
-    # can't reach (or projects auto-synced from Auth0 claims) shows up.
-    if getattr(user, "awaiting_approval", False):
-        return {"nav_projects": [], "console_groups": [], "awaiting_approval": True}
-
     from apps.fieldwork.models import UnitAssignment
     from apps.rbac.models import Membership, Role
 

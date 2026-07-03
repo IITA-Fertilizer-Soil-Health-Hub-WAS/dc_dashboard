@@ -35,14 +35,13 @@ def test_approve_action_activates_and_audits(django_user_model):
 
     admin_user = django_user_model.objects.create_superuser("admin@x.org", "pw")
     pending = django_user_model.objects.create_user("pending@x.org", "pw")
-    assert pending.is_approved is False
-    # Approval reviews a submitted profile — give the pending user one.
+    assert pending.is_active is False
+    # Approval reviews the profile submitted at registration.
     UserProfile.objects.create(user=pending, completed_at=timezone.now())
 
     user_approve(_request(admin_user), pending)
 
     pending.refresh_from_db()
-    assert pending.is_approved is True
     assert pending.is_active is True
     assert pending.approved_by == admin_user
     assert pending.approved_at is not None
@@ -55,7 +54,7 @@ def test_approve_refused_without_submitted_profile(django_user_model):
     msg = user_approve(_request(admin_user), pending)
 
     pending.refresh_from_db()
-    assert pending.is_approved is False       # not approved without a profile
+    assert pending.is_active is False
     assert "profile" in msg.lower()
 
 
