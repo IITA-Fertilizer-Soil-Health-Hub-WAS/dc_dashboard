@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Create platform admin · {{ SITE_NAME }}{% endblock %}
+{% block guest_content %}
+<div style="width:100%;max-width:420px;">
+  <div style="text-align:center;margin-bottom:1.2rem;">
+    <h2 style="font-size:1.4rem;">Create the first Platform Admin</h2>
+    <p class="subtle" style="margin:.35rem 0 0;">One-time setup for a new {{ SITE_NAME }} instance.</p>
+  </div>
+
+  <div class="card" style="padding:1.6rem;">
+    {% if error %}<div class="err" style="margin:0 0 .9rem;">{{ error }}</div>{% endif %}
+    <form method="post" action="{% url 'create_admin' %}">
+      {% csrf_token %}
+      <label class="fld">
+        <span>Email</span>
+        <input type="email" name="email" autocomplete="username" value="{{ email }}" required autofocus>
+      </label>
+      <label class="fld">
+        <span>Password</span>
+        <input type="password" name="password" autocomplete="new-password" minlength="8" required>
+      </label>
+      <label class="fld">
+        <span>Confirm password</span>
+        <input type="password" name="confirm" autocomplete="new-password" minlength="8" required>
+      </label>
+      <button type="submit" class="btn btn-open" style="width:100%;padding:.6rem;margin-top:.3rem;">
+        Create admin &amp; sign in
+      </button>
+    </form>
+    <p class="subtle" style="font-size:.78rem;margin:.9rem 0 0;text-align:center;line-height:1.5;">
+      Available only while no admin exists — it closes once the first one is created.
+    </p>
+    <div style="text-align:center;margin-top:.8rem;">
+      <a class="subtle" style="font-size:.82rem;" href="{% url 'login' %}">← Back to sign in</a>
+    </div>
+  </div>
+</div>
+
+<style>
+  .fld{display:block;margin-bottom:.7rem;}
+  .fld span{display:block;font-size:.78rem;font-weight:600;color:var(--muted);margin-bottom:.25rem;}
+  .fld input{width:100%;padding:.55rem .65rem;border:1px solid var(--line);border-radius:8px;font-family:var(--sans);font-size:.9rem;background:var(--surface-2);}
+  .fld input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-50);background:#fff;}
+</style>
+{% endblock %}

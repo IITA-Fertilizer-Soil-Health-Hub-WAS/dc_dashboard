@@ -36,7 +36,56 @@ class LoginLandingView(LoginView):
         ctx["entra_configured"] = settings.ENTRA_CONFIGURED
         ctx["entra_login_url"] = settings.ENTRA_LOGIN_URL
         ctx["next"] = self.request.GET.get("next", "")
+        # First-run: with no Platform Admin yet, offer to create one right here.
+        ctx["no_admin_yet"] = not platform_admin_exists()
         return ctx
+
+
+@require_http_methods(["GET", "POST"])
+def create_admin(request):
+    """First-run setup: create the first Platform Admin from the login page, with
+    no prior sign-in. Open ONLY while the system has zero admins; the route closes
+    permanently the moment one exists, so it can never escalate on a live instance.
+    """
+    if platform_admin_exists():
+        messages.info(request, "A Platform Admin already exists — sign in instead.")
+        return redirect("login")
+
+    error = ""
+    email = (request.POST.get("email") or "").strip().lower()
+    if request.method == "POST":
+        from django.contrib.auth import login
+
+        from .models import User
+
+        password = request.POST.get("password") or ""
+        confirm = request.POST.get("confirm") or ""
+        if not email or "@" not in email:
+            error = "Enter a valid email address."
+        elif len(password) < 8:
+            error = "Password must be at least 8 characters."
+        elif password != confirm:
+            error = "Passwords do not match."
+        else:
+            with transaction.atomic():
+                if platform_admin_exists():  # race guard
+                    messages.info(request, "A Platform Admin already exists.")
+                    return redirect("login")
+                user = User.objects.filter(email__iexact=email).first()
+                if user is not None:
+                    user.is_superuser = user.is_staff = user.is_active = True
+                    user.email_verified = True
+                    user.approved_at = user.approved_at or timezone.now()
+                    user.set_password(password)
+                    user.save()
+                else:
+                    user = User.objects.create_superuser(email=email, password=password)
+            login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+            messages.success(request, "You are the Platform Admin. Welcome — start by "
+                             "creating a project or approving users.")
+            return redirect("dashboards:index")
+
+    return render(request, "accounts/create_admin.html", {"error": error, "email": email})
 
 
 @login_required

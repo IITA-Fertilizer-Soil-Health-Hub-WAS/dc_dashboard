@@ -13,6 +13,17 @@
     <p class="subtle" style="margin:.35rem 0 0;">Field data collection &amp; monitoring</p>
   </div>
 
+  {% if no_admin_yet %}
+    <div class="card" style="padding:1rem 1.2rem;margin-bottom:1rem;border-left:3px solid var(--brand);">
+      <div style="font-weight:600;font-size:.95rem;">First time here?</div>
+      <p class="subtle" style="margin:.25rem 0 .7rem;font-size:.82rem;">
+        This instance has no Platform Admin yet. Create the first one to get started.
+      </p>
+      <a class="btn btn-open" style="display:block;padding:.6rem;text-align:center;text-decoration:none;"
+         href="{% url 'create_admin' %}">Create platform admin</a>
+    </div>
+  {% endif %}
+
   <div class="card" style="padding:1.6rem;">
     {% if auth0_configured %}
       <a class="btn btn-open" style="display:block;font-size:.95rem;padding:.7rem;text-align:center;text-decoration:none;"
