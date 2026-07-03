@@ -5,7 +5,7 @@ import pytest
 from django.urls import reverse
 
 from apps.projects.models import Country, FormDefinition, Organization, Project, Region
-from apps.rbac.models import Role, UseCaseMembership
+from apps.rbac.models import ProjectMembership, Role
 from apps.review import services
 from apps.review.models import ReviewState
 from apps.submissions.models import Submission
@@ -31,11 +31,11 @@ def world(django_user_model):
     uc = Project.objects.create(code="UC", name="UC", organization=org, country=country)
 
     tc = django_user_model.objects.create_user("tc@x.org", "pw", is_active=True, organization=org)
-    UseCaseMembership.objects.create(user=tc, project=uc, role=Role.TRIAL_COORDINATOR)
+    ProjectMembership.objects.create(user=tc, project=uc, role=Role.TRIAL_COORDINATOR)
     regional = django_user_model.objects.create_user("rc@x.org", "pw", is_active=True, organization=org)
-    UseCaseMembership.objects.create(user=regional, region=region, role=Role.REGIONAL_COORDINATOR)
+    ProjectMembership.objects.create(user=regional, region=region, role=Role.REGIONAL_COORDINATOR)
     viewer = django_user_model.objects.create_user("v@x.org", "pw", is_active=True, organization=org)
-    UseCaseMembership.objects.create(user=viewer, project=uc, role=Role.VIEWER)
+    ProjectMembership.objects.create(user=viewer, project=uc, role=Role.VIEWER)
     return {"uc": uc, "tc": tc, "regional": regional, "viewer": viewer}
 
 

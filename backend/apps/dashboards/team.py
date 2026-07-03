@@ -17,7 +17,7 @@ from django.views.decorators.http import require_POST
 
 from apps.accounts.models import User
 from apps.projects.models import Project
-from apps.rbac.models import Role, UseCaseAccessRequest, UseCaseMembership
+from apps.rbac.models import ProjectAccessRequest, ProjectMembership, Role
 from apps.rbac.permissions import (
     can_grant,
     can_manage_access,
@@ -89,8 +89,8 @@ def team(request):
     # Self-service join requests on the projects this person administers.
     grantable_uc_ids = grantable_scopes(request.user)["projects"].values_list("id", flat=True)
     access_requests = (
-        UseCaseAccessRequest.objects.filter(
-            status=UseCaseAccessRequest.Status.PENDING, project_id__in=list(grantable_uc_ids)
+        ProjectAccessRequest.objects.filter(
+            status=ProjectAccessRequest.Status.PENDING, project_id__in=list(grantable_uc_ids)
         )
         .select_related("user", "project")
         .order_by("created_at")
@@ -113,8 +113,8 @@ def team_request_decision(request):
     """Approve (grant a role) or decline a self-service access request."""
     _require_access(request.user)
     req = get_object_or_404(
-        UseCaseAccessRequest, pk=request.POST.get("request"),
-        status=UseCaseAccessRequest.Status.PENDING,
+        ProjectAccessRequest, pk=request.POST.get("request"),
+        status=ProjectAccessRequest.Status.PENDING,
     )
     decision = request.POST.get("decision")
 
@@ -122,20 +122,20 @@ def team_request_decision(request):
         role = request.POST.get("role") or Role.VIEWER
         if role not in dict(Role.choices) or not can_grant(request.user, req.project, role):
             raise PermissionDenied("That grant exceeds your authority.")
-        UseCaseMembership.objects.get_or_create(
+        ProjectMembership.objects.get_or_create(
             user=req.user, project=req.project, role=role,
             defaults={"granted_by": request.user},
         )
         if not req.user.organization_id and req.project.organization_id:
             req.user.organization_id = req.project.organization_id
             req.user.save(update_fields=["organization", "updated_at"])
-        req.status = UseCaseAccessRequest.Status.APPROVED
+        req.status = ProjectAccessRequest.Status.APPROVED
         messages.success(request, f"Granted {req.user.email} {role} on {req.project.code}.")
     elif decision == "decline":
         # Only someone with authority over the project may decline it.
         if not can_grant(request.user, req.project, Role.VIEWER):
             raise PermissionDenied("Outside your authority.")
-        req.status = UseCaseAccessRequest.Status.DECLINED
+        req.status = ProjectAccessRequest.Status.DECLINED
         messages.info(request, f"Declined {req.user.email}'s request for {req.project.code}.")
     else:
         return redirect("dashboards:team")
@@ -176,7 +176,7 @@ def team_grant(request):
         raise PermissionDenied("That user belongs to a different institution.")
 
     field = _SCOPE_FIELD[request.POST["scope"].split(":", 1)[0]]
-    _, created = UseCaseMembership.objects.get_or_create(
+    _, created = ProjectMembership.objects.get_or_create(
         user=target, role=role, **{field: scope_obj},
         defaults={"granted_by": request.user},
     )
@@ -239,7 +239,7 @@ def team_invite(request):
         )
         return redirect("dashboards:team")
 
-    _, created = UseCaseMembership.objects.get_or_create(
+    _, created = ProjectMembership.objects.get_or_create(
         user=target, project=scope_obj, role=role,
         defaults={"granted_by": request.user},
     )
@@ -258,7 +258,7 @@ def team_revoke(request):
     """Revoke a membership — only if it falls within the revoker's authority."""
     _require_access(request.user)
 
-    membership = get_object_or_404(UseCaseMembership, pk=request.POST.get("membership"))
+    membership = get_object_or_404(ProjectMembership, pk=request.POST.get("membership"))
     if not manageable_memberships(request.user).filter(pk=membership.pk).exists():
         raise PermissionDenied("That membership is outside your authority.")
 

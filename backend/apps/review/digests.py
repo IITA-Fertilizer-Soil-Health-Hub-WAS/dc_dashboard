@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from apps.common.email import send_safe_email
 from apps.projects.models import Project
-from apps.rbac.models import Role, UseCaseMembership
+from apps.rbac.models import ProjectMembership, Role
 from apps.submissions.models import Submission
 from apps.validation.models import ValidationFlag
 
@@ -29,7 +29,7 @@ def pending_summary(project) -> dict:
 
 def reviewer_emails(project) -> list[str]:
     members = (
-        UseCaseMembership.objects.filter(project=project, role__in=REVIEWER_ROLES)
+        ProjectMembership.objects.filter(project=project, role__in=REVIEWER_ROLES)
         .select_related("user")
     )
     return sorted({

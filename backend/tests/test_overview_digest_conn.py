@@ -9,7 +9,7 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 
 from apps.projects.models import DataSource, FormDefinition, Project
-from apps.rbac.models import Role, UseCaseMembership
+from apps.rbac.models import ProjectMembership, Role
 from apps.review.digests import send_review_digests
 from apps.submissions.models import Submission
 
@@ -30,7 +30,7 @@ def form(uc):
 @pytest.fixture
 def coordinator(django_user_model, uc):
     u = django_user_model.objects.create_user("c@x.org", "pw", is_active=True)
-    UseCaseMembership.objects.create(user=u, project=uc, role=Role.TRIAL_COORDINATOR)
+    ProjectMembership.objects.create(user=u, project=uc, role=Role.TRIAL_COORDINATOR)
     return u
 
 

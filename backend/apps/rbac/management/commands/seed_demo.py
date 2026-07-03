@@ -11,7 +11,7 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 
 from apps.projects.models import Project
-from apps.rbac.models import Role, UseCaseMembership
+from apps.rbac.models import ProjectMembership, Role
 
 User = get_user_model()
 
@@ -53,7 +53,7 @@ class Command(BaseCommand):
             if created:
                 user.set_password(DEMO_PASSWORD)
                 user.save()
-            UseCaseMembership.objects.get_or_create(
+            ProjectMembership.objects.get_or_create(
                 user=user, project=rwanda, role=role, defaults={"granted_by": admin}
             )
 

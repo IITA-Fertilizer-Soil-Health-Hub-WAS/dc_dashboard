@@ -9,7 +9,7 @@ from django.urls import reverse
 from apps.fieldwork.models import CollectionUnit
 from apps.kpi.metrics import coverage_metrics, enumerator_metrics, quality_metrics
 from apps.projects.models import FormDefinition, Organization, Project
-from apps.rbac.models import Role, UseCaseMembership
+from apps.rbac.models import ProjectMembership, Role
 from apps.review.models import Review, ReviewState
 from apps.submissions.models import Enumerator, Submission
 from apps.validation.models import ValidationFlag, ValidationRule
@@ -51,7 +51,7 @@ def world(django_user_model):
 
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True,
                                                    organization=org)
-    UseCaseMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
+    ProjectMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
     return {"uc": uc, "other": other, "coord": coord}
 
 

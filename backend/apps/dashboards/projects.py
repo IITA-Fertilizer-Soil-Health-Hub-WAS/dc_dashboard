@@ -16,7 +16,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
 
 from apps.projects.models import Country, Project
-from apps.rbac.models import UseCaseAccessRequest
+from apps.rbac.models import ProjectAccessRequest
 from apps.rbac.permissions import can_manage_access, visible_projects
 
 PAGE_SIZE = 24
@@ -99,8 +99,8 @@ def projects(request):
 
     page = Paginator(base, PAGE_SIZE).get_page(request.GET.get("page"))
     pending_ids = set(
-        UseCaseAccessRequest.objects.filter(
-            user=user, status=UseCaseAccessRequest.Status.PENDING
+        ProjectAccessRequest.objects.filter(
+            user=user, status=ProjectAccessRequest.Status.PENDING
         ).values_list("project_id", flat=True)
     )
     rows = [
@@ -140,8 +140,8 @@ def project_request(request, code):
         messages.info(request, f"You already have access to {uc.code}.")
         return redirect("dashboards:projects")
 
-    existing = UseCaseAccessRequest.objects.filter(
-        user=user, project=uc, status=UseCaseAccessRequest.Status.PENDING
+    existing = ProjectAccessRequest.objects.filter(
+        user=user, project=uc, status=ProjectAccessRequest.Status.PENDING
     ).first()
 
     if request.method == "POST":
@@ -151,8 +151,8 @@ def project_request(request, code):
                 "uc": uc, "existing": existing, "note": note,
                 "error": "Please describe what you intend to do on this project.",
             })
-        UseCaseAccessRequest.objects.update_or_create(
-            user=user, project=uc, status=UseCaseAccessRequest.Status.PENDING,
+        ProjectAccessRequest.objects.update_or_create(
+            user=user, project=uc, status=ProjectAccessRequest.Status.PENDING,
             defaults={"note": note},
         )
         messages.success(request, f"Access requested for {uc.code}. A coordinator will review it.")

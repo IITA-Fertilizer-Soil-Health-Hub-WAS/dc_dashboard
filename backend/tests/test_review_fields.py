@@ -6,7 +6,7 @@ from django.urls import reverse
 
 from apps.dashboards.views import _merged_fields, _raw_field_map
 from apps.projects.models import FormDefinition, Organization, Project
-from apps.rbac.models import Role, UseCaseMembership
+from apps.rbac.models import ProjectMembership, Role
 from apps.submissions.models import Submission, SubmissionValue
 
 pytestmark = pytest.mark.django_db
@@ -47,7 +47,7 @@ def test_review_lists_and_edits_any_field(client, django_user_model):
         raw_payload={"_id": 5, "section/soil_colour": "dark", "yield_kg": "120"},
     )
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True, organization=org)
-    UseCaseMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
+    ProjectMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
     client.force_login(coord)
     url = reverse("dashboards:submission_review", args=["PROJ-A", sub.id])
     resp = client.get(url)

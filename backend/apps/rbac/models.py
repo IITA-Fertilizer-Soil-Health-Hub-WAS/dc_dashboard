@@ -23,7 +23,7 @@ class Role(models.TextChoices):
     VIEWER = "VIEWER", "Viewer"
 
 
-class UseCaseMembership(BaseModel):
+class ProjectMembership(BaseModel):
     """Grants a user a role at one scope level: a project, a country, or a region.
 
     The unit of authorization. A country grant cascades to every project in that
@@ -94,7 +94,7 @@ class UseCaseMembership(BaseModel):
         return f"{self.user} @ {self.scope} = {self.role}"
 
 
-class UseCaseAccessRequest(BaseModel):
+class ProjectAccessRequest(BaseModel):
     """A user's self-service request to join a project they can see in their
     institution. A coordinator with authority over that project approves (which
     creates the membership) or declines it from Team & access."""

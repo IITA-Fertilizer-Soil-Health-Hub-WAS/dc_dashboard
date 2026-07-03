@@ -5,7 +5,7 @@ import pytest
 
 from apps.dashboards.views import _health_counts
 from apps.projects.models import FormDefinition, Project
-from apps.rbac.models import Role, UseCaseMembership
+from apps.rbac.models import ProjectMembership, Role
 from apps.review import services
 from apps.review.models import ReviewState
 from apps.submissions.models import Submission
@@ -32,21 +32,21 @@ def _sub(uc, form, n):
 def qc(django_user_model, uc):
     # Coordinators are the reviewers; they can QC-approve.
     user = django_user_model.objects.create_user("qc@x.org", "pw", is_active=True)
-    UseCaseMembership.objects.create(user=user, project=uc, role=Role.COUNTRY_COORDINATOR)
+    ProjectMembership.objects.create(user=user, project=uc, role=Role.COUNTRY_COORDINATOR)
     return user
 
 
 @pytest.fixture
 def coordinator(django_user_model, uc):
     user = django_user_model.objects.create_user("c@x.org", "pw", is_active=True)
-    UseCaseMembership.objects.create(user=user, project=uc, role=Role.TRIAL_COORDINATOR)
+    ProjectMembership.objects.create(user=user, project=uc, role=Role.TRIAL_COORDINATOR)
     return user
 
 
 @pytest.fixture
 def regional(django_user_model, uc):
     user = django_user_model.objects.create_user("r@x.org", "pw", is_active=True)
-    UseCaseMembership.objects.create(user=user, project=uc, role=Role.REGIONAL_COORDINATOR)
+    ProjectMembership.objects.create(user=user, project=uc, role=Role.REGIONAL_COORDINATOR)
     return user
 
 
@@ -85,7 +85,7 @@ def test_gate1_cannot_bulk_validate(client, qc, uc, form):
 def test_bulk_action_requires_permission(client, django_user_model, uc, form):
     # A viewer has no review permission — bulk QC-approve must change nothing.
     viewer = django_user_model.objects.create_user("v@x.org", "pw", is_active=True)
-    UseCaseMembership.objects.create(user=viewer, project=uc, role=Role.VIEWER)
+    ProjectMembership.objects.create(user=viewer, project=uc, role=Role.VIEWER)
     sub = _sub(uc, form, 1)
     client.force_login(viewer)
     resp = client.post(f"/project/{uc.code}/bulk-action/",

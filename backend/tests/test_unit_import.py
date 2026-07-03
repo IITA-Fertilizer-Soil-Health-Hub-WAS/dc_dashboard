@@ -8,7 +8,7 @@ from django.urls import reverse
 from apps.fieldwork.imports import import_collection_units
 from apps.fieldwork.models import CollectionUnit
 from apps.projects.models import Organization, Project
-from apps.rbac.models import Role, UseCaseMembership
+from apps.rbac.models import ProjectMembership, Role
 
 pytestmark = pytest.mark.django_db
 
@@ -56,7 +56,7 @@ def test_import_view_coordinator_scoped(client, django_user_model):
     mine = Project.objects.create(code="MINE", name="Mine", organization=org)
     other = Project.objects.create(code="OTHER", name="Other", organization=org)
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True, organization=org)
-    UseCaseMembership.objects.create(user=coord, project=mine, role=Role.TRIAL_COORDINATOR)
+    ProjectMembership.objects.create(user=coord, project=mine, role=Role.TRIAL_COORDINATOR)
     client.force_login(coord)
 
     # The picker only offers their project.
@@ -82,6 +82,6 @@ def test_import_view_coordinator_scoped(client, django_user_model):
 def test_import_view_blocked_for_viewer(client, django_user_model):
     uc = Project.objects.create(code="V", name="V")
     viewer = django_user_model.objects.create_user("v@x.org", "pw", is_active=True)
-    UseCaseMembership.objects.create(user=viewer, project=uc, role=Role.VIEWER)
+    ProjectMembership.objects.create(user=viewer, project=uc, role=Role.VIEWER)
     client.force_login(viewer)
     assert client.get(reverse("console:import_units")).status_code == 403

@@ -6,7 +6,7 @@ from django.urls import reverse
 
 from apps.ingestion.sync import sync_project
 from apps.projects.models import FieldMapping, FormDefinition, Project
-from apps.rbac.models import Role, UseCaseMembership
+from apps.rbac.models import ProjectMembership, Role
 from apps.review.models import Review, ReviewAction, ReviewActionLog, ReviewState
 from apps.submissions.models import Enumerator, Submission
 
@@ -44,7 +44,7 @@ def attributed(django_user_model):
     )
 
     coord = django_user_model.objects.create_user("co@x.org", "pw", is_active=True)
-    UseCaseMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
+    ProjectMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
     return uc, collector, coord
 
 
@@ -121,7 +121,7 @@ def test_attribution_zero_when_unlinked(client, django_user_model):
 
     sync_project(uc, client=Fake())
     coord = django_user_model.objects.create_user("z@x.org", "pw", is_active=True)
-    UseCaseMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
+    ProjectMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
     client.force_login(coord)
     resp = client.get(reverse("dashboards:tab_summary", args=[uc.code]))
     assert resp.status_code == 200
@@ -132,7 +132,7 @@ def test_unlinked_enumerator_shows_placeholder(client, django_user_model):
     uc = Project.objects.create(code="NOLINK", name="No link")
     Enumerator.objects.create(project=uc, enid="ENX")  # no user
     coord = django_user_model.objects.create_user("c2@x.org", "pw", is_active=True)
-    UseCaseMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
+    ProjectMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
     client.force_login(coord)
     resp = client.get(reverse("dashboards:tab_enumerators", args=[uc.code]))
     assert resp.status_code == 200

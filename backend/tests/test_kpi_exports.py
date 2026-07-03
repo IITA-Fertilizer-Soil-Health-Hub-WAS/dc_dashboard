@@ -10,7 +10,7 @@ from django.urls import reverse
 from apps.fieldwork.models import CollectionUnit
 from apps.kpi.aggregate import rebuild_project_kpis
 from apps.projects.models import FormDefinition, Organization, Project
-from apps.rbac.models import Role, UseCaseMembership
+from apps.rbac.models import ProjectMembership, Role
 from apps.submissions.models import Enumerator, Submission
 
 pytestmark = pytest.mark.django_db
@@ -34,7 +34,7 @@ def world(django_user_model):
     rebuild_project_kpis(uc)
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True,
                                                    organization=org)
-    UseCaseMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
+    ProjectMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
     return {"uc": uc, "coord": coord}
 
 

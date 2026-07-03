@@ -15,13 +15,13 @@ def navigation(request):
         return {"nav_projects": [], "console_groups": []}
 
     from apps.fieldwork.models import UnitAssignment
-    from apps.rbac.models import Role, UseCaseMembership
+    from apps.rbac.models import ProjectMembership, Role
 
     # Anyone holding the enumerator role gets the link as their entry point —
     # not only once they already have an assignment (otherwise a freshly
     # onboarded enumerator sees no path to their own work).
     show_my_assignments = (
-        UseCaseMembership.objects.filter(user=user, role=Role.ENUMERATOR).exists()
+        ProjectMembership.objects.filter(user=user, role=Role.ENUMERATOR).exists()
         or UnitAssignment.objects.filter(enumerator=user).exists()
     )
 
@@ -41,12 +41,12 @@ def navigation(request):
     manages_access = can_manage_access(user)
     pending_count = 0
     if manages_access:
-        from apps.rbac.models import UseCaseAccessRequest
+        from apps.rbac.models import ProjectAccessRequest
         from apps.rbac.permissions import grantable_scopes
 
         grant_uc = grantable_scopes(user)["projects"].values_list("id", flat=True)
-        pending_count = pending_users().count() + UseCaseAccessRequest.objects.filter(
-            status=UseCaseAccessRequest.Status.PENDING, project_id__in=list(grant_uc)
+        pending_count = pending_users().count() + ProjectAccessRequest.objects.filter(
+            status=ProjectAccessRequest.Status.PENDING, project_id__in=list(grant_uc)
         ).count()
 
     # The sidebar offers a project dropdown (quick jump); the Projects page is the

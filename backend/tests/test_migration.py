@@ -8,7 +8,7 @@ from django.core.management import call_command
 
 from apps.accounts.adapters import SocialAccountAdapter
 from apps.projects.models import Project
-from apps.rbac.models import Role, UseCaseMembership
+from apps.rbac.models import ProjectMembership, Role
 
 pytestmark = pytest.mark.django_db
 
@@ -24,12 +24,12 @@ def test_migrate_eia_apps_creates_viewer_memberships(django_user_model):
     call_command("migrate_eia_apps")
 
     roles = set(
-        UseCaseMembership.objects.filter(user=user).values_list("project__code", "role")
+        ProjectMembership.objects.filter(user=user).values_list("project__code", "role")
     )
     assert (rwanda.code, Role.VIEWER) in roles
     assert (kalro.code, Role.VIEWER) in roles
     # Unknown project is skipped, not created.
-    assert not UseCaseMembership.objects.filter(project__code="GHOST-UC").exists()
+    assert not ProjectMembership.objects.filter(project__code="GHOST-UC").exists()
 
 
 def test_migrate_eia_apps_idempotent(django_user_model):
@@ -39,7 +39,7 @@ def test_migrate_eia_apps_idempotent(django_user_model):
     )
     call_command("migrate_eia_apps")
     call_command("migrate_eia_apps")
-    assert UseCaseMembership.objects.filter(user=user).count() == 1
+    assert ProjectMembership.objects.filter(user=user).count() == 1
 
 
 def test_dry_run_creates_nothing(django_user_model):
@@ -48,7 +48,7 @@ def test_dry_run_creates_nothing(django_user_model):
         "u@x.org", "pw", is_active=True, legacy_eia_apps={"SNS-RWANDA": {}}
     )
     call_command("migrate_eia_apps", "--dry-run")
-    assert UseCaseMembership.objects.filter(user=user).count() == 0
+    assert ProjectMembership.objects.filter(user=user).count() == 0
 
 
 def test_social_adapter_snapshots_auth0_claims(django_user_model):

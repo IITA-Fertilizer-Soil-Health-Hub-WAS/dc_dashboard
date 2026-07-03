@@ -9,7 +9,7 @@ from apps.fieldwork.anchor import capture_anchor
 from apps.fieldwork.election import elect_candidate
 from apps.fieldwork.models import CandidatePlot, CollectionUnit
 from apps.projects.models import Organization, Project
-from apps.rbac.models import Role, UseCaseMembership
+from apps.rbac.models import ProjectMembership, Role
 
 pytestmark = pytest.mark.django_db
 
@@ -39,7 +39,7 @@ def elected_unit(django_user_model):
     org = Organization.objects.create(code="o", name="O")
     uc = Project.objects.create(code="PROJ-A", name="A", organization=org)
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True, organization=org)
-    UseCaseMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
+    ProjectMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
     cand = CandidatePlot.objects.create(
         project=uc, trial_key="T1", candidate_ref="A", rank=1, geometry=SQUARE,
         centroid_lat=-1.285, centroid_lon=36.805)

@@ -7,7 +7,7 @@ from django.urls import reverse
 
 from apps.console.registry import console_key_allowed, grouped_for
 from apps.projects.models import Country, FormDefinition, Organization, Project, Region
-from apps.rbac.models import Role, UseCaseMembership
+from apps.rbac.models import ProjectMembership, Role
 from apps.submissions.models import Enumerator
 
 pytestmark = pytest.mark.django_db
@@ -26,9 +26,9 @@ def world(django_user_model):
     Enumerator.objects.create(project=other, enid="EN-OTHER")
 
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True, organization=org)
-    UseCaseMembership.objects.create(user=coord, project=mine, role=Role.TRIAL_COORDINATOR)
+    ProjectMembership.objects.create(user=coord, project=mine, role=Role.TRIAL_COORDINATOR)
     viewer = django_user_model.objects.create_user("v@x.org", "pw", is_active=True, organization=org)
-    UseCaseMembership.objects.create(user=viewer, project=mine, role=Role.VIEWER)
+    ProjectMembership.objects.create(user=viewer, project=mine, role=Role.VIEWER)
     staff = django_user_model.objects.create_superuser("a@x.org", "pw")
     return {"mine": mine, "other": other, "coord": coord, "viewer": viewer, "staff": staff}
 

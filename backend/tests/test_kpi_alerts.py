@@ -11,7 +11,7 @@ from apps.kpi.aggregate import rebuild_project_kpis
 from apps.kpi.alerts import evaluate_rule_for_project, run_alerts
 from apps.kpi.models import AlertEvent, AlertRule
 from apps.projects.models import FormDefinition, Organization, Project
-from apps.rbac.models import Role, UseCaseMembership
+from apps.rbac.models import ProjectMembership, Role
 from apps.submissions.models import Enumerator, Submission
 from apps.validation.models import ValidationFlag, ValidationRule
 
@@ -129,7 +129,7 @@ def test_alerts_view_scoped(client, django_user_model, org):
                               message="hidden alert", observed_value=0)
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True,
                                                    organization=org)
-    UseCaseMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
+    ProjectMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
     client.force_login(coord)
     resp = client.get(reverse("kpi:alerts"))
     assert resp.status_code == 200

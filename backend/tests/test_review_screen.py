@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 
 from apps.projects.models import FormDefinition, Project
-from apps.rbac.models import Role, UseCaseMembership
+from apps.rbac.models import ProjectMembership, Role
 from apps.review.models import ReviewState
 from apps.submissions.models import Submission, SubmissionValue
 
@@ -29,14 +29,14 @@ def submission(uc):
 @pytest.fixture
 def coordinator(django_user_model, uc):
     user = django_user_model.objects.create_user("c@x.org", "pw", is_active=True)
-    UseCaseMembership.objects.create(user=user, project=uc, role=Role.TRIAL_COORDINATOR)
+    ProjectMembership.objects.create(user=user, project=uc, role=Role.TRIAL_COORDINATOR)
     return user
 
 
 @pytest.fixture
 def viewer(django_user_model, uc):
     user = django_user_model.objects.create_user("v@x.org", "pw", is_active=True)
-    UseCaseMembership.objects.create(user=user, project=uc, role=Role.VIEWER)
+    ProjectMembership.objects.create(user=user, project=uc, role=Role.VIEWER)
     return user
 
 

@@ -7,7 +7,7 @@ from django.urls import reverse
 from apps.fieldwork.election import elect_candidate, election_progress, trial_rows
 from apps.fieldwork.models import CandidatePlot, CollectionUnit
 from apps.projects.models import Organization, Project
-from apps.rbac.models import Role, UseCaseMembership
+from apps.rbac.models import ProjectMembership, Role
 
 pytestmark = pytest.mark.django_db
 
@@ -27,8 +27,8 @@ def world(django_user_model):
         centroid_lon=36.8 + rank / 100, accessibility="easy")
     a, b, bk = mk("A", 1), mk("B", 2), mk("BK", 4, role="BACKUP")
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True, organization=org)
-    UseCaseMembership.objects.create(user=coord, project=uc, role=Role.REGIONAL_COORDINATOR)
-    UseCaseMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
+    ProjectMembership.objects.create(user=coord, project=uc, role=Role.REGIONAL_COORDINATOR)
+    ProjectMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
     return {"uc": uc, "a": a, "b": b, "bk": bk, "coord": coord}
 
 

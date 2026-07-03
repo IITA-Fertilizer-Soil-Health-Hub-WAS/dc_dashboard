@@ -23,7 +23,7 @@ from apps.projects.models import (
     Region,
     Trial,
 )
-from apps.rbac.models import UseCaseAccessRequest, UseCaseMembership
+from apps.rbac.models import ProjectAccessRequest, ProjectMembership
 from apps.review.models import RejectionReason
 from apps.submissions.models import Enumerator
 from apps.validation.models import ValidationRule
@@ -125,13 +125,13 @@ _ENTRIES: list[Managed] = [
                          "email_verified", "is_staff", "is_superuser"],
             search_fields=["user_id", "email", "full_name"], ordering=["email"], icon="person",
             actions=USER_ACTIONS, description="People and account approval status."),
-    Managed("memberships", UseCaseMembership, "Memberships", "Accounts & roles",
+    Managed("memberships", ProjectMembership, "Memberships", "Accounts & roles",
             list_display=["user", "project", "country", "region", "role", "granted_by",
                           "created_at"],
             form_fields=["user", "project", "country", "region", "role"],
             search_fields=["user__email", "project__code"], icon="group",
             description="Who can access which project / country / region, and their role."),
-    Managed("access-requests", UseCaseAccessRequest, "Access requests", "Accounts & roles",
+    Managed("access-requests", ProjectAccessRequest, "Access requests", "Accounts & roles",
             list_display=["user", "project", "status", "decided_by", "decided_at",
                           "created_at"],
             search_fields=["user__email", "project__code"], readonly=True, icon="pending_actions",

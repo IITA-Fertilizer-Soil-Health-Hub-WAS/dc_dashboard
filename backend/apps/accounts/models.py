@@ -2,7 +2,7 @@
 
 Replaces the R app's Auth0-only identity. A new user is inactive until they
 verify their email AND a Platform Admin approves them and assigns project
-roles (see apps.rbac.UseCaseMembership). The ``legacy_eia_apps`` / ``auth0_sub``
+roles (see apps.rbac.ProjectMembership). The ``legacy_eia_apps`` / ``auth0_sub``
 fields support the one-time migration off Auth0 (see Phase 9).
 """
 from __future__ import annotations
@@ -169,4 +169,3 @@ class UserProfile(models.Model):
     def mark_complete(self) -> None:
         self.completed_at = timezone.now()
         self.save(update_fields=["completed_at", "updated_at"])
-        self.save()

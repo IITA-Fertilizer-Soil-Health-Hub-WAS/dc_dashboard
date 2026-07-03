@@ -11,7 +11,7 @@ from django.utils import timezone
 from apps.fieldwork.models import CollectionUnit
 from apps.kpi.metrics import coverage_metrics, enumerator_metrics
 from apps.projects.models import FormDefinition, Organization, Project
-from apps.rbac.models import Role, UseCaseMembership
+from apps.rbac.models import ProjectMembership, Role
 from apps.review.models import ReviewState
 from apps.review.services import endorse
 from apps.submissions.models import Enumerator, Submission
@@ -92,7 +92,7 @@ def test_coverage_by_area_buckets_and_orders_behindmost_first(world):
 def endorser(world, django_user_model):
     user = django_user_model.objects.create_user(
         "c@x.org", "pw", is_active=True, organization=world["org"])
-    UseCaseMembership.objects.create(user=user, project=world["uc"], role=Role.TRIAL_COORDINATOR)
+    ProjectMembership.objects.create(user=user, project=world["uc"], role=Role.TRIAL_COORDINATOR)
     return user
 
 
@@ -100,7 +100,7 @@ def endorser(world, django_user_model):
 def validator(world, django_user_model):
     user = django_user_model.objects.create_user(
         "v@x.org", "pw", is_active=True, organization=world["org"])
-    UseCaseMembership.objects.create(user=user, project=world["uc"], role=Role.REGIONAL_COORDINATOR)
+    ProjectMembership.objects.create(user=user, project=world["uc"], role=Role.REGIONAL_COORDINATOR)
     return user
 
 
@@ -137,7 +137,7 @@ def test_qc_validate_approves(client, world, endorser, validator):
 def test_qc_queue_forbidden_without_validator_right(client, world, django_user_model):
     plain = django_user_model.objects.create_user(
         "p@x.org", "pw", is_active=True, organization=world["org"])
-    UseCaseMembership.objects.create(user=plain, project=world["uc"], role=Role.ENUMERATOR)
+    ProjectMembership.objects.create(user=plain, project=world["uc"], role=Role.ENUMERATOR)
     client.force_login(plain)
     resp = client.get(reverse("dashboards:qc_signoff", args=["PROJ-A"]))
     assert resp.status_code == 404

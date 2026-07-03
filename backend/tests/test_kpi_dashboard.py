@@ -9,7 +9,7 @@ from django.urls import reverse
 from apps.kpi.aggregate import rebuild_project_kpis
 from apps.kpi.metrics import overview_metrics, project_metrics
 from apps.projects.models import FormDefinition, Organization, Project
-from apps.rbac.models import Role, UseCaseMembership
+from apps.rbac.models import ProjectMembership, Role
 from apps.submissions.models import Enumerator, Submission
 
 pytestmark = pytest.mark.django_db
@@ -33,7 +33,7 @@ def world(django_user_model):
     a = _project("PROJ-A", 5, org)
     b = _project("PROJ-B", 2, org)
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True, organization=org)
-    UseCaseMembership.objects.create(user=coord, project=a, role=Role.TRIAL_COORDINATOR)
+    ProjectMembership.objects.create(user=coord, project=a, role=Role.TRIAL_COORDINATOR)
     admin = django_user_model.objects.create_superuser("a@x.org", "pw")
     return {"a": a, "b": b, "coord": coord, "admin": admin}
 

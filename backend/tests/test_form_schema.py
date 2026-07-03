@@ -6,7 +6,7 @@ from django.urls import reverse
 
 from apps.ingestion.form_schema import flatten_children, label_map, parse_form_json
 from apps.projects.models import FormDefinition, Organization, Project
-from apps.rbac.models import Role, UseCaseMembership
+from apps.rbac.models import ProjectMembership, Role
 from apps.submissions.models import Submission
 
 pytestmark = pytest.mark.django_db
@@ -58,7 +58,7 @@ def test_review_screen_renders_labels_and_groups(client, django_user_model):
         raw_payload={"A_plot/plot_id": "P-42", "A_plot/crop": "maize", "notes": "ok"},
     )
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True, organization=org)
-    UseCaseMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
+    ProjectMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
     client.force_login(coord)
     page = client.get(reverse("dashboards:submission_review", args=["PROJ-A", sub.id])).content
     assert b"Plot ID" in page and b"Crop grown" in page  # human labels

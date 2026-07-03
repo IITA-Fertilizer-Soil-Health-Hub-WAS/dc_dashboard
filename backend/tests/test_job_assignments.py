@@ -7,7 +7,7 @@ from django.urls import reverse
 from apps.fieldwork.models import CollectionUnit, Job, UnitAssignment
 from apps.fieldwork.services import project_enumerators
 from apps.projects.models import FormDefinition, Organization, Project
-from apps.rbac.models import Role, UseCaseMembership
+from apps.rbac.models import ProjectMembership, Role
 
 pytestmark = pytest.mark.django_db
 
@@ -21,10 +21,10 @@ def world(django_user_model):
     job = Job.objects.create(project=uc, name="Round 1", form=form, target_count=3)
     units = [CollectionUnit.objects.create(project=uc, code=f"HH{i}") for i in range(3)]
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True, organization=org)
-    UseCaseMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
+    ProjectMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
     en = django_user_model.objects.create_user("en@x.org", "pw", full_name="Enid",
                                                is_active=True, organization=org)
-    UseCaseMembership.objects.create(user=en, project=uc, role=Role.ENUMERATOR)
+    ProjectMembership.objects.create(user=en, project=uc, role=Role.ENUMERATOR)
     return {"uc": uc, "job": job, "units": units, "coord": coord, "en": en, "org": org}
 
 
