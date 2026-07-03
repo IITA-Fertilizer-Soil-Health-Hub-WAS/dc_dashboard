@@ -15,8 +15,8 @@ from django.utils import timezone
 from apps.config_admin.loader import import_config, load_yaml
 from apps.fieldwork.models import CollectionUnit
 from apps.ingestion.sync import sync_project
+from apps.projects.models import FormDefinition, Project
 from apps.submissions.models import Enumerator, Submission, SubmissionValue
-from apps.usecases.models import FormDefinition, Project
 
 pytestmark = pytest.mark.django_db
 
@@ -42,7 +42,7 @@ def test_auto_map_on_sync_populates_unmapped_form():
     assert sub.enumerator.enid == "EN1"
     assert sub.collection_unit.code == "HH1"
 
-SNS_PATH = Path(settings.USECASE_CONFIG_DIR) / "sns-rwanda.yaml"
+SNS_PATH = Path(settings.PROJECT_CONFIG_DIR) / "sns-rwanda.yaml"
 
 
 class FakeOnaClient:

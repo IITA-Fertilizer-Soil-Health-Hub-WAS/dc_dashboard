@@ -4,11 +4,11 @@ from __future__ import annotations
 import pytest
 from django.urls import reverse
 
+from apps.projects.models import Country, FormDefinition, Organization, Project, Region
 from apps.rbac.models import Role, UseCaseMembership
 from apps.review import services
 from apps.review.models import ReviewState
 from apps.submissions.models import Submission
-from apps.usecases.models import Country, FormDefinition, Organization, Project, Region
 
 pytestmark = pytest.mark.django_db
 
@@ -98,14 +98,14 @@ def test_review_action_scoped_to_project(client, django_user_model, world):
     assert s.review.state == ReviewState.IN_REVIEW
 
 
-def test_usecase_page_loads_selected_section(client, world):
+def test_project_page_loads_selected_section(client, world):
     # The sidebar is the single nav; the page loads only the chosen section's
     # content (?tab=review → the review partial URL), not a full tab bar.
     client.force_login(world["tc"])
-    resp = client.get(reverse("dashboards:usecase", args=[world["uc"].code]), {"tab": "review"})
+    resp = client.get(reverse("dashboards:project", args=[world["uc"].code]), {"tab": "review"})
     assert resp.status_code == 200
     assert reverse("dashboards:tab_review", args=[world["uc"].code]).encode() in resp.content
     # Default (no tab) loads Summary, not Review.
-    home = client.get(reverse("dashboards:usecase", args=[world["uc"].code]))
+    home = client.get(reverse("dashboards:project", args=[world["uc"].code]))
     assert reverse("dashboards:tab_summary", args=[world["uc"].code]).encode() in home.content
     assert reverse("dashboards:tab_review", args=[world["uc"].code]).encode() not in home.content

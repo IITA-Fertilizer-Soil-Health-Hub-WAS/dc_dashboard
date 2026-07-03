@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('review', '0004_review_endorsed_at_review_endorsed_by_and_more'),
-        ('usecases', '0008_usecase_unit_type'),
+        ('projects', '0008_usecase_unit_type'),
     ]
 
     operations = [
@@ -23,7 +23,7 @@ class Migration(migrations.Migration):
                 ('label', models.CharField(max_length=255)),
                 ('order', models.PositiveSmallIntegerField(default=0)),
                 ('is_active', models.BooleanField(default=True)),
-                ('use_case', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='rejection_reasons', to='usecases.usecase')),
+                ('use_case', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='rejection_reasons', to='projects.usecase')),
             ],
             options={
                 'ordering': ['order', 'label'],

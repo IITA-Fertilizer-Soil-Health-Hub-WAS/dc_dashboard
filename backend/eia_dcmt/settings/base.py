@@ -78,7 +78,7 @@ LOCAL_APPS = [
     "apps.common",
     "apps.accounts",
     "apps.rbac",
-    "apps.usecases",
+    "apps.projects",
     "apps.config_admin",
     "apps.ingestion",
     "apps.submissions",
@@ -340,4 +340,4 @@ UNFOLD = {
 }
 
 # Path where per-use-case YAML config seeds live.
-USECASE_CONFIG_DIR = BASE_DIR / "config" / "usecases"
+PROJECT_CONFIG_DIR = BASE_DIR / "config" / "projects"

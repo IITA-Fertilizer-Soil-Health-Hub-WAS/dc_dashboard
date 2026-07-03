@@ -4,10 +4,10 @@ from __future__ import annotations
 import pytest
 from django.urls import reverse
 
+from apps.projects.models import Country, Organization, Project, Region
+from apps.projects.tenancy import default_organization, resolve_organization
 from apps.rbac.models import Role, UseCaseMembership
 from apps.rbac.permissions import organization_of, visible_projects
-from apps.usecases.models import Country, Organization, Project, Region
-from apps.usecases.tenancy import default_organization, resolve_organization
 
 pytestmark = pytest.mark.django_db
 
@@ -42,7 +42,7 @@ def test_visible_projects_isolated(two_orgs):
 
 def test_cannot_open_other_orgs_project(client, two_orgs):
     client.force_login(two_orgs["coord_a"])
-    resp = client.get(reverse("dashboards:usecase", args=[two_orgs["ucb"].code]))
+    resp = client.get(reverse("dashboards:project", args=[two_orgs["ucb"].code]))
     assert resp.status_code == 404  # B's project is invisible to A
 
 
@@ -71,7 +71,7 @@ def test_cannot_grant_to_other_orgs_user(client, two_orgs):
     client.force_login(two_orgs["coord_a"])
     resp = client.post(reverse("dashboards:team_grant"), {
         "user": str(two_orgs["coord_b"].pk),
-        "scope": f"usecase:{two_orgs['uca'].pk}",
+        "scope": f"project:{two_orgs['uca'].pk}",
         "role": Role.VIEWER,
     })
     assert resp.status_code == 403
@@ -86,7 +86,7 @@ def test_approval_binds_user_to_granter_org(client, django_user_model, two_orgs)
     client.force_login(two_orgs["coord_a"])
     resp = client.post(reverse("dashboards:team_grant"), {
         "user": str(pending.pk),
-        "scope": f"usecase:{two_orgs['uca'].pk}",
+        "scope": f"project:{two_orgs['uca'].pk}",
         "role": Role.ENUMERATOR,
     })
     assert resp.status_code == 302
@@ -103,7 +103,7 @@ def test_invite_external_collaborator_to_one_project(client, two_orgs):
     client.force_login(two_orgs["coord_a"])
     resp = client.post(reverse("dashboards:team_invite"), {
         "email": "b@x.org",  # coord_b belongs to Institution B
-        "scope": f"usecase:{two_orgs['uca'].pk}",
+        "scope": f"project:{two_orgs['uca'].pk}",
         "role": Role.VIEWER,
     })
     assert resp.status_code == 302
@@ -137,7 +137,7 @@ def test_invite_unknown_email_does_nothing(client, two_orgs):
     before = UseCaseMembership.objects.count()
     resp = client.post(reverse("dashboards:team_invite"), {
         "email": "nobody@x.org",
-        "scope": f"usecase:{two_orgs['uca'].pk}",
+        "scope": f"project:{two_orgs['uca'].pk}",
         "role": Role.VIEWER,
     })
     assert resp.status_code == 302
@@ -150,7 +150,7 @@ def test_invite_outside_authority_rejected(client, django_user_model, two_orgs):
     outsider = django_user_model.objects.create_user("out@x.org", "pw", is_active=True)
     resp = client.post(reverse("dashboards:team_invite"), {
         "email": "out@x.org",
-        "scope": f"usecase:{two_orgs['ucb'].pk}",  # B's project
+        "scope": f"project:{two_orgs['ucb'].pk}",  # B's project
         "role": Role.VIEWER,
     })
     assert resp.status_code == 403

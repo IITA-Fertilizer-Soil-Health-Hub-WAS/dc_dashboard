@@ -6,7 +6,7 @@ from django.core.cache import cache
 from django.test import override_settings
 from django.urls import reverse
 
-from apps.usecases.models import Organization, Project
+from apps.projects.models import Organization, Project
 
 pytestmark = pytest.mark.django_db
 

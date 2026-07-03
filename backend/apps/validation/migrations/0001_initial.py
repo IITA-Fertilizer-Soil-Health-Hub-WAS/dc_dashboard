@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('usecases', '0001_initial'),
+        ('projects', '0001_initial'),
     ]
 
     operations = [
@@ -26,7 +26,7 @@ class Migration(migrations.Migration):
                 ('severity', models.CharField(choices=[('INFO', 'Info'), ('WARNING', 'Warning'), ('ERROR', 'Error')], default='WARNING', max_length=10)),
                 ('auto_flag_state', models.BooleanField(default=True)),
                 ('is_enabled', models.BooleanField(default=True)),
-                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='rules', to='usecases.usecase')),
+                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='rules', to='projects.usecase')),
             ],
             options={
                 'ordering': ['use_case', 'code'],

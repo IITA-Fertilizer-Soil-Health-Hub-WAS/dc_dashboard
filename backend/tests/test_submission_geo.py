@@ -7,9 +7,9 @@ import pytest
 from django.urls import reverse
 
 from apps.ingestion.sync import submission_location
+from apps.projects.models import FormDefinition, Organization, Project
 from apps.rbac.models import Role, UseCaseMembership
 from apps.submissions.models import Enumerator, Submission
-from apps.usecases.models import FormDefinition, Organization, Project
 
 pytestmark = pytest.mark.django_db
 

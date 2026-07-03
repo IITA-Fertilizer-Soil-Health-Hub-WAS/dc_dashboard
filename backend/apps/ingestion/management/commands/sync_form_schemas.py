@@ -9,14 +9,14 @@ from __future__ import annotations
 from django.core.management.base import BaseCommand, CommandError
 
 from apps.ingestion.form_schema import sync_project_schemas
-from apps.usecases.models import Project
+from apps.projects.models import Project
 
 
 class Command(BaseCommand):
     help = "Fetch + cache form field schemas (labels/groups) for a use case."
 
     def add_arguments(self, parser):
-        parser.add_argument("code", nargs="?", help="Use case code")
+        parser.add_argument("code", nargs="?", help="Project code")
         parser.add_argument("--all", action="store_true", help="All active use cases")
 
     def handle(self, *args, **options):

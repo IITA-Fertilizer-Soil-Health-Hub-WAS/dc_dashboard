@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('usecases', '0008_usecase_unit_type'),
+        ('projects', '0008_usecase_unit_type'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
@@ -30,7 +30,7 @@ class Migration(migrations.Migration):
                 ('region', models.CharField(blank=True, max_length=64)),
                 ('district', models.CharField(blank=True, max_length=64)),
                 ('attributes', models.JSONField(blank=True, default=dict)),
-                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='collection_units', to='usecases.usecase')),
+                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='collection_units', to='projects.usecase')),
             ],
             options={
                 'ordering': ['use_case', 'code'],
@@ -50,8 +50,8 @@ class Migration(migrations.Migration):
                 ('status', models.CharField(choices=[('DRAFT', 'Draft'), ('ACTIVE', 'Active'), ('CLOSED', 'Closed')], default='DRAFT', max_length=10)),
                 ('assigned_to', models.ManyToManyField(blank=True, related_name='jobs', to=settings.AUTH_USER_MODEL)),
                 ('created_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='created_jobs', to=settings.AUTH_USER_MODEL)),
-                ('form', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='jobs', to='usecases.formdefinition')),
-                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='jobs', to='usecases.usecase')),
+                ('form', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='jobs', to='projects.formdefinition')),
+                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='jobs', to='projects.usecase')),
             ],
             options={
                 'ordering': ['-created_at'],

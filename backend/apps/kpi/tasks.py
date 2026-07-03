@@ -13,7 +13,7 @@ def rebuild_all_kpis_task() -> dict:
 
 @shared_task(name="kpi.rebuild_project")
 def rebuild_project_kpis_task(project_id: str) -> dict:
-    from apps.usecases.models import Project
+    from apps.projects.models import Project
 
     from .aggregate import rebuild_project_kpis
 

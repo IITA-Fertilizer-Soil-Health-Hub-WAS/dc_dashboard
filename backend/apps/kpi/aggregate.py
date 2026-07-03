@@ -11,8 +11,8 @@ from django.db import transaction
 from django.db.models import Count, DateField
 from django.db.models.functions import Coalesce, TruncDate
 
+from apps.projects.models import Project
 from apps.submissions.models import Submission
-from apps.usecases.models import Project
 from apps.validation.models import ValidationFlag
 
 from .models import EnumeratorKpiDaily, FormKpiDaily, ProjectKpiDaily

@@ -5,10 +5,10 @@ from __future__ import annotations
 import pytest
 from django.urls import reverse
 
+from apps.projects.models import FormDefinition, Project
 from apps.review import services
 from apps.review.models import Review
 from apps.submissions.models import Submission
-from apps.usecases.models import FormDefinition, Project
 
 pytestmark = pytest.mark.django_db
 

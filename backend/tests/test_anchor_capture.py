@@ -8,8 +8,8 @@ from apps.common.geo import point_in_polygon
 from apps.fieldwork.anchor import capture_anchor
 from apps.fieldwork.election import elect_candidate
 from apps.fieldwork.models import CandidatePlot, CollectionUnit
+from apps.projects.models import Organization, Project
 from apps.rbac.models import Role, UseCaseMembership
-from apps.usecases.models import Organization, Project
 
 pytestmark = pytest.mark.django_db
 

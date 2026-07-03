@@ -5,10 +5,10 @@ import pytest
 from django.urls import reverse
 
 from apps.ingestion.sync import sync_project
+from apps.projects.models import FieldMapping, FormDefinition, Project
 from apps.rbac.models import Role, UseCaseMembership
 from apps.review.models import Review, ReviewAction, ReviewActionLog, ReviewState
 from apps.submissions.models import Enumerator, Submission
-from apps.usecases.models import FieldMapping, FormDefinition, Project
 
 pytestmark = pytest.mark.django_db
 

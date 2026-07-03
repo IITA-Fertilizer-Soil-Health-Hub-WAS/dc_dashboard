@@ -6,8 +6,8 @@ import pytest
 from apps.fieldwork.anchor import capture_anchor
 from apps.fieldwork.election import elect_candidate
 from apps.fieldwork.models import CandidatePlot
+from apps.projects.models import FormDefinition, Organization, Project
 from apps.submissions.models import Submission
-from apps.usecases.models import FormDefinition, Organization, Project
 from apps.validation.engine import run_for_project
 from apps.validation.models import ValidationFlag, ValidationRule
 

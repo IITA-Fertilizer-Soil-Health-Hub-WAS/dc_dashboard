@@ -98,7 +98,7 @@ def publish_anchor_form(project):
     """Build the current anchor micro-form and publish it to the project's server.
     Returns (FormDefinition | None, PublishResult) from the shared publisher."""
     from apps.ingestion.publishing import publish_xlsform
-    from apps.usecases.models import FormDefinition
+    from apps.projects.models import FormDefinition
 
     xlsx = build_anchor_xlsform(project)
     return publish_xlsform(
@@ -133,7 +133,7 @@ def _parse_geopoint(val) -> tuple[float | None, float | None]:
 
 def anchor_form_for(project):
     """The most recently published anchor form for a project, if any."""
-    from apps.usecases.models import FormDefinition
+    from apps.projects.models import FormDefinition
 
     return (
         FormDefinition.objects.filter(project=project, title=ANCHOR_FORM_TITLE)

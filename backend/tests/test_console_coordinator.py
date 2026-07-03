@@ -6,9 +6,9 @@ import pytest
 from django.urls import reverse
 
 from apps.console.registry import console_key_allowed, grouped_for
+from apps.projects.models import Country, FormDefinition, Organization, Project, Region
 from apps.rbac.models import Role, UseCaseMembership
 from apps.submissions.models import Enumerator
-from apps.usecases.models import Country, FormDefinition, Organization, Project, Region
 
 pytestmark = pytest.mark.django_db
 
@@ -99,7 +99,7 @@ def test_coordinator_can_create_in_own_project(client, world):
     resp = client.post(reverse("console:create", args=["crops"]),
                        {"project": str(world["mine"].pk), "name": "maize", "aliases": "[]"})
     assert resp.status_code == 302
-    from apps.usecases.models import Crop
+    from apps.projects.models import Crop
     assert Crop.objects.filter(project=world["mine"], name="maize").exists()
 
 
@@ -108,7 +108,7 @@ def test_coordinator_cannot_create_in_other_project(client, world):
     resp = client.post(reverse("console:create", args=["crops"]),
                        {"project": str(world["other"].pk), "name": "rice", "aliases": "[]"})
     assert resp.status_code == 200  # re-renders: project not an allowed choice
-    from apps.usecases.models import Crop
+    from apps.projects.models import Crop
     assert not Crop.objects.filter(project=world["other"]).exists()
 
 

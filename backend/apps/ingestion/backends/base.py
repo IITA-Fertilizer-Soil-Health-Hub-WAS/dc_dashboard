@@ -9,7 +9,7 @@ backend can:
 * **sample** a form's field paths (to auto-suggest mappings), and
 * **push** an edited submission back to the source (write-back), when supported.
 
-One use case is bound to one backend via apps.usecases.models.DataSource.
+One use case is bound to one backend via apps.projects.models.DataSource.
 """
 from __future__ import annotations
 

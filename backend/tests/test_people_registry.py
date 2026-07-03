@@ -9,9 +9,9 @@ from __future__ import annotations
 import pytest
 from django.db import IntegrityError
 
+from apps.projects.models import Country, Project, Region
 from apps.rbac.models import Role, UseCaseMembership
 from apps.rbac.permissions import user_can, visible_projects
-from apps.usecases.models import Country, Project, Region
 
 pytestmark = pytest.mark.django_db
 

@@ -11,7 +11,7 @@ import re
 from datetime import date, datetime
 from typing import Any
 
-from apps.usecases.models import FieldMapping
+from apps.projects.models import FieldMapping
 
 
 def _first_non_null(record: dict, paths: list[str]) -> Any:

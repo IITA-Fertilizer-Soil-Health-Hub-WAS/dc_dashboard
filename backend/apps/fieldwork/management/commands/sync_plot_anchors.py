@@ -8,7 +8,7 @@ from __future__ import annotations
 from django.core.management.base import BaseCommand, CommandError
 
 from apps.fieldwork.anchor_form import apply_anchor_submissions, publish_anchor_form
-from apps.usecases.models import Project
+from apps.projects.models import Project
 
 
 class Command(BaseCommand):

@@ -12,7 +12,7 @@ from django.conf import settings
 from django.db import models
 
 from apps.common.models import BaseModel
-from apps.usecases.models import Crop, FormDefinition, Project, Trial
+from apps.projects.models import Crop, FormDefinition, Project, Trial
 
 
 class Enumerator(BaseModel):

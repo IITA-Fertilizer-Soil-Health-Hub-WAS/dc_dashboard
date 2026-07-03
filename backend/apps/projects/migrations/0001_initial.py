@@ -57,8 +57,8 @@ class Migration(migrations.Migration):
                 ('role', models.CharField(choices=[('ENUM_REG', 'Enumerator registration'), ('HH_REG', 'Household registration'), ('VALIDATION', 'Validation data'), ('NOT', 'Nutrient-omission trial'), ('INTERCROP', 'Intercropping'), ('EXTRA', 'Extra')], max_length=16)),
                 ('season', models.CharField(blank=True, max_length=16)),
                 ('system_vars_drop', models.JSONField(blank=True, default=list)),
-                ('crop', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='usecases.crop')),
-                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='forms', to='usecases.usecase')),
+                ('crop', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='projects.crop')),
+                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='forms', to='projects.usecase')),
             ],
             options={
                 'ordering': ['use_case', 'role', 'ona_form_id'],
@@ -77,7 +77,7 @@ class Migration(migrations.Migration):
                 ('transform_args', models.JSONField(blank=True, default=dict)),
                 ('required', models.BooleanField(default=False)),
                 ('order', models.PositiveIntegerField(default=0)),
-                ('form', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='mappings', to='usecases.formdefinition')),
+                ('form', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='mappings', to='projects.formdefinition')),
             ],
             options={
                 'ordering': ['form', 'order', 'target_field'],
@@ -86,7 +86,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='crop',
             name='use_case',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='crops', to='usecases.usecase'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='crops', to='projects.usecase'),
         ),
         migrations.CreateModel(
             name='Trial',
@@ -96,7 +96,7 @@ class Migration(migrations.Migration):
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('name', models.CharField(max_length=128)),
                 ('code', models.CharField(blank=True, max_length=32)),
-                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='trials', to='usecases.usecase')),
+                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='trials', to='projects.usecase')),
             ],
             options={
                 'ordering': ['name'],
@@ -110,7 +110,7 @@ class Migration(migrations.Migration):
                 ('created_at', models.DateTimeField(auto_now_add=True, db_index=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('name', models.CharField(max_length=64)),
-                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='stages', to='usecases.usecase')),
+                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='stages', to='projects.usecase')),
             ],
             options={
                 'ordering': ['name'],
@@ -129,7 +129,7 @@ class Migration(migrations.Migration):
                 ('offset_days', models.IntegerField(default=0)),
                 ('crop_overrides', models.JSONField(blank=True, default=dict)),
                 ('grace_days', models.PositiveIntegerField(default=0)),
-                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='schedule', to='usecases.usecase')),
+                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='schedule', to='projects.usecase')),
             ],
             options={
                 'ordering': ['use_case', 'sequence'],

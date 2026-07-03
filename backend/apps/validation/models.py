@@ -11,8 +11,8 @@ from django.conf import settings
 from django.db import models
 
 from apps.common.models import BaseModel
+from apps.projects.models import Project
 from apps.submissions.models import Submission
-from apps.usecases.models import Project
 
 
 class ValidationRule(BaseModel):

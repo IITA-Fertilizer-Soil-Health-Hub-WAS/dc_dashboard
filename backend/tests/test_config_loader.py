@@ -14,12 +14,12 @@ from apps.config_admin.loader import (
     import_config,
     load_yaml,
 )
-from apps.usecases.models import EventScheduleItem, FieldMapping, Project
+from apps.projects.models import EventScheduleItem, FieldMapping, Project
 from apps.validation.models import ValidationRule
 
 pytestmark = pytest.mark.django_db
 
-SNS_PATH = Path(settings.USECASE_CONFIG_DIR) / "sns-rwanda.yaml"
+SNS_PATH = Path(settings.PROJECT_CONFIG_DIR) / "sns-rwanda.yaml"
 
 
 def test_import_sns_rwanda_from_file():

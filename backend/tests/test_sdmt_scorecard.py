@@ -10,11 +10,11 @@ from django.utils import timezone
 
 from apps.fieldwork.models import CollectionUnit
 from apps.kpi.metrics import coverage_metrics, enumerator_metrics
+from apps.projects.models import FormDefinition, Organization, Project
 from apps.rbac.models import Role, UseCaseMembership
 from apps.review.models import ReviewState
 from apps.review.services import endorse
 from apps.submissions.models import Enumerator, Submission
-from apps.usecases.models import FormDefinition, Organization, Project
 
 pytestmark = pytest.mark.django_db
 

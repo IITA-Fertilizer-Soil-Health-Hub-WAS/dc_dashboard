@@ -11,8 +11,8 @@ from __future__ import annotations
 from django.db import models
 
 from apps.common.models import BaseModel
+from apps.projects.models import FormDefinition, Project
 from apps.submissions.models import Enumerator
-from apps.usecases.models import FormDefinition, Project
 
 
 class ProjectKpiDaily(BaseModel):

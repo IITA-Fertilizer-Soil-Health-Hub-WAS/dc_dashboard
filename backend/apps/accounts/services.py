@@ -1,8 +1,8 @@
 """Account helpers shared between the Auth0 social adapter and management commands."""
 from __future__ import annotations
 
+from apps.projects.models import Project
 from apps.rbac.models import Role, UseCaseMembership
-from apps.usecases.models import Project
 
 
 def platform_admin_exists() -> bool:

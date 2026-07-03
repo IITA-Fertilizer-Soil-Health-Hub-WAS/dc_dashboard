@@ -12,10 +12,7 @@ from dataclasses import dataclass, field
 from apps.accounts.models import User, UserProfile
 from apps.fieldwork.models import CollectionUnit, Job
 from apps.kpi.models import AlertEvent, AlertRule
-from apps.rbac.models import UseCaseAccessRequest, UseCaseMembership
-from apps.review.models import RejectionReason
-from apps.submissions.models import Enumerator
-from apps.usecases.models import (
+from apps.projects.models import (
     Country,
     Crop,
     EventScheduleItem,
@@ -26,9 +23,12 @@ from apps.usecases.models import (
     Region,
     Trial,
 )
+from apps.rbac.models import UseCaseAccessRequest, UseCaseMembership
+from apps.review.models import RejectionReason
+from apps.submissions.models import Enumerator
 from apps.validation.models import ValidationRule
 
-from .actions import USECASE_ACTIONS, USER_ACTIONS, Action
+from .actions import PROJECT_ACTIONS, USER_ACTIONS, Action
 
 
 @dataclass(frozen=True)
@@ -75,7 +75,7 @@ _ENTRIES: list[Managed] = [
             form_fields=["code", "name", "organization", "country", "unit_type", "is_active",
                          "countries", "enid_patterns", "hhid_patterns", "plugin_path",
                          "timezone", "household_label"],
-            search_fields=["code", "name"], icon="category", actions=USECASE_ACTIONS,
+            search_fields=["code", "name"], icon="category", actions=PROJECT_ACTIONS,
             description="Projects you monitor — ONA forms, ID patterns, sync."),
     Managed("forms", FormDefinition, "Forms", "Configuration",
             list_display=["project", "title", "role", "server_form_id", "publish_status",
@@ -205,7 +205,7 @@ MEMBER_READ_KEYS: set[str] = {
 
 # ORM lookup from each coordinator-visible section to its use case id, used to
 # scope the list to the coordinator's own projects.
-USECASE_FILTER_PATHS: dict[str, str] = {
+PROJECT_FILTER_PATHS: dict[str, str] = {
     "forms": "project",
     "field-mappings": "form__project",
     "event-schedule": "project",

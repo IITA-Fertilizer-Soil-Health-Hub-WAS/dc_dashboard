@@ -11,7 +11,7 @@ from django.db import models
 from django.db.models import Q
 
 from apps.common.models import BaseModel
-from apps.usecases.models import Country, Project, Region
+from apps.projects.models import Country, Project, Region
 
 
 class Role(models.TextChoices):

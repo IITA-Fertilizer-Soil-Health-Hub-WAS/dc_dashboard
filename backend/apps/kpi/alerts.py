@@ -17,7 +17,7 @@ from datetime import date, timedelta
 from django.db.models import Sum
 
 from apps.common.email import send_safe_email
-from apps.usecases.models import Project
+from apps.projects.models import Project
 from apps.validation.models import ValidationFlag
 
 from .models import AlertEvent, AlertRule, ProjectKpiDaily

@@ -7,8 +7,8 @@ from django.urls import reverse
 
 from apps.fieldwork.imports import import_collection_units
 from apps.fieldwork.models import CollectionUnit
+from apps.projects.models import Organization, Project
 from apps.rbac.models import Role, UseCaseMembership
-from apps.usecases.models import Organization, Project
 
 pytestmark = pytest.mark.django_db
 

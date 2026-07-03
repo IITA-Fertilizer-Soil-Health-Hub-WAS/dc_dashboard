@@ -8,10 +8,10 @@ from django.urls import reverse
 
 from apps.fieldwork.models import CollectionUnit
 from apps.kpi.metrics import coverage_metrics, enumerator_metrics, quality_metrics
+from apps.projects.models import FormDefinition, Organization, Project
 from apps.rbac.models import Role, UseCaseMembership
 from apps.review.models import Review, ReviewState
 from apps.submissions.models import Enumerator, Submission
-from apps.usecases.models import FormDefinition, Organization, Project
 from apps.validation.models import ValidationFlag, ValidationRule
 
 pytestmark = pytest.mark.django_db

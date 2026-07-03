@@ -1,14 +1,14 @@
 """Sync a use case's ONA data into the database (ops / backfill / CI).
 
-    python manage.py sync_usecase SNS-RWANDA
-    python manage.py sync_usecase --all
+    python manage.py sync_project SNS-RWANDA
+    python manage.py sync_project --all
 """
 from __future__ import annotations
 
 from django.core.management.base import BaseCommand, CommandError
 
 from apps.ingestion.sync import sync_project
-from apps.usecases.models import Project
+from apps.projects.models import Project
 from apps.validation.engine import run_for_project
 
 
@@ -16,7 +16,7 @@ class Command(BaseCommand):
     help = "Pull ONA data for a use case and upsert submissions."
 
     def add_arguments(self, parser):
-        parser.add_argument("code", nargs="?", help="Use case code")
+        parser.add_argument("code", nargs="?", help="Project code")
         parser.add_argument("--all", action="store_true", help="Sync all active use cases")
 
     def handle(self, *args, **options):

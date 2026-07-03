@@ -11,8 +11,8 @@ from __future__ import annotations
 
 from django.core.management.base import BaseCommand, CommandError
 
+from apps.projects.models import Project
 from apps.submissions.linking import MATCH_KEYS, link_enumerators
-from apps.usecases.models import Project
 
 
 class Command(BaseCommand):

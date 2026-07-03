@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from celery import shared_task
 
-from apps.usecases.models import Project
+from apps.projects.models import Project
 from apps.validation.engine import run_for_project
 
 from .sync import sync_project

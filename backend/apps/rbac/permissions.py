@@ -15,7 +15,7 @@ from django.db.models import Q
 from .models import Role, UseCaseMembership
 
 if TYPE_CHECKING:
-    from apps.usecases.models import Project
+    from apps.projects.models import Project
 
 # Action -> set of use-case-scoped roles that may perform it.
 # Coordinator roles share the trial-coordinator powers, just at a wider scope
@@ -48,7 +48,7 @@ ACTION_ROLES: dict[str, set[str]] = {
 }
 
 # Actions only the Platform Admin may perform (no use-case scope).
-GLOBAL_ADMIN_ACTIONS: set[str] = {"manage_config", "manage_users", "manage_usecases"}
+GLOBAL_ADMIN_ACTIONS: set[str] = {"manage_config", "manage_users", "manage_projects"}
 
 
 def roles_for(user, project: Project) -> set[str]:
@@ -117,12 +117,12 @@ def _regional_validator_exists(project) -> bool:
 
 
 def visible_projects(user):
-    """Use cases a user may view — replaces the R `eia_apps ∩ active_project_list`.
+    """Projects a user may view — replaces the R `eia_apps ∩ active_project_list`.
 
     Platform Admin sees all active use cases; everyone else sees only use cases
     where they hold a membership.
     """
-    from apps.usecases.models import Project
+    from apps.projects.models import Project
 
     if not getattr(user, "is_authenticated", False):
         return Project.objects.none()
@@ -144,7 +144,7 @@ def visible_projects(user):
 
 def organization_of(scope_obj):
     """The Organization id that owns a scope object (Region / Country / Project)."""
-    from apps.usecases.models import Country, Project, Region
+    from apps.projects.models import Country, Project, Region
 
     if isinstance(scope_obj, Region):
         return scope_obj.organization_id
@@ -230,7 +230,7 @@ def can_grant_at(user, scope_obj) -> bool:
     """Whether `user`'s coordinator authority covers this scope (Region/Country/Project)."""
     if getattr(user, "is_platform_admin", False):
         return True
-    from apps.usecases.models import Country, Project, Region
+    from apps.projects.models import Country, Project, Region
 
     region_ids, country_ids, uc_ids = _authority(user)
     if isinstance(scope_obj, Region):
@@ -262,7 +262,7 @@ def can_grant(user, scope_obj, role: str) -> bool:
 
 def grantable_scopes(user) -> dict:
     """Scopes (regions/countries/use cases) `user` may grant within, for menus."""
-    from apps.usecases.models import Country, Project, Region
+    from apps.projects.models import Country, Project, Region
 
     if getattr(user, "is_platform_admin", False):
         return {

@@ -20,7 +20,7 @@ class Action:
     style: str = "btn-request"  # button class from base.html
 
 
-# ---- Project actions (were UseCaseAdmin actions) ----
+# ---- Project actions ----
 def uc_validate(request, uc):
     from apps.config_admin.loader import export_config, validate_config
 
@@ -61,7 +61,7 @@ def user_deactivate(request, user):
     return f"Deactivated {user.email}."
 
 
-USECASE_ACTIONS = (
+PROJECT_ACTIONS = (
     Action("sync", "Sync now", uc_sync, "btn-open"),
     Action("validate", "Validate", uc_validate),
     Action("export", "Export YAML", uc_export),

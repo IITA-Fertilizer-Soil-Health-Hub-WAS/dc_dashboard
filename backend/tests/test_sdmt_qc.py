@@ -6,11 +6,11 @@ from django.urls import reverse
 
 from apps.fieldwork.models import CollectionUnit, Job, UnitAssignment
 from apps.fieldwork.services import job_progress
+from apps.projects.models import FormDefinition, Organization, Project
 from apps.rbac.models import Role, UseCaseMembership
 from apps.review.models import RejectionReason, Review, ReviewState
 from apps.review.services import decline
 from apps.submissions.models import Submission, SubmissionValue
-from apps.usecases.models import FormDefinition, Organization, Project
 
 pytestmark = pytest.mark.django_db
 

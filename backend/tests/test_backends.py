@@ -7,7 +7,7 @@ from apps.ingestion.backends.base import CollectionBackend, RemoteForm, RemotePr
 from apps.ingestion.backends.ona import OnaBackend
 from apps.ingestion.backends.registry import build_backend, get_backend_for
 from apps.ingestion.sync import sync_project
-from apps.usecases.models import DataSource, FormDefinition, Project
+from apps.projects.models import DataSource, FormDefinition, Project
 
 pytestmark = pytest.mark.django_db
 
@@ -52,7 +52,7 @@ def test_sync_runs_through_any_backend():
     uc = Project.objects.create(code="FAKEUC", name="Fake")
     form = FormDefinition.objects.create(project=uc, ona_form_id=42,
                                          role=FormDefinition.Role.VALIDATION)
-    from apps.usecases.models import FieldMapping
+    from apps.projects.models import FieldMapping
     FieldMapping.objects.create(form=form, target_field="ENID", source_paths=["enid"])
     FieldMapping.objects.create(form=form, target_field="event_key", source_paths=["event"])
 

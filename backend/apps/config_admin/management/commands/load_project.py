@@ -1,7 +1,7 @@
 """Import use-case config from YAML into the database.
 
-    python manage.py load_usecase config/usecases/sns-rwanda.yaml
-    python manage.py load_usecase --all          # load every file in config/usecases/
+    python manage.py load_project config/projects/sns-rwanda.yaml
+    python manage.py load_project --all          # load every file in config/projects/
 """
 from __future__ import annotations
 
@@ -23,13 +23,13 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("paths", nargs="*", help="YAML config file paths")
-        parser.add_argument("--all", action="store_true", help="Load all files in USECASE_CONFIG_DIR")
+        parser.add_argument("--all", action="store_true", help="Load all files in PROJECT_CONFIG_DIR")
         parser.add_argument("--check", action="store_true", help="Validate only; do not write")
 
     def handle(self, *args, **options):
         paths: list[Path] = [Path(p) for p in options["paths"]]
         if options["all"]:
-            paths += sorted(Path(settings.USECASE_CONFIG_DIR).glob("*.y*ml"))
+            paths += sorted(Path(settings.PROJECT_CONFIG_DIR).glob("*.y*ml"))
         if not paths:
             raise CommandError("Provide config file path(s) or --all")
 

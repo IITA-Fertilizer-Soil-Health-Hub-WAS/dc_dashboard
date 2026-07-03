@@ -7,9 +7,9 @@ import pytest
 from django.urls import reverse
 
 from apps.kpi.metrics import enumerator_trend, project_quality_trend
+from apps.projects.models import FormDefinition, Organization, Project
 from apps.rbac.models import Role, UseCaseMembership
 from apps.submissions.models import Enumerator, Submission
-from apps.usecases.models import FormDefinition, Organization, Project
 from apps.validation.models import ValidationFlag, ValidationRule
 
 pytestmark = pytest.mark.django_db

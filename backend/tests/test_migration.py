@@ -7,8 +7,8 @@ import pytest
 from django.core.management import call_command
 
 from apps.accounts.adapters import SocialAccountAdapter
+from apps.projects.models import Project
 from apps.rbac.models import Role, UseCaseMembership
-from apps.usecases.models import Project
 
 pytestmark = pytest.mark.django_db
 

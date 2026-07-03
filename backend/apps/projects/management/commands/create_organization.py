@@ -10,7 +10,7 @@ from __future__ import annotations
 from django.core.management.base import BaseCommand, CommandError
 from django.utils.text import slugify
 
-from apps.usecases.models import Organization
+from apps.projects.models import Organization
 
 
 class Command(BaseCommand):

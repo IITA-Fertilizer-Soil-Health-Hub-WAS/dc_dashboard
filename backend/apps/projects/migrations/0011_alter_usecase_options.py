@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('usecases', '0010_delete_stage'),
+        ('projects', '0010_delete_stage'),
     ]
 
     operations = [

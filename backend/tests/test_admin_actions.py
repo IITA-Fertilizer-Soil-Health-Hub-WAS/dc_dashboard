@@ -10,11 +10,11 @@ from django.test import RequestFactory
 
 from apps.config_admin.loader import import_config, load_yaml
 from apps.console.actions import uc_export, uc_validate
-from apps.usecases.models import Project
+from apps.projects.models import Project
 
 pytestmark = pytest.mark.django_db
 
-SNS_PATH = Path(settings.USECASE_CONFIG_DIR) / "sns-rwanda.yaml"
+SNS_PATH = Path(settings.PROJECT_CONFIG_DIR) / "sns-rwanda.yaml"
 
 
 def _request():

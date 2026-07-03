@@ -8,8 +8,8 @@ from __future__ import annotations
 import pytest
 
 from apps.ingestion.sync import sync_project
+from apps.projects.models import FieldMapping, FormDefinition, Project
 from apps.submissions.models import Enumerator, Submission
-from apps.usecases.models import FieldMapping, FormDefinition, Project
 
 pytestmark = pytest.mark.django_db
 

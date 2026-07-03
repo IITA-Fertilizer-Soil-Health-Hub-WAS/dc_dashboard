@@ -17,7 +17,7 @@ from tests.test_ingestion import FakeOnaClient, _records
 
 pytestmark = pytest.mark.django_db
 
-SNS_PATH = Path(settings.USECASE_CONFIG_DIR) / "sns-rwanda.yaml"
+SNS_PATH = Path(settings.PROJECT_CONFIG_DIR) / "sns-rwanda.yaml"
 
 
 @pytest.fixture
@@ -100,7 +100,7 @@ def test_final_validation_requires_endorsement_first(synced):
 
 def test_country_coordinator_fallback_validates_when_no_regional(django_user_model):
     """With no Regional on the use case, a second Country Coordinator validates."""
-    from apps.usecases.models import FormDefinition, Project
+    from apps.projects.models import FormDefinition, Project
 
     uc = Project.objects.create(code="NOREG", name="No Regional")
     form = FormDefinition.objects.create(
@@ -177,7 +177,7 @@ def test_illegal_transition_rejected(synced):
 
 def test_cross_project_isolation(synced, django_user_model):
     uc, submission, *_ = synced
-    from apps.usecases.models import Project
+    from apps.projects.models import Project
 
     other = Project.objects.create(code="KALRO", name="KALRO")
     intruder = django_user_model.objects.create_user("i@x.org", "pw", is_active=True)

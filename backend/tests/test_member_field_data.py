@@ -6,9 +6,9 @@ import pytest
 from django.urls import reverse
 
 from apps.console.registry import console_can_edit, console_key_allowed, grouped_for
+from apps.projects.models import Organization, Project
 from apps.rbac.models import Role, UseCaseMembership
 from apps.submissions.models import Enumerator
-from apps.usecases.models import Organization, Project
 
 pytestmark = pytest.mark.django_db
 

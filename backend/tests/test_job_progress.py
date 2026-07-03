@@ -11,8 +11,8 @@ from apps.fieldwork.services import (
     job_progress,
     project_jobs_progress,
 )
+from apps.projects.models import FormDefinition, Project
 from apps.submissions.models import Submission
-from apps.usecases.models import FormDefinition, Project
 
 pytestmark = pytest.mark.django_db
 

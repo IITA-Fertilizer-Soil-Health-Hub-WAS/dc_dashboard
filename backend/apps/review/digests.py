@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 from apps.common.email import send_safe_email
+from apps.projects.models import Project
 from apps.rbac.models import Role, UseCaseMembership
 from apps.submissions.models import Submission
-from apps.usecases.models import Project
 from apps.validation.models import ValidationFlag
 
 from .models import REVIEW_CLOSED_STATES

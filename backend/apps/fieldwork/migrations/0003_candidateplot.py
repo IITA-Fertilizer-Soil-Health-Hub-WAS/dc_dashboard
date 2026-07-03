@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('fieldwork', '0002_job_closed_at_job_closed_by_job_closure_note'),
-        ('usecases', '0009_formdefinition_field_schema'),
+        ('projects', '0009_formdefinition_field_schema'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
@@ -36,7 +36,7 @@ class Migration(migrations.Migration):
                 ('election_note', models.CharField(blank=True, max_length=255)),
                 ('collection_unit', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='source_candidate', to='fieldwork.collectionunit')),
                 ('elected_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='elected_plots', to=settings.AUTH_USER_MODEL)),
-                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='candidate_plots', to='usecases.usecase')),
+                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='candidate_plots', to='projects.usecase')),
             ],
             options={
                 'ordering': ['use_case', 'trial_key', 'rank', 'candidate_ref'],

@@ -9,8 +9,8 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 
 from apps.config_admin.loader import import_config
+from apps.projects.models import FieldMapping, FormDefinition, Organization, Project
 from apps.submissions.models import Enumerator
-from apps.usecases.models import FieldMapping, FormDefinition, Organization, Project
 
 pytestmark = pytest.mark.django_db
 
@@ -55,13 +55,13 @@ def test_export_organization_roundtrip(django_user_model):
     payload = json.loads(out.getvalue())
 
     models = {row["model"] for row in payload}
-    assert "usecases.organization" in models
-    assert "usecases.project" in models
-    assert "usecases.formdefinition" in models
+    assert "projects.organization" in models
+    assert "projects.project" in models
+    assert "projects.formdefinition" in models
     assert "submissions.enumerator" in models
     assert "accounts.user" in models
     # The use case row carries its organization FK so the import stays owned.
-    uc_row = next(r for r in payload if r["model"] == "usecases.project")
+    uc_row = next(r for r in payload if r["model"] == "projects.project")
     assert uc_row["fields"]["organization"] == str(org.pk)
 
 
@@ -81,6 +81,6 @@ def test_export_excludes_other_orgs_data():
     codes = {
         r["fields"].get("code")
         for r in json.loads(out.getvalue())
-        if r["model"] == "usecases.project"
+        if r["model"] == "projects.project"
     }
     assert codes == {"A-UC"}  # B's project is not in A's export

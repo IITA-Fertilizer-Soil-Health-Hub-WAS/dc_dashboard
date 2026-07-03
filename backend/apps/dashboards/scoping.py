@@ -15,5 +15,5 @@ from apps.rbac.permissions import visible_projects
 def get_scoped_project(request, code: str):
     uc = visible_projects(request.user).filter(code=code).first()
     if uc is None:
-        raise Http404("Use case not found or not permitted")
+        raise Http404("Project not found or not permitted")
     return uc

@@ -9,9 +9,9 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.fieldwork.models import CollectionUnit
+from apps.projects.models import EventScheduleItem, FormDefinition, Organization, Project
 from apps.rbac.models import Role, UseCaseMembership
 from apps.submissions.models import Enumerator, Submission, SubmissionValue
-from apps.usecases.models import EventScheduleItem, FormDefinition, Organization, Project
 from apps.validation.engine import run_for_project
 from apps.validation.models import ValidationFlag, ValidationRule
 

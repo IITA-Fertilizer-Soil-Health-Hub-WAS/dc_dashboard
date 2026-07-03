@@ -6,8 +6,8 @@ from django.urls import reverse
 
 from apps.fieldwork.models import CollectionUnit, Job, UnitAssignment
 from apps.fieldwork.services import project_enumerators
+from apps.projects.models import FormDefinition, Organization, Project
 from apps.rbac.models import Role, UseCaseMembership
-from apps.usecases.models import FormDefinition, Organization, Project
 
 pytestmark = pytest.mark.django_db
 

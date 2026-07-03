@@ -7,7 +7,7 @@ from django.urls import reverse
 
 from apps.ingestion.backends.base import PublishResult
 from apps.ingestion.publishing import publish_xlsform
-from apps.usecases.models import FormDefinition, Project
+from apps.projects.models import FormDefinition, Project
 
 pytestmark = pytest.mark.django_db
 

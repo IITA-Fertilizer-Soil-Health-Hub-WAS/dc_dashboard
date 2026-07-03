@@ -15,7 +15,7 @@ REGISTRATION_JOB_NAME = "Plot registration"
 def _registration_form(project):
     """Best form to register a farmer on: household reg, else enumerator reg, else
     validation, else whatever the project has. May be None (job carries no form)."""
-    from apps.usecases.models import FormDefinition
+    from apps.projects.models import FormDefinition
 
     forms = project.forms.all()
     for role in (

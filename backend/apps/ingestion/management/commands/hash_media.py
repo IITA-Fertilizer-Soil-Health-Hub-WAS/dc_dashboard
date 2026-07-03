@@ -9,7 +9,7 @@ from __future__ import annotations
 from django.core.management.base import BaseCommand, CommandError
 
 from apps.ingestion.media_hash import hash_project_media
-from apps.usecases.models import Project
+from apps.projects.models import Project
 
 
 class Command(BaseCommand):

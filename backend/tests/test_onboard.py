@@ -7,7 +7,7 @@ from __future__ import annotations
 import pytest
 
 from apps.console.onboarding import build_config, suggest_mappings, suggest_target
-from apps.usecases.models import Project
+from apps.projects.models import Project
 
 pytestmark = pytest.mark.django_db
 
@@ -94,8 +94,8 @@ def test_identities_derived_without_registration_form(django_user_model):
     """A project with only data forms (no registration form) still gets
     enumerators/units auto-created from the submission data."""
     from apps.fieldwork.models import CollectionUnit
+    from apps.projects.models import FieldMapping, FormDefinition, Project
     from apps.submissions.models import Enumerator
-    from apps.usecases.models import FieldMapping, FormDefinition, Project
 
     uc = Project.objects.create(code="AID", name="AID")
     form = FormDefinition.objects.create(project=uc, ona_form_id=1,

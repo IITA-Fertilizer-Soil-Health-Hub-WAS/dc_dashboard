@@ -82,7 +82,7 @@ class ConsoleListView(UserPassesTestMixin, View):
         return console_key_allowed(self.request.user, self.kwargs.get("key"))
 
     def get(self, request, key):
-        from .registry import ORG_FILTER_PATHS, USECASE_FILTER_PATHS, console_can_edit
+        from .registry import ORG_FILTER_PATHS, PROJECT_FILTER_PATHS, console_can_edit
 
         m = _managed(key)
         is_staff = request.user.is_staff
@@ -96,7 +96,7 @@ class ConsoleListView(UserPassesTestMixin, View):
                 cond |= Q(**{f"{f}__icontains": q})
             qs = qs.filter(cond)
 
-        path = USECASE_FILTER_PATHS.get(key)
+        path = PROJECT_FILTER_PATHS.get(key)
         # Non-staff only ever see rows belonging to their own projects:
         # coordinators to the projects they coordinate, ordinary members to the
         # projects they belong to (read-only field data).
@@ -116,7 +116,7 @@ class ConsoleListView(UserPassesTestMixin, View):
             qs = qs.filter(**{f"{path}__code": ws_code})
 
         # Hub operator's per-institution filter (staff only).
-        from apps.usecases.models import Organization
+        from apps.projects.models import Organization
 
         org_path = ORG_FILTER_PATHS.get(key)
         orgs = list(Organization.objects.all()) if (org_path and is_staff) else []
@@ -152,7 +152,7 @@ def _coordinator_uc_ids(user):
 
 def _editable_projects(user):
     """Projects a user may load data into: all for staff, their own for a coordinator."""
-    from apps.usecases.models import Project
+    from apps.projects.models import Project
 
     if user.is_staff:
         return Project.objects.filter(is_active=True).order_by("code")
@@ -207,9 +207,9 @@ def _scoped_get(user, m, key, pk):
     """Fetch an object — staff: any; coordinator: only within their projects."""
     if user.is_staff:
         return get_object_or_404(m.model, pk=pk)
-    from .registry import USECASE_FILTER_PATHS
+    from .registry import PROJECT_FILTER_PATHS
 
-    path = USECASE_FILTER_PATHS.get(key)
+    path = PROJECT_FILTER_PATHS.get(key)
     if path is None:
         raise Http404("Not available.")
     return get_object_or_404(m.model, pk=pk, **{f"{path}__in": _coordinator_uc_ids(user)})
@@ -220,7 +220,7 @@ def _restrict_form_to_scope(form, user):
     they can never attach a row to a project they don't coordinate."""
     if user.is_staff:
         return
-    from apps.usecases.models import Project
+    from apps.projects.models import Project
 
     uc_ids = _coordinator_uc_ids(user)
     for field in form.fields.values():
@@ -297,7 +297,7 @@ class PublishFormView(StaffMixin, View):
     then (on success) the form is recorded and ready to grant + collect."""
 
     def _ctx(self, request, **extra):
-        from apps.usecases.models import FormDefinition, Project
+        from apps.projects.models import FormDefinition, Project
 
         ctx = {
             "groups": grouped(),
@@ -313,7 +313,7 @@ class PublishFormView(StaffMixin, View):
 
     def post(self, request):
         from apps.ingestion.publishing import publish_xlsform
-        from apps.usecases.models import Project
+        from apps.projects.models import Project
 
         uc = Project.objects.filter(pk=request.POST.get("project")).first()
         upload = request.FILES.get("xlsform")
@@ -455,7 +455,7 @@ class WizardView(StaffMixin, View):
 
     def _ctx(self, request, **extra):
         from apps.ingestion.backends.registry import BACKEND_CHOICES
-        from apps.usecases.models import FormDefinition, Organization
+        from apps.projects.models import FormDefinition, Organization
 
         from .onboarding import CANONICAL_TARGETS
 
@@ -695,12 +695,12 @@ class FormMappingsView(StaffMixin, View):
     """Inline editor for one form's field mappings (add / edit / delete rows)."""
 
     def _form(self, pk):
-        from apps.usecases.models import FormDefinition
+        from apps.projects.models import FormDefinition
 
         return get_object_or_404(FormDefinition.objects.select_related("project"), pk=pk)
 
     def _ctx(self, form):
-        from apps.usecases.models import FieldMapping
+        from apps.projects.models import FieldMapping
 
         return _console_page_ctx("forms") | {
             "form": form,
@@ -712,7 +712,7 @@ class FormMappingsView(StaffMixin, View):
         return render(request, "console/form_mappings.html", self._ctx(self._form(pk)))
 
     def post(self, request, pk):
-        from apps.usecases.models import FieldMapping
+        from apps.projects.models import FieldMapping
 
         form = self._form(pk)
 
@@ -756,7 +756,7 @@ class FormMappingsView(StaffMixin, View):
         import csv
         import io
 
-        from apps.usecases.models import FieldMapping
+        from apps.projects.models import FieldMapping
 
         raw = request.POST.get("csv") or ""
         if "csv_file" in request.FILES:

@@ -16,6 +16,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.accounts.models import User
+from apps.projects.models import Project
 from apps.rbac.models import Role, UseCaseAccessRequest, UseCaseMembership
 from apps.rbac.permissions import (
     can_grant,
@@ -26,10 +27,9 @@ from apps.rbac.permissions import (
     organization_of,
     pending_users,
 )
-from apps.usecases.models import Project
 
 # Maps the scope <select> token prefix to the membership FK field.
-_SCOPE_FIELD = {"region": "region", "country": "country", "usecase": "project"}
+_SCOPE_FIELD = {"region": "region", "country": "country", "project": "project"}
 
 
 def _require_access(user):
@@ -46,7 +46,7 @@ def _scope_options(user) -> list[dict]:
     for c in scopes["countries"]:
         opts.append({"value": f"country:{c.pk}", "label": f"Country · {c.name} ({c.region.name})"})
     for uc in scopes["projects"]:
-        opts.append({"value": f"usecase:{uc.pk}", "label": f"Use case · {uc.code}"})
+        opts.append({"value": f"project:{uc.pk}", "label": f"Project · {uc.code}"})
     return opts
 
 
@@ -58,7 +58,7 @@ def _role_options(user) -> list[dict]:
 def _project_options(user) -> list[dict]:
     """Only the use-case scopes (collaboration is shared per project, never wider)."""
     return [
-        {"value": f"usecase:{uc.pk}", "label": uc.code}
+        {"value": f"project:{uc.pk}", "label": uc.code}
         for uc in grantable_scopes(user)["projects"]
     ]
 
@@ -68,9 +68,9 @@ def _resolve_scope(token: str):
     level, _, pk = (token or "").partition(":")
     if level not in _SCOPE_FIELD:
         return None
-    from apps.usecases.models import Country, Project, Region
+    from apps.projects.models import Country, Project, Region
 
-    model = {"region": Region, "country": Country, "usecase": Project}[level]
+    model = {"region": Region, "country": Country, "project": Project}[level]
     return model.objects.filter(pk=pk).first()
 
 

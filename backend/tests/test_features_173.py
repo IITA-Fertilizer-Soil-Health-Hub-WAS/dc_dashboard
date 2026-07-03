@@ -4,11 +4,11 @@ from __future__ import annotations
 import pytest
 from django.core import mail
 
+from apps.projects.models import FieldMapping, FormDefinition, Project
 from apps.rbac.models import Role, UseCaseMembership
 from apps.review import services
 from apps.review.models import ReviewActionLog
 from apps.submissions.models import Submission
-from apps.usecases.models import FieldMapping, FormDefinition, Project
 
 pytestmark = pytest.mark.django_db
 

@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:  # avoid import cycles at runtime
-    from apps.usecases.models import FormDefinition
+    from apps.projects.models import FormDefinition
 
 
 @runtime_checkable

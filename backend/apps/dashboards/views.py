@@ -171,7 +171,7 @@ TAB_LABELS = {
 
 
 @login_required
-def usecase_detail(request, code):
+def project_detail(request, code):
     uc = get_scoped_project(request, code)
     # The project is the workspace: remember it as the user's current context so
     # the sidebar scopes to it until they switch.
@@ -181,7 +181,7 @@ def usecase_detail(request, code):
     tab = request.GET.get("tab", "summary")
     if tab not in WORKSPACE_TABS:
         tab = "summary"
-    return render(request, "dashboards/usecase.html", {
+    return render(request, "dashboards/project.html", {
         "uc": uc, "active_tab": tab,
         "tab_url": reverse(TAB_URL_NAMES[tab], args=[uc.code]),
         "tab_label": TAB_LABELS[tab],

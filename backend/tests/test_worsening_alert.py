@@ -7,8 +7,8 @@ import pytest
 
 from apps.kpi.alerts import evaluate_rule_for_project, run_alerts
 from apps.kpi.models import AlertEvent, AlertRule
+from apps.projects.models import FormDefinition, Organization, Project
 from apps.submissions.models import Enumerator, Submission
-from apps.usecases.models import FormDefinition, Organization, Project
 from apps.validation.models import ValidationFlag, ValidationRule
 
 pytestmark = pytest.mark.django_db

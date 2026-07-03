@@ -10,7 +10,7 @@ from __future__ import annotations
 from django.core.files.base import ContentFile
 from django.utils import timezone
 
-from apps.usecases.models import FormDefinition
+from apps.projects.models import FormDefinition
 
 from .backends.base import PublishResult
 from .backends.registry import get_backend_for

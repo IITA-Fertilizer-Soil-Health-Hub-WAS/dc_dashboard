@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ hh.code }} timeline · {{ uc.code }} · {{ SITE_NAME }}{% endblock %}
-{% block crumbs %}<span class="sep">/</span><a href="{% url 'dashboards:usecase' uc.code %}">{{ uc.code }}</a><span class="sep">/</span><span class="cur">{{ hh.code }}</span>{% endblock %}
+{% block crumbs %}<span class="sep">/</span><a href="{% url 'dashboards:project' uc.code %}">{{ uc.code }}</a><span class="sep">/</span><span class="cur">{{ hh.code }}</span>{% endblock %}
 {% block extrahead %}<style>
   .tl{list-style:none;margin:0;padding:0;}
   .tl li{position:relative;padding:0 0 1.1rem 1.6rem;border-left:2px solid var(--line);}

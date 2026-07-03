@@ -18,7 +18,7 @@ from tests.test_ingestion import FakeOnaClient, _records
 
 pytestmark = pytest.mark.django_db
 
-SNS_PATH = Path(settings.USECASE_CONFIG_DIR) / "sns-rwanda.yaml"
+SNS_PATH = Path(settings.PROJECT_CONFIG_DIR) / "sns-rwanda.yaml"
 
 
 @pytest.fixture

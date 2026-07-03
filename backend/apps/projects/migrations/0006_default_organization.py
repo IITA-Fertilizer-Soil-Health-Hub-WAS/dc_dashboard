@@ -13,9 +13,9 @@ DEFAULT_NAME = "Default Organization"
 
 
 def create_default_org(apps, schema_editor):
-    Organization = apps.get_model("usecases", "Organization")
-    Region = apps.get_model("usecases", "Region")
-    UseCase = apps.get_model("usecases", "UseCase")
+    Organization = apps.get_model("projects", "Organization")
+    Region = apps.get_model("projects", "Region")
+    UseCase = apps.get_model("projects", "UseCase")
     User = apps.get_model("accounts", "User")
 
     # Only seed a default if there is existing data to home; a brand-new install
@@ -39,7 +39,7 @@ def noop(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("usecases", "0005_organization_alter_region_code_region_organization_and_more"),
+        ("projects", "0005_organization_alter_region_code_region_organization_and_more"),
         ("accounts", "0003_user_organization"),
     ]
 

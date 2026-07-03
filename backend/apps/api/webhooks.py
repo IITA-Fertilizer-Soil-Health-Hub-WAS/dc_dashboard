@@ -15,7 +15,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from apps.ingestion.tasks import webhook_ingest_task
-from apps.usecases.models import Project
+from apps.projects.models import Project
 
 
 def _provided_token(request) -> str:

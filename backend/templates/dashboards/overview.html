@@ -23,7 +23,7 @@
       <tbody>
         {% for r in rows %}
           <tr>
-            <td><a href="{% url 'dashboards:usecase' r.uc.code %}"><strong>{{ r.uc.name }}</strong></a>
+            <td><a href="{% url 'dashboards:project' r.uc.code %}"><strong>{{ r.uc.name }}</strong></a>
               <div class="subtle" style="font-size:.78rem;">{{ r.uc.countries|join:", " }}</div></td>
             <td style="font-variant-numeric:tabular-nums;">{{ r.total }}</td>
             <td style="color:#3f9142;">{{ r.approved }}</td>

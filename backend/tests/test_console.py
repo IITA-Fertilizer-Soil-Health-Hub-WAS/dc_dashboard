@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from apps.usecases.models import Project, Trial
+from apps.projects.models import Project, Trial
 
 pytestmark = pytest.mark.django_db
 

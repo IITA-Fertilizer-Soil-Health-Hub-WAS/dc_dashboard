@@ -4,9 +4,9 @@ from __future__ import annotations
 import pytest
 from django.urls import reverse
 
+from apps.projects.models import Country, Organization, Project, Region
 from apps.rbac.models import Role, UseCaseAccessRequest, UseCaseMembership
 from apps.rbac.permissions import visible_projects
-from apps.usecases.models import Country, Organization, Project, Region
 
 pytestmark = pytest.mark.django_db
 

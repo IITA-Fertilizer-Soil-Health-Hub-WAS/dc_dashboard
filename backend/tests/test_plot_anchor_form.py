@@ -17,8 +17,8 @@ from apps.fieldwork.anchor_form import (
 from apps.fieldwork.dispatch import REGISTRATION_JOB_NAME, registration_job
 from apps.fieldwork.election import elect_candidate
 from apps.fieldwork.models import CandidatePlot, Job, UnitAssignment
+from apps.projects.models import FormDefinition, Organization, Project
 from apps.submissions.models import Submission
-from apps.usecases.models import FormDefinition, Organization, Project
 
 pytestmark = pytest.mark.django_db
 

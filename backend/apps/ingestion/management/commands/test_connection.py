@@ -11,14 +11,14 @@ from __future__ import annotations
 from django.core.management.base import BaseCommand, CommandError
 
 from apps.ingestion.backends.registry import get_backend_for
-from apps.usecases.models import Project
+from apps.projects.models import Project
 
 
 class Command(BaseCommand):
     help = "Test a use case's backend connection by listing its projects/forms."
 
     def add_arguments(self, parser):
-        parser.add_argument("code", help="Use case code")
+        parser.add_argument("code", help="Project code")
 
     def handle(self, *args, **options):
         try:

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}QC sign-off · {{ uc.code }} · {{ SITE_NAME }}{% endblock %}
-{% block crumbs %}<span class="sep">/</span><a href="{% url 'dashboards:usecase' uc.code %}">{{ uc.code }}</a><span class="sep">/</span><span class="cur">QC sign-off</span>{% endblock %}
+{% block crumbs %}<span class="sep">/</span><a href="{% url 'dashboards:project' uc.code %}">{{ uc.code }}</a><span class="sep">/</span><span class="cur">QC sign-off</span>{% endblock %}
 {% block extrahead %}<style>
   .qc-row{padding:.7rem .2rem;border-top:1px solid var(--line);}
   .qc-row:first-child{border-top:none;}

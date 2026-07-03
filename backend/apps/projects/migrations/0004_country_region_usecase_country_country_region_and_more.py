@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('usecases', '0003_datasource'),
+        ('projects', '0003_datasource'),
     ]
 
     operations = [
@@ -42,12 +42,12 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='usecase',
             name='country',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='use_cases', to='usecases.country'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='use_cases', to='projects.country'),
         ),
         migrations.AddField(
             model_name='country',
             name='region',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='countries', to='usecases.region'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='countries', to='projects.region'),
         ),
         migrations.AlterUniqueTogether(
             name='country',

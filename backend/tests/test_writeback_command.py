@@ -9,9 +9,9 @@ from django.core.management.base import CommandError
 
 from apps.ingestion import writeback
 from apps.ingestion.backends.odk import OdkBackend
+from apps.projects.models import FieldMapping, FormDefinition, Project
 from apps.review import services
 from apps.submissions.models import Submission, SubmissionValue
-from apps.usecases.models import FieldMapping, FormDefinition, Project
 
 pytestmark = pytest.mark.django_db
 

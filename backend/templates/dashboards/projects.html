@@ -71,7 +71,7 @@
             </div>
           </div>
           {% if r.is_member %}
-            <a class="btn btn-open" style="text-decoration:none;" href="{% url 'dashboards:usecase' r.uc.code %}">Open</a>
+            <a class="btn btn-open" style="text-decoration:none;" href="{% url 'dashboards:project' r.uc.code %}">Open</a>
           {% elif r.pending %}
             <span class="pill warn">Requested</span>
           {% else %}

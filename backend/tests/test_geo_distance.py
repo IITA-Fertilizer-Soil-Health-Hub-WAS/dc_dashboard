@@ -6,9 +6,9 @@ import pytest
 from apps.common.geo import haversine_m
 from apps.dashboards.charts import submission_plot_map_html
 from apps.fieldwork.models import CollectionUnit
+from apps.projects.models import FormDefinition, Organization, Project
 from apps.rbac.models import Role, UseCaseMembership
 from apps.submissions.models import Submission
-from apps.usecases.models import FormDefinition, Organization, Project
 from apps.validation.engine import run_for_project
 from apps.validation.models import ValidationFlag, ValidationRule
 

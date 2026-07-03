@@ -11,7 +11,7 @@ import pytest
 
 from apps.ingestion.backends.base import WriteResult
 from apps.ingestion.backends.odk import OdkBackend, build_edited_instance
-from apps.usecases.models import FieldMapping, FormDefinition, Project
+from apps.projects.models import FieldMapping, FormDefinition, Project
 
 pytestmark = pytest.mark.django_db
 

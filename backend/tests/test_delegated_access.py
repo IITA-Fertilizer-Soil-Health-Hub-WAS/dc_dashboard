@@ -9,6 +9,7 @@ from __future__ import annotations
 import pytest
 from django.urls import reverse
 
+from apps.projects.models import Country, Project, Region
 from apps.rbac.models import Role, UseCaseMembership
 from apps.rbac.permissions import (
     can_grant,
@@ -16,7 +17,6 @@ from apps.rbac.permissions import (
     grantable_roles,
     manageable_memberships,
 )
-from apps.usecases.models import Country, Project, Region
 
 pytestmark = pytest.mark.django_db
 
@@ -138,7 +138,7 @@ def test_approve_pending_user_via_view(client, django_user_model, geo):
 
     resp = client.post(reverse("dashboards:team_grant"), {
         "user": str(pending.pk),
-        "scope": f"usecase:{geo['uc_rw'].pk}",
+        "scope": f"project:{geo['uc_rw'].pk}",
         "role": Role.ENUMERATOR,
     })
     assert resp.status_code == 302
@@ -159,7 +159,7 @@ def test_view_rejects_out_of_scope_grant(client, django_user_model, geo):
     # Tamper: try to grant on a use case in another country.
     resp = client.post(reverse("dashboards:team_grant"), {
         "user": str(target.pk),
-        "scope": f"usecase:{geo['uc_ke'].pk}",
+        "scope": f"project:{geo['uc_ke'].pk}",
         "role": Role.VIEWER,
     })
     assert resp.status_code == 403
@@ -176,7 +176,7 @@ def test_view_rejects_over_rank_grant(client, django_user_model, geo):
 
     resp = client.post(reverse("dashboards:team_grant"), {
         "user": str(target.pk),
-        "scope": f"usecase:{geo['uc_rw'].pk}",
+        "scope": f"project:{geo['uc_rw'].pk}",
         "role": Role.REGIONAL_COORDINATOR,  # above the coordinator's rank
     })
     assert resp.status_code == 403

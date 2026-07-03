@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('rbac', '0005_retire_quality_roles'),
-        ('usecases', '0006_default_organization'),
+        ('projects', '0006_default_organization'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
@@ -25,7 +25,7 @@ class Migration(migrations.Migration):
                 ('status', models.CharField(choices=[('PENDING', 'Pending'), ('APPROVED', 'Approved'), ('DECLINED', 'Declined')], default='PENDING', max_length=10)),
                 ('decided_at', models.DateTimeField(blank=True, null=True)),
                 ('decided_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='decided_access_requests', to=settings.AUTH_USER_MODEL)),
-                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='access_requests', to='usecases.usecase')),
+                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='access_requests', to='projects.usecase')),
                 ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='access_requests', to=settings.AUTH_USER_MODEL)),
             ],
             options={

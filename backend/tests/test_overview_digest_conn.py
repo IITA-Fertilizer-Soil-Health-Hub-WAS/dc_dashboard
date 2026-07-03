@@ -8,10 +8,10 @@ from django.core import mail
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
+from apps.projects.models import DataSource, FormDefinition, Project
 from apps.rbac.models import Role, UseCaseMembership
 from apps.review.digests import send_review_digests
 from apps.submissions.models import Submission
-from apps.usecases.models import DataSource, FormDefinition, Project
 
 pytestmark = pytest.mark.django_db
 

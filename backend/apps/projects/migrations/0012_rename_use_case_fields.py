@@ -2,7 +2,7 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-    dependencies = [("usecases", "0011_alter_usecase_options")]
+    dependencies = [("projects", "0011_alter_usecase_options")]
     operations = [
         migrations.RemoveConstraint("formdefinition", "uniq_form_server_id"),
         migrations.RenameField("datasource", "use_case", "project"),

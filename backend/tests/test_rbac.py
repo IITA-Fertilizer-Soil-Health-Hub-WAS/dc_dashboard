@@ -3,9 +3,9 @@ from __future__ import annotations
 
 import pytest
 
+from apps.projects.models import Project
 from apps.rbac.models import Role, UseCaseMembership
 from apps.rbac.permissions import user_can, visible_projects
-from apps.usecases.models import Project
 
 pytestmark = pytest.mark.django_db
 

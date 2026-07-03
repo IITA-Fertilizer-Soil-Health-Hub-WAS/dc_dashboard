@@ -15,9 +15,9 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
 
+from apps.projects.models import Country, Project
 from apps.rbac.models import UseCaseAccessRequest
 from apps.rbac.permissions import can_manage_access, visible_projects
-from apps.usecases.models import Country, Project
 
 PAGE_SIZE = 24
 
@@ -75,7 +75,7 @@ def projects(request):
     if is_index and not request.GET.get("scope") and not request.GET.get("q"):
         mine = visible_projects(user)
         if mine.count() == 1:
-            return redirect("dashboards:usecase", code=mine.first().code)
+            return redirect("dashboards:project", code=mine.first().code)
     request.session.pop("active_project", None)  # browsing the directory = leave the workspace
 
     scope = "all" if request.GET.get("scope") == "all" else "mine"

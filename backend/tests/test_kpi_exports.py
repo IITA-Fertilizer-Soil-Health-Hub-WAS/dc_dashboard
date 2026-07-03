@@ -9,9 +9,9 @@ from django.urls import reverse
 
 from apps.fieldwork.models import CollectionUnit
 from apps.kpi.aggregate import rebuild_project_kpis
+from apps.projects.models import FormDefinition, Organization, Project
 from apps.rbac.models import Role, UseCaseMembership
 from apps.submissions.models import Enumerator, Submission
-from apps.usecases.models import FormDefinition, Organization, Project
 
 pytestmark = pytest.mark.django_db
 

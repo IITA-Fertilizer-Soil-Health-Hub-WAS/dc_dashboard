@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('usecases', '0001_initial'),
+        ('projects', '0001_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
@@ -24,7 +24,7 @@ class Migration(migrations.Migration):
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('role', models.CharField(choices=[('PLATFORM_ADMIN', 'Platform Admin'), ('TRIAL_COORDINATOR', 'Trial Coordinator'), ('QUALITY_CHECK', 'Quality Check / Agronomist'), ('ENUMERATOR', 'Enumerator'), ('VIEWER', 'Viewer')], max_length=32)),
                 ('granted_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='granted_memberships', to=settings.AUTH_USER_MODEL)),
-                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='memberships', to='usecases.usecase')),
+                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='memberships', to='projects.usecase')),
                 ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='memberships', to=settings.AUTH_USER_MODEL)),
             ],
             options={

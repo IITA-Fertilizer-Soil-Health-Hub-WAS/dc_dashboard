@@ -7,8 +7,8 @@ import pytest
 
 from apps.kpi.aggregate import rebuild_all_kpis, rebuild_project_kpis
 from apps.kpi.models import EnumeratorKpiDaily, FormKpiDaily, ProjectKpiDaily
+from apps.projects.models import FormDefinition, Project
 from apps.submissions.models import Enumerator, Submission
-from apps.usecases.models import FormDefinition, Project
 
 pytestmark = pytest.mark.django_db
 

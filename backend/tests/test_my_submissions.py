@@ -6,8 +6,8 @@ from datetime import date
 import pytest
 from django.urls import reverse
 
+from apps.projects.models import FormDefinition, Organization, Project
 from apps.submissions.models import Enumerator, Submission
-from apps.usecases.models import FormDefinition, Organization, Project
 
 pytestmark = pytest.mark.django_db
 

@@ -6,7 +6,7 @@ import pytest
 from apps.common.geo import polygon_centroid
 from apps.fieldwork.candidate_import import import_candidates
 from apps.fieldwork.models import CandidatePlot
-from apps.usecases.models import Organization, Project
+from apps.projects.models import Organization, Project
 
 pytestmark = pytest.mark.django_db
 

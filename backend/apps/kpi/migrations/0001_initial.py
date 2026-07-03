@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('submissions', '0004_submission_collection_unit'),
-        ('usecases', '0008_usecase_unit_type'),
+        ('projects', '0008_usecase_unit_type'),
     ]
 
     operations = [
@@ -29,7 +29,7 @@ class Migration(migrations.Migration):
                 ('severity', models.CharField(choices=[('INFO', 'Informational'), ('WARNING', 'Warning'), ('CRITICAL', 'Critical')], default='WARNING', max_length=8)),
                 ('is_enabled', models.BooleanField(default=True)),
                 ('notify_emails', models.JSONField(blank=True, default=list)),
-                ('use_case', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='alert_rules', to='usecases.usecase')),
+                ('use_case', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='alert_rules', to='projects.usecase')),
             ],
             options={
                 'ordering': ['use_case', 'name'],
@@ -44,7 +44,7 @@ class Migration(migrations.Migration):
                 ('observed_value', models.FloatField(blank=True, null=True)),
                 ('severity', models.CharField(choices=[('INFO', 'Informational'), ('WARNING', 'Warning'), ('CRITICAL', 'Critical')], max_length=8)),
                 ('message', models.TextField(blank=True)),
-                ('use_case', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='alert_events', to='usecases.usecase')),
+                ('use_case', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='alert_events', to='projects.usecase')),
                 ('rule', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='events', to='kpi.alertrule')),
             ],
             options={
@@ -60,7 +60,7 @@ class Migration(migrations.Migration):
                 ('date', models.DateField(db_index=True)),
                 ('submissions', models.PositiveIntegerField(default=0)),
                 ('enumerator', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='kpi_daily', to='submissions.enumerator')),
-                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='enumerator_kpi_daily', to='usecases.usecase')),
+                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='enumerator_kpi_daily', to='projects.usecase')),
             ],
             options={
                 'ordering': ['-date'],
@@ -75,7 +75,7 @@ class Migration(migrations.Migration):
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('date', models.DateField(db_index=True)),
                 ('submissions', models.PositiveIntegerField(default=0)),
-                ('form', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='kpi_daily', to='usecases.formdefinition')),
+                ('form', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='kpi_daily', to='projects.formdefinition')),
             ],
             options={
                 'ordering': ['-date'],
@@ -92,7 +92,7 @@ class Migration(migrations.Migration):
                 ('submissions', models.PositiveIntegerField(default=0)),
                 ('active_enumerators', models.PositiveIntegerField(default=0)),
                 ('flags_opened', models.PositiveIntegerField(default=0)),
-                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='kpi_daily', to='usecases.usecase')),
+                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='kpi_daily', to='projects.usecase')),
             ],
             options={
                 'ordering': ['-date'],

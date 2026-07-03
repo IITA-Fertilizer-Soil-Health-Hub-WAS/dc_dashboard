@@ -3,7 +3,7 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("usecases", "0012_rename_use_case_fields"),
+        ("projects", "0012_rename_use_case_fields"),
         ("submissions", "0012_rename_use_case_field"),
         ("fieldwork", "0007_rename_use_case_field"),
         ("kpi", "0002_rename_use_case_field"),

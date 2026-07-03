@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('rbac', '0002_alter_usecasemembership_role'),
-        ('usecases', '0004_country_region_usecase_country_country_region_and_more'),
+        ('projects', '0004_country_region_usecase_country_country_region_and_more'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
@@ -25,17 +25,17 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='usecasemembership',
             name='country',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='memberships', to='usecases.country'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='memberships', to='projects.country'),
         ),
         migrations.AddField(
             model_name='usecasemembership',
             name='region',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='memberships', to='usecases.region'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='memberships', to='projects.region'),
         ),
         migrations.AlterField(
             model_name='usecasemembership',
             name='use_case',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='memberships', to='usecases.usecase'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='memberships', to='projects.usecase'),
         ),
         migrations.AddConstraint(
             model_name='usecasemembership',

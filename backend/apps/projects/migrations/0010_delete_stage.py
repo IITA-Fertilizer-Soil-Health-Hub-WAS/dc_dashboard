@@ -7,7 +7,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('submissions', '0011_remove_submission_stage'),
-        ('usecases', '0009_formdefinition_field_schema'),
+        ('projects', '0009_formdefinition_field_schema'),
     ]
 
     operations = [

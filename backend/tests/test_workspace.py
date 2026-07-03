@@ -4,8 +4,8 @@ from __future__ import annotations
 import pytest
 from django.urls import reverse
 
+from apps.projects.models import Organization, Project
 from apps.rbac.models import Role, UseCaseMembership
-from apps.usecases.models import Organization, Project
 
 pytestmark = pytest.mark.django_db
 
@@ -26,7 +26,7 @@ def test_opening_a_project_sets_active_workspace(client, django_user_model, org)
     uc = Project.objects.create(code="PROJ-A", name="A", organization=org)
     u = _member(django_user_model, org, uc)
     client.force_login(u)
-    resp = client.get(reverse("dashboards:usecase", args=["PROJ-A"]))
+    resp = client.get(reverse("dashboards:project", args=["PROJ-A"]))
     assert resp.status_code == 200
     assert client.session["active_project"] == "PROJ-A"
 
@@ -35,10 +35,10 @@ def test_tab_deep_link(client, django_user_model, org):
     uc = Project.objects.create(code="PROJ-A", name="A", organization=org)
     u = _member(django_user_model, org, uc)
     client.force_login(u)
-    resp = client.get(reverse("dashboards:usecase", args=["PROJ-A"]) + "?tab=review")
+    resp = client.get(reverse("dashboards:project", args=["PROJ-A"]) + "?tab=review")
     assert resp.context["active_tab"] == "review"
     # An unknown tab falls back to summary.
-    resp2 = client.get(reverse("dashboards:usecase", args=["PROJ-A"]) + "?tab=bogus")
+    resp2 = client.get(reverse("dashboards:project", args=["PROJ-A"]) + "?tab=bogus")
     assert resp2.context["active_tab"] == "summary"
 
 
@@ -48,7 +48,7 @@ def test_single_project_user_lands_in_workspace(client, django_user_model, org):
     client.force_login(u)
     resp = client.get("/")
     assert resp.status_code == 302
-    assert resp.url == reverse("dashboards:usecase", args=["ONLY"])
+    assert resp.url == reverse("dashboards:project", args=["ONLY"])
 
 
 def test_multi_project_user_sees_picker(client, django_user_model, org):
@@ -65,7 +65,7 @@ def test_browsing_directory_clears_active_workspace(client, django_user_model, o
     b = Project.objects.create(code="B", name="B", organization=org)
     u = _member(django_user_model, org, a, b)
     client.force_login(u)
-    client.get(reverse("dashboards:usecase", args=["A"]))
+    client.get(reverse("dashboards:project", args=["A"]))
     assert client.session["active_project"] == "A"
     client.get(reverse("dashboards:projects"))  # opening the directory leaves the workspace
     assert "active_project" not in client.session

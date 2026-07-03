@@ -8,13 +8,13 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('accounts', '0002_user_user_id'),
-        ('usecases', '0005_organization_alter_region_code_region_organization_and_more'),
+        ('projects', '0005_organization_alter_region_code_region_organization_and_more'),
     ]
 
     operations = [
         migrations.AddField(
             model_name='user',
             name='organization',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='users', to='usecases.organization'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='users', to='projects.organization'),
         ),
     ]

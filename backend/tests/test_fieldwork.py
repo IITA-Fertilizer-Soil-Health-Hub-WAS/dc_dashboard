@@ -5,8 +5,8 @@ import pytest
 
 from apps.fieldwork.models import CollectionUnit, Job, UnitAssignment
 from apps.ingestion.sync import sync_project
+from apps.projects.models import FieldMapping, FormDefinition, Project
 from apps.submissions.models import Submission
-from apps.usecases.models import FieldMapping, FormDefinition, Project
 
 pytestmark = pytest.mark.django_db
 

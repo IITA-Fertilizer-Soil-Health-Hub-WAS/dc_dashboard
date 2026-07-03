@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('usecases', '0002_usecase_test_ids'),
+        ('projects', '0002_usecase_test_ids'),
     ]
 
     operations = [
@@ -22,7 +22,7 @@ class Migration(migrations.Migration):
                 ('base_url', models.CharField(blank=True, max_length=255)),
                 ('token', models.CharField(blank=True, max_length=512)),
                 ('config', models.JSONField(blank=True, default=dict)),
-                ('use_case', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='data_source', to='usecases.usecase')),
+                ('use_case', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='data_source', to='projects.usecase')),
             ],
             options={
                 'ordering': ['use_case'],

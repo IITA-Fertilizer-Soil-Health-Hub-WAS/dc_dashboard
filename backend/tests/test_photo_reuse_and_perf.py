@@ -10,8 +10,8 @@ from django.utils import timezone
 
 from apps.fieldwork.models import CollectionUnit
 from apps.ingestion.media_hash import hash_submission_media
+from apps.projects.models import FormDefinition, Organization, Project
 from apps.submissions.models import Enumerator, Submission
-from apps.usecases.models import FormDefinition, Organization, Project
 from apps.validation.engine import run_for_project
 from apps.validation.models import ValidationFlag, ValidationRule
 

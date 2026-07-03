@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('usecases', '0002_usecase_test_ids'),
+        ('projects', '0002_usecase_test_ids'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
@@ -27,7 +27,7 @@ class Migration(migrations.Migration):
                 ('surname', models.CharField(blank=True, max_length=128)),
                 ('phone', models.CharField(blank=True, max_length=32)),
                 ('is_test', models.BooleanField(default=False)),
-                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='enumerators', to='usecases.usecase')),
+                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='enumerators', to='projects.usecase')),
             ],
             options={
                 'ordering': ['enid'],
@@ -47,7 +47,7 @@ class Migration(migrations.Migration):
                 ('country', models.CharField(blank=True, max_length=64)),
                 ('site_selection_date', models.DateField(blank=True, null=True)),
                 ('enumerator', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='households', to='submissions.enumerator')),
-                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='households', to='usecases.usecase')),
+                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='households', to='projects.usecase')),
             ],
             options={
                 'ordering': ['hhid'],
@@ -69,13 +69,13 @@ class Migration(migrations.Migration):
                 ('event_key', models.CharField(blank=True, max_length=32)),
                 ('event_date', models.DateField(blank=True, null=True)),
                 ('ingested_at', models.DateTimeField(auto_now_add=True)),
-                ('crop', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='usecases.crop')),
+                ('crop', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='projects.crop')),
                 ('enumerator', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='submissions', to='submissions.enumerator')),
-                ('form', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='submissions', to='usecases.formdefinition')),
+                ('form', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='submissions', to='projects.formdefinition')),
                 ('household', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='submissions', to='submissions.household')),
-                ('stage', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='usecases.stage')),
-                ('trial', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='usecases.trial')),
-                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='submissions', to='usecases.usecase')),
+                ('stage', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='projects.stage')),
+                ('trial', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='projects.trial')),
+                ('use_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='submissions', to='projects.usecase')),
             ],
             options={
                 'ordering': ['-event_date', '-ona_submission_time'],

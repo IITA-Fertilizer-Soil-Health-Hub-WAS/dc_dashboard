@@ -4,11 +4,11 @@ from __future__ import annotations
 import pytest
 
 from apps.dashboards.views import _health_counts
+from apps.projects.models import FormDefinition, Project
 from apps.rbac.models import Role, UseCaseMembership
 from apps.review import services
 from apps.review.models import ReviewState
 from apps.submissions.models import Submission
-from apps.usecases.models import FormDefinition, Project
 
 pytestmark = pytest.mark.django_db
 

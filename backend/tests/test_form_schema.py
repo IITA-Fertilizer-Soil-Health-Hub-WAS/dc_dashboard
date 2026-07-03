@@ -5,9 +5,9 @@ import pytest
 from django.urls import reverse
 
 from apps.ingestion.form_schema import flatten_children, label_map, parse_form_json
+from apps.projects.models import FormDefinition, Organization, Project
 from apps.rbac.models import Role, UseCaseMembership
 from apps.submissions.models import Submission
-from apps.usecases.models import FormDefinition, Organization, Project
 
 pytestmark = pytest.mark.django_db
 

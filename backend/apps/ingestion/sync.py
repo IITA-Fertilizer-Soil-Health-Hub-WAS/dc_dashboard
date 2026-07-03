@@ -17,8 +17,8 @@ from typing import Any
 from django.db import transaction
 from django.utils import timezone
 
+from apps.projects.models import FormDefinition, Project
 from apps.submissions.models import Enumerator, Submission, SubmissionValue
-from apps.usecases.models import FormDefinition, Project
 
 from .backends.registry import get_backend_for
 from .normalizer import build_crop_alias_map, normalize_record
@@ -85,7 +85,7 @@ def auto_map_form(form, sample_record: dict) -> int:
     This makes "onboard -> sync" populate data without manual per-form mapping;
     the mappings can then be refined under Manage -> Forms -> Mappings."""
     from apps.console.onboarding import CANONICAL_TARGETS, suggest_mappings
-    from apps.usecases.models import FieldMapping
+    from apps.projects.models import FieldMapping
 
     by_key = {t["key"]: t for t in CANONICAL_TARGETS}
     chosen = suggest_mappings(sorted(sample_record.keys()))
@@ -274,7 +274,7 @@ def _resolve_trial(project, name):
     trial dimension is always linked to its project."""
     if not name:
         return None
-    from apps.usecases.models import Trial
+    from apps.projects.models import Trial
 
     trial, _ = Trial.objects.get_or_create(project=project, name=name)
     return trial

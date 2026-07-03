@@ -183,15 +183,15 @@
     /* ---------- Misc ---------- */
     .err{background:#fdecea; color:#a33617; padding:.6rem .85rem; border-radius:9px; margin:.5rem 0;
       border:1px solid rgba(195,83,31,.2); font-size:.88rem;}
-    .usecase-link{display:flex; align-items:center; gap:.9rem; padding:1.05rem 1.2rem; background:var(--surface);
+    .project-link{display:flex; align-items:center; gap:.9rem; padding:1.05rem 1.2rem; background:var(--surface);
       border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow-sm); color:var(--ink);
       transition:box-shadow .14s,border-color .14s,transform .14s;}
-    .usecase-link:hover{box-shadow:var(--shadow); border-color:rgba(13,92,63,.3); transform:translateY(-1px);}
-    .usecase-link .uc-mark{width:40px;height:40px;border-radius:10px;background:var(--brand-50);color:var(--brand);
+    .project-link:hover{box-shadow:var(--shadow); border-color:rgba(13,92,63,.3); transform:translateY(-1px);}
+    .project-link .uc-mark{width:40px;height:40px;border-radius:10px;background:var(--brand-50);color:var(--brand);
       display:grid;place-items:center;font-family:var(--serif);font-weight:600;flex-shrink:0;}
-    .usecase-link .uc-body{flex:1;min-width:0;}
-    .usecase-link .uc-body b{font-family:var(--serif);font-weight:600;font-size:1.05rem;}
-    .usecase-link .arrow{color:var(--faint);font-size:1.1rem;}
+    .project-link .uc-body{flex:1;min-width:0;}
+    .project-link .uc-body b{font-family:var(--serif);font-weight:600;font-size:1.05rem;}
+    .project-link .arrow{color:var(--faint);font-size:1.1rem;}
     .empty{padding:2.5rem 1.5rem; text-align:center; color:var(--muted); background:var(--surface);
       border:1px dashed var(--line); border-radius:var(--r);}
     .page-head{display:flex; align-items:center; gap:.7rem; flex-wrap:wrap; margin-bottom:.3rem;}
@@ -363,7 +363,7 @@
                 <select aria-label="Current project — choose another to switch"
                         onchange="if(this.value){window.location.href=this.value;}">
                   {% for uc in nav_projects %}
-                    <option value="{% url 'dashboards:usecase' uc.code %}" {% if uc.code == active_uc.code %}selected{% endif %}>{{ uc.name|default:uc.code }}</option>
+                    <option value="{% url 'dashboards:project' uc.code %}" {% if uc.code == active_uc.code %}selected{% endif %}>{{ uc.name|default:uc.code }}</option>
                   {% endfor %}
                 </select>
               {% else %}
@@ -377,15 +377,15 @@
             {% endif %}
           </div>
 
-          <a href="{% url 'dashboards:usecase' active_uc.code %}"
-             class="{% if request.resolver_match.url_name == 'usecase' and active_tab == 'summary' %}active{% endif %}">
+          <a href="{% url 'dashboards:project' active_uc.code %}"
+             class="{% if request.resolver_match.url_name == 'project' and active_tab == 'summary' %}active{% endif %}">
             <span class="msym">dashboard</span>Dashboard
           </a>
-          <a href="{% url 'dashboards:usecase' active_uc.code %}?tab=review"
+          <a href="{% url 'dashboards:project' active_uc.code %}?tab=review"
              class="{% if active_tab == 'review' %}active{% endif %}">
             <span class="msym">rate_review</span>Review
           </a>
-          <a href="{% url 'dashboards:usecase' active_uc.code %}?tab=enumerators"
+          <a href="{% url 'dashboards:project' active_uc.code %}?tab=enumerators"
              class="{% if active_tab == 'enumerators' %}active{% endif %}">
             <span class="msym">badge</span>Enumerators
           </a>
@@ -393,15 +393,15 @@
              class="{% if request.resolver_match.kwargs.key == 'collection-units' %}active{% endif %}">
             <span class="msym">place</span>Collection units
           </a>
-          <a href="{% url 'dashboards:usecase' active_uc.code %}?tab=issues"
+          <a href="{% url 'dashboards:project' active_uc.code %}?tab=issues"
              class="{% if active_tab == 'issues' %}active{% endif %}">
             <span class="msym">flag</span>Issues
           </a>
-          <a href="{% url 'dashboards:usecase' active_uc.code %}?tab=data"
+          <a href="{% url 'dashboards:project' active_uc.code %}?tab=data"
              class="{% if active_tab == 'data' %}active{% endif %}">
             <span class="msym">table_rows</span>Data
           </a>
-          <a href="{% url 'dashboards:usecase' active_uc.code %}?tab=final"
+          <a href="{% url 'dashboards:project' active_uc.code %}?tab=final"
              class="{% if active_tab == 'final' %}active{% endif %}">
             <span class="msym">verified_user</span>Final data
           </a>
@@ -487,7 +487,7 @@
                     onchange="if(this.value){window.location.href=this.value;}">
               <option value="">Open a project…</option>
               {% for uc in nav_projects %}
-                <option value="{% url 'dashboards:usecase' uc.code %}">{{ uc.name|default:uc.code }}</option>
+                <option value="{% url 'dashboards:project' uc.code %}">{{ uc.name|default:uc.code }}</option>
               {% endfor %}
             </select>
           {% else %}

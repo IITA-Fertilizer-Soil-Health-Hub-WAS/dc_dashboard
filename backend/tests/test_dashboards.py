@@ -9,15 +9,15 @@ from django.urls import reverse
 
 from apps.config_admin.loader import import_config, load_yaml
 from apps.ingestion.sync import sync_project
+from apps.projects.models import Project
 from apps.rbac.models import Role, UseCaseMembership
 from apps.submissions.models import Submission, SubmissionValue
-from apps.usecases.models import Project
 from apps.validation.engine import run_for_project
 from tests.test_ingestion import FakeOnaClient, _records
 
 pytestmark = pytest.mark.django_db
 
-SNS_PATH = Path(settings.USECASE_CONFIG_DIR) / "sns-rwanda.yaml"
+SNS_PATH = Path(settings.PROJECT_CONFIG_DIR) / "sns-rwanda.yaml"
 
 
 @pytest.fixture
@@ -44,13 +44,13 @@ def test_index_lands_single_project_user_in_their_project(client, setup):
     # Project = workspace: a user with exactly one project (SNS-RWANDA, not the
     # unpermitted KALRO) is taken straight into it.
     assert resp.status_code == 302
-    assert resp.url == reverse("dashboards:usecase", args=["SNS-RWANDA"])
+    assert resp.url == reverse("dashboards:project", args=["SNS-RWANDA"])
 
 
 def test_cannot_open_unpermitted_project(client, setup):
     _, other, coord, _, _ = setup
     client.force_login(coord)
-    resp = client.get(reverse("dashboards:usecase", args=[other.code]))
+    resp = client.get(reverse("dashboards:project", args=[other.code]))
     assert resp.status_code == 404
 
 

@@ -13,7 +13,7 @@ from django.conf import settings
 from django.db import models
 
 from apps.common.models import BaseModel
-from apps.usecases.models import FormDefinition, Project
+from apps.projects.models import FormDefinition, Project
 
 
 class CollectionUnit(BaseModel):

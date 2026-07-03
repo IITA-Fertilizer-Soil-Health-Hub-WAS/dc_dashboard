@@ -14,7 +14,7 @@ from typing import Any
 import yaml
 from django.db import transaction
 
-from apps.usecases.models import (
+from apps.projects.models import (
     Crop,
     DataSource,
     EventScheduleItem,
@@ -84,7 +84,7 @@ def import_config(data: dict[str, Any]) -> Project:
     uc, created = Project.objects.get_or_create(code=code, defaults={"name": meta.get("name", code)})
     # Every use case belongs to a tenant: honour an explicit organization code,
     # else fall back to the default org (single-tenant deployments).
-    from apps.usecases.tenancy import resolve_organization
+    from apps.projects.tenancy import resolve_organization
 
     org = resolve_organization(meta.get("organization"))
     if org is not None and uc.organization_id is None:

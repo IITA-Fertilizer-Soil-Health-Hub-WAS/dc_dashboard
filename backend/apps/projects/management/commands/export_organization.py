@@ -17,17 +17,14 @@ from __future__ import annotations
 from django.core import serializers
 from django.core.management.base import BaseCommand, CommandError
 
-from apps.usecases.models import Organization
+from apps.projects.models import Organization
 
 
 def _collect(org):
     """Gather every object owned by an organization, parents before children."""
     from apps.accounts.models import User
     from apps.fieldwork.models import CollectionUnit
-    from apps.rbac.models import UseCaseMembership
-    from apps.review.models import Review, ReviewActionLog
-    from apps.submissions.models import Enumerator, Submission, SubmissionValue
-    from apps.usecases.models import (
+    from apps.projects.models import (
         Country,
         Crop,
         DataSource,
@@ -38,6 +35,9 @@ def _collect(org):
         Region,
         Trial,
     )
+    from apps.rbac.models import UseCaseMembership
+    from apps.review.models import Review, ReviewActionLog
+    from apps.submissions.models import Enumerator, Submission, SubmissionValue
     from apps.validation.models import ValidationFlag, ValidationRule
 
     ucs = Project.objects.filter(organization=org)

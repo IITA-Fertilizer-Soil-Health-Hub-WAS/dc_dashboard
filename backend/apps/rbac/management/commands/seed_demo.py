@@ -10,8 +10,8 @@ from __future__ import annotations
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 
+from apps.projects.models import Project
 from apps.rbac.models import Role, UseCaseMembership
-from apps.usecases.models import Project
 
 User = get_user_model()
 

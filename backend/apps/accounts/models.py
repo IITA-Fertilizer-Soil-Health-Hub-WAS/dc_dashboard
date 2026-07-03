@@ -51,7 +51,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     # operator (superuser) has none and spans all tenants. Set when the user is
     # first granted access (their first membership's scope determines the org).
     organization = models.ForeignKey(
-        "usecases.Organization", null=True, blank=True, on_delete=models.SET_NULL,
+        "projects.Organization", null=True, blank=True, on_delete=models.SET_NULL,
         related_name="users",
     )
     email = models.EmailField(unique=True)

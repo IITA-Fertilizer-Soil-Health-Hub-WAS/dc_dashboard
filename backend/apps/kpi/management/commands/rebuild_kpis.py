@@ -4,7 +4,7 @@ from __future__ import annotations
 from django.core.management.base import BaseCommand, CommandError
 
 from apps.kpi.aggregate import rebuild_all_kpis, rebuild_project_kpis
-from apps.usecases.models import Project
+from apps.projects.models import Project
 
 
 class Command(BaseCommand):
