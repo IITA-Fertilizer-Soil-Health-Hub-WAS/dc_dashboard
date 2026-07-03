@@ -69,7 +69,7 @@ _ENTRIES: list[Managed] = [
             form_fields=["region", "code", "name"], search_fields=["code", "name"],
             icon="flag", description="Countries within a region."),
     # ---- Configuration: how a use case is defined & ingested ----
-    Managed("use-cases", UseCase, "Projects", "Configuration",
+    Managed("projects", UseCase, "Projects", "Configuration",
             list_display=["code", "name", "organization", "country", "is_active",
                           "config_version", "plugin_path"],
             form_fields=["code", "name", "organization", "country", "unit_type", "is_active",
@@ -281,7 +281,7 @@ def grouped_for(user) -> list[tuple[str, list[Managed]]]:
 ORG_FILTER_PATHS: dict[str, str] = {
     "regions": "organization",
     "countries": "region__organization",
-    "use-cases": "organization",
+    "projects": "organization",
     "forms": "use_case__organization",
     "field-mappings": "form__use_case__organization",
     "event-schedule": "use_case__organization",

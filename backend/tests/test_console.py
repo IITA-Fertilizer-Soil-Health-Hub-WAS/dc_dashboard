@@ -25,7 +25,7 @@ def plain(django_user_model):
 
 def test_list_renders_for_staff(client, staff, uc):
     client.force_login(staff)
-    resp = client.get("/manage/use-cases/")
+    resp = client.get("/manage/projects/")
     assert resp.status_code == 200
     body = resp.content.decode()
     # Rendered in the app shell; management sections appear directly in the single
@@ -36,7 +36,7 @@ def test_list_renders_for_staff(client, staff, uc):
 
 def test_non_staff_forbidden(client, plain, uc):
     client.force_login(plain)
-    assert client.get("/manage/use-cases/").status_code == 403
+    assert client.get("/manage/projects/").status_code == 403
 
 
 def test_create_edit_delete_cycle(client, staff, uc):

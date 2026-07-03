@@ -41,7 +41,7 @@ def viewer(django_user_model, uc):
 
 
 def _url(sub):
-    return f"/usecase/{sub.use_case.code}/submission/{sub.pk}/review/"
+    return f"/project/{sub.use_case.code}/submission/{sub.pk}/review/"
 
 
 def test_review_page_renders(client, coordinator, submission):

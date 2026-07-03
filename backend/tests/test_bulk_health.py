@@ -54,14 +54,14 @@ def test_bulk_endorse_then_validate(client, qc, regional, uc, form):
     subs = [_sub(uc, form, i) for i in range(3)]
     # Gate 1: a Country Coordinator bulk-endorses.
     client.force_login(qc)
-    client.post(f"/usecase/{uc.code}/bulk-action/",
+    client.post(f"/project/{uc.code}/bulk-action/",
                 {"action": "ENDORSE", "ids": [str(s.pk) for s in subs]})
     for s in subs:
         s.refresh_from_db()
         assert s.review.state == ReviewState.QC_PENDING
     # Gate 2: the Regional Coordinator bulk-validates.
     client.force_login(regional)
-    resp = client.post(f"/usecase/{uc.code}/bulk-action/",
+    resp = client.post(f"/project/{uc.code}/bulk-action/",
                        {"action": "QC_APPROVE", "ids": [str(s.pk) for s in subs]})
     assert resp.status_code == 200
     for s in subs:
@@ -73,9 +73,9 @@ def test_gate1_cannot_bulk_validate(client, qc, uc, form):
     # A Country Coordinator endorses but cannot give final validation.
     subs = [_sub(uc, form, i) for i in range(2)]
     client.force_login(qc)
-    client.post(f"/usecase/{uc.code}/bulk-action/",
+    client.post(f"/project/{uc.code}/bulk-action/",
                 {"action": "ENDORSE", "ids": [str(s.pk) for s in subs]})
-    client.post(f"/usecase/{uc.code}/bulk-action/",
+    client.post(f"/project/{uc.code}/bulk-action/",
                 {"action": "QC_APPROVE", "ids": [str(s.pk) for s in subs]})
     for s in subs:
         s.refresh_from_db()
@@ -88,7 +88,7 @@ def test_bulk_action_requires_permission(client, django_user_model, uc, form):
     UseCaseMembership.objects.create(user=viewer, use_case=uc, role=Role.VIEWER)
     sub = _sub(uc, form, 1)
     client.force_login(viewer)
-    resp = client.post(f"/usecase/{uc.code}/bulk-action/",
+    resp = client.post(f"/project/{uc.code}/bulk-action/",
                        {"action": "QC_APPROVE", "ids": [str(sub.pk)]})
     assert resp.status_code in (200, 403)
     sub.refresh_from_db()
@@ -98,7 +98,7 @@ def test_bulk_action_requires_permission(client, django_user_model, uc, form):
 def test_bulk_decline_many(client, coordinator, uc, form):
     subs = [_sub(uc, form, i) for i in range(2)]
     client.force_login(coordinator)
-    client.post(f"/usecase/{uc.code}/bulk-action/",
+    client.post(f"/project/{uc.code}/bulk-action/",
                 {"action": "DECLINE", "ids": [str(s.pk) for s in subs]})
     for s in subs:
         s.refresh_from_db()

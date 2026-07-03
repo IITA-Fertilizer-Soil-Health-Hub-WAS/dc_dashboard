@@ -385,7 +385,7 @@ class OnboardProjectView(StaffMixin, View):
         forms, discover_error = self._discover_forms()
         return render(request, "console/onboard.html", {
             "groups": grouped(),
-            "console_key": "use-cases",
+            "console_key": "projects",
             "yaml_template": self.TEMPLATE_YAML,
             "discovered_forms": forms,
             "discover_error": discover_error,
@@ -422,12 +422,12 @@ class OnboardProjectView(StaffMixin, View):
                 f"Project “{uc.code}” onboarded — {uc.forms.count()} form(s). "
                 f"Use “Sync now” to pull submissions.",
             )
-            return redirect("console:list", key="use-cases")
+            return redirect("console:list", key="projects")
 
         forms, discover_error = self._discover_forms()
         return render(request, "console/onboard.html", {
             "groups": grouped(),
-            "console_key": "use-cases",
+            "console_key": "projects",
             "yaml_template": self.TEMPLATE_YAML,
             "discovered_forms": forms,
             "discover_error": discover_error,
@@ -463,7 +463,7 @@ class WizardView(StaffMixin, View):
         # WizardProjectsView) so the wizard opens instantly.
         ctx = {
             "groups": grouped(),
-            "console_key": "use-cases",
+            "console_key": "projects",
             "roles": FormDefinition.Role.choices,
             "backends": BACKEND_CHOICES,
             "targets": CANONICAL_TARGETS,
@@ -490,7 +490,7 @@ class WizardView(StaffMixin, View):
                     f"Project “{uc.code}” onboarded — {uc.forms.count()} form(s). "
                     f"Use “Sync now” to pull submissions.",
                 )
-                return redirect("console:list", key="use-cases")
+                return redirect("console:list", key="projects")
         except (ConfigError, ValueError) as exc:
             problems = [str(exc)]
         return render(request, "console/wizard.html",

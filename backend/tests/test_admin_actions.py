@@ -18,7 +18,7 @@ SNS_PATH = Path(settings.USECASE_CONFIG_DIR) / "sns-rwanda.yaml"
 
 
 def _request():
-    return RequestFactory().post("/manage/use-cases/")
+    return RequestFactory().post("/manage/projects/")
 
 
 def test_export_yaml_action_round_trips():

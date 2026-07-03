@@ -59,7 +59,7 @@ def test_audit_export_csv(client, uc, form, coordinator):
     s = Submission.objects.create(use_case=uc, form=form, ona_uuid="A1", content_hash="h")
     services.decline(coordinator, s, note="bad id")
     client.force_login(coordinator)
-    resp = client.get(f"/usecase/{uc.code}/audit.csv")
+    resp = client.get(f"/project/{uc.code}/audit.csv")
     assert resp.status_code == 200
     assert resp["Content-Type"] == "text/csv"
     body = resp.content.decode()

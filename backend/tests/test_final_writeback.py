@@ -55,7 +55,7 @@ def test_final_rows_use_authoritative_values(submission, coordinator):
 def test_export_final_csv(client, coordinator, submission):
     _approve(coordinator, submission)
     client.force_login(coordinator)
-    resp = client.get(f"/usecase/{submission.use_case.code}/final.csv")
+    resp = client.get(f"/project/{submission.use_case.code}/final.csv")
     assert resp.status_code == 200
     assert resp["Content-Type"] == "text/csv"
     assert b"ona_uuid" in resp.content and b"u1" in resp.content

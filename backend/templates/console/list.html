@@ -22,7 +22,7 @@
         </select>
       </form>
     {% endif %}
-    {% if m.key == 'use-cases' and can_edit %}
+    {% if m.key == 'projects' and can_edit %}
       <a class="btn-new" style="background:var(--gold);color:var(--brand-900);" href="{% url 'console:onboard' %}">Onboard project</a>
     {% endif %}
     {% if m.key == 'collection-units' and can_edit %}

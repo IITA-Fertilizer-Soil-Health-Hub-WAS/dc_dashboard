@@ -49,7 +49,7 @@ def test_assign_sets_assignee_logs_and_emails(uc, form, coordinator):
 def test_assign_to_me_from_review_screen(client, uc, form, coordinator):
     sub = Submission.objects.create(use_case=uc, form=form, ona_uuid="u2", content_hash="h")
     client.force_login(coordinator)
-    resp = client.post(f"/usecase/{uc.code}/submission/{sub.pk}/review/", {"action": "assign_me"})
+    resp = client.post(f"/project/{uc.code}/submission/{sub.pk}/review/", {"action": "assign_me"})
     assert resp.status_code == 200
     sub.refresh_from_db()
     assert sub.review.assigned_to == coordinator
@@ -67,10 +67,10 @@ def test_issues_filtered_by_search_and_state(client, uc, form, coordinator):
     ValidationFlag.objects.create(submission=s2, rule=rule, message="Check HHID", severity="WARNING")
     client.force_login(coordinator)
     # filter by event (Issues table shows the flag message)
-    resp = client.get(f"/usecase/{uc.code}/tab/issues/?event=Event1")
+    resp = client.get(f"/project/{uc.code}/tab/issues/?event=Event1")
     assert b"Check ENID" in resp.content and b"Check HHID" not in resp.content
     # filter by severity
-    resp = client.get(f"/usecase/{uc.code}/tab/issues/?severity=WARNING")
+    resp = client.get(f"/project/{uc.code}/tab/issues/?severity=WARNING")
     assert b"Check HHID" in resp.content and b"Check ENID" not in resp.content
 
 
@@ -82,7 +82,7 @@ def test_issues_filters_survive_bulk_action(client, uc, form, coordinator):
     ValidationFlag.objects.create(submission=s, rule=rule, message="x", severity="WARNING")
     client.force_login(coordinator)
     # a bulk action POST carrying the filter still renders within that filter
-    resp = client.post(f"/usecase/{uc.code}/bulk-action/",
+    resp = client.post(f"/project/{uc.code}/bulk-action/",
                        {"action": "OPEN_REVIEW", "ids": [str(s.pk)], "event": "Event9"})
     assert resp.status_code == 200
     assert b'value="Event9" selected' in resp.content  # filter preserved
