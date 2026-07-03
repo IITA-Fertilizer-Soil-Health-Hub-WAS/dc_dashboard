@@ -11,33 +11,33 @@ from django.core.management.base import CommandError
 from apps.rbac.models import Role, UseCaseMembership
 from apps.review.digests import send_review_digests
 from apps.submissions.models import Submission
-from apps.usecases.models import DataSource, FormDefinition, UseCase
+from apps.usecases.models import DataSource, FormDefinition, Project
 
 pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
 def uc():
-    return UseCase.objects.create(code="UC", name="UC Name")
+    return Project.objects.create(code="UC", name="UC Name")
 
 
 @pytest.fixture
 def form(uc):
-    return FormDefinition.objects.create(use_case=uc, ona_form_id=1,
+    return FormDefinition.objects.create(project=uc, ona_form_id=1,
                                          role=FormDefinition.Role.VALIDATION)
 
 
 @pytest.fixture
 def coordinator(django_user_model, uc):
     u = django_user_model.objects.create_user("c@x.org", "pw", is_active=True)
-    UseCaseMembership.objects.create(user=u, use_case=uc, role=Role.TRIAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=u, project=uc, role=Role.TRIAL_COORDINATOR)
     return u
 
 
 # ---- Overview ----
 def test_overview_aggregates(client, uc, form, coordinator):
-    Submission.objects.create(use_case=uc, form=form, ona_uuid="o1", content_hash="h")
-    Submission.objects.create(use_case=uc, form=form, ona_uuid="o2", content_hash="h")
+    Submission.objects.create(project=uc, form=form, ona_uuid="o1", content_hash="h")
+    Submission.objects.create(project=uc, form=form, ona_uuid="o2", content_hash="h")
     client.force_login(coordinator)
     resp = client.get("/overview/")
     assert resp.status_code == 200
@@ -48,7 +48,7 @@ def test_overview_aggregates(client, uc, form, coordinator):
 
 # ---- Digest ----
 def test_digest_emails_reviewers_with_pending(uc, form, coordinator):
-    Submission.objects.create(use_case=uc, form=form, ona_uuid="p1", content_hash="h")  # in review
+    Submission.objects.create(project=uc, form=form, ona_uuid="p1", content_hash="h")  # in review
     sent = send_review_digests()
     assert sent == 1
     assert len(mail.outbox) == 1
@@ -62,15 +62,15 @@ def test_digest_skips_when_nothing_pending(uc, form, coordinator):
     assert mail.outbox == []
 
 
-def test_digest_skips_use_case_without_reviewers(uc, form):
-    Submission.objects.create(use_case=uc, form=form, ona_uuid="p1", content_hash="h")
+def test_digest_skips_project_without_reviewers(uc, form):
+    Submission.objects.create(project=uc, form=form, ona_uuid="p1", content_hash="h")
     # No coordinator/QC members -> no recipients.
     assert send_review_digests() == 0
 
 
 # ---- Connection test command ----
 def test_connection_command_reports_projects(uc, monkeypatch):
-    DataSource.objects.create(use_case=uc, backend="ONA", token="t")
+    DataSource.objects.create(project=uc, backend="ONA", token="t")
 
     import apps.ingestion.management.commands.test_connection as cmd
     from apps.ingestion.backends.base import RemoteForm, RemoteProject

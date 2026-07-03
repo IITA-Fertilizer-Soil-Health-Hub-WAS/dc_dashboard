@@ -11,7 +11,7 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 
 from apps.rbac.models import Role, UseCaseMembership
-from apps.usecases.models import UseCase
+from apps.usecases.models import Project
 
 User = get_user_model()
 
@@ -22,12 +22,12 @@ class Command(BaseCommand):
     help = "Seed demo use cases, users and memberships."
 
     def handle(self, *args, **options):
-        rwanda, _ = UseCase.objects.get_or_create(
+        rwanda, _ = Project.objects.get_or_create(
             code="SNS-RWANDA",
             defaults={"name": "SNS Rwanda", "countries": ["Rwanda"],
                       "enid_patterns": ["^RSENRW"], "hhid_patterns": ["^RSHHRW"]},
         )
-        kalro, _ = UseCase.objects.get_or_create(
+        kalro, _ = Project.objects.get_or_create(
             code="KALRO", defaults={"name": "KALRO", "countries": ["Kenya"]}
         )
 
@@ -54,7 +54,7 @@ class Command(BaseCommand):
                 user.set_password(DEMO_PASSWORD)
                 user.save()
             UseCaseMembership.objects.get_or_create(
-                user=user, use_case=rwanda, role=role, defaults={"granted_by": admin}
+                user=user, project=rwanda, role=role, defaults={"granted_by": admin}
             )
 
         self.stdout.write(self.style.SUCCESS(

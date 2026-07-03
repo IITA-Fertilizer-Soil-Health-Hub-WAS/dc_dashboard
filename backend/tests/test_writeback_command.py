@@ -11,7 +11,7 @@ from apps.ingestion import writeback
 from apps.ingestion.backends.odk import OdkBackend
 from apps.review import services
 from apps.submissions.models import Submission, SubmissionValue
-from apps.usecases.models import FieldMapping, FormDefinition, UseCase
+from apps.usecases.models import FieldMapping, FormDefinition, Project
 
 pytestmark = pytest.mark.django_db
 
@@ -36,12 +36,12 @@ class FakeOdk(OdkBackend):
 @pytest.fixture
 def edited_submission(django_user_model, monkeypatch):
     admin = django_user_model.objects.create_superuser("a@x.org", "pw")
-    uc = UseCase.objects.create(code="UC", name="UC")
-    form = FormDefinition.objects.create(use_case=uc, ona_form_id=9,
+    uc = Project.objects.create(code="UC", name="UC")
+    form = FormDefinition.objects.create(project=uc, ona_form_id=9,
                                          role=FormDefinition.Role.VALIDATION)
     FieldMapping.objects.create(form=form, target_field="ENID",
                                 source_paths=["intro/enumerator_id"])
-    sub = Submission.objects.create(use_case=uc, form=form, ona_uuid="u1",
+    sub = Submission.objects.create(project=uc, form=form, ona_uuid="u1",
                                     content_hash="h", ona_submission_id=42)
     SubmissionValue.objects.create(submission=sub, field_key="ENID",
                                    raw_value="EN1", current_value="EN1")

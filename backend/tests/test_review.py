@@ -7,7 +7,7 @@ import pytest
 from django.conf import settings
 
 from apps.config_admin.loader import import_config, load_yaml
-from apps.ingestion.sync import sync_use_case
+from apps.ingestion.sync import sync_project
 from apps.rbac.models import Role, UseCaseMembership
 from apps.review import services
 from apps.review.models import Review, ReviewActionLog, ReviewState
@@ -23,17 +23,17 @@ SNS_PATH = Path(settings.USECASE_CONFIG_DIR) / "sns-rwanda.yaml"
 @pytest.fixture
 def synced(django_user_model):
     uc = import_config(load_yaml(SNS_PATH))
-    sync_use_case(uc, client=FakeOnaClient(_records()))
+    sync_project(uc, client=FakeOnaClient(_records()))
     submission = Submission.objects.get(ona_uuid="uuid-aaa")
 
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True)
     qc = django_user_model.objects.create_user("q@x.org", "pw", is_active=True)
     viewer = django_user_model.objects.create_user("v@x.org", "pw", is_active=True)
     regional = django_user_model.objects.create_user("r@x.org", "pw", is_active=True)
-    UseCaseMembership.objects.create(user=coord, use_case=uc, role=Role.TRIAL_COORDINATOR)
-    UseCaseMembership.objects.create(user=qc, use_case=uc, role=Role.COUNTRY_COORDINATOR)
-    UseCaseMembership.objects.create(user=viewer, use_case=uc, role=Role.VIEWER)
-    UseCaseMembership.objects.create(user=regional, use_case=uc, role=Role.REGIONAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=qc, project=uc, role=Role.COUNTRY_COORDINATOR)
+    UseCaseMembership.objects.create(user=viewer, project=uc, role=Role.VIEWER)
+    UseCaseMembership.objects.create(user=regional, project=uc, role=Role.REGIONAL_COORDINATOR)
     # coord/qc = Gate 1 (endorse); regional = Gate 2 (final validation).
     return uc, submission, coord, qc, viewer, regional
 
@@ -100,17 +100,17 @@ def test_final_validation_requires_endorsement_first(synced):
 
 def test_country_coordinator_fallback_validates_when_no_regional(django_user_model):
     """With no Regional on the use case, a second Country Coordinator validates."""
-    from apps.usecases.models import FormDefinition, UseCase
+    from apps.usecases.models import FormDefinition, Project
 
-    uc = UseCase.objects.create(code="NOREG", name="No Regional")
+    uc = Project.objects.create(code="NOREG", name="No Regional")
     form = FormDefinition.objects.create(
-        use_case=uc, ona_form_id=9, role=FormDefinition.Role.VALIDATION
+        project=uc, ona_form_id=9, role=FormDefinition.Role.VALIDATION
     )
-    sub = Submission.objects.create(use_case=uc, form=form, ona_uuid="nr", content_hash="h")
+    sub = Submission.objects.create(project=uc, form=form, ona_uuid="nr", content_hash="h")
     a = django_user_model.objects.create_user("a@x.org", "pw", is_active=True)
     b = django_user_model.objects.create_user("b@x.org", "pw", is_active=True)
-    UseCaseMembership.objects.create(user=a, use_case=uc, role=Role.COUNTRY_COORDINATOR)
-    UseCaseMembership.objects.create(user=b, use_case=uc, role=Role.COUNTRY_COORDINATOR)
+    UseCaseMembership.objects.create(user=a, project=uc, role=Role.COUNTRY_COORDINATOR)
+    UseCaseMembership.objects.create(user=b, project=uc, role=Role.COUNTRY_COORDINATOR)
 
     services.endorse(a, sub)  # Gate 1
     review = services.qc_approve(b, sub)  # Gate 2 fallback (a different person)
@@ -122,8 +122,8 @@ def test_same_person_cannot_endorse_and_validate(synced, django_user_model):
     """Two-person rule: holding both roles still can't self-approve both gates."""
     uc, submission, *_ = synced
     both = django_user_model.objects.create_user("both@x.org", "pw", is_active=True)
-    UseCaseMembership.objects.create(user=both, use_case=uc, role=Role.COUNTRY_COORDINATOR)
-    UseCaseMembership.objects.create(user=both, use_case=uc, role=Role.REGIONAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=both, project=uc, role=Role.COUNTRY_COORDINATOR)
+    UseCaseMembership.objects.create(user=both, project=uc, role=Role.REGIONAL_COORDINATOR)
     services.endorse(both, submission)
     with pytest.raises(ReviewPermissionDenied):
         services.qc_approve(both, submission)
@@ -175,13 +175,13 @@ def test_illegal_transition_rejected(synced):
     assert submission.review.state == ReviewState.IN_REVIEW
 
 
-def test_cross_use_case_isolation(synced, django_user_model):
+def test_cross_project_isolation(synced, django_user_model):
     uc, submission, *_ = synced
-    from apps.usecases.models import UseCase
+    from apps.usecases.models import Project
 
-    other = UseCase.objects.create(code="KALRO", name="KALRO")
+    other = Project.objects.create(code="KALRO", name="KALRO")
     intruder = django_user_model.objects.create_user("i@x.org", "pw", is_active=True)
-    UseCaseMembership.objects.create(user=intruder, use_case=other, role=Role.TRIAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=intruder, project=other, role=Role.TRIAL_COORDINATOR)
     # Coordinator of KALRO cannot act on an SNS-RWANDA submission.
     with pytest.raises(ReviewPermissionDenied):
         services.decline(intruder, submission)

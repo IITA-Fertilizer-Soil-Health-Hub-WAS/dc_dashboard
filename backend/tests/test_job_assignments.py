@@ -7,7 +7,7 @@ from django.urls import reverse
 from apps.fieldwork.models import CollectionUnit, Job, UnitAssignment
 from apps.fieldwork.services import project_enumerators
 from apps.rbac.models import Role, UseCaseMembership
-from apps.usecases.models import FormDefinition, Organization, UseCase
+from apps.usecases.models import FormDefinition, Organization, Project
 
 pytestmark = pytest.mark.django_db
 
@@ -15,16 +15,16 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture
 def world(django_user_model):
     org = Organization.objects.create(code="o", name="O")
-    uc = UseCase.objects.create(code="UC", name="UC", organization=org)
-    form = FormDefinition.objects.create(use_case=uc, ona_form_id=1,
+    uc = Project.objects.create(code="UC", name="UC", organization=org)
+    form = FormDefinition.objects.create(project=uc, ona_form_id=1,
                                          role=FormDefinition.Role.VALIDATION)
-    job = Job.objects.create(use_case=uc, name="Round 1", form=form, target_count=3)
-    units = [CollectionUnit.objects.create(use_case=uc, code=f"HH{i}") for i in range(3)]
+    job = Job.objects.create(project=uc, name="Round 1", form=form, target_count=3)
+    units = [CollectionUnit.objects.create(project=uc, code=f"HH{i}") for i in range(3)]
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True, organization=org)
-    UseCaseMembership.objects.create(user=coord, use_case=uc, role=Role.TRIAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
     en = django_user_model.objects.create_user("en@x.org", "pw", full_name="Enid",
                                                is_active=True, organization=org)
-    UseCaseMembership.objects.create(user=en, use_case=uc, role=Role.ENUMERATOR)
+    UseCaseMembership.objects.create(user=en, project=uc, role=Role.ENUMERATOR)
     return {"uc": uc, "job": job, "units": units, "coord": coord, "en": en, "org": org}
 
 
@@ -62,8 +62,8 @@ def test_remove_assignment(client, world):
 
 def test_assignments_scoped_to_own_project(client, django_user_model, world):
     """A coordinator can't open a job in a project they don't coordinate."""
-    other_uc = UseCase.objects.create(code="OTHER", name="Other", organization=world["org"])
-    other_job = Job.objects.create(use_case=other_uc, name="Other Job")
+    other_uc = Project.objects.create(code="OTHER", name="Other", organization=world["org"])
+    other_job = Job.objects.create(project=other_uc, name="Other Job")
     client.force_login(world["coord"])
     assert client.get(reverse("console:job_assignments",
                               args=[other_job.pk])).status_code == 404

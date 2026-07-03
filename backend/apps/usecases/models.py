@@ -74,7 +74,7 @@ class Country(BaseModel):
         return self.name
 
 
-class UseCase(BaseModel):
+class Project(BaseModel):
     """An independent project implementation (e.g. SNS-RWANDA, KALRO, BioSSA)."""
 
     class UnitType(models.TextChoices):
@@ -90,13 +90,13 @@ class UseCase(BaseModel):
     # unset, so isolation never depends on the geo hierarchy being filled in.
     organization = models.ForeignKey(
         "Organization", null=True, blank=True, on_delete=models.CASCADE,
-        related_name="use_cases",
+        related_name="projects",
     )
     country = models.ForeignKey(
-        "Country", null=True, blank=True, on_delete=models.SET_NULL, related_name="use_cases"
+        "Country", null=True, blank=True, on_delete=models.SET_NULL, related_name="projects"
     )
     name = models.CharField(max_length=255)
-    is_active = models.BooleanField(default=True)  # replaces active_use_case_list
+    is_active = models.BooleanField(default=True)  # replaces active_project_list
     countries = models.JSONField(default=list, blank=True)
 
     # ID validation patterns (was patternissues / patternissuesE in app.R).
@@ -139,7 +139,7 @@ class DataSource(BaseModel):
     (see apps.ingestion.backends). One source per use case.
     """
 
-    use_case = models.OneToOneField(UseCase, on_delete=models.CASCADE, related_name="data_source")
+    project = models.OneToOneField(Project, on_delete=models.CASCADE, related_name="data_source")
     backend = models.CharField(max_length=32, default="ONA")  # matches a registered backend type
     base_url = models.CharField(max_length=255, blank=True)
     token = models.CharField(max_length=512, blank=True)  # API token / key
@@ -147,22 +147,22 @@ class DataSource(BaseModel):
     config = models.JSONField(default=dict, blank=True)
 
     class Meta:
-        ordering = ["use_case"]
+        ordering = ["project"]
 
     def __str__(self) -> str:
-        return f"{self.use_case.code} via {self.backend}"
+        return f"{self.project.code} via {self.backend}"
 
 
 class Crop(BaseModel):
     """maize, potato, rice, banana, cassava, legumes, yam, soy. Aliases handle
     inconsistent ONA values (e.g. 'potatoIrish' == potato)."""
 
-    use_case = models.ForeignKey(UseCase, on_delete=models.CASCADE, related_name="crops")
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="crops")
     name = models.CharField(max_length=64)
     aliases = models.JSONField(default=list, blank=True)
 
     class Meta:
-        unique_together = ("use_case", "name")
+        unique_together = ("project", "name")
         ordering = ["name"]
 
     def __str__(self) -> str:
@@ -172,12 +172,12 @@ class Crop(BaseModel):
 class Trial(BaseModel):
     """Fertilizer Recommendation, Variety Selection, Planting Date, Intercropping, NOT."""
 
-    use_case = models.ForeignKey(UseCase, on_delete=models.CASCADE, related_name="trials")
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="trials")
     name = models.CharField(max_length=128)
     code = models.CharField(max_length=32, blank=True)
 
     class Meta:
-        unique_together = ("use_case", "name")
+        unique_together = ("project", "name")
         ordering = ["name"]
 
     def __str__(self) -> str:
@@ -201,7 +201,7 @@ class FormDefinition(BaseModel):
         PUBLISHED = "PUBLISHED", "Published from XLSForm"
         FAILED = "FAILED", "Publish failed"
 
-    use_case = models.ForeignKey(UseCase, on_delete=models.CASCADE, related_name="forms")
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="forms")
     # ONA numeric form id (legacy / ONA). Null for forms identified by a string id
     # (e.g. ODK Central xmlFormId) — use `server_ref` for the id to call the backend.
     ona_form_id = models.BigIntegerField(null=True, blank=True)
@@ -228,11 +228,11 @@ class FormDefinition(BaseModel):
     published_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        unique_together = ("use_case", "ona_form_id")
-        ordering = ["use_case", "role", "ona_form_id"]
+        unique_together = ("project", "ona_form_id")
+        ordering = ["project", "role", "ona_form_id"]
         constraints = [
             models.UniqueConstraint(
-                fields=["use_case", "server_form_id"],
+                fields=["project", "server_form_id"],
                 condition=models.Q(server_form_id__gt=""),
                 name="uniq_form_server_id",
             )
@@ -246,7 +246,7 @@ class FormDefinition(BaseModel):
         return str(self.ona_form_id) if self.ona_form_id is not None else ""
 
     def __str__(self) -> str:
-        return f"{self.use_case.code}:{self.role}:{self.server_ref}"
+        return f"{self.project.code}:{self.role}:{self.server_ref}"
 
 
 class FieldMapping(BaseModel):
@@ -287,7 +287,7 @@ class EventScheduleItem(BaseModel):
         EVENT1 = "EVENT1", "Event 1 date"
         PREV_EVENT = "PREV_EVENT", "Previous event date"
 
-    use_case = models.ForeignKey(UseCase, on_delete=models.CASCADE, related_name="schedule")
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="schedule")
     event_key = models.CharField(max_length=32)  # "Event1", "Event1R", "Event2"...
     sequence = models.IntegerField()  # ordering; drives out-of-sequence checks
     anchor = models.CharField(max_length=20, choices=Anchor.choices, default=Anchor.EVENT1)
@@ -297,11 +297,11 @@ class EventScheduleItem(BaseModel):
     grace_days = models.PositiveIntegerField(default=0)  # window before "overdue"
 
     class Meta:
-        unique_together = ("use_case", "event_key")
-        ordering = ["use_case", "sequence"]
+        unique_together = ("project", "event_key")
+        ordering = ["project", "sequence"]
 
     def __str__(self) -> str:
-        return f"{self.use_case.code}:{self.event_key}(+{self.offset_days})"
+        return f"{self.project.code}:{self.event_key}(+{self.offset_days})"
 
     def target_offset_for_crop(self, crop_name: str | None) -> int:
         """Resolve the offset for a crop, honouring crop_overrides."""

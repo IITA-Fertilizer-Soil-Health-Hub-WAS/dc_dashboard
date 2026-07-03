@@ -12,13 +12,13 @@ from apps.submissions.models import Submission
 from apps.validation.status import event_status, status_color
 
 
-def build_event_grid(use_case) -> dict[str, Any]:
+def build_event_grid(project) -> dict[str, Any]:
     today = timezone.localdate()
-    schedule = list(use_case.schedule.all())
+    schedule = list(project.schedule.all())
     event_keys = [e.event_key for e in schedule]
 
     subs = list(
-        Submission.objects.filter(use_case=use_case).select_related(
+        Submission.objects.filter(project=project).select_related(
             "collection_unit", "enumerator", "crop"
         )
     )

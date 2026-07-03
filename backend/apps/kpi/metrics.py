@@ -3,7 +3,7 @@
 Reads the materialised daily aggregates (apps.kpi.aggregate) for time-series and
 volume metrics, plus a few live point-in-time stats (open issues, approval rate)
 from the operational tables. Everything is scoped to the projects the user may
-see, via rbac.visible_use_cases.
+see, via rbac.visible_projects.
 """
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from datetime import date, timedelta
 
 from django.db.models import Count, Max, Q, Sum
 
-from apps.rbac.permissions import visible_use_cases
+from apps.rbac.permissions import visible_projects
 from apps.review.models import ReviewState
 from apps.submissions.models import Submission
 from apps.validation.models import ValidationFlag, ValidationRule
@@ -36,27 +36,27 @@ def _q(qs, since, field="date"):
 
 def overview_metrics(user, days: str = "30") -> dict:
     """Platform-wide (scoped) KPI summary for the Overview page."""
-    uc_ids = list(visible_use_cases(user).values_list("id", flat=True))
+    uc_ids = list(visible_projects(user).values_list("id", flat=True))
     since = _since(days)
 
-    proj = _q(ProjectKpiDaily.objects.filter(use_case_id__in=uc_ids), since)
+    proj = _q(ProjectKpiDaily.objects.filter(project_id__in=uc_ids), since)
     total_submissions = proj.aggregate(n=Sum("submissions"))["n"] or 0
-    active_projects = proj.filter(submissions__gt=0).values("use_case").distinct().count()
+    active_projects = proj.filter(submissions__gt=0).values("project").distinct().count()
     active_forms = (
-        _q(FormKpiDaily.objects.filter(form__use_case_id__in=uc_ids), since)
+        _q(FormKpiDaily.objects.filter(form__project_id__in=uc_ids), since)
         .filter(submissions__gt=0).values("form").distinct().count()
     )
     active_enumerators = (
-        _q(EnumeratorKpiDaily.objects.filter(use_case_id__in=uc_ids), since)
+        _q(EnumeratorKpiDaily.objects.filter(project_id__in=uc_ids), since)
         .filter(submissions__gt=0).values("enumerator").distinct().count()
     )
 
     # Live point-in-time stats.
-    subs = Submission.objects.filter(use_case_id__in=uc_ids)
+    subs = Submission.objects.filter(project_id__in=uc_ids)
     total_all = subs.count()
     approved = subs.filter(review__state=ReviewState.APPROVED).count()
     open_issues = ValidationFlag.objects.filter(
-        rule__use_case_id__in=uc_ids, status=ValidationFlag.Status.OPEN
+        rule__project_id__in=uc_ids, status=ValidationFlag.Status.OPEN
     ).count()
 
     trend = list(
@@ -64,7 +64,7 @@ def overview_metrics(user, days: str = "30") -> dict:
     )
     trend_max = max((t["n"] for t in trend), default=0)
     top_projects = list(
-        proj.values("use_case__code", "use_case__name")
+        proj.values("project__code", "project__name")
         .annotate(n=Sum("submissions")).order_by("-n")[:5]
     )
 
@@ -85,35 +85,35 @@ def overview_metrics(user, days: str = "30") -> dict:
     }
 
 
-def project_metrics(use_case, days: str = "30") -> dict:
+def project_metrics(project, days: str = "30") -> dict:
     """Per-project KPI detail."""
     since = _since(days)
-    proj = _q(ProjectKpiDaily.objects.filter(use_case=use_case), since)
+    proj = _q(ProjectKpiDaily.objects.filter(project=project), since)
     total = proj.aggregate(n=Sum("submissions"))["n"] or 0
 
-    subs = Submission.objects.filter(use_case=use_case)
+    subs = Submission.objects.filter(project=project)
     approved = subs.filter(review__state=ReviewState.APPROVED).count()
     open_issues = ValidationFlag.objects.filter(
-        rule__use_case=use_case, status=ValidationFlag.Status.OPEN
+        rule__project=project, status=ValidationFlag.Status.OPEN
     ).count()
 
     # Collection target across the project's jobs (planned units).
     from apps.fieldwork.models import Job
 
     target = (
-        Job.objects.filter(use_case=use_case).exclude(status="CLOSED")
+        Job.objects.filter(project=project).exclude(status="CLOSED")
         .aggregate(t=Sum("target_count"))["t"] or 0
     )
 
     trend = list(proj.values("date").annotate(n=Sum("submissions")).order_by("date"))
     trend_max = max((t["n"] for t in trend), default=0)
     top_enumerators = list(
-        _q(EnumeratorKpiDaily.objects.filter(use_case=use_case), since)
+        _q(EnumeratorKpiDaily.objects.filter(project=project), since)
         .values("enumerator__enid", "enumerator__first_name", "enumerator__surname")
         .annotate(n=Sum("submissions")).order_by("-n")[:10]
     )
     forms = list(
-        _q(FormKpiDaily.objects.filter(form__use_case=use_case), since)
+        _q(FormKpiDaily.objects.filter(form__project=project), since)
         .values("form__title", "form__server_form_id", "form__role")
         .annotate(n=Sum("submissions")).order_by("-n")
     )
@@ -148,11 +148,11 @@ _SEVERITIES = [
 ]
 
 
-def quality_metrics(use_case, days: str = "30") -> dict:
+def quality_metrics(project, days: str = "30") -> dict:
     """Data-quality detail: flags by severity, a rule × severity heatmap and the
     worst-offending rules. Flags are attributed to when they were raised."""
     since = _since(days)
-    flags = ValidationFlag.objects.filter(rule__use_case=use_case)
+    flags = ValidationFlag.objects.filter(rule__project=project)
     if since:
         flags = flags.filter(created_at__date__gte=since)
 
@@ -199,7 +199,7 @@ def quality_metrics(use_case, days: str = "30") -> dict:
 
     rejections = list(
         Review.objects.filter(
-            submission__use_case=use_case, state=ReviewState.DECLINED,
+            submission__project=project, state=ReviewState.DECLINED,
             rejection_reason__isnull=False,
         )
         .values("rejection_reason__label")
@@ -217,7 +217,7 @@ def quality_metrics(use_case, days: str = "30") -> dict:
     }
     integ_counts = dict(
         ValidationFlag.objects.filter(
-            rule__use_case=use_case, status=ValidationFlag.Status.OPEN,
+            rule__project=project, status=ValidationFlag.Status.OPEN,
             rule__rule_type__in=list(integrity_types),
         ).values_list("rule__rule_type").annotate(n=Count("id"))
     )
@@ -273,12 +273,12 @@ def _quality_score(approval_pct, on_time_pct, flag_pct, gps_err) -> int:
     )))
 
 
-def enumerator_metrics(use_case, days: str = "30") -> dict:
+def enumerator_metrics(project, days: str = "30") -> dict:
     """Per-enumerator scorecard: volume, approval / reject rate, on-time delivery,
     average GPS error and open issues, ranked by a composite quality score (not raw
     volume) — SDMT's field-team-management view. Plus the collected geo-points."""
     since = _since(days)
-    subs = Submission.objects.filter(use_case=use_case, enumerator__isnull=False)
+    subs = Submission.objects.filter(project=project, enumerator__isnull=False)
     if since:
         subs = subs.filter(
             Q(event_date__gte=since)
@@ -299,7 +299,7 @@ def enumerator_metrics(use_case, days: str = "30") -> dict:
     # Open flags per enumerator (separate query to avoid join fan-out).
     open_by_enum = dict(
         ValidationFlag.objects.filter(
-            submission__use_case=use_case, status=ValidationFlag.Status.OPEN,
+            submission__project=project, status=ValidationFlag.Status.OPEN,
             submission__enumerator__isnull=False,
         )
         .values_list("submission__enumerator_id")
@@ -328,7 +328,7 @@ def enumerator_metrics(use_case, days: str = "30") -> dict:
     points = [
         {"lat": u.lat, "lon": u.lon,
          "label": f"{u.code} · {u.name}" if u.name else u.code, "color": "#55b047"}
-        for u in _collected_units(use_case)
+        for u in _collected_units(project)
     ]
 
     return {
@@ -423,16 +423,16 @@ def _trend_window_subs(base_qs, weeks: int):
     ).values("id", "event_date", "ona_submission_time")
 
 
-def enumerator_trend(use_case, enumerator_id, weeks: int = 12) -> dict:
+def enumerator_trend(project, enumerator_id, weeks: int = 12) -> dict:
     """One enumerator's flag rate over time — weekly buckets — so a coordinator can
     catch *degrading* quality early rather than only seeing a period average. Each
     bucket: submissions and how many drew an open flag. A first-half vs second-half
     comparison labels the direction (improving / worsening / stable)."""
     from apps.submissions.models import Enumerator
 
-    enum = Enumerator.objects.filter(pk=enumerator_id, use_case=use_case).first()
+    enum = Enumerator.objects.filter(pk=enumerator_id, project=project).first()
     subs = _trend_window_subs(
-        Submission.objects.filter(use_case=use_case, enumerator_id=enumerator_id), weeks
+        Submission.objects.filter(project=project, enumerator_id=enumerator_id), weeks
     )
     flagged_ids = set(
         ValidationFlag.objects.filter(
@@ -442,43 +442,43 @@ def enumerator_trend(use_case, enumerator_id, weeks: int = 12) -> dict:
     return {"enumerator": enum, **_flag_trend(subs, flagged_ids, weeks)}
 
 
-def project_quality_trend(use_case, weeks: int = 12) -> dict:
+def project_quality_trend(project, weeks: int = 12) -> dict:
     """The whole project's flag rate over time — the same early-warning line as the
     per-enumerator trend, but project-wide, so a *systemic* slide (a bad form version,
     seasonal pressure) shows up even when no single enumerator's trend would."""
-    subs = _trend_window_subs(Submission.objects.filter(use_case=use_case), weeks)
+    subs = _trend_window_subs(Submission.objects.filter(project=project), weeks)
     flagged_ids = set(
         ValidationFlag.objects.filter(
-            rule__use_case=use_case, status=ValidationFlag.Status.OPEN,
+            rule__project=project, status=ValidationFlag.Status.OPEN,
         ).values_list("submission_id", flat=True)
     )
     return _flag_trend(subs, flagged_ids, weeks)
 
 
-def _collected_units(use_case):
+def _collected_units(project):
     from apps.fieldwork.models import CollectionUnit
 
     return (
         CollectionUnit.objects.filter(
-            use_case=use_case, lat__isnull=False, lon__isnull=False,
+            project=project, lat__isnull=False, lon__isnull=False,
             submissions__isnull=False,
         )
         .distinct()
     )
 
 
-def coverage_metrics(use_case) -> dict:
+def coverage_metrics(project) -> dict:
     """Coverage / gap view: planned units vs collected, per-job progress and a
     map of every known unit coloured by whether data has come in."""
     from apps.fieldwork.models import CollectionUnit
-    from apps.fieldwork.services import use_case_jobs_progress
+    from apps.fieldwork.services import project_jobs_progress
 
-    units = CollectionUnit.objects.filter(use_case=use_case)
+    units = CollectionUnit.objects.filter(project=project)
     total_units = units.count()
     collected = units.filter(submissions__isnull=False).distinct().count()
     pending = total_units - collected
 
-    jobs = use_case_jobs_progress(use_case)
+    jobs = project_jobs_progress(project)
 
     mapped = units.filter(lat__isnull=False, lon__isnull=False)
     collected_ids = set(

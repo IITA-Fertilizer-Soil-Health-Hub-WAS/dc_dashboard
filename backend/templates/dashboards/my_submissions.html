@@ -17,7 +17,7 @@
       <tbody>
         {% for s in submissions %}
           <tr>
-            <td>{{ s.use_case.code }}</td>
+            <td>{{ s.project.code }}</td>
             <td>{% if s.household %}{{ s.household.hhid }}{% elif s.collection_unit %}{{ s.collection_unit.code }}{% else %}<span class="subtle">—</span>{% endif %}</td>
             <td>{{ s.event_key|default:"—" }}</td>
             <td class="subtle">{{ s.event_date|default:"—" }}</td>

@@ -12,25 +12,25 @@ from django.db import models
 
 from apps.common.models import BaseModel
 from apps.submissions.models import Enumerator
-from apps.usecases.models import FormDefinition, UseCase
+from apps.usecases.models import FormDefinition, Project
 
 
 class ProjectKpiDaily(BaseModel):
     """One row per project per day."""
 
-    use_case = models.ForeignKey(UseCase, on_delete=models.CASCADE, related_name="kpi_daily")
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="kpi_daily")
     date = models.DateField(db_index=True)
     submissions = models.PositiveIntegerField(default=0)
     active_enumerators = models.PositiveIntegerField(default=0)
     flags_opened = models.PositiveIntegerField(default=0)
 
     class Meta:
-        unique_together = ("use_case", "date")
+        unique_together = ("project", "date")
         ordering = ["-date"]
-        indexes = [models.Index(fields=["use_case", "date"])]
+        indexes = [models.Index(fields=["project", "date"], name="kpi_project_proj_date_idx")]
 
     def __str__(self) -> str:
-        return f"{self.use_case.code}@{self.date}: {self.submissions}"
+        return f"{self.project.code}@{self.date}: {self.submissions}"
 
 
 class FormKpiDaily(BaseModel):
@@ -51,14 +51,14 @@ class EnumeratorKpiDaily(BaseModel):
     enumerator = models.ForeignKey(
         Enumerator, on_delete=models.CASCADE, related_name="kpi_daily"
     )
-    use_case = models.ForeignKey(
-        UseCase, on_delete=models.CASCADE, related_name="enumerator_kpi_daily"
+    project = models.ForeignKey(
+        Project, on_delete=models.CASCADE, related_name="enumerator_kpi_daily"
     )
     date = models.DateField(db_index=True)
     submissions = models.PositiveIntegerField(default=0)
 
     class Meta:
-        unique_together = ("enumerator", "use_case", "date")
+        unique_together = ("enumerator", "project", "date")
         ordering = ["-date"]
 
 
@@ -76,8 +76,8 @@ class AlertRule(BaseModel):
         WARNING = "WARNING", "Warning"
         CRITICAL = "CRITICAL", "Critical"
 
-    use_case = models.ForeignKey(
-        UseCase, null=True, blank=True, on_delete=models.CASCADE, related_name="alert_rules"
+    project = models.ForeignKey(
+        Project, null=True, blank=True, on_delete=models.CASCADE, related_name="alert_rules"
     )  # null = platform-wide
     name = models.CharField(max_length=255)
     metric = models.CharField(max_length=64, default="daily_submissions")
@@ -89,7 +89,7 @@ class AlertRule(BaseModel):
     notify_emails = models.JSONField(default=list, blank=True)
 
     class Meta:
-        ordering = ["use_case", "name"]
+        ordering = ["project", "name"]
 
     def __str__(self) -> str:
         return self.name
@@ -99,8 +99,8 @@ class AlertEvent(BaseModel):
     """A fired alert — append-only log."""
 
     rule = models.ForeignKey(AlertRule, on_delete=models.CASCADE, related_name="events")
-    use_case = models.ForeignKey(
-        UseCase, null=True, blank=True, on_delete=models.SET_NULL, related_name="alert_events"
+    project = models.ForeignKey(
+        Project, null=True, blank=True, on_delete=models.SET_NULL, related_name="alert_events"
     )
     observed_value = models.FloatField(null=True, blank=True)
     severity = models.CharField(max_length=8, choices=AlertRule.Severity.choices)

@@ -56,16 +56,16 @@ def label_map(schema: list[dict]) -> dict:
             for f in (schema or []) if f.get("path")}
 
 
-def sync_use_case_schemas(use_case) -> dict:
+def sync_project_schemas(project) -> dict:
     """Fetch + cache each form's field schema for one use case, so submissions
     render with human question labels. Returns {form_server_ref: field_count};
     a backend that doesn't support schema fetch (returns []) leaves the form as-is.
     """
     from apps.ingestion.backends.registry import get_backend_for
 
-    backend = get_backend_for(use_case)
+    backend = get_backend_for(project)
     result: dict = {}
-    for form in use_case.forms.all():
+    for form in project.forms.all():
         ref = form.server_ref
         if not ref:
             continue

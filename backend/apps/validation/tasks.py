@@ -3,17 +3,17 @@ from __future__ import annotations
 
 from celery import shared_task
 
-from apps.usecases.models import UseCase
+from apps.usecases.models import Project
 
-from .engine import run_for_use_case
+from .engine import run_for_project
 
 
-@shared_task(name="validation.run_for_use_case")
+@shared_task(name="validation.run_for_project")
 def run_validation_task(code: str) -> dict:
-    uc = UseCase.objects.get(code=code)
-    stats = run_for_use_case(uc)
+    uc = Project.objects.get(code=code)
+    stats = run_for_project(uc)
     return {
-        "use_case": stats.use_case,
+        "project": stats.project,
         "opened": stats.opened,
         "resolved": stats.resolved,
         "flagged_submissions": stats.flagged_submissions,

@@ -7,7 +7,7 @@ from apps.common.email import send_safe_email
 def notify_assignment(submission, assignee) -> None:
     if not getattr(assignee, "email", None):
         return
-    uc = submission.use_case
+    uc = submission.project
     subject = f"[{uc.code}] A submission was assigned to you for review"
     body = (
         f"You have been assigned submission {submission.ona_uuid} "

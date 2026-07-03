@@ -15,7 +15,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from apps.ingestion.tasks import webhook_ingest_task
-from apps.usecases.models import UseCase
+from apps.usecases.models import Project
 
 
 def _provided_token(request) -> str:
@@ -37,7 +37,7 @@ def collection_webhook(request, code: str):
     if not constant_time_compare(_provided_token(request), secret):
         return JsonResponse({"detail": "Invalid webhook token."}, status=401)
 
-    uc = UseCase.objects.filter(code=code, is_active=True).first()
+    uc = Project.objects.filter(code=code, is_active=True).first()
     if uc is None:
         return JsonResponse({"detail": "Unknown or inactive project."}, status=404)
 

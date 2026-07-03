@@ -1,6 +1,6 @@
 {% extends "console/base.html" %}
 {% block title %}Elect plot · {{ trial_key }} · {{ SITE_NAME }}{% endblock %}
-{% block crumbs %}<span class="sep">/</span><span class="cur">Manage</span><span class="sep">/</span><a href="{% url 'console:plot_election' %}?use_case={{ uc.code }}">Plot election</a><span class="sep">/</span><span class="cur">{{ trial_key }}</span>{% endblock %}
+{% block crumbs %}<span class="sep">/</span><span class="cur">Manage</span><span class="sep">/</span><a href="{% url 'console:plot_election' %}?project={{ uc.code }}">Plot election</a><span class="sep">/</span><span class="cur">{{ trial_key }}</span>{% endblock %}
 {% block console_main %}
   <div class="page-head"><h2>Elect plot — trial {{ trial_key }}</h2></div>
   <p class="subtle" style="margin:.1rem 0 1rem;max-width:70ch;">

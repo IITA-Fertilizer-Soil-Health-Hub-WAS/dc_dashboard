@@ -14,7 +14,7 @@ from apps.config_admin.loader import (
     import_config,
     load_yaml,
 )
-from apps.usecases.models import EventScheduleItem, FieldMapping, UseCase
+from apps.usecases.models import EventScheduleItem, FieldMapping, Project
 from apps.validation.models import ValidationRule
 
 pytestmark = pytest.mark.django_db
@@ -44,7 +44,7 @@ def test_import_sns_rwanda_from_file():
     # Validation rules including ID patterns.
     assert uc.rules.filter(rule_type=ValidationRule.RuleType.REGEX_ID).count() == 2
     coalesce = FieldMapping.objects.filter(
-        form__use_case=uc, transform=FieldMapping.Transform.COALESCE
+        form__project=uc, transform=FieldMapping.Transform.COALESCE
     )
     assert coalesce.exists()
 
@@ -55,7 +55,7 @@ def test_import_is_idempotent_and_bumps_version():
     v1 = uc1.config_version
     uc2 = import_config(data)
     # Same single use case, no duplicate children, version incremented.
-    assert UseCase.objects.filter(code="SNS-RWANDA").count() == 1
+    assert Project.objects.filter(code="SNS-RWANDA").count() == 1
     assert uc2.config_version == v1 + 1
     assert uc2.forms.count() == 3
     assert uc2.schedule.count() == 7
@@ -74,9 +74,9 @@ def test_round_trip_db_to_yaml_to_db():
 
     # dump_yaml produces parseable YAML that imports to the same shape.
     text = dump_yaml(uc)
-    assert yaml.safe_load(text)["use_case"]["code"] == "SNS-RWANDA"
+    assert yaml.safe_load(text)["project"]["code"] == "SNS-RWANDA"
 
 
 def test_missing_code_raises():
     with pytest.raises(ConfigError):
-        import_config({"use_case": {"name": "no code"}})
+        import_config({"project": {"name": "no code"}})

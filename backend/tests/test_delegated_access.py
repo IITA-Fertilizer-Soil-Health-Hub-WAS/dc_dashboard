@@ -16,7 +16,7 @@ from apps.rbac.permissions import (
     grantable_roles,
     manageable_memberships,
 )
-from apps.usecases.models import Country, Region, UseCase
+from apps.usecases.models import Country, Project, Region
 
 pytestmark = pytest.mark.django_db
 
@@ -30,9 +30,9 @@ def geo():
     nigeria = Country.objects.create(region=wa, code="NG", name="Nigeria")
     return {
         "ea": ea, "wa": wa, "rwanda": rwanda, "kenya": kenya, "nigeria": nigeria,
-        "uc_rw": UseCase.objects.create(code="SNS-RW", name="SNS Rwanda", country=rwanda),
-        "uc_ke": UseCase.objects.create(code="KALRO", name="KALRO", country=kenya),
-        "uc_ng": UseCase.objects.create(code="BIOSSA", name="BioSSA", country=nigeria),
+        "uc_rw": Project.objects.create(code="SNS-RW", name="SNS Rwanda", country=rwanda),
+        "uc_ke": Project.objects.create(code="KALRO", name="KALRO", country=kenya),
+        "uc_ng": Project.objects.create(code="BIOSSA", name="BioSSA", country=nigeria),
     }
 
 
@@ -65,9 +65,9 @@ def test_regional_coordinator_spans_region(django_user_model, geo):
     assert not can_grant(rc, geo["wa"], Role.VIEWER)
 
 
-def test_trial_coordinator_limited_to_one_use_case(django_user_model, geo):
+def test_trial_coordinator_limited_to_one_project(django_user_model, geo):
     tc = _user(django_user_model, "tc@x.org")
-    UseCaseMembership.objects.create(user=tc, use_case=geo["uc_rw"], role=Role.TRIAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=tc, project=geo["uc_rw"], role=Role.TRIAL_COORDINATOR)
     assert can_grant(tc, geo["uc_rw"], Role.ENUMERATOR)
     assert not can_grant(tc, geo["uc_ke"], Role.ENUMERATOR)
     assert not can_grant(tc, geo["rwanda"], Role.ENUMERATOR)  # cannot widen to the country
@@ -89,7 +89,7 @@ def test_role_ceiling_blocks_upgrading_above_self(django_user_model, geo):
 
 def test_grantable_roles_capped_at_own_rank(django_user_model, geo):
     tc = _user(django_user_model, "tc2@x.org")
-    UseCaseMembership.objects.create(user=tc, use_case=geo["uc_rw"], role=Role.TRIAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=tc, project=geo["uc_rw"], role=Role.TRIAL_COORDINATOR)
     roles = set(grantable_roles(tc))
     assert Role.TRIAL_COORDINATOR in roles
     assert Role.ENUMERATOR in roles
@@ -99,7 +99,7 @@ def test_grantable_roles_capped_at_own_rank(django_user_model, geo):
 
 def test_non_coordinator_cannot_manage_access(django_user_model, geo):
     viewer = _user(django_user_model, "v@x.org")
-    UseCaseMembership.objects.create(user=viewer, use_case=geo["uc_rw"], role=Role.VIEWER)
+    UseCaseMembership.objects.create(user=viewer, project=geo["uc_rw"], role=Role.VIEWER)
     assert not can_manage_access(viewer)
     assert grantable_roles(viewer) == []
     assert not can_grant(viewer, geo["uc_rw"], Role.VIEWER)
@@ -119,8 +119,8 @@ def test_manageable_memberships_scoped(django_user_model, geo):
     cc = _user(django_user_model, "cc3@x.org")
     UseCaseMembership.objects.create(user=cc, country=geo["rwanda"], role=Role.COUNTRY_COORDINATOR)
     other = _user(django_user_model, "other@x.org")
-    in_scope = UseCaseMembership.objects.create(user=other, use_case=geo["uc_rw"], role=Role.VIEWER)
-    out_scope = UseCaseMembership.objects.create(user=other, use_case=geo["uc_ke"], role=Role.VIEWER)
+    in_scope = UseCaseMembership.objects.create(user=other, project=geo["uc_rw"], role=Role.VIEWER)
+    out_scope = UseCaseMembership.objects.create(user=other, project=geo["uc_ke"], role=Role.VIEWER)
 
     pks = set(manageable_memberships(cc).values_list("pk", flat=True))
     assert in_scope.pk in pks
@@ -146,7 +146,7 @@ def test_approve_pending_user_via_view(client, django_user_model, geo):
     assert pending.is_active is True
     assert pending.approved_by == cc
     assert UseCaseMembership.objects.filter(
-        user=pending, use_case=geo["uc_rw"], role=Role.ENUMERATOR
+        user=pending, project=geo["uc_rw"], role=Role.ENUMERATOR
     ).exists()
 
 
@@ -187,7 +187,7 @@ def test_view_revoke_only_within_authority(client, django_user_model, geo):
     cc = _user(django_user_model, "cc7@x.org")
     UseCaseMembership.objects.create(user=cc, country=geo["rwanda"], role=Role.COUNTRY_COORDINATOR)
     victim = _user(django_user_model, "vic@x.org")
-    out = UseCaseMembership.objects.create(user=victim, use_case=geo["uc_ke"], role=Role.VIEWER)
+    out = UseCaseMembership.objects.create(user=victim, project=geo["uc_ke"], role=Role.VIEWER)
     client.force_login(cc)
 
     resp = client.post(reverse("dashboards:team_revoke"), {"membership": str(out.pk)})
@@ -197,7 +197,7 @@ def test_view_revoke_only_within_authority(client, django_user_model, geo):
 
 def test_team_page_denied_for_non_manager(client, django_user_model, geo):
     viewer = _user(django_user_model, "v2@x.org")
-    UseCaseMembership.objects.create(user=viewer, use_case=geo["uc_rw"], role=Role.VIEWER)
+    UseCaseMembership.objects.create(user=viewer, project=geo["uc_rw"], role=Role.VIEWER)
     client.force_login(viewer)
     resp = client.get(reverse("dashboards:team"))
     assert resp.status_code == 403

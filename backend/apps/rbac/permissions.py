@@ -1,6 +1,6 @@
 """Authorization facade.
 
-`user_can(user, action, use_case)` is the single entry point for permission
+`user_can(user, action, project)` is the single entry point for permission
 checks across views, templates, DRF, and the review state machine. It maps
 abstract actions to the roles allowed to perform them, scoped to a use case.
 Keeping this in one place means the review state machine, the dashboards, and
@@ -15,7 +15,7 @@ from django.db.models import Q
 from .models import Role, UseCaseMembership
 
 if TYPE_CHECKING:
-    from apps.usecases.models import UseCase
+    from apps.usecases.models import Project
 
 # Action -> set of use-case-scoped roles that may perform it.
 # Coordinator roles share the trial-coordinator powers, just at a wider scope
@@ -51,7 +51,7 @@ ACTION_ROLES: dict[str, set[str]] = {
 GLOBAL_ADMIN_ACTIONS: set[str] = {"manage_config", "manage_users", "manage_usecases"}
 
 
-def roles_for(user, use_case: UseCase) -> set[str]:
+def roles_for(user, project: Project) -> set[str]:
     """All roles a user holds for a use case, including cascaded country/region grants.
 
     A grant on the use case's country (or region) confers the same role as a direct
@@ -60,18 +60,18 @@ def roles_for(user, use_case: UseCase) -> set[str]:
     """
     if not user.is_authenticated:
         return set()
-    scope = Q(use_case=use_case)
-    if use_case.country_id:
-        scope |= Q(country_id=use_case.country_id)
-        if use_case.country.region_id:
-            scope |= Q(region_id=use_case.country.region_id)
+    scope = Q(project=project)
+    if project.country_id:
+        scope |= Q(country_id=project.country_id)
+        if project.country.region_id:
+            scope |= Q(region_id=project.country.region_id)
     return set(
         UseCaseMembership.objects.filter(scope, user=user).values_list("role", flat=True)
     )
 
 
-def user_can(user, action: str, use_case: UseCase | None = None) -> bool:
-    """Return True if `user` may perform `action` (optionally within `use_case`)."""
+def user_can(user, action: str, project: Project | None = None) -> bool:
+    """Return True if `user` may perform `action` (optionally within `project`)."""
     if not getattr(user, "is_authenticated", False) or not user.is_active:
         return False
 
@@ -86,10 +86,10 @@ def user_can(user, action: str, use_case: UseCase | None = None) -> bool:
     if allowed_roles is None:
         raise ValueError(f"Unknown action: {action!r}")
 
-    if use_case is None:
+    if project is None:
         return False  # scoped actions require a use case
 
-    held = roles_for(user, use_case)
+    held = roles_for(user, project)
 
     # Gate 2 fallback: a Country Coordinator may give final validation only when
     # no Regional Coordinator covers this use case — so a use case without a
@@ -97,37 +97,37 @@ def user_can(user, action: str, use_case: UseCase | None = None) -> bool:
     if (
         action == "final_approve"
         and Role.COUNTRY_COORDINATOR in held
-        and not _regional_validator_exists(use_case)
+        and not _regional_validator_exists(project)
     ):
         return True
 
     return bool(held & allowed_roles)
 
 
-def _regional_validator_exists(use_case) -> bool:
+def _regional_validator_exists(project) -> bool:
     """Whether any active Regional Coordinator has authority over this use case."""
-    scope = Q(use_case=use_case)
-    if use_case.country_id:
-        scope |= Q(country_id=use_case.country_id)
-        if use_case.country.region_id:
-            scope |= Q(region_id=use_case.country.region_id)
+    scope = Q(project=project)
+    if project.country_id:
+        scope |= Q(country_id=project.country_id)
+        if project.country.region_id:
+            scope |= Q(region_id=project.country.region_id)
     return UseCaseMembership.objects.filter(
         scope, role=Role.REGIONAL_COORDINATOR, user__is_active=True
     ).exists()
 
 
-def visible_use_cases(user):
-    """Use cases a user may view — replaces the R `eia_apps ∩ active_use_case_list`.
+def visible_projects(user):
+    """Use cases a user may view — replaces the R `eia_apps ∩ active_project_list`.
 
     Platform Admin sees all active use cases; everyone else sees only use cases
     where they hold a membership.
     """
-    from apps.usecases.models import UseCase
+    from apps.usecases.models import Project
 
     if not getattr(user, "is_authenticated", False):
-        return UseCase.objects.none()
+        return Project.objects.none()
     if getattr(user, "is_platform_admin", False):
-        return UseCase.objects.filter(is_active=True)  # hub operator spans tenants
+        return Project.objects.filter(is_active=True)  # hub operator spans tenants
     own_org = getattr(user, "organization_id", None)
     # Region/country grants cascade only within the user's own institution — a
     # whole region of another org is never shared this way.
@@ -137,20 +137,20 @@ def visible_use_cases(user):
     # A direct use-case membership grants visibility even across the org
     # boundary: that is exactly how an owner shares one project with an outside
     # collaborator (see team.team_invite). Everything else stays in-tenant.
-    return UseCase.objects.filter(
+    return Project.objects.filter(
         Q(memberships__user=user) | cascade, is_active=True
     ).distinct()
 
 
 def organization_of(scope_obj):
-    """The Organization id that owns a scope object (Region / Country / UseCase)."""
-    from apps.usecases.models import Country, Region, UseCase
+    """The Organization id that owns a scope object (Region / Country / Project)."""
+    from apps.usecases.models import Country, Project, Region
 
     if isinstance(scope_obj, Region):
         return scope_obj.organization_id
     if isinstance(scope_obj, Country):
         return scope_obj.region.organization_id
-    if isinstance(scope_obj, UseCase):
+    if isinstance(scope_obj, Project):
         return scope_obj.organization_id
     return None
 
@@ -179,20 +179,20 @@ ROLE_RANK: dict[str, int] = {
 
 
 def _authority(user) -> tuple[set, set, set]:
-    """The (region_ids, country_ids, use_case_ids) a user has coordinator authority over."""
+    """The (region_ids, country_ids, project_ids) a user has coordinator authority over."""
     region_ids: set = set()
     country_ids: set = set()
     uc_ids: set = set()
     rows = UseCaseMembership.objects.filter(user=user, role__in=COORDINATORS).values(
-        "region_id", "country_id", "use_case_id"
+        "region_id", "country_id", "project_id"
     )
     for r in rows:
         if r["region_id"]:
             region_ids.add(r["region_id"])
         elif r["country_id"]:
             country_ids.add(r["country_id"])
-        elif r["use_case_id"]:
-            uc_ids.add(r["use_case_id"])
+        elif r["project_id"]:
+            uc_ids.add(r["project_id"])
     return region_ids, country_ids, uc_ids
 
 
@@ -227,17 +227,17 @@ def grantable_roles(user) -> list[str]:
 
 
 def can_grant_at(user, scope_obj) -> bool:
-    """Whether `user`'s coordinator authority covers this scope (Region/Country/UseCase)."""
+    """Whether `user`'s coordinator authority covers this scope (Region/Country/Project)."""
     if getattr(user, "is_platform_admin", False):
         return True
-    from apps.usecases.models import Country, Region, UseCase
+    from apps.usecases.models import Country, Project, Region
 
     region_ids, country_ids, uc_ids = _authority(user)
     if isinstance(scope_obj, Region):
         return scope_obj.id in region_ids
     if isinstance(scope_obj, Country):
         return scope_obj.id in country_ids or scope_obj.region_id in region_ids
-    if isinstance(scope_obj, UseCase):
+    if isinstance(scope_obj, Project):
         if scope_obj.id in uc_ids:
             return True
         if scope_obj.country_id and scope_obj.country_id in country_ids:
@@ -262,13 +262,13 @@ def can_grant(user, scope_obj, role: str) -> bool:
 
 def grantable_scopes(user) -> dict:
     """Scopes (regions/countries/use cases) `user` may grant within, for menus."""
-    from apps.usecases.models import Country, Region, UseCase
+    from apps.usecases.models import Country, Project, Region
 
     if getattr(user, "is_platform_admin", False):
         return {
             "regions": Region.objects.all(),
             "countries": Country.objects.select_related("region").all(),
-            "use_cases": UseCase.objects.filter(is_active=True).select_related("country"),
+            "projects": Project.objects.filter(is_active=True).select_related("country"),
         }
     region_ids, country_ids, uc_ids = _authority(user)
     return {
@@ -276,7 +276,7 @@ def grantable_scopes(user) -> dict:
         "countries": Country.objects.select_related("region").filter(
             Q(id__in=country_ids) | Q(region_id__in=region_ids)
         ),
-        "use_cases": UseCase.objects.filter(
+        "projects": Project.objects.filter(
             Q(id__in=uc_ids)
             | Q(country_id__in=country_ids)
             | Q(country__region_id__in=region_ids),
@@ -290,7 +290,7 @@ def manageable_memberships(user):
     if not can_manage_access(user):
         return UseCaseMembership.objects.none()
     qs = UseCaseMembership.objects.select_related(
-        "user", "use_case", "country", "region", "granted_by"
+        "user", "project", "country", "region", "granted_by"
     )
     if getattr(user, "is_platform_admin", False):
         return qs
@@ -299,9 +299,9 @@ def manageable_memberships(user):
         Q(region_id__in=region_ids)
         | Q(country_id__in=country_ids)
         | Q(country__region_id__in=region_ids)
-        | Q(use_case_id__in=uc_ids)
-        | Q(use_case__country_id__in=country_ids)
-        | Q(use_case__country__region_id__in=region_ids)
+        | Q(project_id__in=uc_ids)
+        | Q(project__country_id__in=country_ids)
+        | Q(project__country__region_id__in=region_ids)
     )
 
 

@@ -7,7 +7,7 @@ from django.urls import reverse
 
 from apps.ingestion.backends.base import PublishResult
 from apps.ingestion.publishing import publish_xlsform
-from apps.usecases.models import FormDefinition, UseCase
+from apps.usecases.models import FormDefinition, Project
 
 pytestmark = pytest.mark.django_db
 
@@ -27,7 +27,7 @@ class _FakeBackend:
 
 @pytest.fixture
 def uc():
-    return UseCase.objects.create(code="MAIZE", name="Maize Trial")
+    return Project.objects.create(code="MAIZE", name="Maize Trial")
 
 
 def _patch_backend(monkeypatch, result):
@@ -48,7 +48,7 @@ def test_publish_service_records_form(monkeypatch, uc):
         ok=True, server_form_id="maize_v1", version="2024a", title="Maize Trial"))
     form, result = publish_xlsform(uc, b"<xlsx>", filename="maize.xlsx", role="VALIDATION")
     assert result.ok
-    assert form.use_case == uc
+    assert form.project == uc
     assert form.server_form_id == "maize_v1"
     assert form.publish_status == FormDefinition.PublishStatus.PUBLISHED
     assert form.published_at is not None
@@ -91,9 +91,9 @@ def test_publish_view_uploads_and_creates_form(client, django_user_model, monkey
         "maize.xlsx", b"<xlsx-bytes>",
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     resp = client.post(reverse("console:publish_form"),
-                       {"use_case": str(uc.pk), "role": "VALIDATION", "xlsform": upload})
+                       {"project": str(uc.pk), "role": "VALIDATION", "xlsform": upload})
     assert resp.status_code == 302  # success → redirect to forms list
-    assert FormDefinition.objects.filter(use_case=uc, server_form_id="maize_v1").exists()
+    assert FormDefinition.objects.filter(project=uc, server_form_id="maize_v1").exists()
 
 
 def test_publish_view_shows_error(client, django_user_model, monkeypatch, uc):
@@ -102,7 +102,7 @@ def test_publish_view_shows_error(client, django_user_model, monkeypatch, uc):
     client.force_login(admin)
     upload = SimpleUploadedFile("bad.xlsx", b"<bad>")
     resp = client.post(reverse("console:publish_form"),
-                       {"use_case": str(uc.pk), "role": "VALIDATION", "xlsform": upload})
+                       {"project": str(uc.pk), "role": "VALIDATION", "xlsform": upload})
     assert resp.status_code == 200
     assert b"Conversion failed" in resp.content
     assert FormDefinition.objects.count() == 0

@@ -8,7 +8,7 @@ from apps.ingestion import writeback
 from apps.ingestion.backends.base import CollectionBackend, WriteResult
 from apps.review import services
 from apps.submissions.models import Submission, SubmissionValue
-from apps.usecases.models import FormDefinition, UseCase
+from apps.usecases.models import FormDefinition, Project
 
 pytestmark = pytest.mark.django_db
 
@@ -26,10 +26,10 @@ def coordinator(django_user_model):
 
 @pytest.fixture
 def submission():
-    uc = UseCase.objects.create(code="UC", name="UC")
-    form = FormDefinition.objects.create(use_case=uc, ona_form_id=1,
+    uc = Project.objects.create(code="UC", name="UC")
+    form = FormDefinition.objects.create(project=uc, ona_form_id=1,
                                          role=FormDefinition.Role.VALIDATION)
-    sub = Submission.objects.create(use_case=uc, form=form, ona_uuid="u1", content_hash="h")
+    sub = Submission.objects.create(project=uc, form=form, ona_uuid="u1", content_hash="h")
     SubmissionValue.objects.create(submission=sub, field_key="ENID",
                                    raw_value="EN1", current_value="EN1")
     return sub
@@ -37,7 +37,7 @@ def submission():
 
 # ---- Final data gate ----
 def test_only_approved_in_final_dataset(submission, coordinator):
-    uc = submission.use_case
+    uc = submission.project
     assert approved_submissions(uc).count() == 0  # not yet approved
     _approve(coordinator, submission)
     assert approved_submissions(uc).count() == 1
@@ -47,7 +47,7 @@ def test_final_rows_use_authoritative_values(submission, coordinator):
     # Edit a value, then approve — final data must reflect the edited value.
     services.edit_value(coordinator, submission, field_key="ENID", new_value="EN1-FIXED")
     _approve(coordinator, submission)
-    _, keys, rows = final_rows(submission.use_case)
+    _, keys, rows = final_rows(submission.project)
     assert rows[0]["values"]["ENID"] == "EN1-FIXED"
     assert rows[0]["edited"] == 1
 
@@ -55,7 +55,7 @@ def test_final_rows_use_authoritative_values(submission, coordinator):
 def test_export_final_csv(client, coordinator, submission):
     _approve(coordinator, submission)
     client.force_login(coordinator)
-    resp = client.get(f"/project/{submission.use_case.code}/final.csv")
+    resp = client.get(f"/project/{submission.project.code}/final.csv")
     assert resp.status_code == 200
     assert resp["Content-Type"] == "text/csv"
     assert b"ona_uuid" in resp.content and b"u1" in resp.content

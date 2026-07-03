@@ -20,7 +20,7 @@ class Action:
     style: str = "btn-request"  # button class from base.html
 
 
-# ---- UseCase actions (were UseCaseAdmin actions) ----
+# ---- Project actions (were UseCaseAdmin actions) ----
 def uc_validate(request, uc):
     from apps.config_admin.loader import export_config, validate_config
 
@@ -31,11 +31,11 @@ def uc_validate(request, uc):
 
 
 def uc_sync(request, uc):
-    from apps.ingestion.sync import sync_use_case
-    from apps.validation.engine import run_for_use_case
+    from apps.ingestion.sync import sync_project
+    from apps.validation.engine import run_for_project
 
-    stats = sync_use_case(uc)
-    vstats = run_for_use_case(uc)
+    stats = sync_project(uc)
+    vstats = run_for_project(uc)
     return f"{uc.code}: synced (+{stats.created} new), {vstats.opened} flags opened."
 
 

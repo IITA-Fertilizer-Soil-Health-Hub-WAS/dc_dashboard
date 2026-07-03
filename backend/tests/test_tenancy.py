@@ -5,8 +5,8 @@ import pytest
 from django.urls import reverse
 
 from apps.rbac.models import Role, UseCaseMembership
-from apps.rbac.permissions import organization_of, visible_use_cases
-from apps.usecases.models import Country, Organization, Region, UseCase
+from apps.rbac.permissions import organization_of, visible_projects
+from apps.usecases.models import Country, Organization, Project, Region
 from apps.usecases.tenancy import default_organization, resolve_organization
 
 pytestmark = pytest.mark.django_db
@@ -20,8 +20,8 @@ def two_orgs(django_user_model):
     rb = Region.objects.create(organization=b, code="WA", name="West Africa")
     ca = Country.objects.create(region=ra, code="RW", name="Rwanda")
     cb = Country.objects.create(region=rb, code="NG", name="Nigeria")
-    uca = UseCase.objects.create(code="A-SNS", name="A SNS", organization=a, country=ca)
-    ucb = UseCase.objects.create(code="B-BIO", name="B BioSSA", organization=b, country=cb)
+    uca = Project.objects.create(code="A-SNS", name="A SNS", organization=a, country=ca)
+    ucb = Project.objects.create(code="B-BIO", name="B BioSSA", organization=b, country=cb)
 
     coord_a = django_user_model.objects.create_user("a@x.org", "pw", is_active=True, organization=a)
     UseCaseMembership.objects.create(user=coord_a, country=ca, role=Role.COUNTRY_COORDINATOR)
@@ -33,14 +33,14 @@ def two_orgs(django_user_model):
     }
 
 
-def test_visible_use_cases_isolated(two_orgs):
-    a_codes = set(visible_use_cases(two_orgs["coord_a"]).values_list("code", flat=True))
-    b_codes = set(visible_use_cases(two_orgs["coord_b"]).values_list("code", flat=True))
+def test_visible_projects_isolated(two_orgs):
+    a_codes = set(visible_projects(two_orgs["coord_a"]).values_list("code", flat=True))
+    b_codes = set(visible_projects(two_orgs["coord_b"]).values_list("code", flat=True))
     assert a_codes == {"A-SNS"}
     assert b_codes == {"B-BIO"}
 
 
-def test_cannot_open_other_orgs_use_case(client, two_orgs):
+def test_cannot_open_other_orgs_project(client, two_orgs):
     client.force_login(two_orgs["coord_a"])
     resp = client.get(reverse("dashboards:usecase", args=[two_orgs["ucb"].code]))
     assert resp.status_code == 404  # B's project is invisible to A
@@ -48,7 +48,7 @@ def test_cannot_open_other_orgs_use_case(client, two_orgs):
 
 def test_hub_operator_spans_all_orgs(django_user_model, two_orgs):
     hub = django_user_model.objects.create_superuser("hub@x.org", "pw")  # no organization
-    codes = set(visible_use_cases(hub).values_list("code", flat=True))
+    codes = set(visible_projects(hub).values_list("code", flat=True))
     assert codes == {"A-SNS", "B-BIO"}
 
 
@@ -76,7 +76,7 @@ def test_cannot_grant_to_other_orgs_user(client, two_orgs):
     })
     assert resp.status_code == 403
     assert not UseCaseMembership.objects.filter(
-        user=two_orgs["coord_b"], use_case=two_orgs["uca"]
+        user=two_orgs["coord_b"], project=two_orgs["uca"]
     ).exists()
 
 
@@ -109,17 +109,17 @@ def test_invite_external_collaborator_to_one_project(client, two_orgs):
     assert resp.status_code == 302
     b = two_orgs["coord_b"]
     assert UseCaseMembership.objects.filter(
-        user=b, use_case=two_orgs["uca"], role=Role.VIEWER
+        user=b, project=two_orgs["uca"], role=Role.VIEWER
     ).exists()
     # B's home institution is unchanged...
     b.refresh_from_db()
     assert b.organization_id == two_orgs["b"].id
     # ...and B now sees the shared A project, but not A's other data.
-    visible = set(visible_use_cases(b).values_list("code", flat=True))
+    visible = set(visible_projects(b).values_list("code", flat=True))
     assert visible == {"B-BIO", "A-SNS"}
 
 
-def test_collaboration_only_on_use_case_not_region(client, two_orgs):
+def test_collaboration_only_on_project_not_region(client, two_orgs):
     client.force_login(two_orgs["coord_a"])
     resp = client.post(reverse("dashboards:team_invite"), {
         "email": "b@x.org",

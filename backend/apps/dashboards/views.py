@@ -16,7 +16,7 @@ from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from apps.rbac.permissions import user_can, visible_use_cases
+from apps.rbac.permissions import user_can, visible_projects
 from apps.review import services
 from apps.review.models import (
     REVIEW_CLOSED_STATES,
@@ -31,7 +31,7 @@ from apps.validation.models import ValidationFlag
 from .charts import monthly_submission_counts, points_map_html, trials_map_html
 from .final import final_rows
 from .grid import build_event_grid
-from .scoping import get_scoped_use_case
+from .scoping import get_scoped_project
 
 ACTION_SERVICES = {
     ReviewAction.OPEN_REVIEW: services.open_review,
@@ -62,7 +62,7 @@ def my_assignments(request):
 
     assignments = (
         UnitAssignment.objects.filter(enumerator=request.user)
-        .select_related("job", "job__use_case", "job__form", "unit")
+        .select_related("job", "job__project", "job__form", "unit")
         .order_by("job__deadline", "job__name", "unit__code")
     )
     groups: dict = {}
@@ -82,7 +82,7 @@ def my_submissions(request):
         Submission.objects.filter(
             Q(collected_by=user) | Q(enumerator__user=user)
         )
-        .select_related("use_case", "form", "enumerator", "collection_unit", "review")
+        .select_related("project", "form", "enumerator", "collection_unit", "review")
         .annotate(open_flags=Count("flags", filter=Q(flags__status=ValidationFlag.Status.OPEN)))
         .order_by("-event_date", "-ona_submission_time")
     )
@@ -103,15 +103,15 @@ def overview(request):
     rows = []
     totals = {"total": 0, "approved": 0, "in_review": 0, "open_issues": 0,
               "wb_pending": 0, "wb_failed": 0}
-    for uc in visible_use_cases(request.user):
-        subs = Submission.objects.filter(use_case=uc)
+    for uc in visible_projects(request.user):
+        subs = Submission.objects.filter(project=uc)
         row = {
             "uc": uc,
             "total": subs.count(),
             "approved": subs.filter(review__state=ReviewState.APPROVED).count(),
             "in_review": subs.exclude(review__state__in=closed).count(),
             "open_issues": ValidationFlag.objects.filter(
-                rule__use_case=uc, status=ValidationFlag.Status.OPEN).count(),
+                rule__project=uc, status=ValidationFlag.Status.OPEN).count(),
             "wb_pending": subs.filter(
                 writeback_status=Submission.WriteBackStatus.PENDING).count(),
             "wb_failed": subs.filter(
@@ -128,9 +128,9 @@ def overview(request):
 @login_required
 def export_audit(request, code):
     """CSV of the review audit trail for a use case."""
-    uc = get_scoped_use_case(request, code)
+    uc = get_scoped_project(request, code)
     logs = (
-        ReviewActionLog.objects.filter(submission__use_case=uc)
+        ReviewActionLog.objects.filter(submission__project=uc)
         .select_related("actor", "submission", "submission__collected_by")
         .order_by("created_at")
     )
@@ -172,7 +172,7 @@ TAB_LABELS = {
 
 @login_required
 def usecase_detail(request, code):
-    uc = get_scoped_use_case(request, code)
+    uc = get_scoped_project(request, code)
     # The project is the workspace: remember it as the user's current context so
     # the sidebar scopes to it until they switch.
     request.session["active_project"] = uc.code
@@ -192,9 +192,9 @@ def usecase_detail(request, code):
 
 @login_required
 def tab_summary(request, code):
-    uc = get_scoped_use_case(request, code)
+    uc = get_scoped_project(request, code)
     submissions = list(
-        Submission.objects.filter(use_case=uc).select_related("collection_unit", "enumerator")
+        Submission.objects.filter(project=uc).select_related("collection_unit", "enumerator")
     )
     # Plot the submissions' own collected locations; fall back to unit points for
     # projects whose data predates geo capture.
@@ -227,9 +227,9 @@ def tab_summary(request, code):
 
 
 def _jobs_progress(uc):
-    from apps.fieldwork.services import use_case_jobs_progress
+    from apps.fieldwork.services import project_jobs_progress
 
-    return use_case_jobs_progress(uc)
+    return project_jobs_progress(uc)
 
 
 def _attribution_stats(uc) -> dict:
@@ -238,7 +238,7 @@ def _attribution_stats(uc) -> dict:
     Tracks migration off the ONA-era ENID bridge toward stamped UserIDs — the
     closer to 100%, the more of the data is owned by a known collector.
     """
-    subs = Submission.objects.filter(use_case=uc)
+    subs = Submission.objects.filter(project=uc)
     total = subs.count()
     attributed = subs.filter(collected_by__isnull=False).count()
     return {
@@ -253,7 +253,7 @@ def _health_counts(uc) -> dict:
     """Per-use-case review + write-back health for the Summary tab."""
     from apps.review.models import ReviewState
 
-    subs = Submission.objects.filter(use_case=uc)
+    subs = Submission.objects.filter(project=uc)
     closed = REVIEW_CLOSED_STATES
     return {
         "approved": subs.filter(review__state=ReviewState.APPROVED).count(),
@@ -274,20 +274,20 @@ GATE1_STATES = [
 @login_required
 def tab_review(request, code):
     """This project's review queue, split by gate, with inline actions."""
-    uc = get_scoped_use_case(request, code)
+    uc = get_scoped_project(request, code)
     can_endorse = user_can(request.user, "endorse", uc)
     can_validate = user_can(request.user, "final_approve", uc)
     sel = ("enumerator", "collection_unit", "review", "review__endorsed_by", "review__assigned_to")
 
     to_validate = list(
-        Submission.objects.filter(use_case=uc, review__state=ReviewState.QC_PENDING)
+        Submission.objects.filter(project=uc, review__state=ReviewState.QC_PENDING)
         .select_related(*sel).order_by("-updated_at")[:300]
     ) if can_validate else []
     to_endorse = list(
-        Submission.objects.filter(use_case=uc, review__state__in=GATE1_STATES)
+        Submission.objects.filter(project=uc, review__state__in=GATE1_STATES)
         .select_related(*sel).order_by("review__state", "-ingested_at")[:300]
     ) if can_endorse else []
-    approved = Submission.objects.filter(use_case=uc, review__state=ReviewState.APPROVED).count()
+    approved = Submission.objects.filter(project=uc, review__state=ReviewState.APPROVED).count()
 
     return render(request, "dashboards/_review.html", {
         "uc": uc, "to_validate": to_validate, "to_endorse": to_endorse,
@@ -300,8 +300,8 @@ def tab_review(request, code):
 @require_POST
 def tab_review_action(request, code):
     """Endorse / validate / decline a submission from the Review tab, then refresh it."""
-    uc = get_scoped_use_case(request, code)
-    submission = Submission.objects.filter(use_case=uc, pk=request.POST.get("submission")).first()
+    uc = get_scoped_project(request, code)
+    submission = Submission.objects.filter(project=uc, pk=request.POST.get("submission")).first()
     fn = {
         ReviewAction.ENDORSE: services.endorse,
         ReviewAction.QC_APPROVE: services.qc_approve,
@@ -331,11 +331,11 @@ def my_performance(request):
     # The projects this user collects on, via their enumerator identity.
     identities = (
         Enumerator.objects.filter(user=user)
-        .select_related("use_case").order_by("use_case__code")
+        .select_related("project").order_by("project__code")
     )
     by_uc: dict = {}
     for e in identities:
-        by_uc.setdefault(e.use_case, set()).add(e.id)
+        by_uc.setdefault(e.project, set()).add(e.id)
 
     cards = []
     for uc, enum_ids in by_uc.items():
@@ -364,13 +364,13 @@ def household_timeline(request, code, hh_id):
     from apps.submissions.models import SubmissionValue
     from apps.validation.status import event_status, status_color
 
-    uc = get_scoped_use_case(request, code)
-    hh = get_object_or_404(CollectionUnit, pk=hh_id, use_case=uc)
+    uc = get_scoped_project(request, code)
+    hh = get_object_or_404(CollectionUnit, pk=hh_id, project=uc)
     schedule = list(uc.schedule.all())
 
     subs = {
         s.event_key: s
-        for s in Submission.objects.filter(use_case=uc, collection_unit=hh)
+        for s in Submission.objects.filter(project=uc, collection_unit=hh)
         .select_related("review", "enumerator", "crop").order_by("event_date")
     }
     event1 = subs.get("Event1")
@@ -420,13 +420,13 @@ def qc_signoff(request, code):
     checker / agronomist signs off its agronomic validity here before it becomes
     APPROVED. Its own screen (not buried in the Review tab's dual list) so the
     validator works one clean backlog. Guarded by the `final_approve` right."""
-    uc = get_scoped_use_case(request, code)
+    uc = get_scoped_project(request, code)
     if not user_can(request.user, "final_approve", uc):
         raise Http404("You are not a validator on this project.")
 
     if request.method == "POST":
         submission = Submission.objects.filter(
-            use_case=uc, pk=request.POST.get("submission")
+            project=uc, pk=request.POST.get("submission")
         ).first()
         fn = {
             ReviewAction.QC_APPROVE: services.qc_approve,
@@ -442,13 +442,13 @@ def qc_signoff(request, code):
         return redirect("dashboards:qc_signoff", code=uc.code)
 
     pending = list(
-        Submission.objects.filter(use_case=uc, review__state=ReviewState.QC_PENDING)
+        Submission.objects.filter(project=uc, review__state=ReviewState.QC_PENDING)
         .select_related("enumerator", "collection_unit", "review", "review__endorsed_by",
                         "collection_unit")
         .order_by("review__updated_at")[:300]
     )
     approved = Submission.objects.filter(
-        use_case=uc, review__state=ReviewState.APPROVED
+        project=uc, review__state=ReviewState.APPROVED
     ).count()
     return render(request, "dashboards/qc_signoff.html", {
         "uc": uc, "pending": pending, "pending_count": len(pending),
@@ -458,9 +458,9 @@ def qc_signoff(request, code):
 
 @login_required
 def tab_enumerators(request, code):
-    uc = get_scoped_use_case(request, code)
+    uc = get_scoped_project(request, code)
     ranking = (
-        Enumerator.objects.filter(use_case=uc, is_test=False)
+        Enumerator.objects.filter(project=uc, is_test=False)
         .select_related("user")
         .annotate(n=Count("submissions"))
         .order_by("-n")
@@ -471,7 +471,7 @@ def tab_enumerators(request, code):
 
     collectors = (
         User.objects.annotate(
-            n=Count("collected_submissions", filter=Q(collected_submissions__use_case=uc))
+            n=Count("collected_submissions", filter=Q(collected_submissions__project=uc))
         )
         .filter(n__gt=0)
         .order_by("-n", "email")
@@ -486,21 +486,21 @@ def tab_enumerators(request, code):
 
 @login_required
 def tab_issues(request, code):
-    uc = get_scoped_use_case(request, code)
+    uc = get_scoped_project(request, code)
     return render(request, "dashboards/_issues.html", _issues_context(request, uc))
 
 
 @login_required
 def tab_data(request, code):
-    uc = get_scoped_use_case(request, code)
+    uc = get_scoped_project(request, code)
     submissions = list(
-        Submission.objects.filter(use_case=uc)
+        Submission.objects.filter(project=uc)
         .select_related("enumerator", "collection_unit", "review", "collected_by")
         .prefetch_related("values")
         .order_by("-event_date", "-ona_submission_time")[:100]
     )
     columns, rows = _data_grid(submissions)
-    total = Submission.objects.filter(use_case=uc).count()
+    total = Submission.objects.filter(project=uc).count()
     return render(request, "dashboards/_data.html", {
         "uc": uc, "columns": columns, "rows": rows,
         "showing": len(submissions), "total": total,
@@ -535,7 +535,7 @@ def _data_grid(submissions, max_cols: int = 60):
 @login_required
 def tab_final(request, code):
     """Final dataset: approved submissions only, with authoritative values."""
-    uc = get_scoped_use_case(request, code)
+    uc = get_scoped_project(request, code)
     rows = final_rows(uc)[2]
     return render(request, "dashboards/_final.html", {"uc": uc, "rows": rows, "count": len(rows)})
 
@@ -543,7 +543,7 @@ def tab_final(request, code):
 @login_required
 def export_final(request, code):
     """Download the final (approved) dataset as CSV — authoritative values."""
-    uc = get_scoped_use_case(request, code)
+    uc = get_scoped_project(request, code)
     subs, keys, rows = final_rows(uc)
     base = ["ona_uuid", "ENID", "HHID", "collected_by", "event", "crop", "date", "state"]
     columns = base + [k for k in keys if k not in base]
@@ -574,8 +574,8 @@ def export_final(request, code):
 @login_required
 @require_POST
 def submission_action(request, code, submission_id):
-    uc = get_scoped_use_case(request, code)
-    submission = Submission.objects.filter(use_case=uc, pk=submission_id).first()
+    uc = get_scoped_project(request, code)
+    submission = Submission.objects.filter(project=uc, pk=submission_id).first()
     if submission is None:
         return render(request, "dashboards/_issues.html", _issues_context(request, uc))
 
@@ -608,10 +608,10 @@ def submission_action(request, code, submission_id):
 @login_required
 def submission_review(request, code, submission_id):
     """Full review screen: edit field values and run workflow actions."""
-    uc = get_scoped_use_case(request, code)
+    uc = get_scoped_project(request, code)
     submission = get_object_or_404(
         Submission.objects.select_related("enumerator", "collection_unit", "crop", "review", "form"),
-        use_case=uc, pk=submission_id,
+        project=uc, pk=submission_id,
     )
     error = ok = None
 
@@ -647,7 +647,7 @@ def submission_review(request, code, submission_id):
                 if rc:
                     from apps.review.models import RejectionReason
                     reason = RejectionReason.objects.filter(
-                        Q(use_case=uc) | Q(use_case__isnull=True), pk=rc
+                        Q(project=uc) | Q(project__isnull=True), pk=rc
                     ).first()
                 services.decline(request.user, submission, note=note, reason=reason)
                 ok = "Decline recorded."
@@ -694,7 +694,7 @@ def submission_review(request, code, submission_id):
         "plot_map_html": submission_plot_map_html(submission),
         "is_corrected": any(f["is_edited"] for f in fields),
         "rejection_reasons": RejectionReason.objects.filter(
-            Q(use_case=uc) | Q(use_case__isnull=True), is_active=True
+            Q(project=uc) | Q(project__isnull=True), is_active=True
         ).order_by("order", "label"),
     })
 
@@ -718,8 +718,8 @@ def submission_media(request, code, submission_id, name):
     """Stream one submission photo/media through the app, using the backend's own
     credentials — collection-server attachments aren't publicly fetchable. Scoped to
     a member of the use case; the file must belong to this submission's record."""
-    uc = get_scoped_use_case(request, code)
-    submission = get_object_or_404(Submission, use_case=uc, pk=submission_id)
+    uc = get_scoped_project(request, code)
+    submission = get_object_or_404(Submission, project=uc, pk=submission_id)
     match = next((a for a in _list_media(uc, submission) if a.get("name") == name), None)
     if match is None:
         raise Http404("Attachment not part of this submission.")
@@ -801,7 +801,7 @@ def _merged_fields(submission) -> list[dict]:
 @require_POST
 def bulk_submission_action(request, code):
     """Apply one review action to many selected submissions at once."""
-    uc = get_scoped_use_case(request, code)
+    uc = get_scoped_project(request, code)
     action = request.POST.get("action")
     ids = request.POST.getlist("ids")
     ok = 0
@@ -809,7 +809,7 @@ def bulk_submission_action(request, code):
 
     if action in ACTION_SERVICES and ids:
         service = ACTION_SERVICES[action]
-        submissions = Submission.objects.filter(use_case=uc, pk__in=ids)
+        submissions = Submission.objects.filter(project=uc, pk__in=ids)
         for submission in submissions:
             try:
                 service(request.user, submission, note=request.POST.get("note", ""))
@@ -848,7 +848,7 @@ def _issues_context(request, uc) -> dict:
     }
 
     flags = (
-        ValidationFlag.objects.filter(rule__use_case=uc, status=ValidationFlag.Status.OPEN)
+        ValidationFlag.objects.filter(rule__project=uc, status=ValidationFlag.Status.OPEN)
         .select_related("submission", "submission__review", "submission__enumerator",
                         "submission__collection_unit", "rule")
         .order_by("submission__ona_uuid")
@@ -869,7 +869,7 @@ def _issues_context(request, uc) -> dict:
         flags = flags.filter(submission__review__assigned_to=request.user)
 
     events = sorted(
-        Submission.objects.filter(use_case=uc).exclude(event_key="")
+        Submission.objects.filter(project=uc).exclude(event_key="")
         .values_list("event_key", flat=True).distinct()
     )
     can = {

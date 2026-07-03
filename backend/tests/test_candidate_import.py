@@ -6,7 +6,7 @@ import pytest
 from apps.common.geo import polygon_centroid
 from apps.fieldwork.candidate_import import import_candidates
 from apps.fieldwork.models import CandidatePlot
-from apps.usecases.models import Organization, UseCase
+from apps.usecases.models import Organization, Project
 
 pytestmark = pytest.mark.django_db
 
@@ -35,7 +35,7 @@ def _fc():
 @pytest.fixture
 def uc():
     org = Organization.objects.create(code="o", name="O")
-    return UseCase.objects.create(code="PROJ-A", name="A", organization=org)
+    return Project.objects.create(code="PROJ-A", name="A", organization=org)
 
 
 def test_polygon_centroid_of_square():
@@ -47,12 +47,12 @@ def test_polygon_centroid_of_square():
 def test_import_groups_by_trial_and_sets_fields(uc):
     stats = import_candidates(uc, _fc())
     assert stats.created == 4 and stats.updated == 0 and stats.trials == 2
-    a = CandidatePlot.objects.get(use_case=uc, trial_key="T1", candidate_ref="A")
+    a = CandidatePlot.objects.get(project=uc, trial_key="T1", candidate_ref="A")
     assert a.rank == 1 and a.accessibility == "easy" and a.cropping_region == "maize-legume"
     assert a.role == CandidatePlot.Role.PRIMARY
     assert a.centroid_lat is not None and a.centroid_lon is not None
     assert a.status == CandidatePlot.Status.PROPOSED
-    bk = CandidatePlot.objects.get(use_case=uc, trial_key="T1", candidate_ref="backup")
+    bk = CandidatePlot.objects.get(project=uc, trial_key="T1", candidate_ref="backup")
     assert bk.role == CandidatePlot.Role.BACKUP
 
 
@@ -60,7 +60,7 @@ def test_import_is_idempotent(uc):
     import_candidates(uc, _fc())
     stats = import_candidates(uc, _fc())
     assert stats.created == 0 and stats.updated == 4
-    assert CandidatePlot.objects.filter(use_case=uc).count() == 4
+    assert CandidatePlot.objects.filter(project=uc).count() == 4
 
 
 def test_bad_features_skipped_not_fatal(uc):
@@ -74,7 +74,7 @@ def test_bad_features_skipped_not_fatal(uc):
     ]}
     stats = import_candidates(uc, fc)
     assert stats.created == 1 and stats.skipped == 2 and len(stats.errors) == 2
-    assert CandidatePlot.objects.filter(use_case=uc).count() == 1
+    assert CandidatePlot.objects.filter(project=uc).count() == 1
 
 
 def test_custom_trial_prop(uc):
@@ -84,4 +84,4 @@ def test_custom_trial_prop(uc):
     ]}
     stats = import_candidates(uc, fc, trial_prop="area_ref")
     assert stats.created == 1
-    assert CandidatePlot.objects.get(use_case=uc).trial_key == "AR1"
+    assert CandidatePlot.objects.get(project=uc).trial_key == "AR1"

@@ -37,10 +37,10 @@ def _transition(
     transition = resolve(action, review.state)
 
     if transition.permission is not None and not user_can(
-        user, transition.permission, submission.use_case
+        user, transition.permission, submission.project
     ):
         raise ReviewPermissionDenied(
-            f"{getattr(user, 'email', user)} cannot {action} in {submission.use_case.code}"
+            f"{getattr(user, 'email', user)} cannot {action} in {submission.project.code}"
         )
 
     from_state = review.state
@@ -134,9 +134,9 @@ def comment(user, submission, note: str) -> Review:
 def assign(user, submission, assignee) -> Review:
     """Assign a submission to a reviewer (not a state transition). Coordinators
     and QC may assign; the assignee is notified by email."""
-    if not user_can(user, "open_review", submission.use_case):
+    if not user_can(user, "open_review", submission.project):
         raise ReviewPermissionDenied(
-            f"{getattr(user, 'email', user)} cannot assign in {submission.use_case.code}"
+            f"{getattr(user, 'email', user)} cannot assign in {submission.project.code}"
         )
     review = get_or_create_review(submission)
     review.assigned_to = assignee

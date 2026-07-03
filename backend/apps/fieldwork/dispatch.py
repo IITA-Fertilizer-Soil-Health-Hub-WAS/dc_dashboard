@@ -12,12 +12,12 @@ from __future__ import annotations
 REGISTRATION_JOB_NAME = "Plot registration"
 
 
-def _registration_form(use_case):
+def _registration_form(project):
     """Best form to register a farmer on: household reg, else enumerator reg, else
     validation, else whatever the project has. May be None (job carries no form)."""
     from apps.usecases.models import FormDefinition
 
-    forms = use_case.forms.all()
+    forms = project.forms.all()
     for role in (
         FormDefinition.Role.HH_REG,
         FormDefinition.Role.ENUM_REG,
@@ -29,30 +29,30 @@ def _registration_form(use_case):
     return forms.first()
 
 
-def registration_job(use_case):
+def registration_job(project):
     """The project's standing auto registration job — created on first election,
     reused thereafter. Backfills the form if it was missing when first created."""
     from apps.fieldwork.models import Job
 
     job, created = Job.objects.get_or_create(
-        use_case=use_case,
+        project=project,
         name=REGISTRATION_JOB_NAME,
-        defaults={"status": Job.Status.ACTIVE, "form": _registration_form(use_case)},
+        defaults={"status": Job.Status.ACTIVE, "form": _registration_form(project)},
     )
     if not created and job.form is None:
-        form = _registration_form(use_case)
+        form = _registration_form(project)
         if form is not None:
             job.form = form
             job.save(update_fields=["form", "updated_at"])
     return job
 
 
-def dispatch_registration_job(use_case, unit, actor=None):
+def dispatch_registration_job(project, unit, actor=None):
     """Add `unit` to the project's registration job (idempotent). Returns the job.
     Enumerator is left unset — the coordinator assigns on the job screen, or an
     'assign all' sweep picks it up."""
     from apps.fieldwork.models import UnitAssignment
 
-    job = registration_job(use_case)
+    job = registration_job(project)
     UnitAssignment.objects.get_or_create(job=job, unit=unit)
     return job

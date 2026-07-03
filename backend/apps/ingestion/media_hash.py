@@ -23,7 +23,7 @@ def hash_submission_media(submission, backend=None) -> list[str]:
     if backend is None:
         from apps.ingestion.backends.registry import get_backend_for
 
-        backend = get_backend_for(submission.use_case)
+        backend = get_backend_for(submission.project)
 
     try:
         attachments = backend.list_attachments(submission)
@@ -56,12 +56,12 @@ class MediaHashStats:
     with_media: int = 0
 
 
-def hash_use_case_media(use_case, *, limit: int | None = None, only_new: bool = True) -> MediaHashStats:
+def hash_project_media(project, *, limit: int | None = None, only_new: bool = True) -> MediaHashStats:
     """Hash media for a project's submissions. `only_new` skips those already hashed
     so re-runs are cheap; `limit` caps the batch (media fetches are network-bound)."""
     from apps.submissions.models import Submission
 
-    qs = Submission.objects.filter(use_case=use_case).order_by("-ingested_at")
+    qs = Submission.objects.filter(project=project).order_by("-ingested_at")
     if only_new:
         qs = qs.filter(media_hashed_at__isnull=True)
     if limit:

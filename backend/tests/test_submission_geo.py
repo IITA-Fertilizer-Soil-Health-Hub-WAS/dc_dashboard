@@ -9,7 +9,7 @@ from django.urls import reverse
 from apps.ingestion.sync import submission_location
 from apps.rbac.models import Role, UseCaseMembership
 from apps.submissions.models import Enumerator, Submission
-from apps.usecases.models import FormDefinition, Organization, UseCase
+from apps.usecases.models import FormDefinition, Organization, Project
 
 pytestmark = pytest.mark.django_db
 
@@ -32,15 +32,15 @@ def test_no_location_returns_none():
 @pytest.fixture
 def world(django_user_model):
     org = Organization.objects.create(code="o", name="O")
-    uc = UseCase.objects.create(code="PROJ-A", name="A", organization=org)
-    form = FormDefinition.objects.create(use_case=uc, ona_form_id=9, role=FormDefinition.Role.VALIDATION)
-    en = Enumerator.objects.create(use_case=uc, enid="EN-1")
-    Submission.objects.create(use_case=uc, form=form, ona_uuid="g1", content_hash="h",
+    uc = Project.objects.create(code="PROJ-A", name="A", organization=org)
+    form = FormDefinition.objects.create(project=uc, ona_form_id=9, role=FormDefinition.Role.VALIDATION)
+    en = Enumerator.objects.create(project=uc, enid="EN-1")
+    Submission.objects.create(project=uc, form=form, ona_uuid="g1", content_hash="h",
                               enumerator=en, lat="-1.95", lon="30.06")
-    Submission.objects.create(use_case=uc, form=form, ona_uuid="g2", content_hash="h",
+    Submission.objects.create(project=uc, form=form, ona_uuid="g2", content_hash="h",
                               enumerator=en)  # no geo
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True, organization=org)
-    UseCaseMembership.objects.create(user=coord, use_case=uc, role=Role.TRIAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
     return {"uc": uc, "coord": coord}
 
 
@@ -59,9 +59,9 @@ def test_trend_uses_submission_time_when_no_event_date(django_user_model):
     from apps.dashboards.charts import _effective_date
 
     org = Organization.objects.create(code="o2", name="O2")
-    uc = UseCase.objects.create(code="P2", name="P2", organization=org)
-    form = FormDefinition.objects.create(use_case=uc, ona_form_id=3, role=FormDefinition.Role.VALIDATION)
+    uc = Project.objects.create(code="P2", name="P2", organization=org)
+    form = FormDefinition.objects.create(project=uc, ona_form_id=3, role=FormDefinition.Role.VALIDATION)
     # No event_date, but a server submission_time — the trend must still place it.
-    s = Submission.objects.create(use_case=uc, form=form, ona_uuid="t1", content_hash="h",
+    s = Submission.objects.create(project=uc, form=form, ona_uuid="t1", content_hash="h",
                                   ona_submission_time=datetime(2024, 6, 15, 9, 0, tzinfo=UTC))
     assert _effective_date(s).strftime("%Y-%m") == "2024-06"

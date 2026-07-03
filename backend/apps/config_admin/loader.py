@@ -20,8 +20,8 @@ from apps.usecases.models import (
     EventScheduleItem,
     FieldMapping,
     FormDefinition,
+    Project,
     Trial,
-    UseCase,
 )
 from apps.validation.models import ValidationRule
 
@@ -44,9 +44,9 @@ def validate_config(data: dict[str, Any]) -> list[str]:
     action. Data-coverage checks against real submissions are added in Phase 4.
     """
     problems: list[str] = []
-    meta = data.get("use_case") or {}
+    meta = data.get("project") or {}
     if not meta.get("code"):
-        problems.append("use_case.code is required")
+        problems.append("project.code is required")
 
     # Forms only need an id here. Roles, field mappings and event modelling vary
     # by project (events can come from a column or from separate forms) and are
@@ -74,14 +74,14 @@ def validate_config(data: dict[str, Any]) -> list[str]:
 
 
 @transaction.atomic
-def import_config(data: dict[str, Any]) -> UseCase:
+def import_config(data: dict[str, Any]) -> Project:
     """Upsert a use case + all children from a config dict. Idempotent."""
-    meta = data.get("use_case") or {}
+    meta = data.get("project") or {}
     code = meta.get("code")
     if not code:
-        raise ConfigError("use_case.code is required")
+        raise ConfigError("project.code is required")
 
-    uc, created = UseCase.objects.get_or_create(code=code, defaults={"name": meta.get("name", code)})
+    uc, created = Project.objects.get_or_create(code=code, defaults={"name": meta.get("name", code)})
     # Every use case belongs to a tenant: honour an explicit organization code,
     # else fall back to the default org (single-tenant deployments).
     from apps.usecases.tenancy import resolve_organization
@@ -106,7 +106,7 @@ def import_config(data: dict[str, Any]) -> UseCase:
     ds = data.get("data_source")
     if ds:
         DataSource.objects.update_or_create(
-            use_case=uc,
+            project=uc,
             defaults={
                 "backend": ds.get("backend", "ONA"),
                 "base_url": ds.get("base_url", "") or "",
@@ -125,16 +125,16 @@ def import_config(data: dict[str, Any]) -> UseCase:
     crop_by_name: dict[str, Crop] = {}
     for c in data.get("crops", []) or []:
         crop = Crop.objects.create(
-            use_case=uc, name=c["name"], aliases=c.get("aliases", []) or []
+            project=uc, name=c["name"], aliases=c.get("aliases", []) or []
         )
         crop_by_name[crop.name] = crop
 
     for t in data.get("trials", []) or []:
-        Trial.objects.create(use_case=uc, name=t["name"], code=t.get("code", ""))
+        Trial.objects.create(project=uc, name=t["name"], code=t.get("code", ""))
 
     for ev in data.get("event_schedule", []) or []:
         EventScheduleItem.objects.create(
-            use_case=uc,
+            project=uc,
             event_key=ev["event_key"],
             sequence=ev["sequence"],
             anchor=ev.get("anchor", EventScheduleItem.Anchor.EVENT1),
@@ -146,7 +146,7 @@ def import_config(data: dict[str, Any]) -> UseCase:
     for f in data.get("forms", []) or []:
         crop = crop_by_name.get(f["crop"]) if f.get("crop") else None
         form = FormDefinition.objects.create(
-            use_case=uc,
+            project=uc,
             ona_form_id=f["ona_form_id"],
             role=f["role"],
             crop=crop,
@@ -166,7 +166,7 @@ def import_config(data: dict[str, Any]) -> UseCase:
 
     for r in data.get("validation_rules", []) or []:
         ValidationRule.objects.create(
-            use_case=uc,
+            project=uc,
             code=r["code"],
             rule_type=r["type"],
             params=r.get("params", {}) or {},
@@ -178,10 +178,10 @@ def import_config(data: dict[str, Any]) -> UseCase:
     return uc
 
 
-def export_config(uc: UseCase) -> dict[str, Any]:
+def export_config(uc: Project) -> dict[str, Any]:
     """Reproduce a config dict from the DB (inverse of import_config)."""
     data: dict[str, Any] = {
-        "use_case": {
+        "project": {
             "code": uc.code,
             "name": uc.name,
             "is_active": uc.is_active,
@@ -250,5 +250,5 @@ def export_config(uc: UseCase) -> dict[str, Any]:
     return data
 
 
-def dump_yaml(uc: UseCase) -> str:
+def dump_yaml(uc: Project) -> str:
     return yaml.safe_dump(export_config(uc), sort_keys=False, allow_unicode=True)

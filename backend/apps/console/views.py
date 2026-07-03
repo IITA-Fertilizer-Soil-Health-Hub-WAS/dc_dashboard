@@ -101,17 +101,17 @@ class ConsoleListView(UserPassesTestMixin, View):
         # coordinators to the projects they coordinate, ordinary members to the
         # projects they belong to (read-only field data).
         if not is_staff:
-            from apps.rbac.permissions import can_manage_access, visible_use_cases
+            from apps.rbac.permissions import can_manage_access, visible_projects
 
             if can_manage_access(request.user):
                 uc_ids = _coordinator_uc_ids(request.user)
             else:
-                uc_ids = list(visible_use_cases(request.user).values_list("id", flat=True))
+                uc_ids = list(visible_projects(request.user).values_list("id", flat=True))
             qs = qs.filter(**{f"{path}__in": uc_ids}) if path else qs.none()
 
-        # Workspace scope: a ?use_case=<code> filter (within what's allowed above)
+        # Workspace scope: a ?project=<code> filter (within what's allowed above)
         # narrows the list to one project — used by the project-workspace sidebar.
-        ws_code = (request.GET.get("use_case") or "").strip()
+        ws_code = (request.GET.get("project") or "").strip()
         if ws_code and path:
             qs = qs.filter(**{f"{path}__code": ws_code})
 
@@ -147,16 +147,16 @@ class ConsoleListView(UserPassesTestMixin, View):
 def _coordinator_uc_ids(user):
     from apps.rbac.permissions import grantable_scopes
 
-    return list(grantable_scopes(user)["use_cases"].values_list("id", flat=True))
+    return list(grantable_scopes(user)["projects"].values_list("id", flat=True))
 
 
-def _editable_use_cases(user):
+def _editable_projects(user):
     """Projects a user may load data into: all for staff, their own for a coordinator."""
-    from apps.usecases.models import UseCase
+    from apps.usecases.models import Project
 
     if user.is_staff:
-        return UseCase.objects.filter(is_active=True).order_by("code")
-    return UseCase.objects.filter(id__in=_coordinator_uc_ids(user)).order_by("code")
+        return Project.objects.filter(is_active=True).order_by("code")
+    return Project.objects.filter(id__in=_coordinator_uc_ids(user)).order_by("code")
 
 
 class ImportCollectionUnitsView(UserPassesTestMixin, View):
@@ -170,7 +170,7 @@ class ImportCollectionUnitsView(UserPassesTestMixin, View):
 
     def _ctx(self, request, **extra):
         ctx = {"groups": grouped(), "console_key": "collection-units",
-               "use_cases": _editable_use_cases(request.user)}
+               "projects": _editable_projects(request.user)}
         ctx.update(extra)
         return ctx
 
@@ -180,7 +180,7 @@ class ImportCollectionUnitsView(UserPassesTestMixin, View):
     def post(self, request):
         from apps.fieldwork.imports import import_collection_units
 
-        uc = _editable_use_cases(request.user).filter(pk=request.POST.get("use_case")).first()
+        uc = _editable_projects(request.user).filter(pk=request.POST.get("project")).first()
         upload = request.FILES.get("csv")
         if uc is None or upload is None:
             return render(request, "console/import_units.html",
@@ -220,7 +220,7 @@ def _restrict_form_to_scope(form, user):
     they can never attach a row to a project they don't coordinate."""
     if user.is_staff:
         return
-    from apps.usecases.models import UseCase
+    from apps.usecases.models import Project
 
     uc_ids = _coordinator_uc_ids(user)
     for field in form.fields.values():
@@ -228,25 +228,25 @@ def _restrict_form_to_scope(form, user):
         if qs is None:
             continue
         model = qs.model
-        if model is UseCase:
+        if model is Project:
             field.queryset = qs.filter(id__in=uc_ids)
-        elif any(f.name == "use_case" for f in model._meta.fields):
-            field.queryset = qs.filter(use_case_id__in=uc_ids)
+        elif any(f.name == "project" for f in model._meta.fields):
+            field.queryset = qs.filter(project_id__in=uc_ids)
 
 
-def _default_use_case(form, request):
+def _default_project(form, request):
     """Pre-select a new row's Project to the workspace the coordinator is in — the
-    ?use_case= carried by every sidebar console link, else the active-project
+    ?project= carried by every sidebar console link, else the active-project
     session. Only applies when the form still offers that project as a choice."""
-    field = form.fields.get("use_case")
+    field = form.fields.get("project")
     if field is None or getattr(field, "queryset", None) is None:
         return
-    code = request.GET.get("use_case") or request.session.get("active_project")
+    code = request.GET.get("project") or request.session.get("active_project")
     if not code:
         return
     uc = field.queryset.filter(code=code).first()
     if uc is not None:
-        form.initial.setdefault("use_case", uc.pk)
+        form.initial.setdefault("project", uc.pk)
 
 
 class ConsoleFormView(UserPassesTestMixin, View):
@@ -270,7 +270,7 @@ class ConsoleFormView(UserPassesTestMixin, View):
         form = self._form_class(m)(instance=instance)
         _restrict_form_to_scope(form, request.user)
         if instance is None:
-            _default_use_case(form, request)
+            _default_project(form, request)
         return render(request, "console/form.html", _base_ctx(m) | {"form": form, "instance": instance})
 
     def post(self, request, key, pk=None):
@@ -297,12 +297,12 @@ class PublishFormView(StaffMixin, View):
     then (on success) the form is recorded and ready to grant + collect."""
 
     def _ctx(self, request, **extra):
-        from apps.usecases.models import FormDefinition, UseCase
+        from apps.usecases.models import FormDefinition, Project
 
         ctx = {
             "groups": grouped(),
             "console_key": "forms",
-            "use_cases": UseCase.objects.filter(is_active=True).order_by("code"),
+            "projects": Project.objects.filter(is_active=True).order_by("code"),
             "roles": FormDefinition.Role.choices,
         }
         ctx.update(extra)
@@ -313,9 +313,9 @@ class PublishFormView(StaffMixin, View):
 
     def post(self, request):
         from apps.ingestion.publishing import publish_xlsform
-        from apps.usecases.models import UseCase
+        from apps.usecases.models import Project
 
-        uc = UseCase.objects.filter(pk=request.POST.get("use_case")).first()
+        uc = Project.objects.filter(pk=request.POST.get("project")).first()
         upload = request.FILES.get("xlsform")
         role = request.POST.get("role") or "VALIDATION"
         if uc is None or upload is None:
@@ -349,7 +349,7 @@ class OnboardProjectView(StaffMixin, View):
     """
 
     TEMPLATE_YAML = (
-        "use_case:\n"
+        "project:\n"
         "  code: MY-PROJECT\n"
         "  name: My Project\n"
         "  is_active: true\n"
@@ -406,7 +406,7 @@ class OnboardProjectView(StaffMixin, View):
         try:
             data = _yaml.safe_load(raw)
             if not isinstance(data, dict):
-                problems = ["Config must be a YAML mapping (use_case: ...)."]
+                problems = ["Config must be a YAML mapping (project: ...)."]
             else:
                 problems = validate_config(data)
                 if not problems:
@@ -609,8 +609,8 @@ class WriteBackQueueView(ManageMixin, View):
         status = Submission.WriteBackStatus
         qs = Submission.objects.filter(writeback_status__in=[status.PENDING, status.FAILED])
         if not request.user.is_staff:
-            qs = qs.filter(use_case_id__in=_coordinator_uc_ids(request.user))
-        return qs.select_related("use_case", "enumerator", "collection_unit").order_by(
+            qs = qs.filter(project_id__in=_coordinator_uc_ids(request.user))
+        return qs.select_related("project", "enumerator", "collection_unit").order_by(
             "writeback_status", "-updated_at"
         )
 
@@ -660,7 +660,7 @@ class EnumeratorLinkView(ManageMixin, View):
     def get(self, request):
         from apps.submissions.linking import link_enumerators
 
-        report = link_enumerators(apply=False, use_cases=self._scope(request))
+        report = link_enumerators(apply=False, projects=self._scope(request))
         ctx = _console_page_ctx("link-enumerators") | {
             "report": report,
             "rows": report.actionable[:300],
@@ -671,7 +671,7 @@ class EnumeratorLinkView(ManageMixin, View):
         from apps.submissions.linking import link_enumerators
 
         overwrite = request.POST.get("overwrite") == "1"
-        report = link_enumerators(apply=True, overwrite=overwrite, use_cases=self._scope(request))
+        report = link_enumerators(apply=True, overwrite=overwrite, projects=self._scope(request))
         if report.matched:
             messages.success(
                 request, f"Linked {report.matched} enumerator(s) to accounts. "
@@ -697,7 +697,7 @@ class FormMappingsView(StaffMixin, View):
     def _form(self, pk):
         from apps.usecases.models import FormDefinition
 
-        return get_object_or_404(FormDefinition.objects.select_related("use_case"), pk=pk)
+        return get_object_or_404(FormDefinition.objects.select_related("project"), pk=pk)
 
     def _ctx(self, form):
         from apps.usecases.models import FieldMapping
@@ -816,9 +816,9 @@ class JobAssignmentsView(UserPassesTestMixin, View):
             "can_edit": True,  # reaching this view already requires edit rights
             "assignments": job.assignments.select_related("unit", "enumerator")
             .prefetch_related("unit__submissions").all(),
-            "available_units": CollectionUnit.objects.filter(use_case=job.use_case)
+            "available_units": CollectionUnit.objects.filter(project=job.project)
             .exclude(id__in=taken).order_by("code"),
-            "enumerators": project_enumerators(job.use_case),
+            "enumerators": project_enumerators(job.project),
             "progress": job_progress(job),
             "enum_progress": job_enumerator_progress(job),
         }
@@ -846,7 +846,7 @@ class JobAssignmentsView(UserPassesTestMixin, View):
         elif action == "remove":
             UnitAssignment.objects.filter(job=job, pk=request.POST.get("assignment")).delete()
         elif action == "assign_all":
-            units = CollectionUnit.objects.filter(use_case=job.use_case).exclude(
+            units = CollectionUnit.objects.filter(project=job.project).exclude(
                 assignments__job=job)
             UnitAssignment.objects.bulk_create(
                 [UnitAssignment(job=job, unit=u, enumerator=enum) for u in units])
@@ -855,7 +855,7 @@ class JobAssignmentsView(UserPassesTestMixin, View):
             messages.success(request, f"Assigned {len(units)} unit(s).")
         else:  # add one
             unit = CollectionUnit.objects.filter(
-                use_case=job.use_case, pk=request.POST.get("unit")).first()
+                project=job.project, pk=request.POST.get("unit")).first()
             if unit:
                 UnitAssignment.objects.get_or_create(
                     job=job, unit=unit, defaults={"enumerator": enum})
@@ -872,9 +872,9 @@ class PlotElectionQueueView(ManageMixin, View):
         from apps.fieldwork.anchor_form import anchor_form_for, pending_anchor_trials
         from apps.fieldwork.election import election_progress, trial_rows
 
-        use_cases = _editable_use_cases(request.user)
-        uc = use_cases.filter(code=request.GET.get("use_case")).first() or use_cases.first()
-        ctx = {"use_cases": use_cases, "uc": uc, "rows": [], "progress": None,
+        projects = _editable_projects(request.user)
+        uc = projects.filter(code=request.GET.get("project")).first() or projects.first()
+        ctx = {"projects": projects, "uc": uc, "rows": [], "progress": None,
                "anchor_form": None, "pending_anchors": 0}
         if uc is not None:
             ctx["rows"] = trial_rows(uc)
@@ -890,8 +890,8 @@ class PlotElectionQueueView(ManageMixin, View):
 
         from apps.fieldwork.anchor_form import apply_anchor_submissions, publish_anchor_form
 
-        use_cases = _editable_use_cases(request.user)
-        uc = get_object_or_404(use_cases, code=request.POST.get("use_case"))
+        projects = _editable_projects(request.user)
+        uc = get_object_or_404(projects, code=request.POST.get("project"))
         action = request.POST.get("action")
         if action == "publish_anchor_form":
             form, result = publish_anchor_form(uc)
@@ -906,21 +906,21 @@ class PlotElectionQueueView(ManageMixin, View):
                 f"Anchor sync: {stats.captured} captured, {stats.outside} outside boundary, "
                 f"{stats.skipped} skipped.",
             )
-        return redirect(f"{reverse('console:plot_election')}?use_case={uc.code}")
+        return redirect(f"{reverse('console:plot_election')}?project={uc.code}")
 
 
 class PlotElectionView(ManageMixin, View):
     """Elect one candidate plot for a single trial (or flag no-valid-plot)."""
 
     def _uc(self, request, code):
-        return get_object_or_404(_editable_use_cases(request.user), code=code)
+        return get_object_or_404(_editable_projects(request.user), code=code)
 
     def get(self, request, code, trial_key):
         from apps.dashboards.charts import candidate_plots_map_html
         from apps.fieldwork.models import CandidatePlot
 
         uc = self._uc(request, code)
-        cands = list(CandidatePlot.objects.filter(use_case=uc, trial_key=trial_key))
+        cands = list(CandidatePlot.objects.filter(project=uc, trial_key=trial_key))
         if not cands:
             raise Http404("No candidates for this trial.")
         elected = next((c for c in cands if c.status == CandidatePlot.Status.ELECTED), None)
@@ -940,11 +940,11 @@ class PlotElectionView(ManageMixin, View):
 
         uc = self._uc(request, code)
         note = (request.POST.get("note") or "").strip()
-        queue_url = f"{reverse('console:plot_election')}?use_case={uc.code}"
+        queue_url = f"{reverse('console:plot_election')}?project={uc.code}"
         elect_url = redirect("console:plot_elect", code=uc.code, trial_key=trial_key)
         if request.POST.get("action") == "capture_anchor":
             elected = CandidatePlot.objects.filter(
-                use_case=uc, trial_key=trial_key, status=CandidatePlot.Status.ELECTED
+                project=uc, trial_key=trial_key, status=CandidatePlot.Status.ELECTED
             ).select_related("collection_unit").first()
             if elected is None or elected.collection_unit is None:
                 messages.error(request, "Elect a plot before capturing its anchor.")
@@ -958,7 +958,7 @@ class PlotElectionView(ManageMixin, View):
             messages.success(request, f"Trial {trial_key}: flagged no valid plot ({n} candidates).")
             return redirect(queue_url)
         chosen = CandidatePlot.objects.filter(
-            use_case=uc, trial_key=trial_key, pk=request.POST.get("candidate")).first()
+            project=uc, trial_key=trial_key, pk=request.POST.get("candidate")).first()
         if chosen is None:
             messages.error(request, "Pick a candidate to elect.")
             return redirect("console:plot_elect", code=uc.code, trial_key=trial_key)

@@ -18,9 +18,9 @@
       {% csrf_token %}
       <div class="field" style="margin-bottom:1rem;">
         <label>Project</label>
-        <select name="use_case" required class="input" style="width:100%;">
+        <select name="project" required class="input" style="width:100%;">
           <option value="">Choose a project…</option>
-          {% for uc in use_cases %}<option value="{{ uc.pk }}">{{ uc.code }} — {{ uc.name }}</option>{% endfor %}
+          {% for uc in projects %}<option value="{{ uc.pk }}">{{ uc.code }} — {{ uc.name }}</option>{% endfor %}
         </select>
       </div>
       <div class="field" style="margin-bottom:1rem;">

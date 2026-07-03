@@ -25,17 +25,17 @@ from apps.fieldwork.models import CandidatePlot
 ANCHOR_FORM_TITLE = "Plot anchor (coordinator)"
 
 
-def anchor_form_id(use_case) -> str:
-    slug = use_case.code.lower().replace(" ", "_")
+def anchor_form_id(project) -> str:
+    slug = project.code.lower().replace(" ", "_")
     return f"{slug}_plot_anchor"
 
 
-def pending_anchor_trials(use_case) -> list[tuple[str, str]]:
+def pending_anchor_trials(project) -> list[tuple[str, str]]:
     """(trial_key, candidate_ref) for every elected plot still awaiting its field
     anchor — the choice list the coordinator picks from while standing in the field."""
     rows = (
         CandidatePlot.objects.filter(
-            use_case=use_case, status=CandidatePlot.Status.ELECTED
+            project=project, status=CandidatePlot.Status.ELECTED
         )
         .select_related("collection_unit")
         .order_by("trial_key")
@@ -47,14 +47,14 @@ def pending_anchor_trials(use_case) -> list[tuple[str, str]]:
     ]
 
 
-def build_anchor_xlsform(use_case) -> bytes:
+def build_anchor_xlsform(project) -> bytes:
     """Generate the coordinator anchor micro-form as XLSForm (.xlsx) bytes.
 
     The choice list is the project's currently-unanchored trials, so publishing a
     fresh copy after more elections widens the picker automatically."""
     from django.utils import timezone
 
-    trials = pending_anchor_trials(use_case)
+    trials = pending_anchor_trials(project)
     wb = Workbook()
 
     survey = wb.active
@@ -62,7 +62,7 @@ def build_anchor_xlsform(use_case) -> bytes:
     survey.append(["type", "name", "label", "required", "hint"])
     survey.append([
         "note", "intro",
-        f"Plot anchor capture — {use_case.name}. Stand on the farmer field, inside "
+        f"Plot anchor capture — {project.name}. Stand on the farmer field, inside "
         "the elected plot, before capturing.", "", "",
     ])
     survey.append([
@@ -85,7 +85,7 @@ def build_anchor_xlsform(use_case) -> bytes:
     settings = wb.create_sheet("settings")
     settings.append(["form_title", "form_id", "version"])
     settings.append([
-        ANCHOR_FORM_TITLE, anchor_form_id(use_case),
+        ANCHOR_FORM_TITLE, anchor_form_id(project),
         timezone.now().strftime("%Y%m%d%H%M"),
     ])
 
@@ -94,16 +94,16 @@ def build_anchor_xlsform(use_case) -> bytes:
     return buf.getvalue()
 
 
-def publish_anchor_form(use_case):
+def publish_anchor_form(project):
     """Build the current anchor micro-form and publish it to the project's server.
     Returns (FormDefinition | None, PublishResult) from the shared publisher."""
     from apps.ingestion.publishing import publish_xlsform
     from apps.usecases.models import FormDefinition
 
-    xlsx = build_anchor_xlsform(use_case)
+    xlsx = build_anchor_xlsform(project)
     return publish_xlsform(
-        use_case, xlsx,
-        filename=f"{anchor_form_id(use_case)}.xlsx",
+        project, xlsx,
+        filename=f"{anchor_form_id(project)}.xlsx",
         role=FormDefinition.Role.EXTRA,
         title=ANCHOR_FORM_TITLE,
     )
@@ -131,18 +131,18 @@ def _parse_geopoint(val) -> tuple[float | None, float | None]:
         return None, None
 
 
-def anchor_form_for(use_case):
+def anchor_form_for(project):
     """The most recently published anchor form for a project, if any."""
     from apps.usecases.models import FormDefinition
 
     return (
-        FormDefinition.objects.filter(use_case=use_case, title=ANCHOR_FORM_TITLE)
+        FormDefinition.objects.filter(project=project, title=ANCHOR_FORM_TITLE)
         .order_by("-published_at", "-created_at")
         .first()
     )
 
 
-def apply_anchor_submissions(use_case, user=None) -> AnchorSyncStats:
+def apply_anchor_submissions(project, user=None) -> AnchorSyncStats:
     """Fold captured anchor submissions onto their trials' CollectionUnits.
 
     Reads the project's anchor-form submissions, pulls (trial_key, geopoint) from
@@ -154,17 +154,17 @@ def apply_anchor_submissions(use_case, user=None) -> AnchorSyncStats:
     from apps.submissions.models import Submission
 
     stats = AnchorSyncStats()
-    form = anchor_form_for(use_case)
+    form = anchor_form_for(project)
     if form is None:
         return stats
-    for sub in Submission.objects.filter(use_case=use_case, form=form).order_by("created_at"):
+    for sub in Submission.objects.filter(project=project, form=form).order_by("created_at"):
         payload = sub.raw_payload or {}
         trial_key = payload.get("trial_key") or payload.get("trial")
         lat, lon = _parse_geopoint(payload.get("farmer_field"))
         if not trial_key or lat is None:
             stats.skipped += 1
             continue
-        unit = CollectionUnit.objects.filter(use_case=use_case, code=trial_key).first()
+        unit = CollectionUnit.objects.filter(project=project, code=trial_key).first()
         if unit is None:
             stats.skipped += 1
             continue

@@ -6,17 +6,17 @@ from datetime import date
 from django.db.models import Count, Q
 
 
-def project_enumerators(use_case):
+def project_enumerators(project):
     """Active users holding the Enumerator role on a project (incl. the
     country/region cascade) — the pool a coordinator assigns units to."""
     from apps.accounts.models import User
     from apps.rbac.models import Role
 
-    covers = Q(memberships__use_case=use_case)
-    if use_case.country_id:
-        covers |= Q(memberships__country_id=use_case.country_id)
-        if use_case.country.region_id:
-            covers |= Q(memberships__region_id=use_case.country.region_id)
+    covers = Q(memberships__project=project)
+    if project.country_id:
+        covers |= Q(memberships__country_id=project.country_id)
+        if project.country.region_id:
+            covers |= Q(memberships__region_id=project.country.region_id)
     return (
         User.objects.filter(Q(memberships__role=Role.ENUMERATOR) & covers, is_active=True)
         .distinct()
@@ -53,7 +53,7 @@ def job_progress(job) -> dict:
     from apps.submissions.models import Submission
 
     unit_ids = UnitAssignment.objects.filter(job=job).values_list("unit_id", flat=True)
-    subs = Submission.objects.filter(use_case=job.use_case, collection_unit_id__in=unit_ids)
+    subs = Submission.objects.filter(project=job.project, collection_unit_id__in=unit_ids)
     total_subs = subs.count()
     approved_subs = subs.filter(review__state=ReviewState.APPROVED).count()
 
@@ -95,7 +95,7 @@ def job_enumerator_progress(job) -> list[dict]:
     return out
 
 
-def use_case_jobs_progress(use_case) -> list[dict]:
+def project_jobs_progress(project) -> list[dict]:
     """Progress for each active job in a project (for the Summary tab)."""
-    jobs = use_case.jobs.exclude(status="CLOSED").order_by("deadline", "name")
+    jobs = project.jobs.exclude(status="CLOSED").order_by("deadline", "name")
     return [{"job": j, "progress": job_progress(j)} for j in jobs]

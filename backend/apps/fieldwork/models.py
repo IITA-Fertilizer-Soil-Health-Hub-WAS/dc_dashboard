@@ -1,7 +1,7 @@
 """Field-work planning: collection units + jobs.
 
 A **collection unit** is the thing data is collected on — a plot, or a
-farmer/household (one type per project, set on ``UseCase.unit_type``). A **job**
+farmer/household (one type per project, set on ``Project.unit_type``). A **job**
 is a data-collection assignment: a form to collect, a target, a deadline, and the
 enumerators assigned over a set of units. Submissions are matched back to their
 unit at ingest, so the platform tracks expected vs actual — the basis for the
@@ -13,14 +13,14 @@ from django.conf import settings
 from django.db import models
 
 from apps.common.models import BaseModel
-from apps.usecases.models import FormDefinition, UseCase
+from apps.usecases.models import FormDefinition, Project
 
 
 class CollectionUnit(BaseModel):
     """One plot or farmer/household enrolled for collection in a project."""
 
-    use_case = models.ForeignKey(
-        UseCase, on_delete=models.CASCADE, related_name="collection_units"
+    project = models.ForeignKey(
+        Project, on_delete=models.CASCADE, related_name="collection_units"
     )
     code = models.CharField(max_length=64)  # matches a submission ID field (e.g. HHID/plot id)
     name = models.CharField(max_length=255, blank=True)
@@ -51,8 +51,8 @@ class CollectionUnit(BaseModel):
     attributes = models.JSONField(default=dict, blank=True)
 
     class Meta:
-        unique_together = ("use_case", "code")
-        ordering = ["use_case", "code"]
+        unique_together = ("project", "code")
+        ordering = ["project", "code"]
 
     def __str__(self) -> str:
         return self.code
@@ -67,7 +67,7 @@ class Job(BaseModel):
         ACTIVE = "ACTIVE", "Active"
         CLOSED = "CLOSED", "Closed"
 
-    use_case = models.ForeignKey(UseCase, on_delete=models.CASCADE, related_name="jobs")
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="jobs")
     name = models.CharField(max_length=255)
     form = models.ForeignKey(
         FormDefinition, null=True, blank=True, on_delete=models.SET_NULL, related_name="jobs"
@@ -98,7 +98,7 @@ class Job(BaseModel):
         ordering = ["-created_at"]
 
     def __str__(self) -> str:
-        return f"{self.use_case.code}:{self.name}"
+        return f"{self.project.code}:{self.name}"
 
     def close(self, user, note: str = "") -> None:
         from django.utils import timezone
@@ -126,8 +126,8 @@ class CandidatePlot(BaseModel):
         ELECTED = "ELECTED", "Elected"
         NOT_SELECTED = "NOT_SELECTED", "Not selected"
 
-    use_case = models.ForeignKey(
-        UseCase, on_delete=models.CASCADE, related_name="candidate_plots"
+    project = models.ForeignKey(
+        Project, on_delete=models.CASCADE, related_name="candidate_plots"
     )
     # The trial / area this candidate belongs to — the key the GIS export must carry.
     trial_key = models.CharField(max_length=64)
@@ -156,12 +156,12 @@ class CandidatePlot(BaseModel):
     )
 
     class Meta:
-        unique_together = ("use_case", "trial_key", "candidate_ref")
-        ordering = ["use_case", "trial_key", "rank", "candidate_ref"]
-        indexes = [models.Index(fields=["use_case", "trial_key"])]
+        unique_together = ("project", "trial_key", "candidate_ref")
+        ordering = ["project", "trial_key", "rank", "candidate_ref"]
+        indexes = [models.Index(fields=["project", "trial_key"], name="fieldwork_cand_project_idx")]
 
     def __str__(self) -> str:
-        return f"{self.use_case.code}:{self.trial_key}:{self.candidate_ref}"
+        return f"{self.project.code}:{self.trial_key}:{self.candidate_ref}"
 
 
 class UnitAssignment(BaseModel):

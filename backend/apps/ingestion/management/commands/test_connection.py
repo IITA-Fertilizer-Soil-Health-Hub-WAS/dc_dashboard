@@ -11,7 +11,7 @@ from __future__ import annotations
 from django.core.management.base import BaseCommand, CommandError
 
 from apps.ingestion.backends.registry import get_backend_for
-from apps.usecases.models import UseCase
+from apps.usecases.models import Project
 
 
 class Command(BaseCommand):
@@ -22,8 +22,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
-            uc = UseCase.objects.get(code=options["code"])
-        except UseCase.DoesNotExist as exc:
+            uc = Project.objects.get(code=options["code"])
+        except Project.DoesNotExist as exc:
             raise CommandError(f"Unknown use case: {options['code']}") from exc
 
         backend = get_backend_for(uc)

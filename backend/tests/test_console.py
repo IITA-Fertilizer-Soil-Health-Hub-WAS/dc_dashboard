@@ -3,14 +3,14 @@ from __future__ import annotations
 
 import pytest
 
-from apps.usecases.models import Trial, UseCase
+from apps.usecases.models import Project, Trial
 
 pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
 def uc():
-    return UseCase.objects.create(code="SNS-RWANDA", name="SNS Rwanda")
+    return Project.objects.create(code="SNS-RWANDA", name="SNS Rwanda")
 
 
 @pytest.fixture
@@ -42,11 +42,11 @@ def test_non_staff_forbidden(client, plain, uc):
 def test_create_edit_delete_cycle(client, staff, uc):
     client.force_login(staff)
     # create
-    r = client.post("/manage/trials/new/", {"use_case": str(uc.pk), "name": "T1", "code": "T1"})
+    r = client.post("/manage/trials/new/", {"project": str(uc.pk), "name": "T1", "code": "T1"})
     assert r.status_code == 302
     t = Trial.objects.get(name="T1")
     # edit
-    r = client.post(f"/manage/trials/{t.pk}/", {"use_case": str(uc.pk), "name": "T1b", "code": "T1"})
+    r = client.post(f"/manage/trials/{t.pk}/", {"project": str(uc.pk), "name": "T1b", "code": "T1"})
     assert r.status_code == 302
     t.refresh_from_db()
     assert t.name == "T1b"
@@ -56,13 +56,13 @@ def test_create_edit_delete_cycle(client, staff, uc):
     assert not Trial.objects.filter(pk=t.pk).exists()
 
 
-def test_new_form_defaults_use_case_to_active_project(client, staff, uc):
+def test_new_form_defaults_project_to_active_project(client, staff, uc):
     client.force_login(staff)
-    # ?use_case= (carried by every scoped sidebar link) pre-selects the project.
-    body = client.get(f"/manage/trials/new/?use_case={uc.code}").content.decode()
+    # ?project= (carried by every scoped sidebar link) pre-selects the project.
+    body = client.get(f"/manage/trials/new/?project={uc.code}").content.decode()
     assert f'value="{uc.pk}" selected' in body
     # Falls back to the active-project session when no query param is present.
-    other = UseCase.objects.create(code="OTHER", name="Other")  # noqa: F841
+    other = Project.objects.create(code="OTHER", name="Other")  # noqa: F841
     session = client.session
     session["active_project"] = uc.code
     session.save()
@@ -95,8 +95,8 @@ def test_membership_stamps_granted_by(client, staff, uc, django_user_model):
     client.force_login(staff)
     target = django_user_model.objects.create_user("member@x.org", "pw", is_active=True)
     r = client.post("/manage/memberships/new/",
-                    {"user": str(target.pk), "use_case": str(uc.pk), "role": "VIEWER"})
+                    {"user": str(target.pk), "project": str(uc.pk), "role": "VIEWER"})
     assert r.status_code == 302
     from apps.rbac.models import UseCaseMembership
-    m = UseCaseMembership.objects.get(user=target, use_case=uc)
+    m = UseCaseMembership.objects.get(user=target, project=uc)
     assert m.granted_by == staff  # auto-stamped

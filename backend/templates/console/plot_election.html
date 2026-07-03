@@ -12,8 +12,8 @@
   {% if messages %}{% for msg in messages %}<div class="pill" style="margin-bottom:.7rem;">{{ msg }}</div>{% endfor %}{% endif %}
 
   <form method="get" style="margin-bottom:1rem;">
-    <select name="use_case" class="input" onchange="this.form.submit()" style="min-width:280px;">
-      {% for u in use_cases %}<option value="{{ u.code }}" {% if u == uc %}selected{% endif %}>{{ u.code }} — {{ u.name }}</option>{% endfor %}
+    <select name="project" class="input" onchange="this.form.submit()" style="min-width:280px;">
+      {% for u in projects %}<option value="{{ u.code }}" {% if u == uc %}selected{% endif %}>{{ u.code }} — {{ u.name }}</option>{% endfor %}
     </select>
   </form>
 
@@ -39,9 +39,9 @@
         </p>
       </div>
       <div style="display:flex;gap:.5rem;">
-        <form method="post"><input type="hidden" name="use_case" value="{{ uc.code }}"><input type="hidden" name="action" value="publish_anchor_form">
+        <form method="post"><input type="hidden" name="project" value="{{ uc.code }}"><input type="hidden" name="action" value="publish_anchor_form">
           <button class="btn" type="submit">Publish anchor form</button></form>
-        <form method="post"><input type="hidden" name="use_case" value="{{ uc.code }}"><input type="hidden" name="action" value="sync_anchors">
+        <form method="post"><input type="hidden" name="project" value="{{ uc.code }}"><input type="hidden" name="action" value="sync_anchors">
           <button class="btn" type="submit">Sync captured anchors</button></form>
       </div>
     </div>

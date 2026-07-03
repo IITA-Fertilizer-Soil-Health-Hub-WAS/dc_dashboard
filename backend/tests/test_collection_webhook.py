@@ -6,7 +6,7 @@ from django.core.cache import cache
 from django.test import override_settings
 from django.urls import reverse
 
-from apps.usecases.models import Organization, UseCase
+from apps.usecases.models import Organization, Project
 
 pytestmark = pytest.mark.django_db
 
@@ -16,7 +16,7 @@ SECRET = "s3cr3t"
 @pytest.fixture
 def uc():
     org = Organization.objects.create(code="o", name="O")
-    return UseCase.objects.create(code="PROJ-A", name="A", organization=org, is_active=True)
+    return Project.objects.create(code="PROJ-A", name="A", organization=org, is_active=True)
 
 
 @pytest.fixture

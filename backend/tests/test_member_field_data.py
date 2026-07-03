@@ -8,7 +8,7 @@ from django.urls import reverse
 from apps.console.registry import console_can_edit, console_key_allowed, grouped_for
 from apps.rbac.models import Role, UseCaseMembership
 from apps.submissions.models import Enumerator
-from apps.usecases.models import Organization, UseCase
+from apps.usecases.models import Organization, Project
 
 pytestmark = pytest.mark.django_db
 
@@ -16,12 +16,12 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture
 def world(django_user_model):
     org = Organization.objects.create(code="o", name="O")
-    mine = UseCase.objects.create(code="MINE", name="Mine", organization=org)
-    other = UseCase.objects.create(code="OTHER", name="Other", organization=org)
-    Enumerator.objects.create(use_case=mine, enid="EN-MINE")
-    Enumerator.objects.create(use_case=other, enid="EN-OTHER")
+    mine = Project.objects.create(code="MINE", name="Mine", organization=org)
+    other = Project.objects.create(code="OTHER", name="Other", organization=org)
+    Enumerator.objects.create(project=mine, enid="EN-MINE")
+    Enumerator.objects.create(project=other, enid="EN-OTHER")
     viewer = django_user_model.objects.create_user("v@x.org", "pw", is_active=True, organization=org)
-    UseCaseMembership.objects.create(user=viewer, use_case=mine, role=Role.VIEWER)
+    UseCaseMembership.objects.create(user=viewer, project=mine, role=Role.VIEWER)
     stranger = django_user_model.objects.create_user("s@x.org", "pw", is_active=True, organization=org)
     return {"mine": mine, "other": other, "viewer": viewer, "stranger": stranger}
 

@@ -1,7 +1,7 @@
 """Role-based access control, scoped per use case.
 
 The R app had no roles: Auth0 `eia_apps` metadata simply listed which use cases
-a user could see. Here, access is a (user, use_case, role) triple. Platform
+a user could see. Here, access is a (user, project, role) triple. Platform
 Admin is global (Django superuser). All other roles are granted per use case.
 """
 from __future__ import annotations
@@ -11,7 +11,7 @@ from django.db import models
 from django.db.models import Q
 
 from apps.common.models import BaseModel
-from apps.usecases.models import Country, Region, UseCase
+from apps.usecases.models import Country, Project, Region
 
 
 class Role(models.TextChoices):
@@ -28,17 +28,17 @@ class UseCaseMembership(BaseModel):
 
     The unit of authorization. A country grant cascades to every use case in that
     country; a region grant cascades to every use case in the region. Exactly one
-    of ``use_case`` / ``country`` / ``region`` is set (enforced by a check
+    of ``project`` / ``country`` / ``region`` is set (enforced by a check
     constraint). The cascade is resolved in ``permissions.roles_for`` /
-    ``visible_use_cases`` so views never special-case the scope level.
+    ``visible_projects`` so views never special-case the scope level.
     """
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="memberships"
     )
     # Exactly one of these three scopes is non-null.
-    use_case = models.ForeignKey(
-        UseCase, null=True, blank=True, on_delete=models.CASCADE, related_name="memberships"
+    project = models.ForeignKey(
+        Project, null=True, blank=True, on_delete=models.CASCADE, related_name="memberships"
     )
     country = models.ForeignKey(
         Country, null=True, blank=True, on_delete=models.CASCADE, related_name="memberships"
@@ -56,22 +56,22 @@ class UseCaseMembership(BaseModel):
     )
 
     class Meta:
-        ordering = ["use_case", "country", "region", "role"]
+        ordering = ["project", "country", "region", "role"]
         constraints = [
             # Exactly one scope level must be set.
             models.CheckConstraint(
                 name="membership_exactly_one_scope",
                 check=(
-                    Q(use_case__isnull=False, country__isnull=True, region__isnull=True)
-                    | Q(use_case__isnull=True, country__isnull=False, region__isnull=True)
-                    | Q(use_case__isnull=True, country__isnull=True, region__isnull=False)
+                    Q(project__isnull=False, country__isnull=True, region__isnull=True)
+                    | Q(project__isnull=True, country__isnull=False, region__isnull=True)
+                    | Q(project__isnull=True, country__isnull=True, region__isnull=False)
                 ),
             ),
             # One row per (user, role) at each scope level.
             models.UniqueConstraint(
-                fields=["user", "use_case", "role"],
-                condition=Q(use_case__isnull=False),
-                name="uniq_membership_use_case",
+                fields=["user", "project", "role"],
+                condition=Q(project__isnull=False),
+                name="uniq_membership_project",
             ),
             models.UniqueConstraint(
                 fields=["user", "country", "role"],
@@ -88,7 +88,7 @@ class UseCaseMembership(BaseModel):
     @property
     def scope(self):
         """The object this membership is scoped to (use case, country, or region)."""
-        return self.use_case or self.country or self.region
+        return self.project or self.country or self.region
 
     def __str__(self) -> str:
         return f"{self.user} @ {self.scope} = {self.role}"
@@ -107,8 +107,8 @@ class UseCaseAccessRequest(BaseModel):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="access_requests"
     )
-    use_case = models.ForeignKey(
-        UseCase, on_delete=models.CASCADE, related_name="access_requests"
+    project = models.ForeignKey(
+        Project, on_delete=models.CASCADE, related_name="access_requests"
     )
     note = models.TextField(blank=True)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
@@ -126,11 +126,11 @@ class UseCaseAccessRequest(BaseModel):
         constraints = [
             # At most one open request per user per use case.
             models.UniqueConstraint(
-                fields=["user", "use_case"],
+                fields=["user", "project"],
                 condition=Q(status="PENDING"),
                 name="uniq_pending_access_request",
             )
         ]
 
     def __str__(self) -> str:
-        return f"{self.user} -> {self.use_case} ({self.status})"
+        return f"{self.user} -> {self.project} ({self.status})"

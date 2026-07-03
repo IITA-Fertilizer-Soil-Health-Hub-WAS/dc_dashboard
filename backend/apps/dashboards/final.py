@@ -8,19 +8,19 @@ from apps.review.models import ReviewState
 from apps.submissions.models import Submission
 
 
-def approved_submissions(use_case):
+def approved_submissions(project):
     return (
-        Submission.objects.filter(use_case=use_case, review__state=ReviewState.APPROVED)
+        Submission.objects.filter(project=project, review__state=ReviewState.APPROVED)
         .select_related("enumerator", "collection_unit", "crop", "review", "collected_by")
         .prefetch_related("values")
         .order_by("-event_date", "-ona_submission_time")
     )
 
 
-def final_rows(use_case):
+def final_rows(project):
     """Return (submissions, field_keys, rows) where each row is
     (submission, {field_key: current_value}). field_keys is the sorted union."""
-    subs = list(approved_submissions(use_case))
+    subs = list(approved_submissions(project))
     keys: set[str] = set()
     rows = []
     for s in subs:

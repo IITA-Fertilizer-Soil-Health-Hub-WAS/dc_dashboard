@@ -22,9 +22,9 @@ from apps.usecases.models import (
     FieldMapping,
     FormDefinition,
     Organization,
+    Project,
     Region,
     Trial,
-    UseCase,
 )
 from apps.validation.models import ValidationRule
 
@@ -69,7 +69,7 @@ _ENTRIES: list[Managed] = [
             form_fields=["region", "code", "name"], search_fields=["code", "name"],
             icon="flag", description="Countries within a region."),
     # ---- Configuration: how a use case is defined & ingested ----
-    Managed("projects", UseCase, "Projects", "Configuration",
+    Managed("projects", Project, "Projects", "Configuration",
             list_display=["code", "name", "organization", "country", "is_active",
                           "config_version", "plugin_path"],
             form_fields=["code", "name", "organization", "country", "unit_type", "is_active",
@@ -78,9 +78,9 @@ _ENTRIES: list[Managed] = [
             search_fields=["code", "name"], icon="category", actions=USECASE_ACTIONS,
             description="Projects you monitor — ONA forms, ID patterns, sync."),
     Managed("forms", FormDefinition, "Forms", "Configuration",
-            list_display=["use_case", "title", "role", "server_form_id", "publish_status",
+            list_display=["project", "title", "role", "server_form_id", "publish_status",
                           "version"],
-            form_fields=["use_case", "title", "ona_form_id", "server_form_id", "role", "crop",
+            form_fields=["project", "title", "ona_form_id", "server_form_id", "role", "crop",
                          "season", "system_vars_drop"],
             search_fields=["server_form_id", "title"], icon="description",
             description="Forms feeding each use case (onboarded or published)."),
@@ -93,28 +93,28 @@ _ENTRIES: list[Managed] = [
             search_fields=["target_field"], icon="swap_horiz",
             description="Map raw ONA fields to canonical fields."),
     Managed("event-schedule", EventScheduleItem, "Event schedule", "Configuration",
-            list_display=["use_case", "event_key", "sequence", "anchor", "offset_days"],
-            form_fields=["use_case", "event_key", "sequence", "anchor", "offset_days",
+            list_display=["project", "event_key", "sequence", "anchor", "offset_days"],
+            form_fields=["project", "event_key", "sequence", "anchor", "offset_days",
                          "crop_overrides", "grace_days"],
             search_fields=["event_key"], icon="event",
             description="Visit timeline & day offsets driving status colours."),
     Managed("crops", Crop, "Crops", "Configuration",
-            list_display=["use_case", "name", "aliases"],
-            form_fields=["use_case", "name", "aliases"], search_fields=["name"], icon="grass",
+            list_display=["project", "name", "aliases"],
+            form_fields=["project", "name", "aliases"], search_fields=["name"], icon="grass",
             description="Crops and their ONA name aliases."),
     Managed("trials", Trial, "Trials", "Configuration",
-            list_display=["use_case", "name", "code"],
-            form_fields=["use_case", "name", "code"], search_fields=["name"], icon="science",
+            list_display=["project", "name", "code"],
+            form_fields=["project", "name", "code"], search_fields=["name"], icon="science",
             description="Trial / experiment types (linked to submissions at ingest)."),
     Managed("validation-rules", ValidationRule, "Validation rules", "Configuration",
-            list_display=["use_case", "code", "rule_type", "severity", "is_enabled"],
-            form_fields=["use_case", "code", "rule_type", "params", "severity",
+            list_display=["project", "code", "rule_type", "severity", "is_enabled"],
+            form_fields=["project", "code", "rule_type", "params", "severity",
                          "auto_flag_state", "is_enabled"],
             search_fields=["code"], icon="rule",
             description="Checks that flag submissions for review."),
     Managed("rejection-reasons", RejectionReason, "Rejection reasons", "Configuration",
-            list_display=["use_case", "code", "label", "order", "is_active"],
-            form_fields=["use_case", "code", "label", "order", "is_active"],
+            list_display=["project", "code", "label", "order", "is_active"],
+            form_fields=["project", "code", "label", "order", "is_active"],
             search_fields=["code", "label"], icon="block",
             description="Categorised reasons a reviewer can decline a submission for."),
     # ---- Access: who can see & act ----
@@ -126,15 +126,15 @@ _ENTRIES: list[Managed] = [
             search_fields=["user_id", "email", "full_name"], ordering=["email"], icon="person",
             actions=USER_ACTIONS, description="People and account approval status."),
     Managed("memberships", UseCaseMembership, "Memberships", "Accounts & roles",
-            list_display=["user", "use_case", "country", "region", "role", "granted_by",
+            list_display=["user", "project", "country", "region", "role", "granted_by",
                           "created_at"],
-            form_fields=["user", "use_case", "country", "region", "role"],
-            search_fields=["user__email", "use_case__code"], icon="group",
+            form_fields=["user", "project", "country", "region", "role"],
+            search_fields=["user__email", "project__code"], icon="group",
             description="Who can access which use case / country / region, and their role."),
     Managed("access-requests", UseCaseAccessRequest, "Access requests", "Accounts & roles",
-            list_display=["user", "use_case", "status", "decided_by", "decided_at",
+            list_display=["user", "project", "status", "decided_by", "decided_at",
                           "created_at"],
-            search_fields=["user__email", "use_case__code"], readonly=True, icon="pending_actions",
+            search_fields=["user__email", "project__code"], readonly=True, icon="pending_actions",
             description="Self-service requests to join a project (read-only)."),
     Managed("user-profiles", UserProfile, "User profiles", "Accounts & roles",
             list_display=["user", "first_name", "family_name", "gender", "country",
@@ -145,16 +145,16 @@ _ENTRIES: list[Managed] = [
     # config console — so their group is intentionally outside GROUPS (routable +
     # editable, but not repeated in the Field data list). Same pattern as Monitoring.
     Managed("jobs", Job, "Jobs", "Operations",
-            list_display=["use_case", "name", "form", "status", "target_count", "deadline"],
-            form_fields=["use_case", "name", "form", "target_count", "start_date", "deadline",
+            list_display=["project", "name", "form", "status", "target_count", "deadline"],
+            form_fields=["project", "name", "form", "target_count", "start_date", "deadline",
                          "status", "assigned_to"],
             search_fields=["name"], icon="assignment",
             description="Data-collection assignments — form, target, deadline, enumerators."),
     # Collection units are a top-level project workspace link (same level as
     # Dashboard), so the section is routable but not repeated in a console group.
     Managed("collection-units", CollectionUnit, "Collection units", "Operations",
-            list_display=["use_case", "code", "name", "country", "region", "district"],
-            form_fields=["use_case", "code", "name", "lat", "lon", "country", "region",
+            list_display=["project", "code", "name", "country", "region", "district"],
+            form_fields=["project", "code", "name", "lat", "lon", "country", "region",
                          "district", "attributes"],
             search_fields=["code", "name"], icon="place",
             description="The units data is collected on — farmers / households / plots."),
@@ -162,8 +162,8 @@ _ENTRIES: list[Managed] = [
     # roster"), so it's a single sidebar concept — group kept outside GROUPS
     # (routable + editable, not a second "Enumerators" console item).
     Managed("enumerators", Enumerator, "Enumerators", "Operations",
-            list_display=["use_case", "enid", "first_name", "surname", "user", "is_test"],
-            form_fields=["use_case", "enid", "first_name", "surname", "phone", "user",
+            list_display=["project", "enid", "first_name", "surname", "user", "is_test"],
+            form_fields=["project", "enid", "first_name", "surname", "phone", "user",
                          "is_test"],
             search_fields=["enid", "first_name", "surname"], icon="badge",
             description="Field staff collecting data, linked to platform accounts."),
@@ -171,14 +171,14 @@ _ENTRIES: list[Managed] = [
     # and Issues tabs — no duplicate console section for them.
     # ---- Monitoring: M&E threshold alerts ----
     Managed("alert-rules", AlertRule, "Alert rules", "Monitoring",
-            list_display=["use_case", "name", "metric", "comparator", "threshold",
+            list_display=["project", "name", "metric", "comparator", "threshold",
                           "consecutive_days", "severity", "is_enabled"],
-            form_fields=["use_case", "name", "metric", "comparator", "threshold",
+            form_fields=["project", "name", "metric", "comparator", "threshold",
                          "consecutive_days", "severity", "notify_emails", "is_enabled"],
             search_fields=["name"], icon="notifications_active",
             description="Threshold rules that raise M&E alerts and email watchers."),
     Managed("alert-events", AlertEvent, "Alert events", "Monitoring",
-            list_display=["created_at", "use_case", "rule", "severity", "observed_value"],
+            list_display=["created_at", "project", "rule", "severity", "observed_value"],
             search_fields=["message"], readonly=True, ordering=["-created_at"],
             icon="warning", description="Fired alerts — append-only log (read-only)."),
 ]
@@ -206,19 +206,19 @@ MEMBER_READ_KEYS: set[str] = {
 # ORM lookup from each coordinator-visible section to its use case id, used to
 # scope the list to the coordinator's own projects.
 USECASE_FILTER_PATHS: dict[str, str] = {
-    "forms": "use_case",
-    "field-mappings": "form__use_case",
-    "event-schedule": "use_case",
-    "crops": "use_case",
-    "trials": "use_case",
-    "validation-rules": "use_case",
-    "rejection-reasons": "use_case",
-    "jobs": "use_case",
-    "collection-units": "use_case",
-    "enumerators": "use_case",
-    "alert-rules": "use_case",
-    "alert-events": "use_case",
-    "access-requests": "use_case",
+    "forms": "project",
+    "field-mappings": "form__project",
+    "event-schedule": "project",
+    "crops": "project",
+    "trials": "project",
+    "validation-rules": "project",
+    "rejection-reasons": "project",
+    "jobs": "project",
+    "collection-units": "project",
+    "enumerators": "project",
+    "alert-rules": "project",
+    "alert-events": "project",
+    "access-requests": "project",
 }
 
 
@@ -230,11 +230,11 @@ def _visible_console_keys(user) -> set[str] | None:
         return set()
     if user.is_staff:
         return None  # everything
-    from apps.rbac.permissions import can_manage_access, visible_use_cases
+    from apps.rbac.permissions import can_manage_access, visible_projects
 
     if can_manage_access(user):
         return COORDINATOR_CONSOLE_KEYS
-    if visible_use_cases(user).exists():
+    if visible_projects(user).exists():
         return MEMBER_READ_KEYS
     return set()
 
@@ -282,17 +282,17 @@ ORG_FILTER_PATHS: dict[str, str] = {
     "regions": "organization",
     "countries": "region__organization",
     "projects": "organization",
-    "forms": "use_case__organization",
-    "field-mappings": "form__use_case__organization",
-    "event-schedule": "use_case__organization",
-    "crops": "use_case__organization",
-    "trials": "use_case__organization",
-    "validation-rules": "use_case__organization",
-    "jobs": "use_case__organization",
-    "collection-units": "use_case__organization",
+    "forms": "project__organization",
+    "field-mappings": "form__project__organization",
+    "event-schedule": "project__organization",
+    "crops": "project__organization",
+    "trials": "project__organization",
+    "validation-rules": "project__organization",
+    "jobs": "project__organization",
+    "collection-units": "project__organization",
     "users": "organization",
-    "enumerators": "use_case__organization",
-    "access-requests": "use_case__organization",
+    "enumerators": "project__organization",
+    "access-requests": "project__organization",
 }
 
 # Group order for sidebar rendering.

@@ -15,7 +15,7 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 
 from apps.rbac.models import Role, UseCaseMembership
-from apps.usecases.models import UseCase
+from apps.usecases.models import Project
 
 User = get_user_model()
 
@@ -37,19 +37,19 @@ class Command(BaseCommand):
             apps = user.legacy_eia_apps
             codes = apps.keys() if isinstance(apps, dict) else apps
             for code in codes:
-                uc = UseCase.objects.filter(code=code).first()
+                uc = Project.objects.filter(code=code).first()
                 if uc is None:
                     unknown += 1
                     self.stderr.write(self.style.WARNING(f"  ? unknown use case '{code}' for {user.email}"))
                     continue
                 exists = UseCaseMembership.objects.filter(
-                    user=user, use_case=uc, role=Role.VIEWER
+                    user=user, project=uc, role=Role.VIEWER
                 ).exists()
                 if exists:
                     skipped += 1
                     continue
                 if not options["dry_run"]:
-                    UseCaseMembership.objects.create(user=user, use_case=uc, role=Role.VIEWER)
+                    UseCaseMembership.objects.create(user=user, project=uc, role=Role.VIEWER)
                 created += 1
 
         prefix = "[dry-run] " if options["dry_run"] else ""

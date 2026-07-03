@@ -16,8 +16,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
 
 from apps.rbac.models import UseCaseAccessRequest
-from apps.rbac.permissions import can_manage_access, visible_use_cases
-from apps.usecases.models import Country, UseCase
+from apps.rbac.permissions import can_manage_access, visible_projects
+from apps.usecases.models import Country, Project
 
 PAGE_SIZE = 24
 
@@ -42,19 +42,19 @@ def _home_summary(user, member_ids):
 
         ids = list(member_ids)
         out["awaiting_review"] = (
-            Submission.objects.filter(use_case_id__in=ids)
+            Submission.objects.filter(project_id__in=ids)
             .exclude(review__state__in=REVIEW_CLOSED_STATES).count()
         )
         out["open_issues"] = ValidationFlag.objects.filter(
-            rule__use_case_id__in=ids, status=ValidationFlag.Status.OPEN
+            rule__project_id__in=ids, status=ValidationFlag.Status.OPEN
         ).count()
     return out
 
 
-def _org_use_cases(user):
+def _org_projects(user):
     """Active use cases the user may see in the directory: their institution's
     (a hub operator sees all; a user with no institution yet sees none)."""
-    qs = UseCase.objects.filter(is_active=True).select_related("country", "organization")
+    qs = Project.objects.filter(is_active=True).select_related("country", "organization")
     if getattr(user, "is_platform_admin", False):
         return qs
     if user.organization_id:
@@ -73,7 +73,7 @@ def projects(request):
     user = request.user
     is_index = bool(request.resolver_match and request.resolver_match.url_name == "index")
     if is_index and not request.GET.get("scope") and not request.GET.get("q"):
-        mine = visible_use_cases(user)
+        mine = visible_projects(user)
         if mine.count() == 1:
             return redirect("dashboards:usecase", code=mine.first().code)
     request.session.pop("active_project", None)  # browsing the directory = leave the workspace
@@ -82,15 +82,15 @@ def projects(request):
     q = (request.GET.get("q") or "").strip()
     country = (request.GET.get("country") or "").strip()
 
-    member_ids = set(visible_use_cases(user).values_list("id", flat=True))
-    org_qs = _org_use_cases(user)
+    member_ids = set(visible_projects(user).values_list("id", flat=True))
+    org_qs = _org_projects(user)
 
     # 'mine' = projects you belong to (membership is the authorization, no org
     # gate needed); 'all' = the institution directory you may request access in.
     if scope == "all":
         base = org_qs
     else:
-        base = visible_use_cases(user).select_related("country", "organization")
+        base = visible_projects(user).select_related("country", "organization")
     if q:
         base = base.filter(Q(code__icontains=q) | Q(name__icontains=q))
     if country:
@@ -101,14 +101,14 @@ def projects(request):
     pending_ids = set(
         UseCaseAccessRequest.objects.filter(
             user=user, status=UseCaseAccessRequest.Status.PENDING
-        ).values_list("use_case_id", flat=True)
+        ).values_list("project_id", flat=True)
     )
     rows = [
         {"uc": uc, "is_member": uc.id in member_ids, "pending": uc.id in pending_ids}
         for uc in page
     ]
     countries = Country.objects.filter(
-        use_cases__in=org_qs
+        projects__in=org_qs
     ).distinct().order_by("name")
 
     # Personal 'attention' strip only on the default (your-projects) landing —
@@ -129,19 +129,19 @@ def project_request(request, code):
     """Request access to a project: describe what you intend to do; a coordinator
     reads that and grants the fitting role."""
     user = request.user
-    uc = get_object_or_404(UseCase, code=code, is_active=True)
+    uc = get_object_or_404(Project, code=code, is_active=True)
 
     # Tenant guard: you can only request projects in your own institution.
     if not getattr(user, "is_platform_admin", False):
         if not user.organization_id or uc.organization_id != user.organization_id:
             raise PermissionDenied("That project is in another institution.")
 
-    if visible_use_cases(user).filter(pk=uc.pk).exists():
+    if visible_projects(user).filter(pk=uc.pk).exists():
         messages.info(request, f"You already have access to {uc.code}.")
         return redirect("dashboards:projects")
 
     existing = UseCaseAccessRequest.objects.filter(
-        user=user, use_case=uc, status=UseCaseAccessRequest.Status.PENDING
+        user=user, project=uc, status=UseCaseAccessRequest.Status.PENDING
     ).first()
 
     if request.method == "POST":
@@ -152,7 +152,7 @@ def project_request(request, code):
                 "error": "Please describe what you intend to do on this project.",
             })
         UseCaseAccessRequest.objects.update_or_create(
-            user=user, use_case=uc, status=UseCaseAccessRequest.Status.PENDING,
+            user=user, project=uc, status=UseCaseAccessRequest.Status.PENDING,
             defaults={"note": note},
         )
         messages.success(request, f"Access requested for {uc.code}. A coordinator will review it.")

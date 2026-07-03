@@ -5,7 +5,7 @@ BioSSA's nested multi-crop repeat groups) need imperative logic that does not
 fit a declarative mapping. Those provide a plugin implementing this Protocol;
 the ingestion/validation engines call the hooks around the generic pipeline.
 
-A use case opts in via ``UseCase.plugin_path`` (e.g. ``plugins.biossa:BioSSAPlugin``).
+A use case opts in via ``Project.plugin_path`` (e.g. ``plugins.biossa:BioSSAPlugin``).
 """
 from __future__ import annotations
 

@@ -4,11 +4,11 @@ from __future__ import annotations
 import pytest
 from django.urls import reverse
 
-from apps.ingestion.sync import sync_use_case
+from apps.ingestion.sync import sync_project
 from apps.rbac.models import Role, UseCaseMembership
 from apps.review.models import Review, ReviewAction, ReviewActionLog, ReviewState
 from apps.submissions.models import Enumerator, Submission
-from apps.usecases.models import FieldMapping, FormDefinition, UseCase
+from apps.usecases.models import FieldMapping, FormDefinition, Project
 
 pytestmark = pytest.mark.django_db
 
@@ -19,10 +19,10 @@ def attributed(django_user_model):
     collector = django_user_model.objects.create_user(
         "collector@x.org", "pw", full_name="Field Collector", is_active=True
     )
-    uc = UseCase.objects.create(code="ATTR", name="Attribution UC")
-    Enumerator.objects.create(use_case=uc, enid="EN1", user=collector)
+    uc = Project.objects.create(code="ATTR", name="Attribution UC")
+    Enumerator.objects.create(project=uc, enid="EN1", user=collector)
     form = FormDefinition.objects.create(
-        use_case=uc, ona_form_id=1, role=FormDefinition.Role.VALIDATION
+        project=uc, ona_form_id=1, role=FormDefinition.Role.VALIDATION
     )
     for order, (t, s) in enumerate([("ENID", "enid"), ("HHID", "hhid"), ("event_key", "ev")]):
         FieldMapping.objects.create(form=form, target_field=t, source_paths=[s], order=order)
@@ -31,8 +31,8 @@ def attributed(django_user_model):
         def get_data(self, fid):
             return [{"_uuid": "u1", "enid": "EN1", "hhid": "HH1", "ev": "Event1"}]
 
-    sync_use_case(uc, client=Fake())
-    sub = Submission.objects.get(use_case=uc, ona_uuid="u1")
+    sync_project(uc, client=Fake())
+    sub = Submission.objects.get(project=uc, ona_uuid="u1")
     assert sub.collected_by == collector  # bridge populated it
 
     Review.objects.update_or_create(
@@ -44,7 +44,7 @@ def attributed(django_user_model):
     )
 
     coord = django_user_model.objects.create_user("co@x.org", "pw", is_active=True)
-    UseCaseMembership.objects.create(user=coord, use_case=uc, role=Role.TRIAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
     return uc, collector, coord
 
 
@@ -107,10 +107,10 @@ def test_summary_attribution_coverage(client, attributed):
 
 
 def test_attribution_zero_when_unlinked(client, django_user_model):
-    uc = UseCase.objects.create(code="ZERO", name="Zero")
-    Enumerator.objects.create(use_case=uc, enid="ENZ")  # not linked
+    uc = Project.objects.create(code="ZERO", name="Zero")
+    Enumerator.objects.create(project=uc, enid="ENZ")  # not linked
     form = FormDefinition.objects.create(
-        use_case=uc, ona_form_id=2, role=FormDefinition.Role.VALIDATION
+        project=uc, ona_form_id=2, role=FormDefinition.Role.VALIDATION
     )
     for order, (t, s) in enumerate([("ENID", "enid"), ("event_key", "ev")]):
         FieldMapping.objects.create(form=form, target_field=t, source_paths=[s], order=order)
@@ -119,9 +119,9 @@ def test_attribution_zero_when_unlinked(client, django_user_model):
         def get_data(self, fid):
             return [{"_uuid": "z1", "enid": "ENZ", "ev": "Event1"}]
 
-    sync_use_case(uc, client=Fake())
+    sync_project(uc, client=Fake())
     coord = django_user_model.objects.create_user("z@x.org", "pw", is_active=True)
-    UseCaseMembership.objects.create(user=coord, use_case=uc, role=Role.TRIAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
     client.force_login(coord)
     resp = client.get(reverse("dashboards:tab_summary", args=[uc.code]))
     assert resp.status_code == 200
@@ -129,10 +129,10 @@ def test_attribution_zero_when_unlinked(client, django_user_model):
 
 
 def test_unlinked_enumerator_shows_placeholder(client, django_user_model):
-    uc = UseCase.objects.create(code="NOLINK", name="No link")
-    Enumerator.objects.create(use_case=uc, enid="ENX")  # no user
+    uc = Project.objects.create(code="NOLINK", name="No link")
+    Enumerator.objects.create(project=uc, enid="ENX")  # no user
     coord = django_user_model.objects.create_user("c2@x.org", "pw", is_active=True)
-    UseCaseMembership.objects.create(user=coord, use_case=uc, role=Role.TRIAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
     client.force_login(coord)
     resp = client.get(reverse("dashboards:tab_enumerators", args=[uc.code]))
     assert resp.status_code == 200

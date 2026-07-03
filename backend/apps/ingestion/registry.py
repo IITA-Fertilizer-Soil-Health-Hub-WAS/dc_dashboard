@@ -22,7 +22,7 @@ def _load(plugin_path: str) -> UseCasePlugin:
     return cls()
 
 
-def get_plugin(use_case) -> UseCasePlugin:
-    if use_case.plugin_path:
-        return _load(use_case.plugin_path)
+def get_plugin(project) -> UseCasePlugin:
+    if project.plugin_path:
+        return _load(project.plugin_path)
     return BaseUseCasePlugin()

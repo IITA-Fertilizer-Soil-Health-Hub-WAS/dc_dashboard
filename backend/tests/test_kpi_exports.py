@@ -8,10 +8,10 @@ import pytest
 from django.urls import reverse
 
 from apps.fieldwork.models import CollectionUnit
-from apps.kpi.aggregate import rebuild_use_case_kpis
+from apps.kpi.aggregate import rebuild_project_kpis
 from apps.rbac.models import Role, UseCaseMembership
 from apps.submissions.models import Enumerator, Submission
-from apps.usecases.models import FormDefinition, Organization, UseCase
+from apps.usecases.models import FormDefinition, Organization, Project
 
 pytestmark = pytest.mark.django_db
 
@@ -19,22 +19,22 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture
 def world(django_user_model):
     org = Organization.objects.create(code="o", name="O")
-    uc = UseCase.objects.create(code="PROJ-A", name="Project A", organization=org)
-    UseCase.objects.create(code="PROJ-B", name="Project B", organization=org)
-    form = FormDefinition.objects.create(use_case=uc, ona_form_id=3,
+    uc = Project.objects.create(code="PROJ-A", name="Project A", organization=org)
+    Project.objects.create(code="PROJ-B", name="Project B", organization=org)
+    form = FormDefinition.objects.create(project=uc, ona_form_id=3,
                                          role=FormDefinition.Role.VALIDATION)
-    en = Enumerator.objects.create(use_case=uc, enid="EN-1", first_name="Ana")
-    u1 = CollectionUnit.objects.create(use_case=uc, code="U1", name="Plot 1",
+    en = Enumerator.objects.create(project=uc, enid="EN-1", first_name="Ana")
+    u1 = CollectionUnit.objects.create(project=uc, code="U1", name="Plot 1",
                                        lat="1.0", lon="2.0", country="RW")
-    CollectionUnit.objects.create(use_case=uc, code="U2", lat="1.1", lon="2.1")
+    CollectionUnit.objects.create(project=uc, code="U2", lat="1.1", lon="2.1")
     for i in range(3):
-        Submission.objects.create(use_case=uc, form=form, ona_uuid=f"a-{i}",
+        Submission.objects.create(project=uc, form=form, ona_uuid=f"a-{i}",
                                   content_hash="h", enumerator=en,
                                   collection_unit=u1, event_date=date.today())
-    rebuild_use_case_kpis(uc)
+    rebuild_project_kpis(uc)
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True,
                                                    organization=org)
-    UseCaseMembership.objects.create(user=coord, use_case=uc, role=Role.TRIAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
     return {"uc": uc, "coord": coord}
 
 

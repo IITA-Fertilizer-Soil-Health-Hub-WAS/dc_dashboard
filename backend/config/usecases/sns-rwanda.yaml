@@ -1,7 +1,7 @@
 # SNS-RWANDA use case — ported from the R app (okapi.R form IDs,
 # dataprocessing.R field renames, support_fun.R event offsets, app.R ID patterns).
 # Adding a use case now means writing a file like this — no code changes.
-use_case:
+project:
   code: SNS-RWANDA
   name: SNS Rwanda
   is_active: true

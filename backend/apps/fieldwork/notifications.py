@@ -16,7 +16,7 @@ def notify_plot_ready(unit) -> None:
     }
     if not emails:
         return
-    uc = unit.use_case
+    uc = unit.project
     subject = f"[{uc.code}] Plot {unit.code} is ready to register"
     body = (
         f"The farmer-field anchor for plot {unit.code} ({uc.name}) has been "

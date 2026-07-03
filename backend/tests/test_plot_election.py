@@ -7,7 +7,7 @@ from django.urls import reverse
 from apps.fieldwork.election import elect_candidate, election_progress, trial_rows
 from apps.fieldwork.models import CandidatePlot, CollectionUnit
 from apps.rbac.models import Role, UseCaseMembership
-from apps.usecases.models import Organization, UseCase
+from apps.usecases.models import Organization, Project
 
 pytestmark = pytest.mark.django_db
 
@@ -20,15 +20,15 @@ def _poly(lon, lat, d=0.001):
 @pytest.fixture
 def world(django_user_model):
     org = Organization.objects.create(code="o", name="O")
-    uc = UseCase.objects.create(code="PROJ-A", name="A", organization=org)
+    uc = Project.objects.create(code="PROJ-A", name="A", organization=org)
     mk = lambda ref, rank, role="PRIMARY": CandidatePlot.objects.create(  # noqa: E731
-        use_case=uc, trial_key="T1", candidate_ref=ref, rank=rank, role=role,
+        project=uc, trial_key="T1", candidate_ref=ref, rank=rank, role=role,
         geometry=_poly(36.8 + rank / 100, -1.29), centroid_lat=-1.29,
         centroid_lon=36.8 + rank / 100, accessibility="easy")
     a, b, bk = mk("A", 1), mk("B", 2), mk("BK", 4, role="BACKUP")
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True, organization=org)
-    UseCaseMembership.objects.create(user=coord, use_case=uc, role=Role.REGIONAL_COORDINATOR)
-    UseCaseMembership.objects.create(user=coord, use_case=uc, role=Role.TRIAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=coord, project=uc, role=Role.REGIONAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
     return {"uc": uc, "a": a, "b": b, "bk": bk, "coord": coord}
 
 
@@ -55,16 +55,16 @@ def test_elect_promotes_to_unit_and_marks_siblings(world):
 def test_reelection_reuses_one_unit(world):
     elect_candidate(world["coord"], world["a"])
     elect_candidate(world["coord"], world["b"])
-    assert CollectionUnit.objects.filter(use_case=world["uc"], code="T1").count() == 1
+    assert CollectionUnit.objects.filter(project=world["uc"], code="T1").count() == 1
     world["a"].refresh_from_db()
     assert world["a"].status == CandidatePlot.Status.NOT_SELECTED
-    unit = CollectionUnit.objects.get(use_case=world["uc"], code="T1")
+    unit = CollectionUnit.objects.get(project=world["uc"], code="T1")
     assert unit.attributes["elected_candidate"] == "B"
 
 
 def test_queue_and_elect_screen(client, world):
     client.force_login(world["coord"])
-    q = client.get(reverse("console:plot_election") + "?use_case=PROJ-A")
+    q = client.get(reverse("console:plot_election") + "?project=PROJ-A")
     assert q.status_code == 200 and b"T1" in q.content
     screen = client.get(reverse("console:plot_elect", args=["PROJ-A", "T1"]))
     assert screen.status_code == 200 and b"Plot A" in screen.content

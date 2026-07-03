@@ -21,33 +21,33 @@ from .models import ProjectKpiDaily
 
 # --- datasets: each returns (columns, rows) ---------------------------------
 
-def kpi_summary_dataset(use_case, days: str = "all"):
+def kpi_summary_dataset(project, days: str = "all"):
     columns = ["date", "submissions", "active_enumerators", "flags_opened"]
     rows = [
         [str(r.date), r.submissions, r.active_enumerators, r.flags_opened]
-        for r in ProjectKpiDaily.objects.filter(use_case=use_case).order_by("date")
+        for r in ProjectKpiDaily.objects.filter(project=project).order_by("date")
     ]
     return columns, rows
 
 
-def enumerator_dataset(use_case, days: str = "all"):
+def enumerator_dataset(project, days: str = "all"):
     columns = ["enid", "first_name", "surname", "submissions", "approved",
                "approval_pct", "open_flags", "last_active"]
     rows = [
         [e["enumerator__enid"], e["enumerator__first_name"] or "",
          e["enumerator__surname"] or "", e["n"], e["approved"],
          e["approval_pct"], e["open_flags"], str(e["last_active"] or "")]
-        for e in enumerator_metrics(use_case, days)["leaderboard"]
+        for e in enumerator_metrics(project, days)["leaderboard"]
     ]
     return columns, rows
 
 
-def approved_dataset(use_case, days: str = "all"):
+def approved_dataset(project, days: str = "all"):
     """The clean, reviewed output — approved submissions with their authoritative
     (possibly edited) values. This is what analysts actually want."""
     from apps.dashboards.final import final_rows
 
-    _subs, keys, rows = final_rows(use_case)
+    _subs, keys, rows = final_rows(project)
     base = ["ona_uuid", "ENID", "HHID", "collected_by", "event", "crop", "date", "state"]
     columns = base + [k for k in keys if k not in base]
     out = []
@@ -80,14 +80,14 @@ DATASETS = {
 
 # --- format writers ---------------------------------------------------------
 
-def _filename(use_case, suffix: str, ext: str) -> str:
-    return f"{use_case.code.lower()}_{suffix}.{ext}"
+def _filename(project, suffix: str, ext: str) -> str:
+    return f"{project.code.lower()}_{suffix}.{ext}"
 
 
-def _csv_response(columns, rows, use_case, suffix) -> HttpResponse:
+def _csv_response(columns, rows, project, suffix) -> HttpResponse:
     response = HttpResponse(content_type="text/csv")
     response["Content-Disposition"] = (
-        f'attachment; filename="{_filename(use_case, suffix, "csv")}"'
+        f'attachment; filename="{_filename(project, suffix, "csv")}"'
     )
     writer = csv.writer(response)
     writer.writerow(columns)
@@ -95,7 +95,7 @@ def _csv_response(columns, rows, use_case, suffix) -> HttpResponse:
     return response
 
 
-def _xlsx_response(columns, rows, use_case, suffix) -> HttpResponse:
+def _xlsx_response(columns, rows, project, suffix) -> HttpResponse:
     from openpyxl import Workbook
 
     wb = Workbook()
@@ -111,7 +111,7 @@ def _xlsx_response(columns, rows, use_case, suffix) -> HttpResponse:
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
     response["Content-Disposition"] = (
-        f'attachment; filename="{_filename(use_case, suffix, "xlsx")}"'
+        f'attachment; filename="{_filename(project, suffix, "xlsx")}"'
     )
     return response
 
@@ -145,7 +145,7 @@ def _sanitize_columns(columns):
     return out
 
 
-def _stats_response(columns, rows, use_case, suffix, ext) -> HttpResponse:
+def _stats_response(columns, rows, project, suffix, ext) -> HttpResponse:
     import pandas as pd
     import pyreadstat
 
@@ -164,7 +164,7 @@ def _stats_response(columns, rows, use_case, suffix, ext) -> HttpResponse:
         data = tmp.read()
     response = HttpResponse(data, content_type=content_type)
     response["Content-Disposition"] = (
-        f'attachment; filename="{_filename(use_case, suffix, ext)}"'
+        f'attachment; filename="{_filename(project, suffix, ext)}"'
     )
     return response
 
@@ -177,7 +177,7 @@ FORMATS = {
 }
 
 
-def render_dataset(kind: str, fmt: str, use_case, days: str = "all"):
+def render_dataset(kind: str, fmt: str, project, days: str = "all"):
     """Build a dataset and serialise it in the requested format. Returns an
     HttpResponse, or None for an unknown dataset/format, or a 501 response when
     a stats format is requested but pandas/pyreadstat are unavailable."""
@@ -190,22 +190,22 @@ def render_dataset(kind: str, fmt: str, use_case, days: str = "all"):
             "STATA/SPSS export needs pandas + pyreadstat, which are not installed.",
             status=501, content_type="text/plain",
         )
-    columns, rows = spec["builder"](use_case, days)
+    columns, rows = spec["builder"](project, days)
     suffix = spec["suffix"]
     if fmt == "csv":
-        return _csv_response(columns, rows, use_case, suffix)
+        return _csv_response(columns, rows, project, suffix)
     if fmt == "xlsx":
-        return _xlsx_response(columns, rows, use_case, suffix)
-    return _stats_response(columns, rows, use_case, suffix, fmt)
+        return _xlsx_response(columns, rows, project, suffix)
+    return _stats_response(columns, rows, project, suffix, fmt)
 
 
-def units_geojson(use_case) -> JsonResponse:
+def units_geojson(project) -> JsonResponse:
     """Collection units as a GeoJSON FeatureCollection, each tagged with whether
     data has been received — drop straight into QGIS / Leaflet / kepler.gl."""
     from apps.fieldwork.models import CollectionUnit
 
     units = CollectionUnit.objects.filter(
-        use_case=use_case, lat__isnull=False, lon__isnull=False
+        project=project, lat__isnull=False, lon__isnull=False
     )
     collected_ids = set(
         units.filter(submissions__isnull=False).values_list("id", flat=True)
@@ -227,7 +227,7 @@ def units_geojson(use_case) -> JsonResponse:
     ]
     response = JsonResponse({"type": "FeatureCollection", "features": features})
     response["Content-Disposition"] = (
-        f'attachment; filename="{_filename(use_case, "units", "geojson")}"'
+        f'attachment; filename="{_filename(project, "units", "geojson")}"'
     )
     return response
 

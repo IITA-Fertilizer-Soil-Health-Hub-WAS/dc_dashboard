@@ -7,7 +7,7 @@ from django.urls import reverse
 from apps.ingestion.attachments import parse_attachments
 from apps.rbac.models import Role, UseCaseMembership
 from apps.submissions.models import Submission
-from apps.usecases.models import FormDefinition, Organization, UseCase
+from apps.usecases.models import FormDefinition, Organization, Project
 
 pytestmark = pytest.mark.django_db
 
@@ -40,12 +40,12 @@ def test_parse_attachments_empty():
 @pytest.fixture
 def world(django_user_model):
     org = Organization.objects.create(code="o", name="O")
-    uc = UseCase.objects.create(code="PROJ-A", name="A", organization=org)
-    form = FormDefinition.objects.create(use_case=uc, ona_form_id=1, role=FormDefinition.Role.VALIDATION)
-    sub = Submission.objects.create(use_case=uc, form=form, ona_uuid="m1",
+    uc = Project.objects.create(code="PROJ-A", name="A", organization=org)
+    form = FormDefinition.objects.create(project=uc, ona_form_id=1, role=FormDefinition.Role.VALIDATION)
+    sub = Submission.objects.create(project=uc, form=form, ona_uuid="m1",
                                     content_hash="h", raw_payload=PAYLOAD)
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True, organization=org)
-    UseCaseMembership.objects.create(user=coord, use_case=uc, role=Role.TRIAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
     return {"uc": uc, "sub": sub, "coord": coord}
 
 

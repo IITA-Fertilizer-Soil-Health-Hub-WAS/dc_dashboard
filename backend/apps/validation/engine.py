@@ -39,7 +39,7 @@ PER_USE_CASE = {
 
 @dataclass
 class ValidationStats:
-    use_case: str
+    project: str
     opened: int = 0
     resolved: int = 0
     flagged_submissions: int = 0
@@ -53,19 +53,19 @@ def _run_rule(rule: ValidationRule, submissions) -> list[rule_impls.FlagResult]:
             results.extend(fn(sub, rule.params))
         return results
     if rule.rule_type in PER_USE_CASE:
-        return PER_USE_CASE[rule.rule_type](rule.use_case, rule.params)
+        return PER_USE_CASE[rule.rule_type](rule.project, rule.params)
     return []  # PLUGIN / CROSS_FIELD handled by plugin.post_validate (Phase 8)
 
 
 @transaction.atomic
-def run_for_use_case(use_case) -> ValidationStats:
-    stats = ValidationStats(use_case=use_case.code)
+def run_for_project(project) -> ValidationStats:
+    stats = ValidationStats(project=project.code)
     submissions = list(
-        Submission.objects.filter(use_case=use_case).select_related("collection_unit")
+        Submission.objects.filter(project=project).select_related("collection_unit")
     )
     error_submission_ids: set = set()
 
-    for rule in use_case.rules.filter(is_enabled=True):
+    for rule in project.rules.filter(is_enabled=True):
         results = _run_rule(rule, submissions)
         wanted: dict[tuple, rule_impls.FlagResult] = {
             (r.submission_id, r.field_key): r for r in results
@@ -111,4 +111,4 @@ def run_for_use_case(use_case) -> ValidationStats:
 
 def run_for_submission(submission) -> None:
     """Convenience: re-run per-submission rules for a single submission."""
-    run_for_use_case(submission.use_case)
+    run_for_project(submission.project)

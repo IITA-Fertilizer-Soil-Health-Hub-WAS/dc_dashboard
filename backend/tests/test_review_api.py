@@ -8,7 +8,7 @@ from django.conf import settings
 from django.urls import reverse
 
 from apps.config_admin.loader import import_config, load_yaml
-from apps.ingestion.sync import sync_use_case
+from apps.ingestion.sync import sync_project
 from apps.rbac.models import Role, UseCaseMembership
 from apps.submissions.models import Submission
 from tests.test_ingestion import FakeOnaClient, _records
@@ -21,12 +21,12 @@ SNS_PATH = Path(settings.USECASE_CONFIG_DIR) / "sns-rwanda.yaml"
 @pytest.fixture
 def setup(django_user_model):
     uc = import_config(load_yaml(SNS_PATH))
-    sync_use_case(uc, client=FakeOnaClient(_records()))
+    sync_project(uc, client=FakeOnaClient(_records()))
     submission = Submission.objects.get(ona_uuid="uuid-aaa")
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True)
     viewer = django_user_model.objects.create_user("v@x.org", "pw", is_active=True)
-    UseCaseMembership.objects.create(user=coord, use_case=uc, role=Role.TRIAL_COORDINATOR)
-    UseCaseMembership.objects.create(user=viewer, use_case=uc, role=Role.VIEWER)
+    UseCaseMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=viewer, project=uc, role=Role.VIEWER)
     return submission, coord, viewer
 
 

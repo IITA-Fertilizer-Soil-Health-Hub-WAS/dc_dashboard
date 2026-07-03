@@ -7,12 +7,12 @@ from __future__ import annotations
 import pytest
 
 from apps.console.onboarding import build_config, suggest_mappings, suggest_target
-from apps.usecases.models import UseCase
+from apps.usecases.models import Project
 
 pytestmark = pytest.mark.django_db
 
 YAML = """
-use_case:
+project:
   code: NEW-PROJ
   name: New Project
   enid_patterns: ['^EN']
@@ -50,7 +50,7 @@ def test_suggest_mappings_picks_first_match():
     assert chosen["event_key"] == "intro/event"
 
 
-def test_build_config_assembles_full_use_case():
+def test_build_config_assembles_full_project():
     post = {
         "code": "WZ", "name": "Wizard", "countries": "Rwanda", "crops": "maize",
         "enid_patterns": "^EN", "hhid_patterns": "^HH",
@@ -59,7 +59,7 @@ def test_build_config_assembles_full_use_case():
         "map-0-ENID": "intro/enumerator_id", "map-0-event_key": "intro/event",
     }
     cfg = build_config(post)
-    assert cfg["use_case"]["code"] == "WZ"
+    assert cfg["project"]["code"] == "WZ"
     assert len(cfg["forms"]) == 1
     assert len(cfg["event_schedule"]) == 2
     assert any(r["code"] == "enid_pattern" for r in cfg["validation_rules"])
@@ -95,10 +95,10 @@ def test_identities_derived_without_registration_form(django_user_model):
     enumerators/units auto-created from the submission data."""
     from apps.fieldwork.models import CollectionUnit
     from apps.submissions.models import Enumerator
-    from apps.usecases.models import FieldMapping, FormDefinition, UseCase
+    from apps.usecases.models import FieldMapping, FormDefinition, Project
 
-    uc = UseCase.objects.create(code="AID", name="AID")
-    form = FormDefinition.objects.create(use_case=uc, ona_form_id=1,
+    uc = Project.objects.create(code="AID", name="AID")
+    form = FormDefinition.objects.create(project=uc, ona_form_id=1,
                                          role=FormDefinition.Role.VALIDATION)
     FieldMapping.objects.create(form=form, target_field="ENID", source_paths=["enid"])
     FieldMapping.objects.create(form=form, target_field="HHID", source_paths=["hhid"])
@@ -107,10 +107,10 @@ def test_identities_derived_without_registration_form(django_user_model):
         def get_data(self, fid):
             return [{"_uuid": "u1", "enid": "EN1", "hhid": "HH1"}]
 
-    from apps.ingestion.sync import sync_use_case
-    sync_use_case(uc, client=Fake())
-    assert Enumerator.objects.filter(use_case=uc, enid="EN1").exists()
-    hh = CollectionUnit.objects.get(use_case=uc, code="HH1")
+    from apps.ingestion.sync import sync_project
+    sync_project(uc, client=Fake())
+    assert Enumerator.objects.filter(project=uc, enid="EN1").exists()
+    hh = CollectionUnit.objects.get(project=uc, code="HH1")
     assert hh.enumerator.enid == "EN1"
 
 
@@ -139,11 +139,11 @@ def test_wizard_onboards_forms_without_event_key(client, staff):
     }
     resp = client.post("/manage/new-project/", post)
     assert resp.status_code == 302  # onboarded, no event_key error
-    uc = UseCase.objects.get(code="HUB-SL")
+    uc = Project.objects.get(code="HUB-SL")
     assert uc.forms.count() == 2
 
 
-def test_wizard_creates_use_case(client, staff):
+def test_wizard_creates_project(client, staff):
     client.force_login(staff)
     post = {
         "code": "WZ-1", "name": "Wizard One", "enid_patterns": "^EN",
@@ -153,7 +153,7 @@ def test_wizard_creates_use_case(client, staff):
     }
     resp = client.post("/manage/new-project/", post)
     assert resp.status_code == 302
-    assert UseCase.objects.filter(code="WZ-1").exists()
+    assert Project.objects.filter(code="WZ-1").exists()
 
 
 def test_field_discovery_fallback_without_token(client, staff):
@@ -170,19 +170,19 @@ def test_wizard_non_staff_forbidden(client, django_user_model):
 
 
 # ---- YAML import (advanced) ----
-def test_yaml_import_creates_use_case(client, staff):
+def test_yaml_import_creates_project(client, staff):
     client.force_login(staff)
     resp = client.post("/manage/new-project/advanced/", {"yaml": YAML})
     assert resp.status_code == 302
-    uc = UseCase.objects.get(code="NEW-PROJ")
+    uc = Project.objects.get(code="NEW-PROJ")
     assert uc.forms.count() == 1
 
 
 def test_yaml_import_rejects_bad_config(client, staff):
     client.force_login(staff)
-    resp = client.post("/manage/new-project/advanced/", {"yaml": "use_case:\n  name: x\n"})
+    resp = client.post("/manage/new-project/advanced/", {"yaml": "project:\n  name: x\n"})
     assert resp.status_code == 200
-    assert not UseCase.objects.filter(name="x").exists()
+    assert not Project.objects.filter(name="x").exists()
 
 
 def test_list_forms_parses_response(monkeypatch):

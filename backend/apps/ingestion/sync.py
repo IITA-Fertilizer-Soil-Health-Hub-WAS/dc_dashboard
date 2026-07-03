@@ -3,7 +3,7 @@
 For a use case it: pulls each ONA form, normalizes records via config-driven
 FieldMappings, upserts Enumerators/CollectionUnits from the registration forms, and
 upserts immutable Submissions + their authoritative SubmissionValues from the
-validation forms. Idempotent: keyed on (use_case, ona_uuid) with a content hash
+validation forms. Idempotent: keyed on (project, ona_uuid) with a content hash
 so unchanged records are skipped and reviewer edits are never clobbered.
 """
 from __future__ import annotations
@@ -18,7 +18,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.submissions.models import Enumerator, Submission, SubmissionValue
-from apps.usecases.models import FormDefinition, UseCase
+from apps.usecases.models import FormDefinition, Project
 
 from .backends.registry import get_backend_for
 from .normalizer import build_crop_alias_map, normalize_record
@@ -35,7 +35,7 @@ VALIDATION_ROLES = {
 
 @dataclass
 class SyncStats:
-    use_case: str
+    project: str
     enumerators: int = 0
     units: int = 0
     created: int = 0
@@ -46,7 +46,7 @@ class SyncStats:
 
     def as_dict(self) -> dict[str, Any]:
         return {
-            "use_case": self.use_case,
+            "project": self.project,
             "enumerators": self.enumerators,
             "units": self.units,
             "created": self.created,
@@ -101,22 +101,22 @@ def auto_map_form(form, sample_record: dict) -> int:
     return created
 
 
-def sync_use_case(use_case: UseCase, backend=None, client=None) -> SyncStats:
+def sync_project(project: Project, backend=None, client=None) -> SyncStats:
     """Sync all of a use case's forms via its data-collection backend.
 
     `backend` (or legacy `client`) may be injected for testing; otherwise the
     backend bound to the use case's DataSource is used.
     """
-    source = backend or client or get_backend_for(use_case)
-    stats = SyncStats(use_case=use_case.code)
-    plugin = get_plugin(use_case)
-    alias_map = build_crop_alias_map(use_case)
-    crop_by_name = {c.name: c for c in use_case.crops.all()}
-    test_ids = set(use_case.test_ids or [])
+    source = backend or client or get_backend_for(project)
+    stats = SyncStats(project=project.code)
+    plugin = get_plugin(project)
+    alias_map = build_crop_alias_map(project)
+    crop_by_name = {c.name: c for c in project.crops.all()}
+    test_ids = set(project.test_ids or [])
 
     # Not prefetching mappings: auto_map_form may create them mid-loop, and a
     # prefetch cache would hide the new rows.
-    forms = list(use_case.forms.all())
+    forms = list(project.forms.all())
 
     # Cache each form's field schema (question labels + section groups) so the
     # review screen renders human labels. Best-effort: never block a data sync.
@@ -141,9 +141,9 @@ def sync_use_case(use_case: UseCase, backend=None, client=None) -> SyncStats:
         for rec in records:
             mapped = normalize_record(mappings, rec, alias_map)
             if form.role == FormDefinition.Role.ENUM_REG:
-                _upsert_enumerator(use_case, mapped, test_ids, stats)
+                _upsert_enumerator(project, mapped, test_ids, stats)
             else:
-                _upsert_collection_unit(use_case, mapped, stats)
+                _upsert_collection_unit(project, mapped, stats)
 
     # 2) Validation forms -> immutable Submissions + authoritative values.
     for form in [f for f in forms if f.role in VALIDATION_ROLES]:
@@ -155,17 +155,17 @@ def sync_use_case(use_case: UseCase, backend=None, client=None) -> SyncStats:
             mapped = normalize_record(mappings, rec, alias_map)
             # Plugins may explode one nested record into multiple normalized rows.
             for row in plugin.normalize(form, rec, mapped):
-                _upsert_submission(use_case, form, rec, row, crop_by_name, test_ids, stats)
+                _upsert_submission(project, form, rec, row, crop_by_name, test_ids, stats)
 
     return stats
 
 
-def _upsert_enumerator(use_case, mapped, test_ids, stats) -> None:
+def _upsert_enumerator(project, mapped, test_ids, stats) -> None:
     enid = mapped.get("ENID")
     if not enid:
         return
     Enumerator.objects.update_or_create(
-        use_case=use_case,
+        project=project,
         enid=enid,
         defaults={
             "first_name": mapped.get("ENfirstName") or "",
@@ -177,7 +177,7 @@ def _upsert_enumerator(use_case, mapped, test_ids, stats) -> None:
     stats.enumerators += 1
 
 
-def _upsert_collection_unit(use_case, mapped, stats) -> None:
+def _upsert_collection_unit(project, mapped, stats) -> None:
     """Upsert the collection unit (household / farm / plot) a registration form
     describes (``code`` = HHID / plot id). Never overwrites the coordinates of a
     unit whose farmer anchor is already captured (a plot-election unit) — that
@@ -190,8 +190,8 @@ def _upsert_collection_unit(use_case, mapped, stats) -> None:
     enumerator = None
     enid = mapped.get("ENID")
     if enid:
-        enumerator = Enumerator.objects.filter(use_case=use_case, enid=enid).first()
-    unit, _created = CollectionUnit.objects.get_or_create(use_case=use_case, code=hhid)
+        enumerator = Enumerator.objects.filter(project=project, enid=enid).first()
+    unit, _created = CollectionUnit.objects.get_or_create(project=project, code=hhid)
     unit.enumerator = enumerator
     unit.alt = _num(mapped.get("ALT"))
     unit.country = mapped.get("Country") or unit.country
@@ -204,7 +204,7 @@ def _upsert_collection_unit(use_case, mapped, stats) -> None:
 
 
 @transaction.atomic
-def _upsert_submission(use_case, form, raw_rec, mapped, crop_by_name, test_ids, stats) -> None:
+def _upsert_submission(project, form, raw_rec, mapped, crop_by_name, test_ids, stats) -> None:
     enid = mapped.get("ENID")
     if enid and enid in test_ids:
         stats.skipped_test += 1
@@ -227,16 +227,16 @@ def _upsert_submission(use_case, form, raw_rec, mapped, crop_by_name, test_ids, 
     enumerator = None
     if enid:
         enumerator, _ = Enumerator.objects.get_or_create(
-            use_case=use_case, enid=enid, defaults={"is_test": enid in test_ids}
+            project=project, enid=enid, defaults={"is_test": enid in test_ids}
         )
     hhid = mapped.get("HHID")
     crop = crop_by_name.get(mapped.get("Crop")) if mapped.get("Crop") else None
-    trial = _resolve_trial(use_case, mapped.get("Trial"))
+    trial = _resolve_trial(project, mapped.get("Trial"))
     collected_by = _resolve_collector(mapped, enumerator)
-    collection_unit = _resolve_or_create_unit(use_case, hhid, enumerator)
+    collection_unit = _resolve_or_create_unit(project, hhid, enumerator)
     lat, lon = _resolve_location(raw_rec, mapped, collection_unit)
 
-    existing = Submission.objects.filter(use_case=use_case, ona_uuid=ona_uuid).first()
+    existing = Submission.objects.filter(project=project, ona_uuid=ona_uuid).first()
     if existing and existing.content_hash == content_hash:
         stats.unchanged += 1
         return
@@ -259,7 +259,7 @@ def _upsert_submission(use_case, form, raw_rec, mapped, crop_by_name, test_ids, 
         "lon": lon,
     }
     submission, created = Submission.objects.update_or_create(
-        use_case=use_case, ona_uuid=ona_uuid, defaults=defaults
+        project=project, ona_uuid=ona_uuid, defaults=defaults
     )
     _sync_values(submission, mapped, is_new=created)
     if created:
@@ -268,7 +268,7 @@ def _upsert_submission(use_case, form, raw_rec, mapped, crop_by_name, test_ids, 
         stats.updated += 1
 
 
-def _resolve_trial(use_case, name):
+def _resolve_trial(project, name):
     """The trial (experiment type) a submission belongs to, keyed by name and scoped
     to the project. Matches a configured trial or creates one from the data, so the
     trial dimension is always linked to its project."""
@@ -276,11 +276,11 @@ def _resolve_trial(use_case, name):
         return None
     from apps.usecases.models import Trial
 
-    trial, _ = Trial.objects.get_or_create(use_case=use_case, name=name)
+    trial, _ = Trial.objects.get_or_create(project=project, name=name)
     return trial
 
 
-def _resolve_or_create_unit(use_case, hhid, enumerator=None):
+def _resolve_or_create_unit(project, hhid, enumerator=None):
     """The submission's collection unit, keyed by id (HHID / plot id). Matches a
     pre-planned unit (plot election) or creates one on the fly (household-style
     collection) — since a unit now IS the household/farm/plot the merge unifies."""
@@ -289,7 +289,7 @@ def _resolve_or_create_unit(use_case, hhid, enumerator=None):
     from apps.fieldwork.models import CollectionUnit
 
     unit, _ = CollectionUnit.objects.get_or_create(
-        use_case=use_case, code=hhid, defaults={"enumerator": enumerator}
+        project=project, code=hhid, defaults={"enumerator": enumerator}
     )
     return unit
 

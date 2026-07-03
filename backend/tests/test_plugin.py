@@ -8,14 +8,14 @@ from __future__ import annotations
 import pytest
 
 from apps.config_admin.loader import import_config
-from apps.ingestion.sync import sync_use_case
+from apps.ingestion.sync import sync_project
 from apps.submissions.models import Submission
 from tests.test_ingestion import FakeOnaClient
 
 pytestmark = pytest.mark.django_db
 
 BIOSSA_CONFIG = {
-    "use_case": {
+    "project": {
         "code": "BioSSA",
         "name": "BioSSA",
         "plugin": "plugins.biossa:BioSSAPlugin",
@@ -57,10 +57,10 @@ def test_plugin_explodes_nested_plots():
             {"plot/HHID": "BSPLOT-C", "plot/crop": "banana", "plot/event": "Event1", "plot/date": "2026-02-03"},
         ],
     }
-    sync_use_case(uc, client=FakeOnaClient({801786: [record]}))
+    sync_project(uc, client=FakeOnaClient({801786: [record]}))
 
     # One submission per nested plot, each with a distinct uuid.
-    subs = Submission.objects.filter(use_case=uc)
+    subs = Submission.objects.filter(project=uc)
     assert subs.count() == 3
     uuids = set(subs.values_list("ona_uuid", flat=True))
     assert uuids == {"biossa-rec-1:BSPLOT-A", "biossa-rec-1:BSPLOT-B", "biossa-rec-1:BSPLOT-C"}
@@ -72,5 +72,5 @@ def test_plugin_passthrough_when_no_nested_repeat():
         "_uuid": "flat-1", "intro/enumerator_ID": "BSEN001",
         "intro/event": "Event1", "today": "2026-02-01",
     }
-    sync_use_case(uc, client=FakeOnaClient({801786: [flat]}))
-    assert Submission.objects.filter(use_case=uc).count() == 1
+    sync_project(uc, client=FakeOnaClient({801786: [flat]}))
+    assert Submission.objects.filter(project=uc).count() == 1

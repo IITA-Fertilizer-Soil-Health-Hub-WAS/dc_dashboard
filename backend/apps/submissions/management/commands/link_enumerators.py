@@ -12,14 +12,14 @@ from __future__ import annotations
 from django.core.management.base import BaseCommand, CommandError
 
 from apps.submissions.linking import MATCH_KEYS, link_enumerators
-from apps.usecases.models import UseCase
+from apps.usecases.models import Project
 
 
 class Command(BaseCommand):
     help = "Link Enumerators to User accounts by phone/name so collected_by populates."
 
     def add_arguments(self, parser):
-        parser.add_argument("--use-case", dest="use_case", help="Limit to one UseCase code.")
+        parser.add_argument("--use-case", dest="project", help="Limit to one Project code.")
         parser.add_argument(
             "--by", default=",".join(MATCH_KEYS),
             help="Comma-separated match keys in priority order (phone,name).",
@@ -34,11 +34,11 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        use_case = None
-        if options["use_case"]:
-            use_case = UseCase.objects.filter(code=options["use_case"]).first()
-            if use_case is None:
-                raise CommandError(f"Unknown use case: {options['use_case']}")
+        project = None
+        if options["project"]:
+            project = Project.objects.filter(code=options["project"]).first()
+            if project is None:
+                raise CommandError(f"Unknown use case: {options['project']}")
 
         keys = tuple(k.strip() for k in options["by"].split(",") if k.strip())
         unknown = set(keys) - set(MATCH_KEYS)
@@ -46,18 +46,18 @@ class Command(BaseCommand):
             raise CommandError(f"Unknown match key(s): {', '.join(sorted(unknown))}")
 
         report = link_enumerators(
-            use_case=use_case, by=keys, overwrite=options["overwrite"],
+            project=project, by=keys, overwrite=options["overwrite"],
             apply=options["apply"],
         )
 
         for p in report.actionable:
             if p.status == "match":
                 self.stdout.write(
-                    f"  {p.use_case}:{p.enid}  ->  {p.user_id} <{p.user_email}>  ({p.reason})"
+                    f"  {p.project}:{p.enid}  ->  {p.user_id} <{p.user_email}>  ({p.reason})"
                 )
             else:
                 self.stdout.write(
-                    self.style.WARNING(f"  {p.use_case}:{p.enid}  ->  AMBIGUOUS ({p.reason})")
+                    self.style.WARNING(f"  {p.project}:{p.enid}  ->  AMBIGUOUS ({p.reason})")
                 )
 
         verb = "Linked" if report.applied else "Would link"

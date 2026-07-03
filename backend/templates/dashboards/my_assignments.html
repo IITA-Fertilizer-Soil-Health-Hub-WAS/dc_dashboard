@@ -11,7 +11,7 @@
   {% for g in job_groups %}
     <div class="section">
       <div class="st">
-        <h3><span class="msym">assignment</span>{{ g.job.name }} <span class="pill neutral">{{ g.job.use_case.code }}</span></h3>
+        <h3><span class="msym">assignment</span>{{ g.job.name }} <span class="pill neutral">{{ g.job.project.code }}</span></h3>
         <div class="desc">
           {% if g.job.form %}Form: {{ g.job.form.title|default:g.job.form.server_ref }} · {% endif %}
           {% if g.job.deadline %}Due {{ g.job.deadline }}{% else %}No deadline{% endif %}

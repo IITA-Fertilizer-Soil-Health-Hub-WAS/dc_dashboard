@@ -11,8 +11,8 @@ from django.utils import timezone
 from apps.fieldwork.models import CollectionUnit
 from apps.rbac.models import Role, UseCaseMembership
 from apps.submissions.models import Enumerator, Submission, SubmissionValue
-from apps.usecases.models import EventScheduleItem, FormDefinition, Organization, UseCase
-from apps.validation.engine import run_for_use_case
+from apps.usecases.models import EventScheduleItem, FormDefinition, Organization, Project
+from apps.validation.engine import run_for_project
 from apps.validation.models import ValidationFlag, ValidationRule
 
 pytestmark = pytest.mark.django_db
@@ -21,15 +21,15 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture
 def world():
     org = Organization.objects.create(code="o", name="O")
-    uc = UseCase.objects.create(code="PROJ-A", name="A", organization=org)
-    form = FormDefinition.objects.create(use_case=uc, ona_form_id=1,
+    uc = Project.objects.create(code="PROJ-A", name="A", organization=org)
+    form = FormDefinition.objects.create(project=uc, ona_form_id=1,
                                          role=FormDefinition.Role.VALIDATION)
     return {"uc": uc, "form": form, "org": org}
 
 
 def _sub(world, uuid, **kw):
     return Submission.objects.create(
-        use_case=world["uc"], form=world["form"], ona_uuid=uuid, content_hash=uuid, **kw)
+        project=world["uc"], form=world["form"], ona_uuid=uuid, content_hash=uuid, **kw)
 
 
 # --- Statistical outliers ----------------------------------------------------
@@ -44,9 +44,9 @@ def test_numeric_outlier_flags_only_the_extreme_value(world):
     SubmissionValue.objects.create(submission=wild, field_key="yield", current_value=940)
 
     ValidationRule.objects.create(
-        use_case=uc, code="yield-outlier",
+        project=uc, code="yield-outlier",
         rule_type=ValidationRule.RuleType.NUMERIC_OUTLIER, params={"field": "yield"})
-    run_for_use_case(uc)
+    run_for_project(uc)
 
     flags = ValidationFlag.objects.filter(status="OPEN")
     assert flags.count() == 1
@@ -61,9 +61,9 @@ def test_numeric_outlier_silent_below_min_n(world):
         s = _sub(world, f"s{i}")
         SubmissionValue.objects.create(submission=s, field_key="yield", current_value=i * 100)
     ValidationRule.objects.create(
-        use_case=uc, code="yo", rule_type=ValidationRule.RuleType.NUMERIC_OUTLIER,
+        project=uc, code="yo", rule_type=ValidationRule.RuleType.NUMERIC_OUTLIER,
         params={"field": "yield"})
-    run_for_use_case(uc)
+    run_for_project(uc)
     assert ValidationFlag.objects.filter(status="OPEN").count() == 0
 
 
@@ -71,18 +71,18 @@ def test_numeric_outlier_silent_below_min_n(world):
 
 def test_geo_duplicate_flags_shared_point_across_households(world):
     uc = world["uc"]
-    h1 = CollectionUnit.objects.create(use_case=uc, code="H1")
-    h2 = CollectionUnit.objects.create(use_case=uc, code="H2")
+    h1 = CollectionUnit.objects.create(project=uc, code="H1")
+    h2 = CollectionUnit.objects.create(project=uc, code="H2")
     # Two different households at the exact same GPS → never moved.
     _sub(world, "a", collection_unit=h1, lat="-1.2900", lon="36.8000")
     _sub(world, "b", collection_unit=h2, lat="-1.2900", lon="36.8000")
     # A third household, elsewhere → not flagged.
-    h3 = CollectionUnit.objects.create(use_case=uc, code="H3")
+    h3 = CollectionUnit.objects.create(project=uc, code="H3")
     _sub(world, "c", collection_unit=h3, lat="-1.5000", lon="36.9000")
 
     ValidationRule.objects.create(
-        use_case=uc, code="dup-gps", rule_type=ValidationRule.RuleType.GEO_DUPLICATE)
-    run_for_use_case(uc)
+        project=uc, code="dup-gps", rule_type=ValidationRule.RuleType.GEO_DUPLICATE)
+    run_for_project(uc)
 
     flagged = set(ValidationFlag.objects.filter(status="OPEN").values_list("submission__ona_uuid", flat=True))
     assert flagged == {"a", "b"}
@@ -90,12 +90,12 @@ def test_geo_duplicate_flags_shared_point_across_households(world):
 
 def test_geo_duplicate_ignores_same_household_revisits(world):
     uc = world["uc"]
-    h1 = CollectionUnit.objects.create(use_case=uc, code="H1")
+    h1 = CollectionUnit.objects.create(project=uc, code="H1")
     _sub(world, "e1", collection_unit=h1, lat="-1.2900", lon="36.8000")
     _sub(world, "e2", collection_unit=h1, lat="-1.2900", lon="36.8000")  # same HH, later event
     ValidationRule.objects.create(
-        use_case=uc, code="dup-gps", rule_type=ValidationRule.RuleType.GEO_DUPLICATE)
-    run_for_use_case(uc)
+        project=uc, code="dup-gps", rule_type=ValidationRule.RuleType.GEO_DUPLICATE)
+    run_for_project(uc)
     assert ValidationFlag.objects.filter(status="OPEN").count() == 0
 
 
@@ -103,7 +103,7 @@ def test_geo_duplicate_ignores_same_household_revisits(world):
 
 def test_submission_speed_flags_a_burst(world):
     uc = world["uc"]
-    enum = Enumerator.objects.create(use_case=uc, enid="E1")
+    enum = Enumerator.objects.create(project=uc, enid="E1")
     base = timezone.now()
     # 8 submissions within ~14 min → exceeds max=6 in a 30-min window.
     for i in range(8):
@@ -113,9 +113,9 @@ def test_submission_speed_flags_a_burst(world):
     _sub(world, "calm", enumerator=enum, ona_submission_time=base + timedelta(hours=6))
 
     ValidationRule.objects.create(
-        use_case=uc, code="speed", rule_type=ValidationRule.RuleType.SUBMISSION_SPEED,
+        project=uc, code="speed", rule_type=ValidationRule.RuleType.SUBMISSION_SPEED,
         params={"max": 6, "window_min": 30})
-    run_for_use_case(uc)
+    run_for_project(uc)
 
     flagged = set(ValidationFlag.objects.filter(status="OPEN").values_list("submission__ona_uuid", flat=True))
     assert "calm" not in flagged
@@ -128,10 +128,10 @@ def test_household_timeline_orders_events_and_shows_gaps(client, world, django_u
     uc = world["uc"]
     coord = django_user_model.objects.create_user(
         "c@x.org", "pw", is_active=True, organization=world["org"])
-    UseCaseMembership.objects.create(user=coord, use_case=uc, role=Role.TRIAL_COORDINATOR)
-    EventScheduleItem.objects.create(use_case=uc, event_key="Event1", sequence=1)
-    EventScheduleItem.objects.create(use_case=uc, event_key="Event2", sequence=2)
-    hh = CollectionUnit.objects.create(use_case=uc, code="H-42")
+    UseCaseMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
+    EventScheduleItem.objects.create(project=uc, event_key="Event1", sequence=1)
+    EventScheduleItem.objects.create(project=uc, event_key="Event2", sequence=2)
+    hh = CollectionUnit.objects.create(project=uc, code="H-42")
     _sub(world, "ev1", collection_unit=hh, event_key="Event1", event_date=timezone.localdate())
     # Event2 deliberately missing → a gap in the timeline.
 

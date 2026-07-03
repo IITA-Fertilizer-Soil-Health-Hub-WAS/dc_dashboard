@@ -6,21 +6,21 @@ import pytest
 from apps.rbac.models import Role, UseCaseMembership
 from apps.review.models import ReviewState
 from apps.submissions.models import Submission, SubmissionValue
-from apps.usecases.models import FormDefinition, UseCase
+from apps.usecases.models import FormDefinition, Project
 
 pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
 def uc():
-    return UseCase.objects.create(code="UC", name="UC")
+    return Project.objects.create(code="UC", name="UC")
 
 
 @pytest.fixture
 def submission(uc):
-    form = FormDefinition.objects.create(use_case=uc, ona_form_id=1,
+    form = FormDefinition.objects.create(project=uc, ona_form_id=1,
                                          role=FormDefinition.Role.VALIDATION)
-    sub = Submission.objects.create(use_case=uc, form=form, ona_uuid="u1", content_hash="h")
+    sub = Submission.objects.create(project=uc, form=form, ona_uuid="u1", content_hash="h")
     SubmissionValue.objects.create(submission=sub, field_key="ENID",
                                    raw_value="EN1", current_value="EN1")
     return sub
@@ -29,19 +29,19 @@ def submission(uc):
 @pytest.fixture
 def coordinator(django_user_model, uc):
     user = django_user_model.objects.create_user("c@x.org", "pw", is_active=True)
-    UseCaseMembership.objects.create(user=user, use_case=uc, role=Role.TRIAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=user, project=uc, role=Role.TRIAL_COORDINATOR)
     return user
 
 
 @pytest.fixture
 def viewer(django_user_model, uc):
     user = django_user_model.objects.create_user("v@x.org", "pw", is_active=True)
-    UseCaseMembership.objects.create(user=user, use_case=uc, role=Role.VIEWER)
+    UseCaseMembership.objects.create(user=user, project=uc, role=Role.VIEWER)
     return user
 
 
 def _url(sub):
-    return f"/project/{sub.use_case.code}/submission/{sub.pk}/review/"
+    return f"/project/{sub.project.code}/submission/{sub.pk}/review/"
 
 
 def test_review_page_renders(client, coordinator, submission):

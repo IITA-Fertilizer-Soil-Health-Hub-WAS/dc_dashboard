@@ -87,10 +87,10 @@ def normalize_record(
     return out
 
 
-def build_crop_alias_map(use_case) -> dict[str, str]:
+def build_crop_alias_map(project) -> dict[str, str]:
     """Map every crop alias (and canonical name) -> canonical name for LOOKUPs."""
     alias_map: dict[str, str] = {}
-    for crop in use_case.crops.all():
+    for crop in project.crops.all():
         alias_map[crop.name] = crop.name
         for alias in crop.aliases:
             alias_map[alias] = crop.name

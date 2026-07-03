@@ -7,7 +7,7 @@ from django.urls import reverse
 from apps.dashboards.views import _merged_fields, _raw_field_map
 from apps.rbac.models import Role, UseCaseMembership
 from apps.submissions.models import Submission, SubmissionValue
-from apps.usecases.models import FormDefinition, Organization, UseCase
+from apps.usecases.models import FormDefinition, Organization, Project
 
 pytestmark = pytest.mark.django_db
 
@@ -27,9 +27,9 @@ def test_raw_field_map_keeps_answers_drops_system():
 
 def test_merged_fields_overlays_edits_on_raw():
     org = Organization.objects.create(code="o0", name="O")
-    uc = UseCase.objects.create(code="PX", name="X", organization=org)
-    form = FormDefinition.objects.create(use_case=uc, ona_form_id=1, role=FormDefinition.Role.VALIDATION)
-    sub = Submission.objects.create(use_case=uc, form=form, ona_uuid="u0", content_hash="h",
+    uc = Project.objects.create(code="PX", name="X", organization=org)
+    form = FormDefinition.objects.create(project=uc, ona_form_id=1, role=FormDefinition.Role.VALIDATION)
+    sub = Submission.objects.create(project=uc, form=form, ona_uuid="u0", content_hash="h",
                                     raw_payload={"soil_ph": "6.5", "grp/crop": "maize"})
     SubmissionValue.objects.create(submission=sub, field_key="soil_ph",
                                    raw_value="6.5", current_value="7.0", is_edited=True)
@@ -40,14 +40,14 @@ def test_merged_fields_overlays_edits_on_raw():
 
 def test_review_lists_and_edits_any_field(client, django_user_model):
     org = Organization.objects.create(code="o", name="O")
-    uc = UseCase.objects.create(code="PROJ-A", name="A", organization=org)
-    form = FormDefinition.objects.create(use_case=uc, ona_form_id=1, role=FormDefinition.Role.VALIDATION)
+    uc = Project.objects.create(code="PROJ-A", name="A", organization=org)
+    form = FormDefinition.objects.create(project=uc, ona_form_id=1, role=FormDefinition.Role.VALIDATION)
     sub = Submission.objects.create(
-        use_case=uc, form=form, ona_uuid="u1", content_hash="h",
+        project=uc, form=form, ona_uuid="u1", content_hash="h",
         raw_payload={"_id": 5, "section/soil_colour": "dark", "yield_kg": "120"},
     )
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True, organization=org)
-    UseCaseMembership.objects.create(user=coord, use_case=uc, role=Role.TRIAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
     client.force_login(coord)
     url = reverse("dashboards:submission_review", args=["PROJ-A", sub.id])
     resp = client.get(url)

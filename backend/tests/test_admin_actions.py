@@ -10,7 +10,7 @@ from django.test import RequestFactory
 
 from apps.config_admin.loader import import_config, load_yaml
 from apps.console.actions import uc_export, uc_validate
-from apps.usecases.models import UseCase
+from apps.usecases.models import Project
 
 pytestmark = pytest.mark.django_db
 
@@ -23,15 +23,15 @@ def _request():
 
 def test_export_yaml_action_round_trips():
     import_config(load_yaml(SNS_PATH))
-    uc = UseCase.objects.get(code="SNS-RWANDA")
+    uc = Project.objects.get(code="SNS-RWANDA")
     resp = uc_export(_request(), uc)
     assert resp["Content-Type"] == "application/x-yaml"
     parsed = yaml.safe_load(resp.content)
-    assert parsed["use_case"]["code"] == "SNS-RWANDA"
+    assert parsed["project"]["code"] == "SNS-RWANDA"
     assert len(parsed["forms"]) == 3
 
 
 def test_validate_action_reports_ok():
     import_config(load_yaml(SNS_PATH))
-    uc = UseCase.objects.get(code="SNS-RWANDA")
+    uc = Project.objects.get(code="SNS-RWANDA")
     assert "OK" in uc_validate(_request(), uc)

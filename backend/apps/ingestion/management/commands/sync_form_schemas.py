@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from django.core.management.base import BaseCommand, CommandError
 
-from apps.ingestion.form_schema import sync_use_case_schemas
-from apps.usecases.models import UseCase
+from apps.ingestion.form_schema import sync_project_schemas
+from apps.usecases.models import Project
 
 
 class Command(BaseCommand):
@@ -21,15 +21,15 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if options["all"]:
-            qs = UseCase.objects.filter(is_active=True)
+            qs = Project.objects.filter(is_active=True)
         elif options["code"]:
-            qs = UseCase.objects.filter(code=options["code"])
+            qs = Project.objects.filter(code=options["code"])
             if not qs.exists():
                 raise CommandError(f"Unknown use case: {options['code']}")
         else:
             raise CommandError("Provide a use case code or --all")
 
         for uc in qs:
-            result = sync_use_case_schemas(uc)
+            result = sync_project_schemas(uc)
             parts = ", ".join(f"{ref}={n}" for ref, n in result.items()) or "no forms"
             self.stdout.write(self.style.SUCCESS(f"{uc.code}: {parts}"))

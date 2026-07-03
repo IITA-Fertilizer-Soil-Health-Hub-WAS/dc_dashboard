@@ -6,26 +6,26 @@ import pytest
 from apps.rbac.models import Role, UseCaseMembership
 from apps.review import services
 from apps.submissions.models import Submission
-from apps.usecases.models import FormDefinition, UseCase
+from apps.usecases.models import FormDefinition, Project
 
 pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
 def uc():
-    return UseCase.objects.create(code="UC", name="UC")
+    return Project.objects.create(code="UC", name="UC")
 
 
 @pytest.fixture
 def form(uc):
-    return FormDefinition.objects.create(use_case=uc, ona_form_id=1,
+    return FormDefinition.objects.create(project=uc, ona_form_id=1,
                                          role=FormDefinition.Role.VALIDATION)
 
 
 @pytest.fixture
 def coordinator(django_user_model, uc):
     u = django_user_model.objects.create_user("c@x.org", "pw", is_active=True)
-    UseCaseMembership.objects.create(user=u, use_case=uc, role=Role.TRIAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=u, project=uc, role=Role.TRIAL_COORDINATOR)
     return u
 
 
@@ -56,7 +56,7 @@ def test_csv_import_skips_header_and_blanks(client, staff, form):
 
 # ---- Audit export ----
 def test_audit_export_csv(client, uc, form, coordinator):
-    s = Submission.objects.create(use_case=uc, form=form, ona_uuid="A1", content_hash="h")
+    s = Submission.objects.create(project=uc, form=form, ona_uuid="A1", content_hash="h")
     services.decline(coordinator, s, note="bad id")
     client.force_login(coordinator)
     resp = client.get(f"/project/{uc.code}/audit.csv")

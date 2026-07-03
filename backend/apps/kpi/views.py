@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
 from apps.dashboards.charts import points_map_html
-from apps.dashboards.scoping import get_scoped_use_case
+from apps.dashboards.scoping import get_scoped_project
 
 from .metrics import (
     PERIODS,
@@ -32,7 +32,7 @@ def kpi_overview(request):
 
 @login_required
 def kpi_project(request, code):
-    uc = get_scoped_use_case(request, code)  # 404 if not visible to the user
+    uc = get_scoped_project(request, code)  # 404 if not visible to the user
     from .exports import export_options
 
     ctx = project_metrics(uc, _days(request)) | {
@@ -43,7 +43,7 @@ def kpi_project(request, code):
 
 @login_required
 def kpi_quality(request, code):
-    uc = get_scoped_use_case(request, code)
+    uc = get_scoped_project(request, code)
     ctx = quality_metrics(uc, _days(request)) | {
         "uc": uc, "periods": PERIODS, "qtrend": project_quality_trend(uc),
     }
@@ -52,7 +52,7 @@ def kpi_quality(request, code):
 
 @login_required
 def kpi_enumerators(request, code):
-    uc = get_scoped_use_case(request, code)
+    uc = get_scoped_project(request, code)
     m = enumerator_metrics(uc, _days(request))
     ctx = m | {"uc": uc, "periods": PERIODS, "map_html": points_map_html(m["points"])}
     return render(request, "kpi/enumerators.html", ctx)
@@ -64,7 +64,7 @@ def kpi_enumerator_detail(request, code, enum_id):
     coordinator can spot degrading quality early (not just a period average)."""
     from django.http import Http404
 
-    uc = get_scoped_use_case(request, code)
+    uc = get_scoped_project(request, code)
     m = enumerator_metrics(uc, _days(request))
     row = next((r for r in m["leaderboard"] if str(r["enumerator_id"]) == str(enum_id)), None)
     trend = enumerator_trend(uc, enum_id)
@@ -77,7 +77,7 @@ def kpi_enumerator_detail(request, code, enum_id):
 
 @login_required
 def kpi_coverage(request, code):
-    uc = get_scoped_use_case(request, code)
+    uc = get_scoped_project(request, code)
     m = coverage_metrics(uc)
     ctx = m | {"uc": uc, "map_html": points_map_html(m["points"])}
     return render(request, "kpi/coverage.html", ctx)
@@ -91,7 +91,7 @@ def kpi_export(request, code, kind):
 
     from .exports import render_dataset, units_geojson
 
-    uc = get_scoped_use_case(request, code)
+    uc = get_scoped_project(request, code)
     if kind == "units-geojson":
         return units_geojson(uc)
     fmt = request.GET.get("fmt", "csv")
@@ -104,18 +104,18 @@ def kpi_export(request, code, kind):
 @login_required
 def kpi_alerts(request):
     """Recent fired alerts and active rules, scoped to the user's projects."""
-    from apps.rbac.permissions import visible_use_cases
+    from apps.rbac.permissions import visible_projects
 
     from .models import AlertEvent, AlertRule
 
-    uc_ids = list(visible_use_cases(request.user).values_list("id", flat=True))
+    uc_ids = list(visible_projects(request.user).values_list("id", flat=True))
     events = list(
-        AlertEvent.objects.filter(use_case_id__in=uc_ids)
-        .select_related("rule", "use_case")[:100]
+        AlertEvent.objects.filter(project_id__in=uc_ids)
+        .select_related("rule", "project")[:100]
     )
     rules = (
-        AlertRule.objects.filter(use_case_id__in=uc_ids, is_enabled=True)
-        .select_related("use_case")
+        AlertRule.objects.filter(project_id__in=uc_ids, is_enabled=True)
+        .select_related("project")
     )
     from .alerts import METRICS
 

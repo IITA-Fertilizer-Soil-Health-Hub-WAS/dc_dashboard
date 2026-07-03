@@ -11,7 +11,7 @@ import pytest
 
 from apps.ingestion.backends.base import WriteResult
 from apps.ingestion.backends.odk import OdkBackend, build_edited_instance
-from apps.usecases.models import FieldMapping, FormDefinition, UseCase
+from apps.usecases.models import FieldMapping, FormDefinition, Project
 
 pytestmark = pytest.mark.django_db
 
@@ -62,13 +62,13 @@ class FakeOdk(OdkBackend):
 
 
 def _submission_with_mapping():
-    uc = UseCase.objects.create(code="UC", name="UC")
-    form = FormDefinition.objects.create(use_case=uc, ona_form_id=10,
+    uc = Project.objects.create(code="UC", name="UC")
+    form = FormDefinition.objects.create(project=uc, ona_form_id=10,
                                          role=FormDefinition.Role.VALIDATION)
     FieldMapping.objects.create(form=form, target_field="ENID",
                                 source_paths=["intro/enumerator_id"])
     from apps.submissions.models import Submission
-    return Submission.objects.create(use_case=uc, form=form, ona_uuid="u1",
+    return Submission.objects.create(project=uc, form=form, ona_uuid="u1",
                                      content_hash="h", ona_submission_id=555)
 
 

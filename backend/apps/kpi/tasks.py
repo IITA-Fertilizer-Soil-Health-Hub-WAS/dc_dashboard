@@ -11,14 +11,14 @@ def rebuild_all_kpis_task() -> dict:
     return rebuild_all_kpis()
 
 
-@shared_task(name="kpi.rebuild_use_case")
-def rebuild_use_case_kpis_task(use_case_id: str) -> dict:
-    from apps.usecases.models import UseCase
+@shared_task(name="kpi.rebuild_project")
+def rebuild_project_kpis_task(project_id: str) -> dict:
+    from apps.usecases.models import Project
 
-    from .aggregate import rebuild_use_case_kpis
+    from .aggregate import rebuild_project_kpis
 
-    uc = UseCase.objects.filter(pk=use_case_id).first()
-    return rebuild_use_case_kpis(uc) if uc else {}
+    uc = Project.objects.filter(pk=project_id).first()
+    return rebuild_project_kpis(uc) if uc else {}
 
 
 @shared_task(name="kpi.run_alerts")

@@ -18,7 +18,7 @@ from apps.fieldwork.dispatch import REGISTRATION_JOB_NAME, registration_job
 from apps.fieldwork.election import elect_candidate
 from apps.fieldwork.models import CandidatePlot, Job, UnitAssignment
 from apps.submissions.models import Submission
-from apps.usecases.models import FormDefinition, Organization, UseCase
+from apps.usecases.models import FormDefinition, Organization, Project
 
 pytestmark = pytest.mark.django_db
 
@@ -30,11 +30,11 @@ SQUARE = {"type": "Polygon", "coordinates": [[
 @pytest.fixture
 def world():
     org = Organization.objects.create(code="o", name="O")
-    uc = UseCase.objects.create(code="PROJ-A", name="A", organization=org)
-    FormDefinition.objects.create(use_case=uc, ona_form_id=1,
+    uc = Project.objects.create(code="PROJ-A", name="A", organization=org)
+    FormDefinition.objects.create(project=uc, ona_form_id=1,
                                   role=FormDefinition.Role.HH_REG)
     cand = CandidatePlot.objects.create(
-        use_case=uc, trial_key="T1", candidate_ref="A", rank=1, geometry=SQUARE,
+        project=uc, trial_key="T1", candidate_ref="A", rank=1, geometry=SQUARE,
         centroid_lat=-1.285, centroid_lon=36.805)
     unit = elect_candidate(None, cand)
     return {"uc": uc, "cand": cand, "unit": unit}
@@ -54,7 +54,7 @@ def test_election_dispatches_registration_job(world):
 def test_dispatch_is_idempotent(world):
     # Re-electing the same trial must not create a second job or duplicate assignment.
     elect_candidate(None, world["cand"])
-    assert Job.objects.filter(use_case=world["uc"], name=REGISTRATION_JOB_NAME).count() == 1
+    assert Job.objects.filter(project=world["uc"], name=REGISTRATION_JOB_NAME).count() == 1
     assert UnitAssignment.objects.filter(unit=world["unit"]).count() == 1
 
 
@@ -97,13 +97,13 @@ def test_build_xlsform_has_trial_choice_and_geopoint(world):
 
 def _anchor_form(uc):
     return FormDefinition.objects.create(
-        use_case=uc, ona_form_id=99, role=FormDefinition.Role.EXTRA,
+        project=uc, ona_form_id=99, role=FormDefinition.Role.EXTRA,
         title=ANCHOR_FORM_TITLE)
 
 
 def _anchor_sub(uc, form, trial, geopoint, uuid):
     return Submission.objects.create(
-        use_case=uc, form=form, ona_uuid=uuid, content_hash=uuid,
+        project=uc, form=form, ona_uuid=uuid, content_hash=uuid,
         raw_payload={"trial_key": trial, "farmer_field": geopoint})
 
 

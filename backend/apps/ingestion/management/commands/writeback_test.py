@@ -38,10 +38,10 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         sub = self._find(options["submission"])
-        backend = get_backend_for(sub.use_case)
+        backend = get_backend_for(sub.project)
         changes = collect_changes(sub)
 
-        self.stdout.write(f"Submission {sub.ona_uuid} ({sub.use_case.code}) via {backend.label}")
+        self.stdout.write(f"Submission {sub.ona_uuid} ({sub.project.code}) via {backend.label}")
         self.stdout.write(f"Edited fields: {changes or '(none)'}")
 
         if not changes:

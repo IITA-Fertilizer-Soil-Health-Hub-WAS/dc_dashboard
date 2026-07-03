@@ -4,7 +4,7 @@ The upstream site-selection tool exports one FeatureCollection per experiment:
 each feature is a candidate plot with POLYGON geometry and properties. Every
 feature MUST carry the trial/area key it belongs to (default property `trial_id`)
 so candidates group into their trial's set of 3 + backup. Import is idempotent —
-re-importing updates in place, keyed on (use_case, trial_key, candidate_ref).
+re-importing updates in place, keyed on (project, trial_key, candidate_ref).
 """
 from __future__ import annotations
 
@@ -49,7 +49,7 @@ def _role_of(props: dict, ref: str) -> str:
     return CandidatePlot.Role.PRIMARY
 
 
-def import_candidates(use_case, geojson: dict, *, trial_prop: str | None = None) -> ImportStats:
+def import_candidates(project, geojson: dict, *, trial_prop: str | None = None) -> ImportStats:
     """Upsert candidate plots for a use case from a GeoJSON FeatureCollection.
 
     `trial_prop` overrides which property carries the trial key (else auto-detect
@@ -87,7 +87,7 @@ def import_candidates(use_case, geojson: dict, *, trial_prop: str | None = None)
         centroid = polygon_centroid(geometry)
 
         _, created = CandidatePlot.objects.update_or_create(
-            use_case=use_case, trial_key=trial_key, candidate_ref=ref,
+            project=project, trial_key=trial_key, candidate_ref=ref,
             defaults={
                 "role": _role_of(props, ref),
                 "rank": rank,

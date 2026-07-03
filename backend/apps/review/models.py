@@ -12,16 +12,16 @@ from django.db import models
 
 from apps.common.models import BaseModel
 from apps.submissions.models import Submission
-from apps.usecases.models import UseCase
+from apps.usecases.models import Project
 
 
 class RejectionReason(BaseModel):
     """A configurable reason a submission can be declined for — so rejections are
     categorised (and reportable) instead of only a free-text note. Adapted from
-    SDMT's rejection-reason taxonomy. `use_case` null = available to every project."""
+    SDMT's rejection-reason taxonomy. `project` null = available to every project."""
 
-    use_case = models.ForeignKey(
-        UseCase, null=True, blank=True, on_delete=models.CASCADE,
+    project = models.ForeignKey(
+        Project, null=True, blank=True, on_delete=models.CASCADE,
         related_name="rejection_reasons",
     )
     code = models.SlugField(max_length=64)
@@ -31,7 +31,7 @@ class RejectionReason(BaseModel):
 
     class Meta:
         ordering = ["order", "label"]
-        unique_together = ("use_case", "code")
+        unique_together = ("project", "code")
 
     def __str__(self) -> str:
         return self.label

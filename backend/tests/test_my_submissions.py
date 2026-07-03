@@ -7,7 +7,7 @@ import pytest
 from django.urls import reverse
 
 from apps.submissions.models import Enumerator, Submission
-from apps.usecases.models import FormDefinition, Organization, UseCase
+from apps.usecases.models import FormDefinition, Organization, Project
 
 pytestmark = pytest.mark.django_db
 
@@ -15,18 +15,18 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture
 def world(django_user_model):
     org = Organization.objects.create(code="o", name="O")
-    uc = UseCase.objects.create(code="PROJ-A", name="A", organization=org)
-    form = FormDefinition.objects.create(use_case=uc, ona_form_id=5,
+    uc = Project.objects.create(code="PROJ-A", name="A", organization=org)
+    form = FormDefinition.objects.create(project=uc, ona_form_id=5,
                                          role=FormDefinition.Role.VALIDATION)
     me = django_user_model.objects.create_user("me@x.org", "pw", is_active=True, organization=org)
     other = django_user_model.objects.create_user("other@x.org", "pw", is_active=True, organization=org)
     # One submission collected by me (direct), one via my linked enumerator, one by someone else.
-    Submission.objects.create(use_case=uc, form=form, ona_uuid="mine-direct",
+    Submission.objects.create(project=uc, form=form, ona_uuid="mine-direct",
                               content_hash="h", collected_by=me, event_date=date.today())
-    en = Enumerator.objects.create(use_case=uc, enid="EN-ME", user=me)
-    Submission.objects.create(use_case=uc, form=form, ona_uuid="mine-via-enum",
+    en = Enumerator.objects.create(project=uc, enid="EN-ME", user=me)
+    Submission.objects.create(project=uc, form=form, ona_uuid="mine-via-enum",
                               content_hash="h", enumerator=en, event_date=date.today())
-    Submission.objects.create(use_case=uc, form=form, ona_uuid="not-mine",
+    Submission.objects.create(project=uc, form=form, ona_uuid="not-mine",
                               content_hash="h", collected_by=other, event_date=date.today())
     return {"me": me, "other": other}
 

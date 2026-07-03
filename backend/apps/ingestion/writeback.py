@@ -40,7 +40,7 @@ def push_submission(submission: Submission) -> Submission:
         submission.save(update_fields=["writeback_status", "writeback_message", "updated_at"])
         return submission
 
-    backend = get_backend_for(submission.use_case)
+    backend = get_backend_for(submission.project)
 
     if not getattr(backend, "supports_writeback", False):
         submission.writeback_status = Status.UNSUPPORTED

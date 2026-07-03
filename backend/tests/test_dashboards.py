@@ -8,11 +8,11 @@ from django.conf import settings
 from django.urls import reverse
 
 from apps.config_admin.loader import import_config, load_yaml
-from apps.ingestion.sync import sync_use_case
+from apps.ingestion.sync import sync_project
 from apps.rbac.models import Role, UseCaseMembership
 from apps.submissions.models import Submission, SubmissionValue
-from apps.usecases.models import UseCase
-from apps.validation.engine import run_for_use_case
+from apps.usecases.models import Project
+from apps.validation.engine import run_for_project
 from tests.test_ingestion import FakeOnaClient, _records
 
 pytestmark = pytest.mark.django_db
@@ -23,17 +23,17 @@ SNS_PATH = Path(settings.USECASE_CONFIG_DIR) / "sns-rwanda.yaml"
 @pytest.fixture
 def setup(django_user_model):
     uc = import_config(load_yaml(SNS_PATH))
-    sync_use_case(uc, client=FakeOnaClient(_records()))
+    sync_project(uc, client=FakeOnaClient(_records()))
     # Make one submission's ENID invalid so an Issue appears.
     s = Submission.objects.get(ona_uuid="uuid-aaa")
     SubmissionValue.objects.filter(submission=s, field_key="ENID").update(current_value="BADID")
-    run_for_use_case(uc)
+    run_for_project(uc)
 
-    other = UseCase.objects.create(code="KALRO", name="KALRO", is_active=True)
+    other = Project.objects.create(code="KALRO", name="KALRO", is_active=True)
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True)
     viewer = django_user_model.objects.create_user("v@x.org", "pw", is_active=True)
-    UseCaseMembership.objects.create(user=coord, use_case=uc, role=Role.TRIAL_COORDINATOR)
-    UseCaseMembership.objects.create(user=viewer, use_case=uc, role=Role.VIEWER)
+    UseCaseMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=viewer, project=uc, role=Role.VIEWER)
     return uc, other, coord, viewer, s
 
 
@@ -47,7 +47,7 @@ def test_index_lands_single_project_user_in_their_project(client, setup):
     assert resp.url == reverse("dashboards:usecase", args=["SNS-RWANDA"])
 
 
-def test_cannot_open_unpermitted_use_case(client, setup):
+def test_cannot_open_unpermitted_project(client, setup):
     _, other, coord, _, _ = setup
     client.force_login(coord)
     resp = client.get(reverse("dashboards:usecase", args=[other.code]))

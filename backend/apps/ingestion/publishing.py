@@ -17,10 +17,10 @@ from .backends.registry import get_backend_for
 
 
 def publish_xlsform(
-    use_case, xlsx: bytes, *, filename: str, role: str, title: str = ""
+    project, xlsx: bytes, *, filename: str, role: str, title: str = ""
 ) -> tuple[FormDefinition | None, PublishResult]:
     """Push an XLSForm to the use case's server and record the resulting form."""
-    backend = get_backend_for(use_case)
+    backend = get_backend_for(project)
     if not getattr(backend, "supports_publish", False):
         return None, PublishResult(
             ok=False, message=f"{backend.label or backend.type} does not support publishing."
@@ -33,7 +33,7 @@ def publish_xlsform(
     server_id = result.server_form_id or ""
     ona_id = int(server_id) if server_id.isdigit() else None
     form, _ = FormDefinition.objects.update_or_create(
-        use_case=use_case,
+        project=project,
         server_form_id=server_id,
         defaults={
             "ona_form_id": ona_id,

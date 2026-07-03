@@ -1,6 +1,6 @@
 """Helpers for the form-based onboarding wizard.
 
-Maps ONA's structure to ours: an ONA *project* becomes a UseCase; each ONA *form*
+Maps ONA's structure to ours: an ONA *project* becomes a Project; each ONA *form*
 in it becomes a FormDefinition (an "entry" to the project). The wizard collects
 fields and assembles the same config dict the YAML importer consumes, so there's
 one code path into the database (apps.config_admin.loader.import_config).
@@ -69,7 +69,7 @@ def build_config(post) -> dict[str, Any]:
     hhid_patterns = _csv(post.get("hhid_patterns"))
 
     data: dict[str, Any] = {
-        "use_case": {
+        "project": {
             "code": (post.get("code") or "").strip(),
             "name": (post.get("name") or "").strip(),
             "is_active": True,

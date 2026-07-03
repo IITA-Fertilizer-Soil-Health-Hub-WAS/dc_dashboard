@@ -6,24 +6,24 @@ from datetime import date
 import pytest
 from django.urls import reverse
 
-from apps.kpi.aggregate import rebuild_use_case_kpis
+from apps.kpi.aggregate import rebuild_project_kpis
 from apps.kpi.metrics import overview_metrics, project_metrics
 from apps.rbac.models import Role, UseCaseMembership
 from apps.submissions.models import Enumerator, Submission
-from apps.usecases.models import FormDefinition, Organization, UseCase
+from apps.usecases.models import FormDefinition, Organization, Project
 
 pytestmark = pytest.mark.django_db
 
 
 def _project(code, n, org=None):
-    uc = UseCase.objects.create(code=code, name=code, organization=org)
-    form = FormDefinition.objects.create(use_case=uc, ona_form_id=hash(code) % 100000,
+    uc = Project.objects.create(code=code, name=code, organization=org)
+    form = FormDefinition.objects.create(project=uc, ona_form_id=hash(code) % 100000,
                                          role=FormDefinition.Role.VALIDATION)
-    en = Enumerator.objects.create(use_case=uc, enid=f"EN-{code}")
+    en = Enumerator.objects.create(project=uc, enid=f"EN-{code}")
     for i in range(n):
-        Submission.objects.create(use_case=uc, form=form, ona_uuid=f"{code}-{i}",
+        Submission.objects.create(project=uc, form=form, ona_uuid=f"{code}-{i}",
                                   content_hash="h", enumerator=en, event_date=date.today())
-    rebuild_use_case_kpis(uc)
+    rebuild_project_kpis(uc)
     return uc
 
 
@@ -33,7 +33,7 @@ def world(django_user_model):
     a = _project("PROJ-A", 5, org)
     b = _project("PROJ-B", 2, org)
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True, organization=org)
-    UseCaseMembership.objects.create(user=coord, use_case=a, role=Role.TRIAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=coord, project=a, role=Role.TRIAL_COORDINATOR)
     admin = django_user_model.objects.create_superuser("a@x.org", "pw")
     return {"a": a, "b": b, "coord": coord, "admin": admin}
 
@@ -42,7 +42,7 @@ def test_overview_scoped_to_visible_projects(world):
     m = overview_metrics(world["coord"], "30")
     assert m["total_submissions"] == 5            # only PROJ-A
     assert m["active_projects"] == 1
-    codes = {p["use_case__code"] for p in m["top_projects"]}
+    codes = {p["project__code"] for p in m["top_projects"]}
     assert codes == {"PROJ-A"}                     # PROJ-B not visible
 
 

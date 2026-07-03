@@ -3,7 +3,7 @@
     <div style="display:flex;align-items:center;gap:.6rem;">
       <h3 style="margin:0;">Enumerator ranking</h3>
       <span style="flex:1"></span>
-      {% if can_manage_access %}<a class="seg" href="{% url 'console:list' 'enumerators' %}?use_case={{ uc.code }}">Manage roster</a>{% endif %}
+      {% if can_manage_access %}<a class="seg" href="{% url 'console:list' 'enumerators' %}?project={{ uc.code }}">Manage roster</a>{% endif %}
     </div>
     <div class="table-wrap" style="margin-top:.6rem;">
     <table>

@@ -8,7 +8,7 @@ from django.urls import reverse
 from apps.review import services
 from apps.review.models import Review
 from apps.submissions.models import Submission
-from apps.usecases.models import FormDefinition, UseCase
+from apps.usecases.models import FormDefinition, Project
 
 pytestmark = pytest.mark.django_db
 
@@ -16,10 +16,10 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture
 def review(django_user_model):
     admin = django_user_model.objects.create_superuser("a@x.org", "pw")
-    uc = UseCase.objects.create(code="UC", name="UC")
-    form = FormDefinition.objects.create(use_case=uc, ona_form_id=1,
+    uc = Project.objects.create(code="UC", name="UC")
+    form = FormDefinition.objects.create(project=uc, ona_form_id=1,
                                          role=FormDefinition.Role.VALIDATION)
-    sub = Submission.objects.create(use_case=uc, form=form, ona_uuid="u1", content_hash="h")
+    sub = Submission.objects.create(project=uc, form=form, ona_uuid="u1", content_hash="h")
     # Generate a couple of audit actions so the trail renders.
     services.endorse(admin, sub)
     services.qc_approve(admin, sub)

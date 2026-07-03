@@ -34,37 +34,37 @@ def _collect(org):
         EventScheduleItem,
         FieldMapping,
         FormDefinition,
+        Project,
         Region,
         Trial,
-        UseCase,
     )
     from apps.validation.models import ValidationFlag, ValidationRule
 
-    ucs = UseCase.objects.filter(organization=org)
-    forms = FormDefinition.objects.filter(use_case__in=ucs)
-    subs = Submission.objects.filter(use_case__in=ucs)
+    ucs = Project.objects.filter(organization=org)
+    forms = FormDefinition.objects.filter(project__in=ucs)
+    subs = Submission.objects.filter(project__in=ucs)
 
     objs: list = [org]
     objs += list(Region.objects.filter(organization=org))
     objs += list(Country.objects.filter(region__organization=org))
     objs += list(ucs)
-    objs += list(DataSource.objects.filter(use_case__in=ucs))
-    objs += list(Crop.objects.filter(use_case__in=ucs))
-    objs += list(Trial.objects.filter(use_case__in=ucs))
+    objs += list(DataSource.objects.filter(project__in=ucs))
+    objs += list(Crop.objects.filter(project__in=ucs))
+    objs += list(Trial.objects.filter(project__in=ucs))
     objs += list(forms)
     objs += list(FieldMapping.objects.filter(form__in=forms))
-    objs += list(EventScheduleItem.objects.filter(use_case__in=ucs))
-    objs += list(ValidationRule.objects.filter(use_case__in=ucs))
+    objs += list(EventScheduleItem.objects.filter(project__in=ucs))
+    objs += list(ValidationRule.objects.filter(project__in=ucs))
     # Identity + access (only this org's people and the grants over its scopes).
     objs += list(User.objects.filter(organization=org))
     objs += list(
-        UseCaseMembership.objects.filter(use_case__in=ucs)
+        UseCaseMembership.objects.filter(project__in=ucs)
         | UseCaseMembership.objects.filter(country__region__organization=org)
         | UseCaseMembership.objects.filter(region__organization=org)
     )
     # Field data.
-    objs += list(Enumerator.objects.filter(use_case__in=ucs))
-    objs += list(CollectionUnit.objects.filter(use_case__in=ucs))
+    objs += list(Enumerator.objects.filter(project__in=ucs))
+    objs += list(CollectionUnit.objects.filter(project__in=ucs))
     objs += list(subs)
     objs += list(SubmissionValue.objects.filter(submission__in=subs))
     objs += list(Review.objects.filter(submission__in=subs))

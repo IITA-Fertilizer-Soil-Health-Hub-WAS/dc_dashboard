@@ -8,7 +8,7 @@ from django.urls import reverse
 from apps.rbac.models import Role, UseCaseMembership
 from apps.submissions.linking import link_enumerators
 from apps.submissions.models import Enumerator, Submission
-from apps.usecases.models import FormDefinition, Organization, UseCase
+from apps.usecases.models import FormDefinition, Organization, Project
 
 pytestmark = pytest.mark.django_db
 
@@ -16,17 +16,17 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture
 def world(django_user_model):
     org = Organization.objects.create(code="o", name="O")
-    mine = UseCase.objects.create(code="MINE", name="Mine", organization=org)
-    other = UseCase.objects.create(code="OTHER", name="Other", organization=org)
-    fm = FormDefinition.objects.create(use_case=mine, ona_form_id=1, role=FormDefinition.Role.VALIDATION)
-    fo = FormDefinition.objects.create(use_case=other, ona_form_id=2, role=FormDefinition.Role.VALIDATION)
+    mine = Project.objects.create(code="MINE", name="Mine", organization=org)
+    other = Project.objects.create(code="OTHER", name="Other", organization=org)
+    fm = FormDefinition.objects.create(project=mine, ona_form_id=1, role=FormDefinition.Role.VALIDATION)
+    fo = FormDefinition.objects.create(project=other, ona_form_id=2, role=FormDefinition.Role.VALIDATION)
     pend = Submission.WriteBackStatus.PENDING
-    Submission.objects.create(use_case=mine, form=fm, ona_uuid="m1", content_hash="h", writeback_status=pend)
-    Submission.objects.create(use_case=other, form=fo, ona_uuid="o1", content_hash="h", writeback_status=pend)
+    Submission.objects.create(project=mine, form=fm, ona_uuid="m1", content_hash="h", writeback_status=pend)
+    Submission.objects.create(project=other, form=fo, ona_uuid="o1", content_hash="h", writeback_status=pend)
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True, organization=org)
-    UseCaseMembership.objects.create(user=coord, use_case=mine, role=Role.TRIAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=coord, project=mine, role=Role.TRIAL_COORDINATOR)
     viewer = django_user_model.objects.create_user("v@x.org", "pw", is_active=True, organization=org)
-    UseCaseMembership.objects.create(user=viewer, use_case=mine, role=Role.VIEWER)
+    UseCaseMembership.objects.create(user=viewer, project=mine, role=Role.VIEWER)
     return {"mine": mine, "other": other, "coord": coord, "viewer": viewer}
 
 
@@ -47,10 +47,10 @@ def test_writeback_blocked_for_plain_member(client, world):
 
 
 def test_link_enumerators_scoped(world):
-    Enumerator.objects.create(use_case=world["mine"], enid="EN-MINE")
-    Enumerator.objects.create(use_case=world["other"], enid="EN-OTHER")
-    report = link_enumerators(apply=False, use_cases=[world["mine"].id])
-    codes = {p.use_case for p in report.proposals}
+    Enumerator.objects.create(project=world["mine"], enid="EN-MINE")
+    Enumerator.objects.create(project=world["other"], enid="EN-OTHER")
+    report = link_enumerators(apply=False, projects=[world["mine"].id])
+    codes = {p.project for p in report.proposals}
     assert codes == {"MINE"}  # the other project's enumerator is out of scope
 
 

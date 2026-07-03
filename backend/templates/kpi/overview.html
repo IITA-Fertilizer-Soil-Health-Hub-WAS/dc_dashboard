@@ -42,7 +42,7 @@
       <h3 style="margin-bottom:.8rem;">Top projects</h3>
       {% for p in top_projects %}
         <div class="krow">
-          <a class="nm" href="{% url 'kpi:project' p.use_case__code %}">{{ p.use_case__name|default:p.use_case__code }}</a>
+          <a class="nm" href="{% url 'kpi:project' p.project__code %}">{{ p.project__name|default:p.project__code }}</a>
           <div class="track"><i style="width:{% widthratio p.n top_max 100 %}%;"></i></div>
           <span class="v">{{ p.n }}</span>
         </div>

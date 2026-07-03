@@ -35,7 +35,7 @@ def _num(value):
         return None
 
 
-def import_collection_units(use_case, csv_text: str) -> ImportReport:
+def import_collection_units(project, csv_text: str) -> ImportReport:
     report = ImportReport()
     reader = csv.DictReader(io.StringIO(csv_text))
     if not reader.fieldnames or "code" not in {(c or "").strip().lower() for c in reader.fieldnames}:
@@ -51,7 +51,7 @@ def import_collection_units(use_case, csv_text: str) -> ImportReport:
             continue
         attrs = {k: v for k, v in row.items() if k not in KNOWN_COLUMNS and v}
         _, created = CollectionUnit.objects.update_or_create(
-            use_case=use_case, code=code,
+            project=project, code=code,
             defaults={
                 "name": row.get("name", ""),
                 "lat": _num(row.get("lat")),

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from apps.rbac.models import Role, UseCaseMembership
-from apps.usecases.models import UseCase
+from apps.usecases.models import Project
 
 
 def platform_admin_exists() -> bool:
@@ -38,11 +38,11 @@ def sync_memberships_from_eia_apps(user) -> int:
     codes = apps.keys() if isinstance(apps, dict) else apps
     created = 0
     for code in codes:
-        uc = UseCase.objects.filter(code=code).first()
+        uc = Project.objects.filter(code=code).first()
         if uc is None:
             continue
         _, was_created = UseCaseMembership.objects.get_or_create(
-            user=user, use_case=uc, role=Role.VIEWER
+            user=user, project=uc, role=Role.VIEWER
         )
         created += int(was_created)
     return created

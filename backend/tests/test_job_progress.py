@@ -9,28 +9,28 @@ from apps.fieldwork.models import CollectionUnit, Job, UnitAssignment
 from apps.fieldwork.services import (
     job_enumerator_progress,
     job_progress,
-    use_case_jobs_progress,
+    project_jobs_progress,
 )
 from apps.submissions.models import Submission
-from apps.usecases.models import FormDefinition, UseCase
+from apps.usecases.models import FormDefinition, Project
 
 pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
 def job(django_user_model):
-    uc = UseCase.objects.create(code="UC", name="UC")
-    form = FormDefinition.objects.create(use_case=uc, ona_form_id=1,
+    uc = Project.objects.create(code="UC", name="UC")
+    form = FormDefinition.objects.create(project=uc, ona_form_id=1,
                                          role=FormDefinition.Role.VALIDATION)
-    job = Job.objects.create(use_case=uc, name="Round 1", form=form, target_count=4)
-    units = [CollectionUnit.objects.create(use_case=uc, code=f"HH{i}") for i in range(4)]
+    job = Job.objects.create(project=uc, name="Round 1", form=form, target_count=4)
+    units = [CollectionUnit.objects.create(project=uc, code=f"HH{i}") for i in range(4)]
     en = django_user_model.objects.create_user("en@x.org", "pw", full_name="Enid",
                                                is_active=True)
     for u in units:
         UnitAssignment.objects.create(job=job, unit=u, enumerator=en)
     # Two of the four units have a matched submission.
     for i in (0, 1):
-        Submission.objects.create(use_case=uc, form=form, ona_uuid=f"s{i}",
+        Submission.objects.create(project=uc, form=form, ona_uuid=f"s{i}",
                                   content_hash="h", collection_unit=units[i])
     return job, uc, units, en, form
 
@@ -49,7 +49,7 @@ def test_job_progress_counts(job):
 def test_collected_counts_unit_once_with_multiple_submissions(job):
     j, uc, units, en, form = job
     # A second submission on an already-collected unit must not double-count.
-    Submission.objects.create(use_case=uc, form=form, ona_uuid="dup",
+    Submission.objects.create(project=uc, form=form, ona_uuid="dup",
                               content_hash="h", collection_unit=units[0])
     assert job_progress(j)["collected"] == 2
 
@@ -64,7 +64,7 @@ def test_overdue_when_deadline_passed_and_incomplete(job):
 def test_not_overdue_when_complete(job):
     j, uc, units, en, form = job
     for i in (2, 3):  # collect the remaining two
-        Submission.objects.create(use_case=uc, form=form, ona_uuid=f"more{i}",
+        Submission.objects.create(project=uc, form=form, ona_uuid=f"more{i}",
                                   content_hash="h", collection_unit=units[i])
     j.deadline = date.today() - timedelta(days=1)
     j.save()
@@ -80,10 +80,10 @@ def test_enumerator_progress(job):
     assert rows[0]["collected"] == 2 and rows[0]["total"] == 4 and rows[0]["pct"] == 50
 
 
-def test_use_case_jobs_progress_excludes_closed(job):
+def test_project_jobs_progress_excludes_closed(job):
     j, uc, *_ = job
-    Job.objects.create(use_case=uc, name="Closed one", status=Job.Status.CLOSED)
-    progress = use_case_jobs_progress(uc)
+    Job.objects.create(project=uc, name="Closed one", status=Job.Status.CLOSED)
+    progress = project_jobs_progress(uc)
     names = {jp["job"].name for jp in progress}
     assert "Round 1" in names
     assert "Closed one" not in names

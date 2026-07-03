@@ -8,14 +8,14 @@ from django.core.management import call_command
 
 from apps.accounts.adapters import SocialAccountAdapter
 from apps.rbac.models import Role, UseCaseMembership
-from apps.usecases.models import UseCase
+from apps.usecases.models import Project
 
 pytestmark = pytest.mark.django_db
 
 
 def test_migrate_eia_apps_creates_viewer_memberships(django_user_model):
-    rwanda = UseCase.objects.create(code="SNS-RWANDA", name="SNS Rwanda")
-    kalro = UseCase.objects.create(code="KALRO", name="KALRO")
+    rwanda = Project.objects.create(code="SNS-RWANDA", name="SNS Rwanda")
+    kalro = Project.objects.create(code="KALRO", name="KALRO")
     user = django_user_model.objects.create_user(
         "u@x.org", "pw", is_active=True,
         legacy_eia_apps={"SNS-RWANDA": {}, "KALRO": {}, "GHOST-UC": {}},
@@ -24,16 +24,16 @@ def test_migrate_eia_apps_creates_viewer_memberships(django_user_model):
     call_command("migrate_eia_apps")
 
     roles = set(
-        UseCaseMembership.objects.filter(user=user).values_list("use_case__code", "role")
+        UseCaseMembership.objects.filter(user=user).values_list("project__code", "role")
     )
     assert (rwanda.code, Role.VIEWER) in roles
     assert (kalro.code, Role.VIEWER) in roles
     # Unknown use case is skipped, not created.
-    assert not UseCaseMembership.objects.filter(use_case__code="GHOST-UC").exists()
+    assert not UseCaseMembership.objects.filter(project__code="GHOST-UC").exists()
 
 
 def test_migrate_eia_apps_idempotent(django_user_model):
-    UseCase.objects.create(code="SNS-RWANDA", name="SNS Rwanda")
+    Project.objects.create(code="SNS-RWANDA", name="SNS Rwanda")
     user = django_user_model.objects.create_user(
         "u@x.org", "pw", is_active=True, legacy_eia_apps={"SNS-RWANDA": {}}
     )
@@ -43,7 +43,7 @@ def test_migrate_eia_apps_idempotent(django_user_model):
 
 
 def test_dry_run_creates_nothing(django_user_model):
-    UseCase.objects.create(code="SNS-RWANDA", name="SNS Rwanda")
+    Project.objects.create(code="SNS-RWANDA", name="SNS Rwanda")
     user = django_user_model.objects.create_user(
         "u@x.org", "pw", is_active=True, legacy_eia_apps={"SNS-RWANDA": {}}
     )

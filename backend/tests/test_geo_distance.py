@@ -8,8 +8,8 @@ from apps.dashboards.charts import submission_plot_map_html
 from apps.fieldwork.models import CollectionUnit
 from apps.rbac.models import Role, UseCaseMembership
 from apps.submissions.models import Submission
-from apps.usecases.models import FormDefinition, Organization, UseCase
-from apps.validation.engine import run_for_use_case
+from apps.usecases.models import FormDefinition, Organization, Project
+from apps.validation.engine import run_for_project
 from apps.validation.models import ValidationFlag, ValidationRule
 
 pytestmark = pytest.mark.django_db
@@ -25,17 +25,17 @@ def test_haversine_known_distance():
 @pytest.fixture
 def world():
     org = Organization.objects.create(code="o", name="O")
-    uc = UseCase.objects.create(code="PROJ-A", name="A", organization=org)
-    form = FormDefinition.objects.create(use_case=uc, ona_form_id=1,
+    uc = Project.objects.create(code="PROJ-A", name="A", organization=org)
+    form = FormDefinition.objects.create(project=uc, ona_form_id=1,
                                          role=FormDefinition.Role.VALIDATION)
-    unit = CollectionUnit.objects.create(use_case=uc, code="U1",
+    unit = CollectionUnit.objects.create(project=uc, code="U1",
                                          lat="-1.2921", lon="36.8219")
     return {"uc": uc, "form": form, "unit": unit}
 
 
 def _sub(world, lat, lon, uuid, unit=True):
     return Submission.objects.create(
-        use_case=world["uc"], form=world["form"], ona_uuid=uuid, content_hash="h",
+        project=world["uc"], form=world["form"], ona_uuid=uuid, content_hash="h",
         lat=lat, lon=lon, collection_unit=world["unit"] if unit else None)
 
 
@@ -49,11 +49,11 @@ def test_distance_property(world):
 
 def test_geo_distance_rule_flags_far_submissions(world):
     ValidationRule.objects.create(
-        use_case=world["uc"], code="too-far", rule_type=ValidationRule.RuleType.GEO_DISTANCE,
+        project=world["uc"], code="too-far", rule_type=ValidationRule.RuleType.GEO_DISTANCE,
         params={"max_m": 100}, severity=ValidationRule.Severity.WARNING)
     near = _sub(world, "-1.2921", "36.8219", "n")
     far = _sub(world, "-1.3100", "36.8500", "f")
-    run_for_use_case(world["uc"])
+    run_for_project(world["uc"])
     assert not ValidationFlag.objects.filter(submission=near, status="OPEN").exists()
     flag = ValidationFlag.objects.get(submission=far, status="OPEN")
     assert "from assigned plot" in flag.message
@@ -62,10 +62,10 @@ def test_geo_distance_rule_flags_far_submissions(world):
 
 def test_no_flag_without_coordinates(world):
     ValidationRule.objects.create(
-        use_case=world["uc"], code="too-far", rule_type=ValidationRule.RuleType.GEO_DISTANCE,
+        project=world["uc"], code="too-far", rule_type=ValidationRule.RuleType.GEO_DISTANCE,
         params={"max_m": 100})
     _sub(world, None, None, "nogps")
-    run_for_use_case(world["uc"])
+    run_for_project(world["uc"])
     assert ValidationFlag.objects.filter(status="OPEN").count() == 0
 
 
@@ -82,7 +82,7 @@ def test_review_screen_shows_distance_badge(client, world, django_user_model):
     far = _sub(world, "-1.3100", "36.8500", "f")
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True,
                                                    organization=world["uc"].organization)
-    UseCaseMembership.objects.create(user=coord, use_case=world["uc"],
+    UseCaseMembership.objects.create(user=coord, project=world["uc"],
                                      role=Role.TRIAL_COORDINATOR)
     client.force_login(coord)
     from django.urls import reverse

@@ -9,7 +9,7 @@ from apps.fieldwork.anchor import capture_anchor
 from apps.fieldwork.election import elect_candidate
 from apps.fieldwork.models import CandidatePlot, CollectionUnit
 from apps.rbac.models import Role, UseCaseMembership
-from apps.usecases.models import Organization, UseCase
+from apps.usecases.models import Organization, Project
 
 pytestmark = pytest.mark.django_db
 
@@ -37,11 +37,11 @@ def test_point_in_polygon_honours_holes():
 @pytest.fixture
 def elected_unit(django_user_model):
     org = Organization.objects.create(code="o", name="O")
-    uc = UseCase.objects.create(code="PROJ-A", name="A", organization=org)
+    uc = Project.objects.create(code="PROJ-A", name="A", organization=org)
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True, organization=org)
-    UseCaseMembership.objects.create(user=coord, use_case=uc, role=Role.TRIAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
     cand = CandidatePlot.objects.create(
-        use_case=uc, trial_key="T1", candidate_ref="A", rank=1, geometry=SQUARE,
+        project=uc, trial_key="T1", candidate_ref="A", rank=1, geometry=SQUARE,
         centroid_lat=-1.285, centroid_lon=36.805)
     unit = elect_candidate(coord, cand)
     return {"uc": uc, "coord": coord, "unit": unit}
@@ -79,7 +79,7 @@ def test_reelection_resets_anchor(elected_unit):
     unit, coord, uc = elected_unit["unit"], elected_unit["coord"], elected_unit["uc"]
     capture_anchor(coord, unit, -1.285, 36.805)
     other = CandidatePlot.objects.create(
-        use_case=uc, trial_key="T1", candidate_ref="B", rank=2, geometry=SQUARE,
+        project=uc, trial_key="T1", candidate_ref="B", rank=2, geometry=SQUARE,
         centroid_lat=-1.285, centroid_lon=36.805)
     elect_candidate(coord, other)
     unit.refresh_from_db()

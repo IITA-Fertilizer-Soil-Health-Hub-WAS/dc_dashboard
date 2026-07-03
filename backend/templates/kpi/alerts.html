@@ -25,7 +25,7 @@
           <tr>
             <td class="subtle" style="white-space:nowrap;">{{ e.created_at|date:"M j, H:i" }}</td>
             <td><span class="sevtag sev-{{ e.severity }}">{{ e.severity }}</span></td>
-            <td>{% if e.use_case %}<a href="{% url 'kpi:project' e.use_case.code %}">{{ e.use_case.code }}</a>{% else %}<span class="subtle">—</span>{% endif %}</td>
+            <td>{% if e.project %}<a href="{% url 'kpi:project' e.project.code %}">{{ e.project.code }}</a>{% else %}<span class="subtle">—</span>{% endif %}</td>
             <td>{{ e.rule.name }}</td>
             <td>{{ e.message }}</td>
           </tr>

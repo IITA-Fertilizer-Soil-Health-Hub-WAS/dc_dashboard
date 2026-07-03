@@ -14,7 +14,7 @@ from apps.rbac.models import Role, UseCaseMembership
 from apps.review.models import ReviewState
 from apps.review.services import endorse
 from apps.submissions.models import Enumerator, Submission
-from apps.usecases.models import FormDefinition, Organization, UseCase
+from apps.usecases.models import FormDefinition, Organization, Project
 
 pytestmark = pytest.mark.django_db
 
@@ -22,8 +22,8 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture
 def world(django_user_model):
     org = Organization.objects.create(code="o", name="O")
-    uc = UseCase.objects.create(code="PROJ-A", name="A", organization=org)
-    form = FormDefinition.objects.create(use_case=uc, ona_form_id=1,
+    uc = Project.objects.create(code="PROJ-A", name="A", organization=org)
+    form = FormDefinition.objects.create(project=uc, ona_form_id=1,
                                          role=FormDefinition.Role.VALIDATION)
     return {"uc": uc, "form": form, "org": org}
 
@@ -32,14 +32,14 @@ def world(django_user_model):
 
 def test_scorecard_computes_reject_ontime_gps_and_ranks_by_quality(world):
     uc, form = world["uc"], world["form"]
-    unit = CollectionUnit.objects.create(use_case=uc, code="U1", lat="-1.29", lon="36.80")
-    good = Enumerator.objects.create(use_case=uc, enid="E-GOOD")
-    poor = Enumerator.objects.create(use_case=uc, enid="E-POOR")
+    unit = CollectionUnit.objects.create(project=uc, code="U1", lat="-1.29", lon="36.80")
+    good = Enumerator.objects.create(project=uc, enid="E-GOOD")
+    poor = Enumerator.objects.create(project=uc, enid="E-POOR")
     today = timezone.now()
 
     # Good enumerator: approved, on-time, on the plot.
     s = Submission.objects.create(
-        use_case=uc, form=form, ona_uuid="g1", content_hash="g1", enumerator=good,
+        project=uc, form=form, ona_uuid="g1", content_hash="g1", enumerator=good,
         collection_unit=unit, lat="-1.29", lon="36.80",
         event_date=today.date(), ona_submission_time=today)
     s.review.state = ReviewState.APPROVED
@@ -48,7 +48,7 @@ def test_scorecard_computes_reject_ontime_gps_and_ranks_by_quality(world):
     # Poor enumerator: declined, late (10-day lag), ~1.5 km off the plot.
     ev = today.date() - timedelta(days=10)
     s2 = Submission.objects.create(
-        use_case=uc, form=form, ona_uuid="p1", content_hash="p1", enumerator=poor,
+        project=uc, form=form, ona_uuid="p1", content_hash="p1", enumerator=poor,
         collection_unit=unit, lat="-1.30", lon="36.81",
         event_date=ev, ona_submission_time=today)
     s2.review.state = ReviewState.DECLINED
@@ -73,11 +73,11 @@ def test_coverage_by_area_buckets_and_orders_behindmost_first(world):
     uc, form = world["uc"], world["form"]
     # Musanze: 2 units, 2 collected (100%). Burera: 2 units, 0 collected (0%).
     for i in range(2):
-        u = CollectionUnit.objects.create(use_case=uc, code=f"M{i}", district="Musanze")
-        Submission.objects.create(use_case=uc, form=form, ona_uuid=f"m{i}",
+        u = CollectionUnit.objects.create(project=uc, code=f"M{i}", district="Musanze")
+        Submission.objects.create(project=uc, form=form, ona_uuid=f"m{i}",
                                   content_hash=f"m{i}", collection_unit=u)
     for i in range(2):
-        CollectionUnit.objects.create(use_case=uc, code=f"B{i}", district="Burera")
+        CollectionUnit.objects.create(project=uc, code=f"B{i}", district="Burera")
 
     areas = coverage_metrics(uc)["areas"]
     by_area = {a["area"]: a for a in areas}
@@ -92,7 +92,7 @@ def test_coverage_by_area_buckets_and_orders_behindmost_first(world):
 def endorser(world, django_user_model):
     user = django_user_model.objects.create_user(
         "c@x.org", "pw", is_active=True, organization=world["org"])
-    UseCaseMembership.objects.create(user=user, use_case=world["uc"], role=Role.TRIAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=user, project=world["uc"], role=Role.TRIAL_COORDINATOR)
     return user
 
 
@@ -100,20 +100,20 @@ def endorser(world, django_user_model):
 def validator(world, django_user_model):
     user = django_user_model.objects.create_user(
         "v@x.org", "pw", is_active=True, organization=world["org"])
-    UseCaseMembership.objects.create(user=user, use_case=world["uc"], role=Role.REGIONAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=user, project=world["uc"], role=Role.REGIONAL_COORDINATOR)
     return user
 
 
 def _pending_sub(world, endorser, uuid):
     sub = Submission.objects.create(
-        use_case=world["uc"], form=world["form"], ona_uuid=uuid, content_hash=uuid)
+        project=world["uc"], form=world["form"], ona_uuid=uuid, content_hash=uuid)
     endorse(endorser, sub)  # Gate 1 → QC_PENDING
     return sub
 
 
 def test_qc_queue_lists_only_qc_pending(client, world, endorser, validator):
     _pending_sub(world, endorser, "PENDING01")
-    Submission.objects.create(use_case=world["uc"], form=world["form"],
+    Submission.objects.create(project=world["uc"], form=world["form"],
                               ona_uuid="INGESTED9", content_hash="INGESTED9")  # still INGESTED
     client.force_login(validator)
     resp = client.get(reverse("dashboards:qc_signoff", args=["PROJ-A"]))
@@ -137,7 +137,7 @@ def test_qc_validate_approves(client, world, endorser, validator):
 def test_qc_queue_forbidden_without_validator_right(client, world, django_user_model):
     plain = django_user_model.objects.create_user(
         "p@x.org", "pw", is_active=True, organization=world["org"])
-    UseCaseMembership.objects.create(user=plain, use_case=world["uc"], role=Role.ENUMERATOR)
+    UseCaseMembership.objects.create(user=plain, project=world["uc"], role=Role.ENUMERATOR)
     client.force_login(plain)
     resp = client.get(reverse("dashboards:qc_signoff", args=["PROJ-A"]))
     assert resp.status_code == 404

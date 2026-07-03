@@ -110,7 +110,7 @@ def geo_containment(submission, params) -> list[FlagResult]:
 
 # --- Per-use-case rules (need the whole distribution / cross-submission view) --
 
-def numeric_outlier(use_case, params) -> list[FlagResult]:
+def numeric_outlier(project, params) -> list[FlagResult]:
     """Flag numeric values that are statistical outliers for their field across the
     whole project — a value that may sit *inside* the allowed range yet lies far from
     the norm (a unit slip or data-entry error a fixed range waves through). The
@@ -127,7 +127,7 @@ def numeric_outlier(use_case, params) -> list[FlagResult]:
 
     pairs: list[tuple] = []
     for sid, raw in SubmissionValue.objects.filter(
-        submission__use_case=use_case, field_key=field_key
+        submission__project=project, field_key=field_key
     ).values_list("submission_id", "current_value"):
         try:
             pairs.append((sid, float(raw)))
@@ -154,7 +154,7 @@ def numeric_outlier(use_case, params) -> list[FlagResult]:
     return out
 
 
-def geo_duplicate(use_case, params) -> list[FlagResult]:
+def geo_duplicate(project, params) -> list[FlagResult]:
     """Data-integrity / curbstoning signal: submissions from DIFFERENT households at
     the same GPS point — an enumerator who never actually moved. Submissions are
     snapped onto a small grid; any cell holding more than one household flags every
@@ -164,7 +164,7 @@ def geo_duplicate(use_case, params) -> list[FlagResult]:
     precision = int(params.get("precision", 4))
     cells: dict[tuple, list] = {}
     for s in Submission.objects.filter(
-        use_case=use_case, lat__isnull=False, lon__isnull=False
+        project=project, lat__isnull=False, lon__isnull=False
     ).values("id", "lat", "lon", "collection_unit_id"):
         key = (round(float(s["lat"]), precision), round(float(s["lon"]), precision))
         cells.setdefault(key, []).append(s)
@@ -183,7 +183,7 @@ def geo_duplicate(use_case, params) -> list[FlagResult]:
     return out
 
 
-def submission_speed(use_case, params) -> list[FlagResult]:
+def submission_speed(project, params) -> list[FlagResult]:
     """Data-integrity / curbstoning signal: an enumerator filing more than `max`
     submissions inside a short window — faster than genuine field interviews allow.
     Uses the server receipt time; a sliding window flags every submission caught in
@@ -198,7 +198,7 @@ def submission_speed(use_case, params) -> list[FlagResult]:
 
     by_enum: dict = {}
     for s in Submission.objects.filter(
-        use_case=use_case, enumerator__isnull=False, ona_submission_time__isnull=False
+        project=project, enumerator__isnull=False, ona_submission_time__isnull=False
     ).values("id", "enumerator_id", "ona_submission_time"):
         by_enum.setdefault(s["enumerator_id"], []).append(s)
 
@@ -223,7 +223,7 @@ def submission_speed(use_case, params) -> list[FlagResult]:
     return out
 
 
-def photo_reuse(use_case, params) -> list[FlagResult]:
+def photo_reuse(project, params) -> list[FlagResult]:
     """Data-integrity / curbstoning signal: the same photo (identical image bytes)
     submitted for DIFFERENT households — a fabricated visit reusing an earlier
     picture. Relies on `Submission.media_hashes` (populated by the media-hashing
@@ -233,7 +233,7 @@ def photo_reuse(use_case, params) -> list[FlagResult]:
     params: {message?}."""
     by_hash: dict[str, list] = {}
     for s in Submission.objects.filter(
-        use_case=use_case, collection_unit__isnull=False
+        project=project, collection_unit__isnull=False
     ).exclude(media_hashes=[]).values("id", "collection_unit_id", "media_hashes"):
         for h in s["media_hashes"] or []:
             by_hash.setdefault(h, []).append(s)
@@ -257,15 +257,15 @@ def photo_reuse(use_case, params) -> list[FlagResult]:
 
 # --- Per-household rules (need the whole event timeline) ----------------------
 
-def event_sequence(use_case, params) -> list[FlagResult]:
+def event_sequence(project, params) -> list[FlagResult]:
     """Flag households where an event was submitted while an earlier one is
     missing. (R: event N filled but event N-1 missing -> "Check submission events".)"""
     message = params.get("message", "Check submission events")
-    order = {e.event_key: e.sequence for e in use_case.schedule.all()}
+    order = {e.event_key: e.sequence for e in project.schedule.all()}
     if not order:
         return []
     out: list[FlagResult] = []
-    subs = Submission.objects.filter(use_case=use_case).select_related("collection_unit")
+    subs = Submission.objects.filter(project=project).select_related("collection_unit")
     by_hh: dict[Any, list[Submission]] = {}
     for s in subs:
         by_hh.setdefault(s.collection_unit_id, []).append(s)
@@ -284,19 +284,19 @@ def event_sequence(use_case, params) -> list[FlagResult]:
     return out
 
 
-def date_window(use_case, params, today: date | None = None) -> list[FlagResult]:
+def date_window(project, params, today: date | None = None) -> list[FlagResult]:
     """Flag overdue events: an expected event whose target date has passed but was
     never submitted. Drives the same schedule that colours the dashboard grid."""
     from django.utils import timezone
 
     today = today or timezone.localdate()
-    schedule = list(use_case.schedule.all())
+    schedule = list(project.schedule.all())
     if not schedule:
         return []
     out: list[FlagResult] = []
 
     subs = list(
-        Submission.objects.filter(use_case=use_case).select_related("collection_unit", "crop")
+        Submission.objects.filter(project=project).select_related("collection_unit", "crop")
     )
     # Group submissions per unit; track submitted events, Event1 date, and a
     # representative submission (latest) to carry the unit's overdue flags.

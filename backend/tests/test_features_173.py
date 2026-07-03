@@ -8,26 +8,26 @@ from apps.rbac.models import Role, UseCaseMembership
 from apps.review import services
 from apps.review.models import ReviewActionLog
 from apps.submissions.models import Submission
-from apps.usecases.models import FieldMapping, FormDefinition, UseCase
+from apps.usecases.models import FieldMapping, FormDefinition, Project
 
 pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
 def uc():
-    return UseCase.objects.create(code="UC", name="UC")
+    return Project.objects.create(code="UC", name="UC")
 
 
 @pytest.fixture
 def form(uc):
-    return FormDefinition.objects.create(use_case=uc, ona_form_id=1,
+    return FormDefinition.objects.create(project=uc, ona_form_id=1,
                                          role=FormDefinition.Role.VALIDATION)
 
 
 @pytest.fixture
 def coordinator(django_user_model, uc):
     u = django_user_model.objects.create_user("c@x.org", "pw", is_active=True)
-    UseCaseMembership.objects.create(user=u, use_case=uc, role=Role.TRIAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=u, project=uc, role=Role.TRIAL_COORDINATOR)
     return u
 
 
@@ -38,7 +38,7 @@ def staff(django_user_model):
 
 # ---- Feature 1: assignment + notification ----
 def test_assign_sets_assignee_logs_and_emails(uc, form, coordinator):
-    sub = Submission.objects.create(use_case=uc, form=form, ona_uuid="u1", content_hash="h")
+    sub = Submission.objects.create(project=uc, form=form, ona_uuid="u1", content_hash="h")
     services.assign(coordinator, sub, coordinator)
     sub.refresh_from_db()
     assert sub.review.assigned_to == coordinator
@@ -47,7 +47,7 @@ def test_assign_sets_assignee_logs_and_emails(uc, form, coordinator):
 
 
 def test_assign_to_me_from_review_screen(client, uc, form, coordinator):
-    sub = Submission.objects.create(use_case=uc, form=form, ona_uuid="u2", content_hash="h")
+    sub = Submission.objects.create(project=uc, form=form, ona_uuid="u2", content_hash="h")
     client.force_login(coordinator)
     resp = client.post(f"/project/{uc.code}/submission/{sub.pk}/review/", {"action": "assign_me"})
     assert resp.status_code == 200
@@ -58,10 +58,10 @@ def test_assign_to_me_from_review_screen(client, uc, form, coordinator):
 # ---- Feature 2: filters ----
 def test_issues_filtered_by_search_and_state(client, uc, form, coordinator):
     from apps.validation.models import ValidationFlag, ValidationRule
-    rule = ValidationRule.objects.create(use_case=uc, code="r", rule_type="REGEX_ID")
-    s1 = Submission.objects.create(use_case=uc, form=form, ona_uuid="AAA", content_hash="h",
+    rule = ValidationRule.objects.create(project=uc, code="r", rule_type="REGEX_ID")
+    s1 = Submission.objects.create(project=uc, form=form, ona_uuid="AAA", content_hash="h",
                                    event_key="Event1")
-    s2 = Submission.objects.create(use_case=uc, form=form, ona_uuid="BBB", content_hash="h",
+    s2 = Submission.objects.create(project=uc, form=form, ona_uuid="BBB", content_hash="h",
                                    event_key="Event2")
     ValidationFlag.objects.create(submission=s1, rule=rule, message="Check ENID", severity="ERROR")
     ValidationFlag.objects.create(submission=s2, rule=rule, message="Check HHID", severity="WARNING")
@@ -76,8 +76,8 @@ def test_issues_filtered_by_search_and_state(client, uc, form, coordinator):
 
 def test_issues_filters_survive_bulk_action(client, uc, form, coordinator):
     from apps.validation.models import ValidationFlag, ValidationRule
-    rule = ValidationRule.objects.create(use_case=uc, code="r", rule_type="REGEX_ID")
-    s = Submission.objects.create(use_case=uc, form=form, ona_uuid="KEEP", content_hash="h",
+    rule = ValidationRule.objects.create(project=uc, code="r", rule_type="REGEX_ID")
+    s = Submission.objects.create(project=uc, form=form, ona_uuid="KEEP", content_hash="h",
                                   event_key="Event9")
     ValidationFlag.objects.create(submission=s, rule=rule, message="x", severity="WARNING")
     client.force_login(coordinator)

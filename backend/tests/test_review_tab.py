@@ -8,15 +8,15 @@ from apps.rbac.models import Role, UseCaseMembership
 from apps.review import services
 from apps.review.models import ReviewState
 from apps.submissions.models import Submission
-from apps.usecases.models import Country, FormDefinition, Organization, Region, UseCase
+from apps.usecases.models import Country, FormDefinition, Organization, Project, Region
 
 pytestmark = pytest.mark.django_db
 
 
 def _sub(uc, n, state=ReviewState.INGESTED):
-    form = FormDefinition.objects.create(use_case=uc, ona_form_id=n,
+    form = FormDefinition.objects.create(project=uc, ona_form_id=n,
                                          role=FormDefinition.Role.VALIDATION)
-    s = Submission.objects.create(use_case=uc, form=form, ona_uuid=f"u{n}", content_hash="h")
+    s = Submission.objects.create(project=uc, form=form, ona_uuid=f"u{n}", content_hash="h")
     r = s.review
     r.state = state
     r.save()
@@ -28,14 +28,14 @@ def world(django_user_model):
     org = Organization.objects.create(code="o", name="O")
     region = Region.objects.create(organization=org, code="EA", name="EA")
     country = Country.objects.create(region=region, code="RW", name="Rwanda")
-    uc = UseCase.objects.create(code="UC", name="UC", organization=org, country=country)
+    uc = Project.objects.create(code="UC", name="UC", organization=org, country=country)
 
     tc = django_user_model.objects.create_user("tc@x.org", "pw", is_active=True, organization=org)
-    UseCaseMembership.objects.create(user=tc, use_case=uc, role=Role.TRIAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=tc, project=uc, role=Role.TRIAL_COORDINATOR)
     regional = django_user_model.objects.create_user("rc@x.org", "pw", is_active=True, organization=org)
     UseCaseMembership.objects.create(user=regional, region=region, role=Role.REGIONAL_COORDINATOR)
     viewer = django_user_model.objects.create_user("v@x.org", "pw", is_active=True, organization=org)
-    UseCaseMembership.objects.create(user=viewer, use_case=uc, role=Role.VIEWER)
+    UseCaseMembership.objects.create(user=viewer, project=uc, role=Role.VIEWER)
     return {"uc": uc, "tc": tc, "regional": regional, "viewer": viewer}
 
 
@@ -86,9 +86,9 @@ def test_review_tab_action_validate(client, world):
     assert s.review.state == ReviewState.APPROVED
 
 
-def test_review_action_scoped_to_use_case(client, django_user_model, world):
+def test_review_action_scoped_to_project(client, django_user_model, world):
     """A submission in another project can't be actioned through this project's tab."""
-    other = UseCase.objects.create(code="OTHER", name="Other")
+    other = Project.objects.create(code="OTHER", name="Other")
     s = _sub(other, 1, ReviewState.IN_REVIEW)
     client.force_login(world["tc"])
     # tc has no access to OTHER; posting its id under UC's tab must not act.

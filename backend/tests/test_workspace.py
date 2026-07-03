@@ -5,15 +5,15 @@ import pytest
 from django.urls import reverse
 
 from apps.rbac.models import Role, UseCaseMembership
-from apps.usecases.models import Organization, UseCase
+from apps.usecases.models import Organization, Project
 
 pytestmark = pytest.mark.django_db
 
 
-def _member(dj, org, *use_cases):
-    u = dj.objects.create_user(f"u{id(use_cases)}@x.org", "pw", is_active=True, organization=org)
-    for uc in use_cases:
-        UseCaseMembership.objects.create(user=u, use_case=uc, role=Role.VIEWER)
+def _member(dj, org, *projects):
+    u = dj.objects.create_user(f"u{id(projects)}@x.org", "pw", is_active=True, organization=org)
+    for uc in projects:
+        UseCaseMembership.objects.create(user=u, project=uc, role=Role.VIEWER)
     return u
 
 
@@ -23,7 +23,7 @@ def org():
 
 
 def test_opening_a_project_sets_active_workspace(client, django_user_model, org):
-    uc = UseCase.objects.create(code="PROJ-A", name="A", organization=org)
+    uc = Project.objects.create(code="PROJ-A", name="A", organization=org)
     u = _member(django_user_model, org, uc)
     client.force_login(u)
     resp = client.get(reverse("dashboards:usecase", args=["PROJ-A"]))
@@ -32,7 +32,7 @@ def test_opening_a_project_sets_active_workspace(client, django_user_model, org)
 
 
 def test_tab_deep_link(client, django_user_model, org):
-    uc = UseCase.objects.create(code="PROJ-A", name="A", organization=org)
+    uc = Project.objects.create(code="PROJ-A", name="A", organization=org)
     u = _member(django_user_model, org, uc)
     client.force_login(u)
     resp = client.get(reverse("dashboards:usecase", args=["PROJ-A"]) + "?tab=review")
@@ -43,7 +43,7 @@ def test_tab_deep_link(client, django_user_model, org):
 
 
 def test_single_project_user_lands_in_workspace(client, django_user_model, org):
-    uc = UseCase.objects.create(code="ONLY", name="Only", organization=org)
+    uc = Project.objects.create(code="ONLY", name="Only", organization=org)
     u = _member(django_user_model, org, uc)
     client.force_login(u)
     resp = client.get("/")
@@ -52,8 +52,8 @@ def test_single_project_user_lands_in_workspace(client, django_user_model, org):
 
 
 def test_multi_project_user_sees_picker(client, django_user_model, org):
-    a = UseCase.objects.create(code="A", name="A", organization=org)
-    b = UseCase.objects.create(code="B", name="B", organization=org)
+    a = Project.objects.create(code="A", name="A", organization=org)
+    b = Project.objects.create(code="B", name="B", organization=org)
     u = _member(django_user_model, org, a, b)
     client.force_login(u)
     resp = client.get("/")
@@ -61,8 +61,8 @@ def test_multi_project_user_sees_picker(client, django_user_model, org):
 
 
 def test_browsing_directory_clears_active_workspace(client, django_user_model, org):
-    a = UseCase.objects.create(code="A", name="A", organization=org)
-    b = UseCase.objects.create(code="B", name="B", organization=org)
+    a = Project.objects.create(code="A", name="A", organization=org)
+    b = Project.objects.create(code="B", name="B", organization=org)
     u = _member(django_user_model, org, a, b)
     client.force_login(u)
     client.get(reverse("dashboards:usecase", args=["A"]))

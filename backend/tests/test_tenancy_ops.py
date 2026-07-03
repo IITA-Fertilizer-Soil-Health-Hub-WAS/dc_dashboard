@@ -10,7 +10,7 @@ from django.core.management.base import CommandError
 
 from apps.config_admin.loader import import_config
 from apps.submissions.models import Enumerator
-from apps.usecases.models import FieldMapping, FormDefinition, Organization, UseCase
+from apps.usecases.models import FieldMapping, FormDefinition, Organization, Project
 
 pytestmark = pytest.mark.django_db
 
@@ -30,24 +30,24 @@ def test_create_organization_rejects_duplicate():
 
 def test_import_config_assigns_named_org():
     org = Organization.objects.create(code="inst", name="Institution")
-    uc = import_config({"use_case": {"code": "P1", "name": "Project 1", "organization": "inst"}})
+    uc = import_config({"project": {"code": "P1", "name": "Project 1", "organization": "inst"}})
     assert uc.organization == org
 
 
 def test_import_config_falls_back_to_single_org():
     org = Organization.objects.create(code="only", name="Only Org")
-    uc = import_config({"use_case": {"code": "P2", "name": "Project 2"}})
+    uc = import_config({"project": {"code": "P2", "name": "Project 2"}})
     assert uc.organization == org  # exactly one org → the default tenant
 
 
 def test_export_organization_roundtrip(django_user_model):
     org = Organization.objects.create(code="exp", name="Exportable")
-    uc = UseCase.objects.create(code="EXP-UC", name="Exp UC", organization=org)
+    uc = Project.objects.create(code="EXP-UC", name="Exp UC", organization=org)
     form = FormDefinition.objects.create(
-        use_case=uc, ona_form_id=1, role=FormDefinition.Role.VALIDATION
+        project=uc, ona_form_id=1, role=FormDefinition.Role.VALIDATION
     )
     FieldMapping.objects.create(form=form, target_field="ENID", source_paths=["enid"], order=0)
-    Enumerator.objects.create(use_case=uc, enid="EN1")
+    Enumerator.objects.create(project=uc, enid="EN1")
     django_user_model.objects.create_user("u@x.org", "pw", is_active=True, organization=org)
 
     out, err = StringIO(), StringIO()
@@ -56,12 +56,12 @@ def test_export_organization_roundtrip(django_user_model):
 
     models = {row["model"] for row in payload}
     assert "usecases.organization" in models
-    assert "usecases.usecase" in models
+    assert "usecases.project" in models
     assert "usecases.formdefinition" in models
     assert "submissions.enumerator" in models
     assert "accounts.user" in models
     # The use case row carries its organization FK so the import stays owned.
-    uc_row = next(r for r in payload if r["model"] == "usecases.usecase")
+    uc_row = next(r for r in payload if r["model"] == "usecases.project")
     assert uc_row["fields"]["organization"] == str(org.pk)
 
 
@@ -73,14 +73,14 @@ def test_export_unknown_org_errors():
 def test_export_excludes_other_orgs_data():
     a = Organization.objects.create(code="a", name="A")
     b = Organization.objects.create(code="b", name="B")
-    UseCase.objects.create(code="A-UC", name="A", organization=a)
-    UseCase.objects.create(code="B-UC", name="B", organization=b)
+    Project.objects.create(code="A-UC", name="A", organization=a)
+    Project.objects.create(code="B-UC", name="B", organization=b)
 
     out = StringIO()
     call_command("export_organization", "a", stdout=out)
     codes = {
         r["fields"].get("code")
         for r in json.loads(out.getvalue())
-        if r["model"] == "usecases.usecase"
+        if r["model"] == "usecases.project"
     }
     assert codes == {"A-UC"}  # B's project is not in A's export

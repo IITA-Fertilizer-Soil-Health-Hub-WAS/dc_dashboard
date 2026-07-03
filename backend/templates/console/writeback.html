@@ -38,7 +38,7 @@
       <tbody>
         {% for s in rows %}
           <tr>
-            <td>{{ s.use_case.code }}</td>
+            <td>{{ s.project.code }}</td>
             <td class="mono">{{ s.ona_uuid|truncatechars:18 }}</td>
             <td>{{ s.enumerator.enid|default:"—" }}</td>
             <td>

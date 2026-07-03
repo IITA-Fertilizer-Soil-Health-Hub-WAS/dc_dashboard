@@ -31,10 +31,10 @@ def build_backend(backend_type: str = DEFAULT_BACKEND, *, base_url: str = "",
     return backend_class(backend_type)(base_url=base_url, token=token, config=config)
 
 
-def get_backend_for(use_case) -> CollectionBackend:
+def get_backend_for(project) -> CollectionBackend:
     """Resolve the backend bound to a use case via its DataSource, or fall back
     to ONA configured from global settings (back-compat for existing use cases)."""
-    ds = getattr(use_case, "data_source", None)
+    ds = getattr(project, "data_source", None)
     if ds is None:
         return OnaBackend()
     return build_backend(ds.backend, base_url=ds.base_url, token=ds.token, config=ds.config)

@@ -6,8 +6,8 @@ import pytest
 from apps.ingestion.backends.base import CollectionBackend, RemoteForm, RemoteProject, WriteResult
 from apps.ingestion.backends.ona import OnaBackend
 from apps.ingestion.backends.registry import build_backend, get_backend_for
-from apps.ingestion.sync import sync_use_case
-from apps.usecases.models import DataSource, FormDefinition, UseCase
+from apps.ingestion.sync import sync_project
+from apps.usecases.models import DataSource, FormDefinition, Project
 
 pytestmark = pytest.mark.django_db
 
@@ -20,10 +20,10 @@ def test_default_and_explicit_backend():
 
 
 def test_get_backend_for_uses_datasource():
-    uc = UseCase.objects.create(code="X", name="X")
+    uc = Project.objects.create(code="X", name="X")
     # No DataSource -> ONA from global settings.
     assert isinstance(get_backend_for(uc), OnaBackend)
-    DataSource.objects.create(use_case=uc, backend="ONA", base_url="https://k.example", token="tok")
+    DataSource.objects.create(project=uc, backend="ONA", base_url="https://k.example", token="tok")
     backend = get_backend_for(uc)
     assert backend.base_url == "https://k.example"
     assert backend.token == "tok"
@@ -49,15 +49,15 @@ class FakeBackend(CollectionBackend):
 
 
 def test_sync_runs_through_any_backend():
-    uc = UseCase.objects.create(code="FAKEUC", name="Fake")
-    form = FormDefinition.objects.create(use_case=uc, ona_form_id=42,
+    uc = Project.objects.create(code="FAKEUC", name="Fake")
+    form = FormDefinition.objects.create(project=uc, ona_form_id=42,
                                          role=FormDefinition.Role.VALIDATION)
     from apps.usecases.models import FieldMapping
     FieldMapping.objects.create(form=form, target_field="ENID", source_paths=["enid"])
     FieldMapping.objects.create(form=form, target_field="event_key", source_paths=["event"])
 
     backend = FakeBackend({42: [{"_uuid": "u1", "enid": "EN1", "event": "Event1"}]})
-    stats = sync_use_case(uc, backend=backend)
+    stats = sync_project(uc, backend=backend)
     assert stats.created == 1
     assert uc.submissions.filter(ona_uuid="u1").exists()
 
@@ -104,7 +104,7 @@ def test_loader_creates_data_source():
     from apps.config_admin.loader import import_config
 
     uc = import_config({
-        "use_case": {"code": "DSUC", "name": "DS UC"},
+        "project": {"code": "DSUC", "name": "DS UC"},
         "data_source": {"backend": "ONA", "base_url": "https://api.ona.io", "token": "zzz"},
         "forms": [{"ona_form_id": 1, "role": "VALIDATION",
                    "mappings": [{"target": "event_key", "source": ["e"]}]}],

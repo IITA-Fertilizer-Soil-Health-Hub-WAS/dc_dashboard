@@ -12,11 +12,11 @@ from django.conf import settings
 from django.db import models
 
 from apps.common.models import BaseModel
-from apps.usecases.models import Crop, FormDefinition, Trial, UseCase
+from apps.usecases.models import Crop, FormDefinition, Project, Trial
 
 
 class Enumerator(BaseModel):
-    use_case = models.ForeignKey(UseCase, on_delete=models.CASCADE, related_name="enumerators")
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="enumerators")
     enid = models.CharField(max_length=64)
     first_name = models.CharField(max_length=128, blank=True)
     surname = models.CharField(max_length=128, blank=True)
@@ -34,7 +34,7 @@ class Enumerator(BaseModel):
     )
 
     class Meta:
-        unique_together = ("use_case", "enid")
+        unique_together = ("project", "enid")
         ordering = ["enid"]
 
     def __str__(self) -> str:
@@ -45,7 +45,7 @@ class Submission(BaseModel):
     """One ONA submission, immutable after ingest. Denormalized fields support
     fast dashboard filtering without re-parsing the payload."""
 
-    use_case = models.ForeignKey(UseCase, on_delete=models.CASCADE, related_name="submissions")
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="submissions")
     form = models.ForeignKey(FormDefinition, on_delete=models.CASCADE, related_name="submissions")
 
     ona_submission_id = models.BigIntegerField(null=True, blank=True)  # ONA "_id"
@@ -119,17 +119,17 @@ class Submission(BaseModel):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["use_case", "ona_uuid"], name="uq_submission_use_case_uuid"
+                fields=["project", "ona_uuid"], name="uq_submission_project_uuid"
             )
         ]
         indexes = [
-            models.Index(fields=["use_case", "event_key"]),
-            models.Index(fields=["use_case", "enumerator"]),
+            models.Index(fields=["project", "event_key"], name="submissions_project_evt_idx"),
+            models.Index(fields=["project", "enumerator"], name="submissions_project_enum_idx"),
         ]
         ordering = ["-event_date", "-ona_submission_time"]
 
     def __str__(self) -> str:
-        return f"{self.use_case.code}:{self.ona_uuid}"
+        return f"{self.project.code}:{self.ona_uuid}"
 
     @property
     def is_corrected(self) -> bool:

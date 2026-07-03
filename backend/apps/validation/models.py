@@ -12,7 +12,7 @@ from django.db import models
 
 from apps.common.models import BaseModel
 from apps.submissions.models import Submission
-from apps.usecases.models import UseCase
+from apps.usecases.models import Project
 
 
 class ValidationRule(BaseModel):
@@ -43,7 +43,7 @@ class ValidationRule(BaseModel):
         WARNING = "WARNING", "Warning"
         ERROR = "ERROR", "Error"
 
-    use_case = models.ForeignKey(UseCase, on_delete=models.CASCADE, related_name="rules")
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="rules")
     code = models.SlugField(max_length=64)
     rule_type = models.CharField(max_length=20, choices=RuleType.choices)
     params = models.JSONField(default=dict, blank=True)
@@ -53,11 +53,11 @@ class ValidationRule(BaseModel):
     is_enabled = models.BooleanField(default=True)
 
     class Meta:
-        unique_together = ("use_case", "code")
-        ordering = ["use_case", "code"]
+        unique_together = ("project", "code")
+        ordering = ["project", "code"]
 
     def __str__(self) -> str:
-        return f"{self.use_case.code}:{self.code}({self.rule_type})"
+        return f"{self.project.code}:{self.code}({self.rule_type})"
 
 
 class ValidationFlag(BaseModel):

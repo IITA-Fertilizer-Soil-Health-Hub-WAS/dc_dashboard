@@ -11,7 +11,7 @@ from apps.kpi.metrics import coverage_metrics, enumerator_metrics, quality_metri
 from apps.rbac.models import Role, UseCaseMembership
 from apps.review.models import Review, ReviewState
 from apps.submissions.models import Enumerator, Submission
-from apps.usecases.models import FormDefinition, Organization, UseCase
+from apps.usecases.models import FormDefinition, Organization, Project
 from apps.validation.models import ValidationFlag, ValidationRule
 
 pytestmark = pytest.mark.django_db
@@ -20,24 +20,24 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture
 def world(django_user_model):
     org = Organization.objects.create(code="o", name="O")
-    uc = UseCase.objects.create(code="PROJ-A", name="Project A", organization=org)
-    other = UseCase.objects.create(code="PROJ-B", name="Project B", organization=org)
-    form = FormDefinition.objects.create(use_case=uc, ona_form_id=11,
+    uc = Project.objects.create(code="PROJ-A", name="Project A", organization=org)
+    other = Project.objects.create(code="PROJ-B", name="Project B", organization=org)
+    form = FormDefinition.objects.create(project=uc, ona_form_id=11,
                                          role=FormDefinition.Role.VALIDATION)
-    en1 = Enumerator.objects.create(use_case=uc, enid="EN-1", first_name="Ana")
-    en2 = Enumerator.objects.create(use_case=uc, enid="EN-2")
+    en1 = Enumerator.objects.create(project=uc, enid="EN-1", first_name="Ana")
+    en2 = Enumerator.objects.create(project=uc, enid="EN-2")
 
     # Two geo-located units; only u1 gets data (collected), u2 stays pending.
-    u1 = CollectionUnit.objects.create(use_case=uc, code="U1", name="Plot 1",
+    u1 = CollectionUnit.objects.create(project=uc, code="U1", name="Plot 1",
                                        lat="1.0", lon="2.0")
-    CollectionUnit.objects.create(use_case=uc, code="U2", name="Plot 2",
+    CollectionUnit.objects.create(project=uc, code="U2", name="Plot 2",
                                   lat="1.1", lon="2.1")
 
-    rule = ValidationRule.objects.create(use_case=uc, code="id-format",
+    rule = ValidationRule.objects.create(project=uc, code="id-format",
                                          rule_type=ValidationRule.RuleType.REGEX_ID,
                                          severity=ValidationRule.Severity.ERROR)
     for i in range(4):
-        s = Submission.objects.create(use_case=uc, form=form, ona_uuid=f"a-{i}",
+        s = Submission.objects.create(project=uc, form=form, ona_uuid=f"a-{i}",
                                       content_hash="h", enumerator=en1,
                                       collection_unit=u1, event_date=date.today())
         if i == 0:
@@ -46,12 +46,12 @@ def world(django_user_model):
             ValidationFlag.objects.create(submission=s, rule=rule, message="bad id",
                                           severity=ValidationRule.Severity.ERROR,
                                           status=ValidationFlag.Status.OPEN, field_key=f"f{i}")
-    Submission.objects.create(use_case=uc, form=form, ona_uuid="a-x",
+    Submission.objects.create(project=uc, form=form, ona_uuid="a-x",
                               content_hash="h", enumerator=en2, event_date=date.today())
 
     coord = django_user_model.objects.create_user("c@x.org", "pw", is_active=True,
                                                    organization=org)
-    UseCaseMembership.objects.create(user=coord, use_case=uc, role=Role.TRIAL_COORDINATOR)
+    UseCaseMembership.objects.create(user=coord, project=uc, role=Role.TRIAL_COORDINATOR)
     return {"uc": uc, "other": other, "coord": coord}
 
 

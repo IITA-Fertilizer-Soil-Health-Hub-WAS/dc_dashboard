@@ -10,7 +10,7 @@ import json
 from django.core.management.base import BaseCommand, CommandError
 
 from apps.fieldwork.candidate_import import import_candidates
-from apps.usecases.models import UseCase
+from apps.usecases.models import Project
 
 
 class Command(BaseCommand):
@@ -24,8 +24,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
-            uc = UseCase.objects.get(code=options["code"])
-        except UseCase.DoesNotExist:
+            uc = Project.objects.get(code=options["code"])
+        except Project.DoesNotExist:
             raise CommandError(f"Unknown use case: {options['code']}") from None
         try:
             with open(options["geojson"], encoding="utf-8") as fh:

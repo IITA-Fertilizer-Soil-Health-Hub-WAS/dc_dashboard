@@ -4,11 +4,11 @@
 {% block console_main %}
   <div class="page-head">
     <h2>{{ job.name }}</h2>
-    <span class="pill">{{ job.use_case.code }}</span>
+    <span class="pill">{{ job.project.code }}</span>
     {% if job.form %}<span class="subtle">{{ job.form.title|default:job.form.server_ref }}</span>{% endif %}
     {% if job.deadline %}<span class="pill warn">due {{ job.deadline }}</span>{% endif %}
   </div>
-  <p class="subtle" style="margin:.1rem 0 1rem;">Assign the {{ job.use_case.get_unit_type_display|lower }}s to enumerators. {{ assignments|length }} of {{ job.target_count }} assigned.</p>
+  <p class="subtle" style="margin:.1rem 0 1rem;">Assign the {{ job.project.get_unit_type_display|lower }}s to enumerators. {{ assignments|length }} of {{ job.target_count }} assigned.</p>
 
   {% if messages %}{% for msg in messages %}<div class="pill" style="margin-bottom:.7rem;">{{ msg }}</div>{% endfor %}{% endif %}
 

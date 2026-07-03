@@ -11,8 +11,8 @@ from django.utils import timezone
 from apps.fieldwork.models import CollectionUnit
 from apps.ingestion.media_hash import hash_submission_media
 from apps.submissions.models import Enumerator, Submission
-from apps.usecases.models import FormDefinition, Organization, UseCase
-from apps.validation.engine import run_for_use_case
+from apps.usecases.models import FormDefinition, Organization, Project
+from apps.validation.engine import run_for_project
 from apps.validation.models import ValidationFlag, ValidationRule
 
 pytestmark = pytest.mark.django_db
@@ -21,31 +21,31 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture
 def world():
     org = Organization.objects.create(code="o", name="O")
-    uc = UseCase.objects.create(code="PROJ-A", name="A", organization=org)
-    form = FormDefinition.objects.create(use_case=uc, ona_form_id=1,
+    uc = Project.objects.create(code="PROJ-A", name="A", organization=org)
+    form = FormDefinition.objects.create(project=uc, ona_form_id=1,
                                          role=FormDefinition.Role.VALIDATION)
     return {"uc": uc, "form": form, "org": org}
 
 
 def _sub(world, uuid, **kw):
     return Submission.objects.create(
-        use_case=world["uc"], form=world["form"], ona_uuid=uuid, content_hash=uuid, **kw)
+        project=world["uc"], form=world["form"], ona_uuid=uuid, content_hash=uuid, **kw)
 
 
 # --- PHOTO_REUSE rule --------------------------------------------------------
 
 def test_photo_reuse_flags_shared_image_across_households(world):
     uc = world["uc"]
-    h1 = CollectionUnit.objects.create(use_case=uc, code="H1")
-    h2 = CollectionUnit.objects.create(use_case=uc, code="H2")
-    h3 = CollectionUnit.objects.create(use_case=uc, code="H3")
+    h1 = CollectionUnit.objects.create(project=uc, code="H1")
+    h2 = CollectionUnit.objects.create(project=uc, code="H2")
+    h3 = CollectionUnit.objects.create(project=uc, code="H3")
     _sub(world, "a", collection_unit=h1, media_hashes=["deadbeef"])
     _sub(world, "b", collection_unit=h2, media_hashes=["deadbeef"])   # same photo, other farmer
     _sub(world, "c", collection_unit=h3, media_hashes=["c0ffee"])     # unique
 
     ValidationRule.objects.create(
-        use_case=uc, code="photo", rule_type=ValidationRule.RuleType.PHOTO_REUSE)
-    run_for_use_case(uc)
+        project=uc, code="photo", rule_type=ValidationRule.RuleType.PHOTO_REUSE)
+    run_for_project(uc)
 
     flagged = set(ValidationFlag.objects.filter(status="OPEN").values_list("submission__ona_uuid", flat=True))
     assert flagged == {"a", "b"}
@@ -53,12 +53,12 @@ def test_photo_reuse_flags_shared_image_across_households(world):
 
 def test_photo_reuse_ignores_same_household(world):
     uc = world["uc"]
-    h1 = CollectionUnit.objects.create(use_case=uc, code="H1")
+    h1 = CollectionUnit.objects.create(project=uc, code="H1")
     _sub(world, "e1", collection_unit=h1, media_hashes=["shared"])
     _sub(world, "e2", collection_unit=h1, media_hashes=["shared"])  # same HH across events
     ValidationRule.objects.create(
-        use_case=uc, code="photo", rule_type=ValidationRule.RuleType.PHOTO_REUSE)
-    run_for_use_case(uc)
+        project=uc, code="photo", rule_type=ValidationRule.RuleType.PHOTO_REUSE)
+    run_for_project(uc)
     assert ValidationFlag.objects.filter(status="OPEN").count() == 0
 
 
@@ -86,7 +86,7 @@ def test_hash_submission_media_stores_image_sha256_only(world):
     assert sub.media_hashed_at is not None   # marked processed
 
 
-def test_hash_use_case_media_only_new_skips_processed(world, monkeypatch):
+def test_hash_project_media_only_new_skips_processed(world, monkeypatch):
     """The recurring task must not re-fetch already-processed submissions — even
     media-less ones (marked via media_hashed_at, not by having hashes)."""
     from apps.ingestion import media_hash as mh
@@ -102,9 +102,9 @@ def test_hash_use_case_media_only_new_skips_processed(world, monkeypatch):
     monkeypatch.setattr(mh, "hash_submission_media", fake_hash)
     _sub(world, "s1")
     _sub(world, "s2")
-    first = mh.hash_use_case_media(world["uc"], only_new=True)
+    first = mh.hash_project_media(world["uc"], only_new=True)
     assert first.processed == 2 and calls["n"] == 2
-    second = mh.hash_use_case_media(world["uc"], only_new=True)  # nothing new
+    second = mh.hash_project_media(world["uc"], only_new=True)  # nothing new
     assert second.processed == 0 and calls["n"] == 2
 
 
@@ -114,8 +114,8 @@ def test_my_performance_shows_own_score_and_rank(client, world, django_user_mode
     uc = world["uc"]
     user = django_user_model.objects.create_user(
         "e@x.org", "pw", is_active=True, organization=world["org"])
-    me = Enumerator.objects.create(use_case=uc, enid="E-ME", user=user)
-    other = Enumerator.objects.create(use_case=uc, enid="E-OTHER")
+    me = Enumerator.objects.create(project=uc, enid="E-ME", user=user)
+    other = Enumerator.objects.create(project=uc, enid="E-OTHER")
     today = timezone.localdate()
     _sub(world, "mine1", enumerator=me, event_date=today)
     _sub(world, "mine2", enumerator=me, event_date=today)

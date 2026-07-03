@@ -45,7 +45,7 @@
                   </div>
                 </div>
               </td>
-              <td><span class="chip scope"><span class="msym">category</span>{{ r.use_case.code }}</span></td>
+              <td><span class="chip scope"><span class="msym">category</span>{{ r.project.code }}</span></td>
               <td>
                 <select name="role" form="req-{{ r.pk }}" class="input" style="max-width:190px;">
                   {% for o in role_options %}<option value="{{ o.value }}" {% if o.value == 'VIEWER' %}selected{% endif %}>{{ o.label }}</option>{% endfor %}
@@ -156,7 +156,7 @@
              class="input" style="min-width:280px;">
       <select name="scope" required class="input" style="min-width:200px;">
         <option value="">Project…</option>
-        {% for o in use_case_options %}<option value="{{ o.value }}">{{ o.label }}</option>{% endfor %}
+        {% for o in project_options %}<option value="{{ o.value }}">{{ o.label }}</option>{% endfor %}
       </select>
       <select name="role" required class="input" style="min-width:180px;">
         <option value="">Role…</option>
@@ -190,8 +190,8 @@
               </div>
             </td>
             <td>
-              {% if m.use_case %}<span class="chip scope"><span class="msym">category</span>{{ m.use_case.code }}</span>
-                {% if m.user.organization_id and m.user.organization_id != m.use_case.organization_id %}<span class="chip ext"><span class="msym">public</span>external</span>{% endif %}
+              {% if m.project %}<span class="chip scope"><span class="msym">category</span>{{ m.project.code }}</span>
+                {% if m.user.organization_id and m.user.organization_id != m.project.organization_id %}<span class="chip ext"><span class="msym">public</span>external</span>{% endif %}
               {% elif m.country %}<span class="chip scope"><span class="msym">flag</span>{{ m.country.name }}</span>
               {% else %}<span class="chip scope"><span class="msym">public</span>{{ m.region.name }}</span>{% endif %}
             </td>

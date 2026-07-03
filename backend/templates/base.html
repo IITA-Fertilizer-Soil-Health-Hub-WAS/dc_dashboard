@@ -359,10 +359,10 @@
           <div class="ws-head">
             <div class="ws-switch">
               <span class="msym" aria-hidden="true">folder_open</span>
-              {% if nav_use_cases_total > 1 %}
+              {% if nav_projects_total > 1 %}
                 <select aria-label="Current project — choose another to switch"
                         onchange="if(this.value){window.location.href=this.value;}">
-                  {% for uc in nav_use_cases %}
+                  {% for uc in nav_projects %}
                     <option value="{% url 'dashboards:usecase' uc.code %}" {% if uc.code == active_uc.code %}selected{% endif %}>{{ uc.name|default:uc.code }}</option>
                   {% endfor %}
                 </select>
@@ -389,7 +389,7 @@
              class="{% if active_tab == 'enumerators' %}active{% endif %}">
             <span class="msym">badge</span>Enumerators
           </a>
-          <a href="{% url 'console:list' 'collection-units' %}?use_case={{ active_uc.code }}"
+          <a href="{% url 'console:list' 'collection-units' %}?project={{ active_uc.code }}"
              class="{% if request.resolver_match.kwargs.key == 'collection-units' %}active{% endif %}">
             <span class="msym">place</span>Collection units
           </a>
@@ -420,7 +420,7 @@
 
           {% if can_manage_access %}
             <div class="lbl">Manage</div>
-            <a href="{% url 'console:list' 'jobs' %}?use_case={{ active_uc.code }}"
+            <a href="{% url 'console:list' 'jobs' %}?project={{ active_uc.code }}"
                class="{% if request.resolver_match.kwargs.key == 'jobs' or request.resolver_match.url_name == 'job_assignments' %}active{% endif %}">
               <span class="msym">assignment</span>Jobs &amp; assignments
             </a>
@@ -430,7 +430,7 @@
               {% if pending_approvals_count %}<span class="pill" style="margin-left:auto;font-size:.66rem;">{{ pending_approvals_count }}</span>{% endif %}
             </a>
             {% if can_manage_access %}
-              <a href="{% url 'console:plot_election' %}?use_case={{ active_uc.code }}"
+              <a href="{% url 'console:plot_election' %}?project={{ active_uc.code }}"
                  class="{% if request.resolver_match.url_name == 'plot_election' or request.resolver_match.url_name == 'plot_elect' %}active{% endif %}">
                 <span class="msym">where_to_vote</span>Plot election
               </a>
@@ -448,7 +448,7 @@
                 <summary>{{ group }}<span class="msym chev">chevron_right</span></summary>
                 <div class="nav-sub">
                   {% for it in items %}
-                    <a href="{% url 'console:list' it.key %}?use_case={{ active_uc.code }}" title="{{ it.description }}"
+                    <a href="{% url 'console:list' it.key %}?project={{ active_uc.code }}" title="{{ it.description }}"
                        class="{% if it.key == request.resolver_match.kwargs.key %}active{% endif %}">
                       <span class="msym">{{ it.icon }}</span>{{ it.label }}
                     </a>
@@ -480,13 +480,13 @@
           <a href="{% url 'dashboards:projects' %}" title="Browse and search all projects"
              class="{% if request.resolver_match.url_name == 'projects' or request.resolver_match.url_name == 'index' %}active{% endif %}">
             <span class="msym">grid_view</span>{% if user.is_staff %}Browse projects{% else %}My projects{% endif %}
-            {% if nav_use_cases_total %}<span class="pill neutral" style="margin-left:auto;font-size:.66rem;">{{ nav_use_cases_total }}</span>{% endif %}
+            {% if nav_projects_total %}<span class="pill neutral" style="margin-left:auto;font-size:.66rem;">{{ nav_projects_total }}</span>{% endif %}
           </a>
-          {% if nav_use_cases %}
+          {% if nav_projects %}
             <select class="nav-proj-select" aria-label="Open a project"
                     onchange="if(this.value){window.location.href=this.value;}">
               <option value="">Open a project…</option>
-              {% for uc in nav_use_cases %}
+              {% for uc in nav_projects %}
                 <option value="{% url 'dashboards:usecase' uc.code %}">{{ uc.name|default:uc.code }}</option>
               {% endfor %}
             </select>

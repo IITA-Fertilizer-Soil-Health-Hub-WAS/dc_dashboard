@@ -12,7 +12,7 @@ from django.db.models import Count, DateField
 from django.db.models.functions import Coalesce, TruncDate
 
 from apps.submissions.models import Submission
-from apps.usecases.models import UseCase
+from apps.usecases.models import Project
 from apps.validation.models import ValidationFlag
 
 from .models import EnumeratorKpiDaily, FormKpiDaily, ProjectKpiDaily
@@ -33,9 +33,9 @@ _DAY = _day_expr()
 
 
 @transaction.atomic
-def rebuild_use_case_kpis(use_case: UseCase) -> dict[str, int]:
+def rebuild_project_kpis(project: Project) -> dict[str, int]:
     """Recompute all daily aggregates for one project. Returns row counts."""
-    subs = Submission.objects.filter(use_case=use_case)
+    subs = Submission.objects.filter(project=project)
 
     # Project per-day: submissions + active (distinct) enumerators.
     proj = (
@@ -45,16 +45,16 @@ def rebuild_use_case_kpis(use_case: UseCase) -> dict[str, int]:
     # A flag counts on its submission's collection day (so it lines up with the
     # submission rows, not the day the rule happened to run).
     flags = (
-        ValidationFlag.objects.filter(submission__use_case=use_case)
+        ValidationFlag.objects.filter(submission__project=project)
         .annotate(day=_day_expr("submission__"))
         .values("day").annotate(n=Count("id"))
     )
     flags_by_day = {f["day"]: f["n"] for f in flags if f["day"]}
 
-    ProjectKpiDaily.objects.filter(use_case=use_case).delete()
+    ProjectKpiDaily.objects.filter(project=project).delete()
     ProjectKpiDaily.objects.bulk_create([
         ProjectKpiDaily(
-            use_case=use_case, date=r["day"], submissions=r["n"],
+            project=project, date=r["day"], submissions=r["n"],
             active_enumerators=r["enums"], flags_opened=flags_by_day.get(r["day"], 0),
         )
         for r in proj if r["day"]
@@ -65,7 +65,7 @@ def rebuild_use_case_kpis(use_case: UseCase) -> dict[str, int]:
         subs.filter(form__isnull=False).annotate(day=_DAY)
         .values("form", "day").annotate(n=Count("id"))
     )
-    FormKpiDaily.objects.filter(form__use_case=use_case).delete()
+    FormKpiDaily.objects.filter(form__project=project).delete()
     FormKpiDaily.objects.bulk_create([
         FormKpiDaily(form_id=r["form"], date=r["day"], submissions=r["n"])
         for r in form_rows if r["day"]
@@ -76,26 +76,26 @@ def rebuild_use_case_kpis(use_case: UseCase) -> dict[str, int]:
         subs.filter(enumerator__isnull=False).annotate(day=_DAY)
         .values("enumerator", "day").annotate(n=Count("id"))
     )
-    EnumeratorKpiDaily.objects.filter(use_case=use_case).delete()
+    EnumeratorKpiDaily.objects.filter(project=project).delete()
     EnumeratorKpiDaily.objects.bulk_create([
         EnumeratorKpiDaily(
-            enumerator_id=r["enumerator"], use_case=use_case, date=r["day"], submissions=r["n"]
+            enumerator_id=r["enumerator"], project=project, date=r["day"], submissions=r["n"]
         )
         for r in enum_rows if r["day"]
     ])
 
     return {
-        "project_days": ProjectKpiDaily.objects.filter(use_case=use_case).count(),
-        "form_days": FormKpiDaily.objects.filter(form__use_case=use_case).count(),
-        "enumerator_days": EnumeratorKpiDaily.objects.filter(use_case=use_case).count(),
+        "project_days": ProjectKpiDaily.objects.filter(project=project).count(),
+        "form_days": FormKpiDaily.objects.filter(form__project=project).count(),
+        "enumerator_days": EnumeratorKpiDaily.objects.filter(project=project).count(),
     }
 
 
 def rebuild_all_kpis() -> dict[str, int]:
     """Rebuild aggregates for every active project."""
     totals = {"projects": 0, "project_days": 0, "form_days": 0, "enumerator_days": 0}
-    for uc in UseCase.objects.filter(is_active=True):
-        r = rebuild_use_case_kpis(uc)
+    for uc in Project.objects.filter(is_active=True):
+        r = rebuild_project_kpis(uc)
         totals["projects"] += 1
         for k in ("project_days", "form_days", "enumerator_days"):
             totals[k] += r[k]

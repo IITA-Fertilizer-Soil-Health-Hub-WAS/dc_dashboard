@@ -26,10 +26,10 @@ from apps.rbac.permissions import (
     organization_of,
     pending_users,
 )
-from apps.usecases.models import UseCase
+from apps.usecases.models import Project
 
 # Maps the scope <select> token prefix to the membership FK field.
-_SCOPE_FIELD = {"region": "region", "country": "country", "usecase": "use_case"}
+_SCOPE_FIELD = {"region": "region", "country": "country", "usecase": "project"}
 
 
 def _require_access(user):
@@ -45,7 +45,7 @@ def _scope_options(user) -> list[dict]:
         opts.append({"value": f"region:{r.pk}", "label": f"Region · {r.name}"})
     for c in scopes["countries"]:
         opts.append({"value": f"country:{c.pk}", "label": f"Country · {c.name} ({c.region.name})"})
-    for uc in scopes["use_cases"]:
+    for uc in scopes["projects"]:
         opts.append({"value": f"usecase:{uc.pk}", "label": f"Use case · {uc.code}"})
     return opts
 
@@ -55,11 +55,11 @@ def _role_options(user) -> list[dict]:
     return [{"value": r, "label": labels[r]} for r in grantable_roles(user)]
 
 
-def _use_case_options(user) -> list[dict]:
+def _project_options(user) -> list[dict]:
     """Only the use-case scopes (collaboration is shared per project, never wider)."""
     return [
         {"value": f"usecase:{uc.pk}", "label": uc.code}
-        for uc in grantable_scopes(user)["use_cases"]
+        for uc in grantable_scopes(user)["projects"]
     ]
 
 
@@ -68,9 +68,9 @@ def _resolve_scope(token: str):
     level, _, pk = (token or "").partition(":")
     if level not in _SCOPE_FIELD:
         return None
-    from apps.usecases.models import Country, Region, UseCase
+    from apps.usecases.models import Country, Project, Region
 
-    model = {"region": Region, "country": Country, "usecase": UseCase}[level]
+    model = {"region": Region, "country": Country, "usecase": Project}[level]
     return model.objects.filter(pk=pk).first()
 
 
@@ -87,12 +87,12 @@ def team(request):
     if request.user.organization_id:
         active = active.filter(organization_id=request.user.organization_id)
     # Self-service join requests on the use cases this person administers.
-    grantable_uc_ids = grantable_scopes(request.user)["use_cases"].values_list("id", flat=True)
+    grantable_uc_ids = grantable_scopes(request.user)["projects"].values_list("id", flat=True)
     access_requests = (
         UseCaseAccessRequest.objects.filter(
-            status=UseCaseAccessRequest.Status.PENDING, use_case_id__in=list(grantable_uc_ids)
+            status=UseCaseAccessRequest.Status.PENDING, project_id__in=list(grantable_uc_ids)
         )
-        .select_related("user", "use_case")
+        .select_related("user", "project")
         .order_by("created_at")
     )
     ctx = {
@@ -101,7 +101,7 @@ def team(request):
         "access_requests": access_requests,
         "scope_options": _scope_options(request.user),
         "role_options": _role_options(request.user),
-        "use_case_options": _use_case_options(request.user),
+        "project_options": _project_options(request.user),
         "active_users": active.order_by("email"),
     }
     return render(request, "dashboards/team.html", ctx)
@@ -120,23 +120,23 @@ def team_request_decision(request):
 
     if decision == "approve":
         role = request.POST.get("role") or Role.VIEWER
-        if role not in dict(Role.choices) or not can_grant(request.user, req.use_case, role):
+        if role not in dict(Role.choices) or not can_grant(request.user, req.project, role):
             raise PermissionDenied("That grant exceeds your authority.")
         UseCaseMembership.objects.get_or_create(
-            user=req.user, use_case=req.use_case, role=role,
+            user=req.user, project=req.project, role=role,
             defaults={"granted_by": request.user},
         )
-        if not req.user.organization_id and req.use_case.organization_id:
-            req.user.organization_id = req.use_case.organization_id
+        if not req.user.organization_id and req.project.organization_id:
+            req.user.organization_id = req.project.organization_id
             req.user.save(update_fields=["organization", "updated_at"])
         req.status = UseCaseAccessRequest.Status.APPROVED
-        messages.success(request, f"Granted {req.user.email} {role} on {req.use_case.code}.")
+        messages.success(request, f"Granted {req.user.email} {role} on {req.project.code}.")
     elif decision == "decline":
         # Only someone with authority over the use case may decline it.
-        if not can_grant(request.user, req.use_case, Role.VIEWER):
+        if not can_grant(request.user, req.project, Role.VIEWER):
             raise PermissionDenied("Outside your authority.")
         req.status = UseCaseAccessRequest.Status.DECLINED
-        messages.info(request, f"Declined {req.user.email}'s request for {req.use_case.code}.")
+        messages.info(request, f"Declined {req.user.email}'s request for {req.project.code}.")
     else:
         return redirect("dashboards:team")
 
@@ -223,7 +223,7 @@ def team_invite(request):
     role = request.POST.get("role") or ""
     scope_obj = _resolve_scope(request.POST.get("scope") or "")
 
-    if not isinstance(scope_obj, UseCase):
+    if not isinstance(scope_obj, Project):
         messages.error(request, "Collaboration can only be shared on a specific project.")
         return redirect("dashboards:team")
     if role not in dict(Role.choices):
@@ -240,7 +240,7 @@ def team_invite(request):
         return redirect("dashboards:team")
 
     _, created = UseCaseMembership.objects.get_or_create(
-        user=target, use_case=scope_obj, role=role,
+        user=target, project=scope_obj, role=role,
         defaults={"granted_by": request.user},
     )
     if created:
