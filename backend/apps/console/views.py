@@ -126,7 +126,15 @@ class ConsoleListView(UserPassesTestMixin, View):
 
         page = Paginator(qs, 30).get_page(request.GET.get("page"))
         rows = [
-            {"pk": obj.pk, "cells": [_cell(obj, f) for f in m.list_display]}
+            {
+                "pk": obj.pk,
+                "cells": [_cell(obj, f) for f in m.list_display],
+                # Only offer actions that make sense for this row's current
+                # state (e.g. no Approve on an already-active user).
+                "actions": [
+                    a for a in m.actions if a.applies is None or a.applies(obj)
+                ],
+            }
             for obj in page
         ]
         ctx = _base_ctx(m) | {

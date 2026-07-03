@@ -58,7 +58,7 @@
             {% endfor %}
             <td class="row-actions" style="text-align:right;white-space:nowrap;">
               {% if can_edit %}
-                {% for a in m.actions %}
+                {% for a in row.actions %}
                   <form method="post" action="{% url 'console:action' m.key row.pk a.slug %}" style="display:inline;">
                     {% csrf_token %}
                     <button class="btn {{ a.style }}" type="submit"

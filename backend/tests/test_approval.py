@@ -48,3 +48,18 @@ def test_deactivate_action_revokes(django_user_model):
     user_deactivate(_request(admin_user), active)
     active.refresh_from_db()
     assert active.is_active is False
+
+
+def test_action_applicability_tracks_row_state(django_user_model):
+    # Buttons are offered only when they'd change something: Approve on a
+    # pending user, Deactivate on an active one — never both.
+    from apps.console.actions import USER_ACTIONS
+
+    by_slug = {a.slug: a for a in USER_ACTIONS}
+    pending = django_user_model.objects.create_user("p@x.org", "pw")  # inactive
+    active = django_user_model.objects.create_user("q@x.org", "pw", is_active=True)
+
+    assert by_slug["approve"].applies(pending) is True
+    assert by_slug["approve"].applies(active) is False
+    assert by_slug["deactivate"].applies(active) is True
+    assert by_slug["deactivate"].applies(pending) is False

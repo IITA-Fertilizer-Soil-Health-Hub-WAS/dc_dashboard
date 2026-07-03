@@ -18,6 +18,9 @@ class Action:
     label: str
     fn: Callable
     style: str = "btn-request"  # button class from base.html
+    # When set, the button is only shown for rows where ``applies(obj)`` is
+    # true — e.g. hide Approve once a user is already active. ``None`` = always.
+    applies: Callable | None = None
 
 
 # ---- Project actions ----
@@ -68,6 +71,8 @@ PROJECT_ACTIONS = (
 )
 
 USER_ACTIONS = (
-    Action("approve", "Approve", user_approve, "btn-approve"),
-    Action("deactivate", "Deactivate", user_deactivate, "btn-decline"),
+    Action("approve", "Approve", user_approve, "btn-approve",
+           applies=lambda u: not u.is_active),
+    Action("deactivate", "Deactivate", user_deactivate, "btn-decline",
+           applies=lambda u: u.is_active),
 )
