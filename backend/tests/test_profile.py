@@ -37,11 +37,12 @@ def test_submitting_profile_marks_complete_and_syncs(client, user):
     assert resp.status_code == 302
     prof = UserProfile.objects.get(user=user)
     assert prof.is_complete
-    assert prof.first_name == "Ama" and prof.family_name == "Mensah"
     assert prof.experience_years == 4
     assert prof.consent_personal_info is True and prof.consent_photos is False
     user.refresh_from_db()
-    assert user.full_name == "Ama Mensah"          # display name synced
+    # The name is stored once, on the account — composed from the form's boxes.
+    assert user.full_name == "Ama Mensah"
+    assert prof.full_name == "Ama Mensah"          # property passes through to User
     assert user.phone == "+233200000000"            # primary phone synced to User
 
 

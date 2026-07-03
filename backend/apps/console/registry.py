@@ -137,9 +137,8 @@ _ENTRIES: list[Managed] = [
             search_fields=["user__email", "project__code"], readonly=True, icon="pending_actions",
             description="Self-service requests to join a project (read-only)."),
     Managed("user-profiles", UserProfile, "User profiles", "Accounts & roles",
-            list_display=["user", "first_name", "family_name", "gender", "country",
-                          "completed_at"],
-            search_fields=["user__email", "first_name", "family_name"], readonly=True,
+            list_display=["user", "full_name", "gender", "country", "completed_at"],
+            search_fields=["user__email", "user__full_name"], readonly=True,
             icon="badge", description="The register-once identity profiles (read-only)."),
     # Jobs live in the sidebar's Manage section ("Jobs & assignments"), not the
     # config console — so their group is intentionally outside GROUPS (routable +

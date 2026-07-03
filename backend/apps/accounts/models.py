@@ -130,10 +130,10 @@ class UserProfile(models.Model):
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
 
-    # Name parts (User.full_name stays the display name, kept in sync on save).
-    first_name = models.CharField(max_length=128, blank=True)
-    second_name = models.CharField(max_length=128, blank=True)
-    family_name = models.CharField(max_length=128, blank=True)
+    # The person's name is stored once, on User.full_name — the single display
+    # name every account has. The registration form still collects it as
+    # first/second/family boxes, but composes them into full_name (see
+    # ProfileForm); nothing here duplicates that storage.
 
     gender = models.CharField(max_length=8, choices=Gender.choices, blank=True)
     age = models.PositiveSmallIntegerField(null=True, blank=True)
@@ -158,15 +158,15 @@ class UserProfile(models.Model):
         return f"Profile of {self.user.email}"
 
     @property
+    def full_name(self) -> str:
+        """The person's display name — lives on the account, not duplicated here."""
+        return self.user.full_name
+
+    @property
     def is_complete(self) -> bool:
         return self.completed_at is not None
 
     def mark_complete(self) -> None:
         self.completed_at = timezone.now()
-        # Keep the account's display name in sync with the name parts.
-        parts = [self.first_name, self.second_name, self.family_name]
-        full = " ".join(p for p in parts if p).strip()
-        if full and full != self.user.full_name:
-            self.user.full_name = full
-            self.user.save(update_fields=["full_name", "updated_at"])
+        self.save(update_fields=["completed_at", "updated_at"])
         self.save()

@@ -126,25 +126,34 @@ def claim_admin(request):
 
 class ProfileForm(forms.ModelForm):
     """The 'register once' profile, mirroring the ODK 00_RegisterEnumerator form.
-    Primary phone lives on the User; everything else on UserProfile."""
+    The name and primary phone live on the User (name composed from the boxes
+    below into User.full_name); the demographics/consents live on UserProfile."""
 
+    # Name is collected as parts for a familiar registration UX but stored once,
+    # on User.full_name — these are form-only fields, not UserProfile columns.
+    first_name = forms.CharField(max_length=128, required=True, label="First name")
+    second_name = forms.CharField(max_length=128, required=False, label="Second name")
+    family_name = forms.CharField(max_length=128, required=True, label="Family name")
     phone = forms.CharField(max_length=32, required=True, label="Primary mobile phone")
 
     class Meta:
         model = UserProfile
         fields = [
-            "first_name", "second_name", "family_name", "gender", "age",
-            "education_level", "experience_years", "phone_alt", "country",
+            "gender", "age", "education_level", "experience_years",
+            "phone_alt", "country",
             "consent_personal_info", "consent_followup", "consent_photos",
         ]
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         self._user = user
-        for req in ("first_name", "family_name", "country"):
-            self.fields[req].required = True
+        self.fields["country"].required = True
         if user and not (self.data or self.initial.get("phone")):
             self.fields["phone"].initial = user.phone
+
+    def composed_full_name(self) -> str:
+        parts = [self.cleaned_data.get(f) for f in ("first_name", "second_name", "family_name")]
+        return " ".join(p for p in parts if p).strip()
 
 
 @login_required
@@ -157,14 +166,16 @@ def profile(request):
         if form.is_valid():
             obj = form.save(commit=False)
             request.user.phone = form.cleaned_data["phone"]
-            request.user.save(update_fields=["phone", "updated_at"])
+            request.user.full_name = form.composed_full_name()
+            request.user.save(update_fields=["phone", "full_name", "updated_at"])
             obj.save()
             obj.mark_complete()
             messages.success(request, "Your profile has been saved. You won't need to re-enter this.")
             return redirect("profile")
     else:
         initial = {"phone": request.user.phone}
-        if not prof.first_name and request.user.full_name:
+        # Seed the name boxes by splitting the account's existing display name.
+        if request.user.full_name and not prof.is_complete:
             bits = request.user.full_name.split()
             initial["first_name"] = bits[0]
             if len(bits) > 1:
