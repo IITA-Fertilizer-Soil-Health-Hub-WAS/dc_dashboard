@@ -1,5 +1,5 @@
-"""Coordinators get Write-back / Link-enumerators / Access-requests, scoped to
-their own projects — and ordinary members can't reach the operational tools."""
+"""Coordinators get Write-back / Access-requests, scoped to their own projects —
+and ordinary members can't reach the operational tools."""
 from __future__ import annotations
 
 import pytest
@@ -7,8 +7,7 @@ from django.urls import reverse
 
 from apps.projects.models import FormDefinition, Organization, Project
 from apps.rbac.models import Membership, Role
-from apps.submissions.linking import link_enumerators
-from apps.submissions.models import Enumerator, Submission
+from apps.submissions.models import Submission
 
 pytestmark = pytest.mark.django_db
 
@@ -46,14 +45,6 @@ def test_writeback_blocked_for_plain_member(client, world):
     assert resp.status_code != 200  # redirected / forbidden, never the queue
 
 
-def test_link_enumerators_scoped(world):
-    Enumerator.objects.create(project=world["mine"], enid="EN-MINE")
-    Enumerator.objects.create(project=world["other"], enid="EN-OTHER")
-    report = link_enumerators(apply=False, projects=[world["mine"].id])
-    codes = {p.project for p in report.proposals}
-    assert codes == {"MINE"}  # the other project's enumerator is out of scope
-
-
 def test_access_requests_not_a_coordinator_console_section(client, world):
     # Access requests are handled in 'Team & access', so the raw console section
     # stays staff-only — coordinators don't get a duplicate of it.
@@ -66,28 +57,3 @@ def test_access_requests_blocked_for_member(client, world):
     client.force_login(world["viewer"])
     resp = client.get(reverse("console:list", args=["access-requests"]))
     assert resp.status_code != 200
-
-
-def test_manual_link_one_enumerator_to_account(client, world):
-    # An enumerator with no phone/name match — coordinator links it by hand.
-    en = Enumerator.objects.create(project=world["mine"], enid="EN-X")
-    target = world["viewer"]  # any active account in the same institution
-    client.force_login(world["coord"])
-    resp = client.get(reverse("console:link_enumerators"))
-    assert resp.status_code == 200
-    assert b"Link manually" in resp.content
-    resp = client.post(reverse("console:link_enumerators"),
-                       {"action": "link_one", "enumerator": str(en.pk), "user": str(target.pk)})
-    assert resp.status_code == 302
-    en.refresh_from_db()
-    assert en.user_id == target.pk
-
-
-def test_manual_link_blocked_cross_project(client, world, django_user_model):
-    # A coordinator cannot link an enumerator in a project they don't manage.
-    en_other = Enumerator.objects.create(project=world["other"], enid="EN-O")
-    client.force_login(world["coord"])
-    client.post(reverse("console:link_enumerators"),
-               {"action": "link_one", "enumerator": str(en_other.pk), "user": str(world["viewer"].pk)})
-    en_other.refresh_from_db()
-    assert en_other.user_id is None  # out of scope → not linked

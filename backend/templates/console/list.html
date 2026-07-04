@@ -28,9 +28,6 @@
     {% if m.key == 'collection-units' and can_edit %}
       <a class="btn-new" style="background:var(--gold);color:var(--brand-900);" href="{% url 'console:import_units' %}">Import CSV</a>
     {% endif %}
-    {% if m.key == 'enumerators' and can_edit %}
-      <a class="btn-new" style="background:var(--gold);color:var(--brand-900);" href="{% url 'console:link_enumerators' %}">Link accounts</a>
-    {% endif %}
     {% if can_edit %}
       <a class="btn-new" href="{% url 'console:create' m.key %}">+ New</a>
     {% endif %}

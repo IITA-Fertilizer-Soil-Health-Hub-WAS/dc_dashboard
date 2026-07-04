@@ -14,7 +14,6 @@ urlpatterns = [
     path("publish-form/", views.PublishFormView.as_view(), name="publish_form"),
     path("collection-units/import/", views.ImportCollectionUnitsView.as_view(),
          name="import_units"),
-    path("link-enumerators/", views.EnumeratorLinkView.as_view(), name="link_enumerators"),
     path("plot-election/", views.PlotElectionQueueView.as_view(), name="plot_election"),
     path("plot-election/<slug:code>/<str:trial_key>/", views.PlotElectionView.as_view(),
          name="plot_elect"),
