@@ -55,6 +55,12 @@
           {% for o in orgs %}<option value="{{ o.code }}" {% if org == o.code %}selected{% endif %}>{{ o.name }}</option>{% endfor %}
         </select>
       {% endif %}
+      {% if owners %}
+        <select class="input" name="owner" onchange="this.form.submit()" aria-label="Owner">
+          <option value="">All owners</option>
+          {% for o in owners %}<option value="{{ o.user_id }}" {% if owner == o.user_id %}selected{% endif %}>{{ o.full_name|default:o.email }}</option>{% endfor %}
+        </select>
+      {% endif %}
       {% if countries %}
         <select class="input" name="country" onchange="this.form.submit()" aria-label="Country">
           <option value="">All countries</option>
@@ -110,6 +116,12 @@
               <p style="font-size:.9rem;line-height:1.55;margin:0;">
                 {% if r.uc.description %}{{ r.uc.description }}{% else %}<span class="subtle">No description provided for this project yet.</span>{% endif %}
               </p>
+              {% if r.uc.owner %}
+                <div class="subtle" style="font-size:.8rem;margin-top:.8rem;">
+                  <span class="msym" style="font-size:15px;vertical-align:-2px;">account_circle</span>
+                  Owned by {{ r.uc.owner.full_name|default:r.uc.owner.email }}
+                </div>
+              {% endif %}
               <div class="pinfo-foot">
                 {% if r.is_member %}
                   <a class="btn btn-open" style="text-decoration:none;" href="{% url 'dashboards:project' r.uc.code %}">Open project</a>
@@ -128,9 +140,9 @@
 
     {% if page.has_other_pages %}
       <div class="pager" style="margin-top:1.4rem;">
-        {% if page.has_previous %}<a href="?scope={{ scope }}&q={{ q }}&org={{ org }}&country={{ country }}&page={{ page.previous_page_number }}">← Prev</a>{% endif %}
+        {% if page.has_previous %}<a href="?scope={{ scope }}&q={{ q }}&org={{ org }}&owner={{ owner }}&country={{ country }}&page={{ page.previous_page_number }}">← Prev</a>{% endif %}
         <span class="subtle">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
-        {% if page.has_next %}<a href="?scope={{ scope }}&q={{ q }}&org={{ org }}&country={{ country }}&page={{ page.next_page_number }}">Next →</a>{% endif %}
+        {% if page.has_next %}<a href="?scope={{ scope }}&q={{ q }}&org={{ org }}&owner={{ owner }}&country={{ country }}&page={{ page.next_page_number }}">Next →</a>{% endif %}
       </div>
     {% endif %}
   {% else %}

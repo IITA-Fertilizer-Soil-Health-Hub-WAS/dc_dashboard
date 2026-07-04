@@ -8,6 +8,7 @@ its crops/trials/stages, and its ID patterns. Adding a project = inserting rows
 """
 from __future__ import annotations
 
+from django.conf import settings
 from django.db import models
 
 from apps.common.models import BaseModel
@@ -91,6 +92,12 @@ class Project(BaseModel):
     organization = models.ForeignKey(
         "Organization", null=True, blank=True, on_delete=models.CASCADE,
         related_name="projects",
+    )
+    # The specific user who owns/stewards this project (within its institution).
+    # A relationship, not free text — chosen from existing users.
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="owned_projects",
     )
     country = models.ForeignKey(
         "Country", null=True, blank=True, on_delete=models.SET_NULL, related_name="projects"

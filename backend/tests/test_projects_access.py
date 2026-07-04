@@ -43,6 +43,23 @@ def test_all_shows_directory_with_request_button(client, org_world):
     assert b"Request access" in resp.content  # for UC-B (non-member)
 
 
+def test_filter_by_owner(client, django_user_model, org_world):
+    # Owner is a real user relationship; the directory filters by it.
+    owner = django_user_model.objects.create_user(
+        "owner@x.org", "pw", is_active=True, full_name="Ada Owner",
+        organization=org_world["org"],
+    )
+    org_world["uc_a"].owner = owner
+    org_world["uc_a"].save(update_fields=["owner"])
+    client.force_login(org_world["member"])
+    resp = client.get(reverse("dashboards:projects") + f"?scope=all&owner={owner.user_id}")
+    assert resp.status_code == 200
+    assert b"UC-A" in resp.content       # owned by the filtered user
+    assert b"UC-B" not in resp.content   # not theirs
+    # The owner also appears as a filter option (rendered by name).
+    assert b"Ada Owner" in resp.content
+
+
 def test_request_form_renders(client, org_world):
     client.force_login(org_world["member"])
     resp = client.get(reverse("dashboards:project_request", args=["UC-B"]))

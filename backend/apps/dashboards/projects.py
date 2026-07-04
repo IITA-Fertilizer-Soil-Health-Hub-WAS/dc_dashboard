@@ -55,7 +55,9 @@ def _catalogue():
     """The public discovery catalogue: every active project across all
     institutions. Only names/metadata are exposed here — data stays private
     until access is granted (see visible_projects for the data gate)."""
-    return Project.objects.filter(is_active=True).select_related("country", "organization")
+    return Project.objects.filter(is_active=True).select_related(
+        "country", "organization", "owner"
+    )
 
 
 @login_required
@@ -82,13 +84,14 @@ def projects(request):
     q = (request.GET.get("q") or "").strip()
     country = (request.GET.get("country") or "").strip()
     org = (request.GET.get("org") or "").strip()
+    owner = (request.GET.get("owner") or "").strip()
 
     member_ids = set(visible_projects(user).values_list("id", flat=True))
 
     # 'mine' = projects you belong to; 'all' = the global catalogue you can
     # discover and request access in.
     if scope == "mine":
-        base = visible_projects(user).select_related("country", "organization")
+        base = visible_projects(user).select_related("country", "organization", "owner")
     else:
         base = _catalogue()
     if q:
@@ -97,6 +100,8 @@ def projects(request):
         )
     if org:
         base = base.filter(organization__code=org)
+    if owner:
+        base = base.filter(owner__user_id=owner)
     if country:
         base = base.filter(country__code=country)
     base = base.order_by("name")
@@ -118,20 +123,26 @@ def projects(request):
         for uc in page
     ]
     # Filter options span the whole catalogue (global discovery).
+    from apps.accounts.models import User
+
     orgs = Organization.objects.filter(
         projects__is_active=True
     ).distinct().order_by("name")
     countries = Country.objects.filter(
         projects__is_active=True
     ).distinct().order_by("name")
+    owners = User.objects.filter(
+        owned_projects__is_active=True
+    ).distinct().order_by("full_name", "email")
 
     # Personal 'attention' strip only on the your-projects landing.
-    is_landing = scope == "mine" and not q and not country and not org
+    is_landing = scope == "mine" and not q and not country and not org and not owner
     home = _home_summary(user, member_ids) if is_landing else {}
 
     return render(request, "dashboards/projects.html", {
         "rows": rows, "page": page, "scope": scope, "q": q,
         "country": country, "countries": countries, "org": org, "orgs": orgs,
+        "owner": owner, "owners": owners,
         "mine_count": len(member_ids), "home": home, "is_landing": is_landing,
     })
 
