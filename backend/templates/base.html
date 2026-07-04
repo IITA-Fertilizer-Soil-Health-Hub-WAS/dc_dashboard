@@ -85,17 +85,17 @@
     .nav .nav-search::placeholder{color:#9fc2b0;}
     .nav .nav-search:focus{outline:none; border-color:var(--gold); background:rgba(255,255,255,.12);}
     .nav .nav-proj-select{width:100%; margin:.15rem 0 .3rem; padding:.42rem .55rem; border-radius:8px;
-      border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.07); color:#eaf3ee;
+      border:1px solid rgba(255,255,255,.16); background-color:rgba(255,255,255,.07); color:#eaf3ee;
       font-family:var(--sans); font-size:.84rem; cursor:pointer;}
-    .nav .nav-proj-select:focus{outline:none; border-color:var(--gold); background:rgba(255,255,255,.12);}
+    .nav .nav-proj-select:focus{outline:none; border-color:var(--gold); background-color:rgba(255,255,255,.12);}
     .nav .nav-proj-select option{color:var(--ink); background:#fff;}
     .nav .ws-head{padding:.2rem .5rem .7rem; border-bottom:1px solid rgba(255,255,255,.12); margin-bottom:.5rem;}
     .nav .ws-switch{display:flex; align-items:center; gap:.45rem;}
     .nav .ws-switch .msym{color:var(--gold); opacity:1; flex-shrink:0;}
     .nav .ws-switch select{flex:1; min-width:0; padding:.45rem .55rem; border-radius:8px;
-      border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.08); color:#fff;
+      border:1px solid rgba(255,255,255,.18); background-color:rgba(255,255,255,.08); color:#fff;
       font-family:var(--serif); font-weight:600; font-size:.98rem; cursor:pointer;}
-    .nav .ws-switch select:focus{outline:none; border-color:var(--gold); background:rgba(255,255,255,.13);}
+    .nav .ws-switch select:focus{outline:none; border-color:var(--gold); background-color:rgba(255,255,255,.13);}
     .nav .ws-switch select option{color:var(--ink); background:#fff; font-weight:500;}
     .nav .ws-switch .ws-single{font-family:var(--serif); font-weight:600; font-size:1rem; color:#fff;
       white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
@@ -244,10 +244,32 @@
 
     /* ---------- Inline form controls ---------- */
     .input{padding:.5rem .68rem; border:1px solid var(--line); border-radius:8px; font-family:var(--sans);
-      font-size:.88rem; background:var(--surface); color:var(--ink); max-width:100%;}
+      font-size:.88rem; background-color:var(--surface); color:var(--ink); max-width:100%;}
     .input:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-50);}
-    select.input{cursor:pointer;}
     .formrow{display:flex; gap:.55rem; flex-wrap:wrap; align-items:center;}
+
+    /* ---------- Selects: one professional look, platform-wide ---------- */
+    /* Strip the native chevron and draw our own, so every dropdown — classed,
+       inline-styled or bare — matches. Bare selects also get base field styling. */
+    select{
+      appearance:none; -webkit-appearance:none; -moz-appearance:none;
+      font-family:var(--sans); font-size:.88rem; color:var(--ink);
+      background-color:var(--surface);
+      border:1px solid var(--line); border-radius:8px;
+      padding:.5rem .68rem; cursor:pointer; line-height:1.3;
+      background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%235b675f' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E");
+      background-repeat:no-repeat; background-position:right .7rem center; background-size:.72rem;
+      padding-right:2rem !important;  /* always leave room for the chevron */
+    }
+    select::-ms-expand{display:none;}
+    select:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-50);}
+    select:disabled{opacity:.55; cursor:not-allowed;}
+    select option{color:var(--ink); background:#fff;}
+    /* Dark sidebar dropdowns keep their translucent styling but need a light chevron. */
+    .nav select{
+      background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%23e7dcc2' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E");
+      background-repeat:no-repeat; background-position:right .6rem center; background-size:.7rem;
+    }
 
     /* ---------- Compact user identity cell ---------- */
     .idcell{display:flex; align-items:center; gap:.6rem;}

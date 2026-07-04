@@ -1,62 +1,67 @@
 {% extends "base.html" %}
 {% block title %}Complete your registration · {{ SITE_NAME }}{% endblock %}
 {% block guest_content %}
-<div style="width:100%;max-width:640px;">
-  <div style="text-align:center;margin-bottom:1.2rem;">
-    <h2 style="font-size:1.4rem;">Complete your registration</h2>
-    <p class="subtle" style="margin:.35rem 0 0;">
-      Provide your details once. Your account is created after you submit, then an
-      administrator reviews it and grants your access.
-    </p>
+<div class="signup">
+  <div class="su-head">
+    <h2>Complete your registration</h2>
+    <p class="subtle">Provide your details once. Your account is created on submit, then an administrator reviews it and grants access.</p>
   </div>
 
-  <form method="post" action="{% url 'socialaccount_signup' %}" class="pf">
+  <form method="post" action="{% url 'socialaccount_signup' %}">
     {% csrf_token %}
-    {% if form.non_field_errors %}<div class="err" style="margin-bottom:.9rem;">{{ form.non_field_errors }}</div>{% endif %}
+    {% if form.non_field_errors %}<div class="err" style="margin-bottom:.7rem;">{{ form.non_field_errors }}</div>{% endif %}
 
-    <div class="card" style="margin-bottom:1.1rem;">
-      <h3 style="margin-bottom:.8rem;">Your details</h3>
-      <div class="grid2">
+    <div class="card su-card">
+      <div class="su-grid">
         <div class="field"><label>Email</label>{{ form.email }}{{ form.email.errors }}</div>
-        <div class="field"><label>Primary mobile phone *</label>{{ form.phone }}{{ form.phone.errors }}</div>
+        <div class="field"><label>Mobile phone *</label>{{ form.phone }}{{ form.phone.errors }}</div>
+        <div class="field"><label>Country *</label>{{ form.country }}{{ form.country.errors }}</div>
         <div class="field"><label>First name *</label>{{ form.first_name }}{{ form.first_name.errors }}</div>
         <div class="field"><label>Second name</label>{{ form.second_name }}</div>
         <div class="field"><label>Family name *</label>{{ form.family_name }}{{ form.family_name.errors }}</div>
-        <div class="field"><label>Country *</label>{{ form.country }}{{ form.country.errors }}</div>
         <div class="field"><label>Gender</label>{{ form.gender }}</div>
         <div class="field"><label>Age</label>{{ form.age }}</div>
-        <div class="field"><label>Education level</label>{{ form.education_level }}</div>
-        <div class="field"><label>Years of data-collection experience</label>{{ form.experience_years }}</div>
-        <div class="field"><label>Alternate phone</label>{{ form.phone_alt }}</div>
+        <div class="field"><label>Education</label>{{ form.education_level }}</div>
+        <div class="field"><label>Experience (years)</label>{{ form.experience_years }}</div>
+        <div class="field"><label>Alt. phone</label>{{ form.phone_alt }}</div>
+      </div>
+
+      <div class="su-consent">
+        <label class="chk">{{ form.consent_personal_info }}<span>Store my personal information.</span></label>
+        <label class="chk">{{ form.consent_followup }}<span>Contact me for follow-up.</span></label>
+        <label class="chk">{{ form.consent_photos }}<span>Store photos I capture.</span></label>
       </div>
     </div>
 
-    <div class="card" style="margin-bottom:1.1rem;">
-      <h3 style="margin-bottom:.6rem;">Consent</h3>
-      <label class="chk">{{ form.consent_personal_info }}<span>I consent to the platform storing my personal information.</span></label>
-      <label class="chk">{{ form.consent_followup }}<span>I consent to being contacted for follow-up.</span></label>
-      <label class="chk">{{ form.consent_photos }}<span>I consent to photos I capture being stored.</span></label>
-    </div>
-
-    {% if redirect_field_value %}
-      <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
-    {% endif %}
-    <div style="display:flex;gap:.6rem;">
+    {% if redirect_field_value %}<input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">{% endif %}
+    <div class="su-actions">
       <button class="btn btn-open" type="submit">Create my account</button>
       <a class="btn btn-decline" href="/accounts/logout/">Cancel</a>
     </div>
   </form>
 </div>
 <style>
-  .pf .field{margin-bottom:1rem;}
-  .pf label{display:block;font-size:.8rem;font-weight:600;color:var(--muted);margin-bottom:.3rem;}
-  .pf input[type=text],.pf input[type=number],.pf input[type=email],.pf select{
-    width:100%;padding:.55rem .68rem;border:1px solid var(--line);border-radius:8px;
-    font-family:var(--sans);font-size:.9rem;background:var(--surface);}
-  .pf .grid2{display:grid;grid-template-columns:1fr 1fr;gap:.9rem;}
-  .pf .chk{display:flex;align-items:flex-start;gap:.5rem;margin:.5rem 0;font-size:.88rem;font-weight:400;color:var(--text);}
-  .pf .chk span{color:var(--text);}
-  .pf .errorlist{list-style:none;margin:.25rem 0 0;padding:0;color:var(--red);font-size:.8rem;}
-  @media (max-width:560px){.pf .grid2{grid-template-columns:1fr;}}
+  .signup{width:100%; max-width:760px;}
+  .su-head{text-align:center; margin-bottom:.85rem;}
+  .su-head h2{font-size:1.3rem; margin:0;}
+  .su-head .subtle{margin:.25rem auto 0; max-width:56ch; font-size:.85rem; line-height:1.4;}
+  .su-card{padding:1.1rem 1.2rem;}
+  .su-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:.6rem .85rem;}
+  .signup .field{margin:0;}
+  .signup label{display:block; font-size:.74rem; font-weight:600; color:var(--muted);
+    margin-bottom:.22rem; letter-spacing:.01em;}
+  .signup input[type=text],.signup input[type=number],.signup input[type=email],.signup select{
+    width:100%; padding:.44rem .6rem; border:1px solid var(--line); border-radius:8px;
+    font-family:var(--sans); font-size:.86rem; background-color:var(--surface);}
+  .signup input:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-50);}
+  .su-consent{display:flex; flex-wrap:wrap; gap:.35rem 1.3rem; margin-top:.85rem;
+    padding-top:.8rem; border-top:1px solid var(--line-soft);}
+  .signup .chk{display:flex; align-items:center; gap:.45rem; font-size:.82rem; color:var(--ink); font-weight:400;}
+  .signup .chk input{margin:0;}
+  .signup .errorlist{list-style:none; margin:.2rem 0 0; padding:0; color:var(--red); font-size:.76rem;}
+  .su-actions{display:flex; gap:.6rem; margin-top:1rem;}
+  .su-actions .btn{padding:.5rem 1rem; font-size:.85rem;}
+  @media (max-width:640px){.su-grid{grid-template-columns:1fr 1fr;} .signup{max-width:440px;}}
+  @media (max-width:420px){.su-grid{grid-template-columns:1fr;}}
 </style>
 {% endblock %}
