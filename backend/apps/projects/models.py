@@ -178,6 +178,55 @@ class DataSource(BaseModel):
         return f"{self.project.code} via {self.backend}"
 
 
+class FormDraft(BaseModel):
+    """A form authored in-app (the form builder) before it's published to the
+    server. Holds a structured spec (questions + choice lists + settings) that
+    apps.ingestion.xlsform turns into an XLSForm on publish. Kept separate from
+    FormDefinition (the published, server-bound record) so drafts can be edited
+    and re-published without touching live forms."""
+
+    class Status(models.TextChoices):
+        DRAFT = "DRAFT", "Draft"
+        PUBLISHED = "PUBLISHED", "Published"
+
+    class Source(models.TextChoices):
+        MANUAL = "MANUAL", "Built by hand"
+        AI = "AI", "Drafted from a protocol"
+
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="form_drafts")
+    title = models.CharField(max_length=255)
+    form_id = models.SlugField(max_length=100, blank=True)
+    # {"settings": {...}, "questions": [...], "choices": {...}} — see xlsform.build_xlsform.
+    spec = models.JSONField(default=dict, blank=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.DRAFT)
+    source = models.CharField(max_length=8, choices=Source.choices, default=Source.MANUAL)
+    role = models.CharField(max_length=20, default="VALIDATION")  # FormDefinition.Role on publish
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="authored_form_drafts",
+    )
+    published_form = models.ForeignKey(
+        "FormDefinition", null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    published_at = models.DateTimeField(null=True, blank=True)
+    # Terminag variables referenced by the draft that had no vocabulary match.
+    missing_terms = models.JSONField(default=list, blank=True)
+
+    class Meta:
+        ordering = ["-updated_at"]
+
+    def __str__(self) -> str:
+        return f"{self.title} ({self.project.code})"
+
+    @property
+    def question_count(self) -> int:
+        qs = (self.spec or {}).get("questions") or []
+        structural = {"begin_group", "end_group", "begin_repeat", "end_repeat",
+                      "begin group", "end group", "begin repeat", "end repeat"}
+        return sum(1 for q in qs if (q.get("type") or "text") not in structural)
+
+
 class Crop(BaseModel):
     """maize, potato, rice, banana, cassava, legumes, yam, soy. Aliases handle
     inconsistent ONA values (e.g. 'potatoIrish' == potato)."""
