@@ -53,6 +53,12 @@ class SocialSignupForm(SocialSignupBase):
             is_active=True
         ).order_by("name")
 
+    @property
+    def institutions_available(self) -> bool:
+        """Whether any institution has been onboarded — if not, self-registration
+        can't proceed (institution is required) and the page says so."""
+        return self.fields["organization"].queryset.exists()
+
     consent_personal_info = forms.BooleanField(
         required=False, label="I consent to the platform storing my personal information."
     )

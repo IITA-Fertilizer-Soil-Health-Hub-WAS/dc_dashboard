@@ -101,6 +101,14 @@ def test_signup_always_requires_institution():
     assert "organization" in form.errors
 
 
+def test_institutions_available_flag_drives_the_not_open_message():
+    from apps.projects.models import Organization
+
+    assert _bound_form().institutions_available is False   # none onboarded
+    Organization.objects.create(code="iita", name="IITA")
+    assert _bound_form().institutions_available is True
+
+
 def test_signup_requires_name_and_country():
     form = _bound_form(first_name="", family_name="", country="")
     assert not form.is_valid()
