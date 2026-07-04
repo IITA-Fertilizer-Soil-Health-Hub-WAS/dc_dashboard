@@ -119,8 +119,8 @@ def _regional_validator_exists(project) -> bool:
 def visible_projects(user):
     """Projects a user may view — replaces the R `eia_apps ∩ active_project_list`.
 
-    Platform Admin sees all active projects; everyone else sees only projects
-    where they hold a membership.
+    Platform Admin sees all active projects; everyone else sees the projects they
+    hold a membership in, plus any they own.
     """
     from apps.projects.models import Project
 
@@ -136,9 +136,10 @@ def visible_projects(user):
         cascade &= Q(organization_id=own_org)
     # A direct project membership grants visibility even across the org
     # boundary: that is exactly how an owner shares one project with an outside
-    # collaborator (see team.team_invite). Everything else stays in-tenant.
+    # collaborator (see team.team_invite). Owning a project also grants visibility
+    # — you always see and can open the projects you steward.
     return Project.objects.filter(
-        Q(memberships__user=user) | cascade, is_active=True
+        Q(memberships__user=user) | Q(owner=user) | cascade, is_active=True
     ).distinct()
 
 

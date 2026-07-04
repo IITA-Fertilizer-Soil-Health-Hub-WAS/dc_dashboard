@@ -43,6 +43,26 @@ def test_all_shows_directory_with_request_button(client, org_world):
     assert b"Request access" in resp.content  # for UC-B (non-member)
 
 
+def test_owner_sees_and_opens_own_project(client, django_user_model, org_world):
+    # Owning a project grants visibility: it appears in 'Mine' and the catalogue
+    # offers Open (not Request access) — you never request access to your own.
+    owner = django_user_model.objects.create_user(
+        "own2@x.org", "pw", is_active=True, organization=org_world["org"]
+    )
+    uc = org_world["uc_b"]                      # owner holds no membership on it
+    uc.owner = owner
+    uc.save(update_fields=["owner"])
+    assert uc in visible_projects(owner)
+
+    client.force_login(owner)
+    mine = client.get(reverse("dashboards:projects") + "?scope=mine")
+    assert b"UC-B" in mine.content             # listed under Mine
+    directory = client.get(reverse("dashboards:projects") + "?scope=all").content
+    assert b"UC-B" in directory
+    # Their own project shows Manage (owner) + Open, never a Request-access form.
+    assert b"Manage" in directory
+
+
 def test_filter_by_owner(client, django_user_model, org_world):
     # Owner is a real user relationship; the directory filters by it.
     owner = django_user_model.objects.create_user(
