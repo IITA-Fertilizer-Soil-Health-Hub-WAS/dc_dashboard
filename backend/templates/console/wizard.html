@@ -37,17 +37,6 @@
     border:1px solid var(--line);border-radius:10px;padding:.75rem .8rem;margin-bottom:.9rem;}
   @media (max-width:620px){.conn{grid-template-columns:1fr;}}
   .conn .fld input,.conn .fld select{background:var(--surface);}
-  /* pick-from-existing chips */
-  .chips{display:flex;flex-wrap:wrap;gap:.4rem;margin:.1rem 0 .45rem;}
-  .chip{position:relative;}
-  .chip input{position:absolute;opacity:0;width:0;height:0;}
-  .chip span{display:inline-block;border:1px solid var(--line);background:var(--surface);border-radius:999px;
-    padding:.32rem .8rem;font-size:.83rem;cursor:pointer;user-select:none;transition:.12s;white-space:nowrap;}
-  .chip span:hover{border-color:var(--brand);}
-  .chip input:checked + span{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600;}
-  .chip input:focus-visible + span{box-shadow:0 0 0 3px var(--brand-50);}
-  .chip span .creg{font-size:.72rem;color:var(--muted);background:transparent;margin-left:.35rem;}
-  .chip input:checked + span .creg{color:rgba(255,255,255,.8);}
   .chips-empty{font-size:.8rem;color:var(--muted);font-style:italic;margin:.1rem 0 .4rem;}
   /* advanced disclosure */
   .adv{margin-top:1rem;border-top:1px dashed var(--line);padding-top:.5rem;}
@@ -141,33 +130,31 @@
         </div>
 
         <div class="grid2" style="margin-top:.75rem;">
-          <div class="fld"><label>Countries <span class="hint subtle">— from the geography registry</span></label>
+          <div class="fld"><label>Countries <span class="hint subtle">— choose one or more</span></label>
             {% if existing_countries %}
-              <div class="chips">
+              <div class="msel" data-msel data-placeholder="Select countries…">
                 {% for c in existing_countries %}
-                  <label class="chip"><input type="checkbox" name="countries" value="{{ c.name }}"
-                    {% if c.name in posted_countries %}checked{% endif %}>
-                    <span>{{ c.name }}<span class="creg">{{ c.region.name }}</span></span></label>
+                  <label><input type="checkbox" name="countries" value="{{ c.name }}"
+                    {% if c.name in posted_countries %}checked{% endif %}><span class="mtxt">{{ c.name }}</span><span class="creg">{{ c.region.name }}</span></label>
                 {% endfor %}
               </div>
             {% else %}
               <p class="chips-empty">No countries in the registry yet — add them under Countries, or type below.</p>
             {% endif %}
-            <input name="countries_other" value="{{ posted.countries_other }}" placeholder="Add another country (comma-separated)">
+            <input name="countries_other" value="{{ posted.countries_other }}" placeholder="Add another country (comma-separated)" style="margin-top:.4rem;">
           </div>
-          <div class="fld"><label>Crops <span class="hint subtle">— pick from existing crops</span></label>
+          <div class="fld"><label>Crops <span class="hint subtle">— choose one or more</span></label>
             {% if existing_crops %}
-              <div class="chips">
+              <div class="msel" data-msel data-placeholder="Select crops…">
                 {% for crop in existing_crops %}
-                  <label class="chip"><input type="checkbox" name="crops" value="{{ crop }}"
-                    {% if crop in posted_crops %}checked{% endif %}>
-                    <span>{{ crop }}</span></label>
+                  <label><input type="checkbox" name="crops" value="{{ crop }}"
+                    {% if crop in posted_crops %}checked{% endif %}><span class="mtxt">{{ crop }}</span></label>
                 {% endfor %}
               </div>
             {% else %}
               <p class="chips-empty">No crops defined yet — type the first ones below.</p>
             {% endif %}
-            <input name="crops_other" value="{{ posted.crops_other }}" placeholder="Add another crop (comma-separated)">
+            <input name="crops_other" value="{{ posted.crops_other }}" placeholder="Add another crop (comma-separated)" style="margin-top:.4rem;">
           </div>
         </div>
 
