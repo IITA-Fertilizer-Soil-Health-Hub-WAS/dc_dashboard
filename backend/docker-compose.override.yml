@@ -1,0 +1,21 @@
+# Dev-only overrides — merged automatically by `docker compose` on top of
+# docker-compose.yml. This bind-mounts the source into the web container and
+# runs Django's auto-reloading dev server instead of gunicorn, so code and
+# template edits show up on the next request WITHOUT rebuilding the image.
+#
+# Do NOT use this in production (it uses runserver and mounts host code). The
+# base docker-compose.yml alone is the production-shaped stack.
+services:
+  web:
+    build: .
+    volumes:
+      - ./:/app
+    command: sh -c "python manage.py migrate && python manage.py bootstrap_admin && python manage.py runserver 0.0.0.0:8000"
+
+  worker:
+    volumes:
+      - ./:/app
+
+  beat:
+    volumes:
+      - ./:/app
