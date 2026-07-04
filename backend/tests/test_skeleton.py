@@ -31,12 +31,13 @@ def test_local_signup_redirects_to_login(client):
 
 @pytest.mark.django_db
 def test_login_page_degrades_without_auth0(client, settings):
-    # When Auth0 isn't configured, the login page renders a clear message rather
-    # than 500-ing on the OIDC discovery fetch.
+    # With no SSO provider configured, the login page renders a clear message
+    # rather than 500-ing on the OIDC discovery fetch.
     settings.AUTH0_CONFIGURED = False
+    settings.ENTRA_CONFIGURED = False
     resp = client.get("/login/")
     assert resp.status_code == 200
-    assert b"Auth0 is not configured" in resp.content
+    assert b"No sign-in provider is configured" in resp.content
 
 
 @pytest.mark.django_db
@@ -44,5 +45,4 @@ def test_login_page_shows_button_when_configured(client, settings):
     settings.AUTH0_CONFIGURED = True
     resp = client.get("/login/")
     assert resp.status_code == 200
-    assert b"Sign in" in resp.content
-    assert b"Create an account" in resp.content
+    assert b"Continue with Auth0" in resp.content

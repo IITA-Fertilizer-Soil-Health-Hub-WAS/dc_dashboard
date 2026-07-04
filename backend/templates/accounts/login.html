@@ -25,34 +25,44 @@
   {% endif %}
 
   <div class="card" style="padding:1.6rem;">
-    {% if auth0_configured %}
-      <div class="subtle" style="font-size:.8rem;font-weight:600;margin-bottom:.5rem;">Existing members</div>
-      <a class="btn btn-open" style="display:block;font-size:.95rem;padding:.7rem;text-align:center;text-decoration:none;"
-         href="{{ auth0_login_url }}{% if next %}?next={{ next|urlencode }}{% endif %}">
-        Sign in
-      </a>
-      <div class="divider"><span>new here?</span></div>
-      <a style="display:block;font-size:.92rem;padding:.62rem;text-align:center;text-decoration:none;
-                border:1px solid var(--brand);color:var(--brand);border-radius:8px;font-weight:600;background:var(--surface);"
-         href="{{ auth0_login_url }}{% if next %}?next={{ next|urlencode }}{% endif %}">
-        Create an account
-      </a>
-      <p class="subtle" style="font-size:.78rem;margin:.9rem 0 0;text-align:center;line-height:1.5;">
-        Both verify your identity with Auth0. If you don't have an account yet,
-        you'll be guided through a short registration; a coordinator then approves
-        your access and assigns your role.
-      </p>
-      {% if entra_configured %}
-        <a class="btn btn-request" style="display:block;font-size:.9rem;padding:.6rem;margin-top:.9rem;text-align:center;text-decoration:none;"
-           href="{{ entra_login_url }}{% if next %}?next={{ next|urlencode }}{% endif %}">
-          CGIAR staff: continue with Microsoft
+    {% if auth0_configured or entra_configured %}
+      <div class="subtle" style="font-size:.8rem;font-weight:600;margin-bottom:.6rem;">Sign in or create your account</div>
+
+      {% if auth0_configured %}
+        <a class="sso sso-auth0" href="{{ auth0_login_url }}{% if next %}?next={{ next|urlencode }}{% endif %}">
+          <span class="ssico" aria-hidden="true">
+            <svg width="17" height="17" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M16 3l3.9 8.6H29L21.6 17l3 8.6L16 20l-8.6 5.6 3-8.6L3 11.6h9.1L16 3z" fill="currentColor"/>
+            </svg>
+          </span>
+          <span>Continue with Auth0</span>
         </a>
+        <div class="sso-cap">Field teams &amp; partners</div>
       {% endif %}
+
+      {% if entra_configured %}
+        <a class="sso sso-ms" href="{{ entra_login_url }}{% if next %}?next={{ next|urlencode }}{% endif %}">
+          <span class="ssico" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
+              <rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+              <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+            </svg>
+          </span>
+          <span>Continue with Microsoft</span>
+        </a>
+        <div class="sso-cap">CGIAR staff (Entra ID)</div>
+      {% endif %}
+
+      <p class="subtle" style="font-size:.78rem;margin:.9rem 0 0;text-align:center;line-height:1.5;">
+        Pick your organisation's sign-in. Existing members are signed straight in;
+        if you're new, you'll complete a short registration and a coordinator then
+        approves your access.
+      </p>
     {% else %}
       <div class="err" style="text-align:left;margin:0;">
-        <strong>Auth0 is not configured.</strong> Set <code>AUTH0_DOMAIN</code>,
-        <code>AUTH0_CLIENT_ID</code> and <code>AUTH0_CLIENT_SECRET</code> to enable
-        organisation sign-in. Admins can use the form below.
+        <strong>No sign-in provider is configured.</strong> Set the
+        <code>AUTH0_*</code> and/or <code>ENTRA_*</code> environment variables to
+        enable Auth0 or Microsoft (Entra ID) sign-in. Admins can use the form below.
       </div>
     {% endif %}
 
@@ -89,5 +99,16 @@
   .fld span{display:block;font-size:.78rem;font-weight:600;color:var(--muted);margin-bottom:.25rem;}
   .fld input{width:100%;padding:.55rem .65rem;border:1px solid var(--line);border-radius:8px;font-family:var(--sans);font-size:.9rem;background:var(--surface-2);}
   .fld input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-50);background:#fff;}
+  .sso{display:flex;align-items:center;justify-content:center;gap:.55rem;width:100%;
+    padding:.66rem;border-radius:8px;font-size:.92rem;font-weight:600;text-decoration:none;
+    border:1px solid var(--line);transition:filter .12s,border-color .12s;}
+  .sso:hover{filter:brightness(.98);}
+  .sso .ssico{display:inline-flex;align-items:center;}
+  .sso-auth0{background:var(--brand);color:#fff;border-color:var(--brand);}
+  .sso-auth0:hover{filter:brightness(1.06);}
+  .sso-ms{background:#fff;color:#2b2b2b;border-color:var(--line);}
+  .sso-ms:hover{border-color:#c9c9bd;}
+  .sso-cap{text-align:center;font-size:.72rem;color:var(--muted);margin:.25rem 0 .8rem;}
+  .sso-cap:last-of-type{margin-bottom:0;}
 </style>
 {% endblock %}
