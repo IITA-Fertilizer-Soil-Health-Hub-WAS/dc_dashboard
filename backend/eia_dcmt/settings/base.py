@@ -276,6 +276,11 @@ CELERY_BEAT_SCHEDULE = {
         "task": "kpi.run_alerts",
         "schedule": crontab(minute=5),
     },
+    # Keep the Terminag controlled vocabulary in sync with its GitHub repo.
+    "vocabulary-sync-daily": {
+        "task": "vocabulary.sync_terminag",
+        "schedule": crontab(hour=2, minute=30),
+    },
 }
 
 # --- External integrations (parity with R .Renviron) ------------------------

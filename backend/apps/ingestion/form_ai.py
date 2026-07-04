@@ -88,6 +88,30 @@ def draft_spec(protocol_text: str) -> dict:
     return _parse(resp.json())
 
 
+def check() -> dict:
+    """A tiny live round-trip to confirm the key + model work, without drafting a
+    whole form. Returns {ok, model, message}. Never raises."""
+    if not is_enabled():
+        return {"ok": False, "message": "Disabled — set FORM_AI_API_KEY and FORM_AI_ENABLED."}
+    model = getattr(settings, "FORM_AI_MODEL", "claude-opus-4-8")
+    body = {"model": model, "max_tokens": 16,
+            "messages": [{"role": "user", "content": "Reply with the single word: ok"}]}
+    headers = {
+        "x-api-key": settings.FORM_AI_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+    }
+    try:
+        with httpx.Client(timeout=30.0) as client:
+            resp = client.post(ANTHROPIC_URL, headers=headers, json=body)
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "model": model, "message": f"Could not reach the AI service: {exc}"}
+    if resp.status_code != 200:
+        return {"ok": False, "model": model,
+                "message": f"HTTP {resp.status_code}: {resp.text[:200]}"}
+    return {"ok": True, "model": model, "message": "AI service reachable and the key works."}
+
+
 def _parse(payload: dict) -> dict:
     """Extract the JSON spec from an Anthropic Messages API response."""
     try:

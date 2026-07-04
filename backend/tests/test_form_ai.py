@@ -51,6 +51,20 @@ def test_draft_spec_gated_off(settings):
         form_ai.draft_spec("some protocol")
 
 
+def test_check_disabled(settings):
+    settings.FORM_AI_ENABLED = False
+    result = form_ai.check()
+    assert result["ok"] is False and "Disabled" in result["message"]
+
+
+def test_check_ok(monkeypatch, settings):
+    settings.FORM_AI_ENABLED = True
+    settings.FORM_AI_API_KEY = "test-key"
+    _mock_anthropic(monkeypatch, 200, "ok")
+    result = form_ai.check()
+    assert result["ok"] is True and result["model"]
+
+
 def _mock_anthropic(monkeypatch, status, text):
     class Resp:
         status_code = status

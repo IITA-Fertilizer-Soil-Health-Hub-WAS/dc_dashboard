@@ -71,3 +71,27 @@ def test_match_terms_reports_missing(tmp_path):
 def test_match_terms_empty():
     res = match_terms([])
     assert res.matched == {} and res.missing == [] and res.coverage == 0.0
+
+
+def test_daily_sync_task_imports(monkeypatch, tmp_path, settings):
+    """The Celery task clones + imports; here we stub the clone to a local dir."""
+    from apps.vocabulary import importer, tasks
+    from apps.vocabulary.models import VocabularyVariable
+
+    _fixture(tmp_path)
+    monkeypatch.setattr(importer, "sync_from_repo",
+                        lambda url: importer.import_from_dir(tmp_path))
+    settings.TERMINAG_REPO_URL = "https://example/terminag.git"
+    result = tasks.sync_terminag_task()
+    assert result["ok"] and result["variables"] == 4
+    assert VocabularyVariable.objects.filter(name="depth").exists()
+
+
+def test_daily_sync_task_is_fail_soft(monkeypatch, settings):
+    from apps.vocabulary import importer, tasks
+
+    def boom(url):
+        raise importer.VocabularySyncError("clone failed: network down")
+    monkeypatch.setattr(importer, "sync_from_repo", boom)
+    result = tasks.sync_terminag_task()
+    assert result["ok"] is False and "network down" in result["error"]

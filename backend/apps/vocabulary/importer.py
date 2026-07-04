@@ -9,10 +9,16 @@ from __future__ import annotations
 
 import csv
 import re
+import subprocess
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from .models import VocabularyValue, VocabularyVariable
+
+
+class VocabularySyncError(RuntimeError):
+    """Cloning or reading the vocabulary repo failed."""
 
 _YES = {"yes", "true", "1", "y"}
 
@@ -97,6 +103,23 @@ def import_from_dir(root: str | Path) -> ImportReport:
         report.tables.append(path.name)
 
     return report
+
+
+def sync_from_repo(repo_url: str) -> ImportReport:
+    """Shallow-clone ``repo_url`` to a temp dir and import it. Used by the daily
+    Celery task and the management command so both share one code path."""
+    if not repo_url:
+        raise VocabularySyncError("No vocabulary repo URL configured.")
+    with tempfile.TemporaryDirectory() as tmp:
+        try:
+            subprocess.run(["git", "clone", "--depth", "1", repo_url, tmp],
+                           check=True, capture_output=True, text=True)
+        except (subprocess.CalledProcessError, FileNotFoundError) as exc:
+            raise VocabularySyncError(f"Clone failed: {getattr(exc, 'stderr', exc)}")
+        root = Path(tmp)
+        if not (root / "variables").is_dir():
+            raise VocabularySyncError(f"{repo_url} has no variables/ folder — not a Terminag repo.")
+        return import_from_dir(root)
 
 
 def _rows(path: Path):
