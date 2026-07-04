@@ -494,9 +494,9 @@
           {# ===================== Projects ===================== #}
           <div class="lbl">Projects</div>
           {% if user.is_staff %}
-            <a href="{% url 'dashboards:overview' %}" title="Cross-project overview"
+            <a href="{% url 'dashboards:overview' %}" title="Cross-project review &amp; write-back status"
                class="{% if request.resolver_match.url_name == 'overview' %}active{% endif %}">
-              <span class="msym">dashboard</span>Overview
+              <span class="msym">dashboard</span>Operations
             </a>
             <a href="{% url 'kpi:overview' %}" title="Cross-project M&amp;E"
                class="{% if request.resolver_match.app_name == 'kpi' %}active{% endif %}">
@@ -545,10 +545,6 @@
             <a href="{% url 'console:publish_form' %}"
                class="{% if request.resolver_match.url_name == 'publish_form' %}active{% endif %}">
               <span class="msym">upload_file</span>Publish form
-            </a>
-            <a href="{% url 'console:link_enumerators' %}"
-               class="{% if request.resolver_match.url_name == 'link_enumerators' %}active{% endif %}">
-              <span class="msym">link</span>Link enumerators
             </a>
             <a href="/admin/" class="nav-sys" title="System settings: review audit, groups, scheduled tasks">
               <span class="msym">settings</span>Admin console
