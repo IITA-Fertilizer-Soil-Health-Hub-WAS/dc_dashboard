@@ -68,7 +68,7 @@ def test_signup_captures_completed_profile(django_user_model):
 
 
 def test_signup_can_pick_institution(django_user_model):
-    # Self-service institution is optional but, when chosen, links the account.
+    # When institutions exist, the account is linked to the chosen one.
     from apps.projects.models import Organization
 
     org = Organization.objects.create(code="iita", name="IITA")
@@ -78,6 +78,23 @@ def test_signup_can_pick_institution(django_user_model):
     form.custom_signup(_make_request(), user)
     user.refresh_from_db()
     assert user.organization_id == org.id
+
+
+def test_signup_requires_institution_once_any_exist():
+    # Institution is enforced as soon as the Platform Admin has onboarded one —
+    # the dropdown is that onboarded list, and a real choice is mandatory.
+    from apps.projects.models import Organization
+
+    Organization.objects.create(code="iita", name="IITA")
+    form = _bound_form()                 # no organization chosen
+    assert not form.is_valid()
+    assert "organization" in form.errors
+
+
+def test_signup_institution_optional_on_fresh_system():
+    # Brand-new system with no institution yet — registration isn't a dead end.
+    form = _bound_form()                 # no orgs exist, none chosen
+    assert form.is_valid(), form.errors
 
 
 def test_signup_requires_name_and_country():

@@ -35,20 +35,24 @@ class SocialSignupForm(SocialSignupBase):
     phone_alt = forms.CharField(max_length=32, required=False, label="Alternate phone")
     country = forms.CharField(max_length=64, label="Country")
 
-    # Optional self-service institution. Left blank for field enumerators who
-    # don't belong to a listed institution — an admin can bind them at approval.
+    # The institution the person belongs to — chosen from the list the Platform
+    # Admin has onboarded (console → Tenancy → Institutions). Required as soon as
+    # any institution exists; only optional on a brand-new system with none yet.
     organization = forms.ModelChoiceField(
-        queryset=None, required=False, label="Institution (if you belong to one)",
-        empty_label="— none / not sure —",
+        queryset=None, required=False, label="Institution",
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         from apps.projects.models import Organization
 
-        self.fields["organization"].queryset = Organization.objects.filter(
-            is_active=True
-        ).order_by("name")
+        field = self.fields["organization"]
+        field.queryset = Organization.objects.filter(is_active=True).order_by("name")
+        if field.queryset.exists():
+            field.required = True
+            field.empty_label = "Select your institution…"
+        else:
+            field.empty_label = "— none / not sure —"
 
     consent_personal_info = forms.BooleanField(
         required=False, label="I consent to the platform storing my personal information."
