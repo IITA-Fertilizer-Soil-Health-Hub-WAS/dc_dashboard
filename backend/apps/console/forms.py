@@ -36,10 +36,11 @@ class ProjectAdminForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         owner = self.fields["owner"]
-        # Only real people who belong to an institution are eligible.
-        owner.queryset = User.objects.filter(
-            organization__isnull=False
-        ).order_by("full_name", "email")
+        # Any existing account can be an owner. We do NOT require an institution
+        # here — a fresh account is only linked to one when first granted a role,
+        # so requiring it would leave the picker empty. Org-less users simply show
+        # under every institution in the live filter.
+        owner.queryset = User.objects.all().order_by("full_name", "email")
         # Every project must be owned by a specific user — required at creation and
         # enforced on edit, so any legacy owner-less project gets one when touched.
         owner.required = True

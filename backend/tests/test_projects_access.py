@@ -100,6 +100,20 @@ def test_project_form_scopes_and_validates_owner(django_user_model, org_world):
     assert "data-searchable" in widget_html and 'data-depends="organization"' in widget_html
 
 
+def test_owner_picker_lists_accounts_without_an_institution(django_user_model, org_world):
+    # A freshly created account has no organization yet; it must still be
+    # selectable as an owner (the earlier org-only filter left the picker empty).
+    from apps.console.forms import ProjectAdminForm
+
+    orgless = django_user_model.objects.create_user(
+        "fresh@x.org", "pw", is_active=True, full_name="Fresh Account"
+    )
+    assert orgless.organization_id is None
+    form = ProjectAdminForm()
+    assert orgless in form.fields["owner"].queryset
+    assert b"Fresh Account" in str(form["owner"]).encode()
+
+
 def test_project_form_requires_owner(org_world):
     # Every project must be owned by a specific user — no owner ⇒ invalid.
     from apps.console.forms import ProjectAdminForm

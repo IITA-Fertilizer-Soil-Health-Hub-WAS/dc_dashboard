@@ -479,10 +479,9 @@ class WizardView(StaffMixin, View):
             "backends": BACKEND_CHOICES,
             "targets": CANONICAL_TARGETS,
             "organizations": Organization.objects.filter(is_active=True),
-            # Owner candidates for the searchable, institution-scoped picker.
-            "owner_candidates": User.objects.filter(
-                organization__isnull=False
-            ).order_by("full_name", "email"),
+            # Owner candidates for the searchable picker — any existing account
+            # (org-less ones included, since org is only set at first grant).
+            "owner_candidates": User.objects.all().order_by("full_name", "email"),
         }
         ctx.update(extra)
         return ctx
