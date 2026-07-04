@@ -489,10 +489,16 @@ class WizardView(StaffMixin, View):
     def _ctx(self, request, **extra):
         from apps.accounts.models import User
         from apps.ingestion.backends.registry import BACKEND_CHOICES
-        from apps.projects.models import FormDefinition, Organization
+        from apps.projects.models import Country, Crop, FormDefinition, Organization
 
         from .onboarding import CANONICAL_TARGETS
 
+        # Existing crops offered as pick-from chips (crops are per-project, so the
+        # catalogue is the distinct set of names already in use anywhere).
+        existing_crops = sorted(
+            {c for c in Crop.objects.values_list("name", flat=True) if c},
+            key=str.lower,
+        )
         # No network here — projects are discovered asynchronously (see
         # WizardProjectsView) so the wizard opens instantly.
         ctx = {
@@ -505,8 +511,18 @@ class WizardView(StaffMixin, View):
             # Owner candidates for the searchable picker — any existing account
             # (org-less ones included, since org is only set at first grant).
             "owner_candidates": User.objects.all().order_by("full_name", "email"),
+            # Pick countries from the geo registry (drives the coordinator
+            # hierarchy) and crops from what already exists — no free typing.
+            "existing_countries": Country.objects.select_related("region").order_by("name"),
+            "existing_crops": existing_crops,
         }
         ctx.update(extra)
+        # Re-check the chips the user had ticked when redisplaying after an error.
+        posted = extra.get("posted")
+        if posted is not None:
+            getlist = getattr(posted, "getlist", lambda k: [])
+            ctx["posted_countries"] = getlist("countries")
+            ctx["posted_crops"] = getlist("crops")
         return ctx
 
     def get(self, request):

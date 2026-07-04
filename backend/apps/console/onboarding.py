@@ -63,10 +63,31 @@ def _csv(value: str | None) -> list[str]:
     return [p.strip() for p in (value or "").split(",") if p.strip()]
 
 
+def _picked(post, key: str) -> list[str]:
+    """Values for a multi-select field, from checkbox chips (``getlist``) plus an
+    optional free-text ``<key>_other`` (comma-separated) for adding new ones, plus
+    the legacy single ``<key>`` comma string. De-duplicated, order preserved."""
+    values: list[str] = []
+    if hasattr(post, "getlist"):
+        values.extend(v.strip() for v in post.getlist(key) if v.strip())
+    else:  # plain dict (tests) — the key may hold a comma string
+        values.extend(_csv(post.get(key)))
+    values.extend(_csv(post.get(f"{key}_other")))
+    seen: set[str] = set()
+    out: list[str] = []
+    for v in values:
+        low = v.lower()
+        if low not in seen:
+            seen.add(low)
+            out.append(v)
+    return out
+
+
 def build_config(post) -> dict[str, Any]:
     """Assemble a project config dict from wizard POST data."""
     enid_patterns = _csv(post.get("enid_patterns"))
     hhid_patterns = _csv(post.get("hhid_patterns"))
+    countries = _picked(post, "countries")
 
     data: dict[str, Any] = {
         "project": {
@@ -77,7 +98,10 @@ def build_config(post) -> dict[str, Any]:
             "organization": (post.get("organization") or "").strip(),
             # The specific user who owns/stewards it (a User.user_id).
             "owner": (post.get("owner") or "").strip(),
-            "countries": _csv(post.get("countries")),
+            "countries": countries,
+            # First picked country resolves to the geo-hierarchy Country FK
+            # (drives the coordinator cascade) — see config_admin.loader.
+            "country": countries[0] if countries else "",
             "enid_patterns": enid_patterns,
             "hhid_patterns": hhid_patterns,
         },
@@ -86,7 +110,7 @@ def build_config(post) -> dict[str, Any]:
             "base_url": (post.get("base_url") or "").strip(),
             "token": (post.get("token") or "").strip(),
         },
-        "crops": [{"name": c} for c in _csv(post.get("crops"))],
+        "crops": [{"name": c} for c in _picked(post, "crops")],
         "trials": [{"name": t} for t in _csv(post.get("trials"))],
         "forms": [],
         "event_schedule": [],

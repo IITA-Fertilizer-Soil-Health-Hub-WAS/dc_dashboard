@@ -101,6 +101,18 @@ def import_config(data: dict[str, Any]) -> Project:
         )
         if owner is not None:
             uc.owner = owner
+    # Optional geo-hierarchy country (drives the coordinator cascade), referenced
+    # by Country code or name. Only an existing Country is linked — never created.
+    country_ref = meta.get("country")
+    if country_ref:
+        from apps.projects.models import Country
+
+        country = (
+            Country.objects.filter(code__iexact=country_ref).first()
+            or Country.objects.filter(name__iexact=country_ref).first()
+        )
+        if country is not None:
+            uc.country = country
     uc.name = meta.get("name", uc.name)
     uc.is_active = meta.get("is_active", True)
     uc.countries = meta.get("countries", [])

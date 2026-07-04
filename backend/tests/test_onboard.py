@@ -177,6 +177,52 @@ def test_wizard_creates_project(client, staff, owner):
     assert Project.objects.filter(code="WZ-1").exists()
 
 
+def test_wizard_offers_existing_countries_and_crops(client, staff):
+    # The wizard lets you pick countries from the geo registry and crops from
+    # existing ones — as chips, not free typing.
+    from apps.projects.models import Country, Crop, Organization, Project, Region
+
+    org = Organization.objects.create(code="o", name="O")
+    region = Region.objects.create(organization=org, code="EA", name="East Africa")
+    Country.objects.create(region=region, code="RW", name="Rwanda")
+    seed = Project.objects.create(code="SEED", name="Seed", organization=org)
+    Crop.objects.create(project=seed, name="cassava")
+
+    client.force_login(staff)
+    html = client.get("/manage/new-project/").content.decode()
+    assert 'name="countries" value="Rwanda"' in html
+    assert 'name="crops" value="cassava"' in html
+    assert "East Africa" in html  # region shown alongside the country chip
+
+
+def test_picked_merges_chips_and_other():
+    from apps.console.onboarding import _picked
+    from django.http import QueryDict
+
+    q = QueryDict(mutable=True)
+    q.setlist("countries", ["Rwanda", "Kenya"])
+    q["countries_other"] = "Uganda, Rwanda"  # dup Rwanda is dropped
+    assert _picked(q, "countries") == ["Rwanda", "Kenya", "Uganda"]
+
+
+def test_wizard_links_country_fk_from_picker(client, staff, owner):
+    from apps.projects.models import Country, Project, Region
+
+    region = Region.objects.create(organization=owner.organization, code="EA", name="EA")
+    rw = Country.objects.create(region=region, code="RW", name="Rwanda")
+    client.force_login(staff)
+    resp = client.post("/manage/new-project/", {
+        "code": "WZ-C", "name": "WZ C", "owner": owner.user_id,
+        "countries": "Rwanda", "crops": "maize",
+        "form_count": "1", "form-0-id": "5",
+    })
+    assert resp.status_code == 302
+    uc = Project.objects.get(code="WZ-C")
+    assert uc.country == rw               # geo-hierarchy FK linked from the pick
+    assert uc.countries == ["Rwanda"]     # legacy list still populated
+    assert uc.crops.filter(name="maize").exists()
+
+
 def test_field_discovery_fallback_without_token(client, staff):
     client.force_login(staff)
     resp = client.post("/manage/new-project/fields/", {"index": "0", "form_id": "123"})

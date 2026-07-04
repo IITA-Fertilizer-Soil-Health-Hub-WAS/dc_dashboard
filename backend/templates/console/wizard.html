@@ -3,15 +3,31 @@
 {% block crumbs %}<span class="sep">/</span><span class="cur">Manage</span><span class="sep">/</span><span class="cur">Onboard project</span>{% endblock %}
 {% block extrahead %}{{ block.super }}
 <style>
-  .wz section{margin-bottom:1.3rem;}
-  .wz h3{display:flex;align-items:center;gap:.5rem;}
-  .wz .num{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--brand);color:#fff;font-size:.76rem;font-weight:700;}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;}
+  .wz{padding:0;overflow:hidden;}
+  .wz section{padding:1.3rem 1.5rem;border-bottom:1px solid var(--line);}
+  .wz section:last-of-type{border-bottom:none;}
+  .wz h3{display:flex;align-items:center;gap:.6rem;margin:0 0 .3rem;font-size:1rem;}
+  .wz .step-hint{font-size:.8rem;color:var(--muted);margin:.1rem 0 .9rem 2rem;}
+  .wz .num{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--brand);color:#fff;font-size:.82rem;font-weight:700;flex:none;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:.8rem 1rem;}
   @media (max-width:680px){.grid2,.maps{grid-template-columns:1fr;}
     .formblock{grid-template-columns:1fr;}}
   .fld label{display:block;font-size:.78rem;font-weight:600;color:var(--muted);margin-bottom:.25rem;}
+  .fld .hint{font-weight:400;color:var(--muted);}
   .fld input,.fld select{width:100%;padding:.5rem .65rem;border:1px solid var(--line);border-radius:8px;font-family:var(--sans);font-size:.9rem;background:var(--surface);}
   .fld input:focus,.fld select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-50);}
+  /* pick-from-existing chips (countries, crops) */
+  .chips{display:flex;flex-wrap:wrap;gap:.4rem;margin:.1rem 0 .5rem;}
+  .chip{position:relative;}
+  .chip input{position:absolute;opacity:0;width:0;height:0;}
+  .chip span{display:inline-block;border:1px solid var(--line);background:var(--surface);border-radius:999px;
+    padding:.32rem .8rem;font-size:.83rem;cursor:pointer;user-select:none;transition:.12s;white-space:nowrap;}
+  .chip span:hover{border-color:var(--brand);}
+  .chip input:checked + span{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600;}
+  .chip input:focus-visible + span{box-shadow:0 0 0 3px var(--brand-50);}
+  .chip span .creg{font-size:.72rem;color:var(--muted);background:transparent;margin-left:.35rem;}
+  .chip input:checked + span .creg{color:rgba(255,255,255,.8);}
+  .chips-empty{font-size:.8rem;color:var(--muted);font-style:italic;margin:.1rem 0 .4rem;}
   .formblock{border:1px solid var(--line);border-radius:10px;padding:.8rem 1rem;margin-bottom:.6rem;background:var(--surface-2);
     display:grid;grid-template-columns:auto 1fr auto;gap:.7rem;align-items:center;}
   .formblock .fname{font-weight:600;}
@@ -71,14 +87,45 @@
           </select>
         </div>
         {% endif %}
-        <div class="fld"><label>Owner *</label>
+        <div class="fld"><label>Owner * <span class="hint">— an existing user</span></label>
           <select name="owner" required data-searchable="1"{% if organizations|length > 1 %} data-depends="organization"{% endif %} data-placeholder="Search a user by name or email…">
             <option value="">—</option>
             {% for u in owner_candidates %}<option value="{{ u.user_id }}" data-org="{{ u.organization.code }}" {% if posted.owner == u.user_id %}selected{% endif %}>{{ u.full_name|default:u.email }}{% if u.full_name %} · {{ u.email }}{% endif %}</option>{% endfor %}
           </select>
         </div>
-        <div class="fld"><label>Countries (comma)</label><input name="countries" value="{{ posted.countries }}" placeholder="Rwanda"></div>
-        <div class="fld"><label>Crops (comma)</label><input name="crops" value="{{ posted.crops }}" placeholder="maize, potato"></div>
+      </div>
+
+      <div class="fld" style="margin-top:.8rem;"><label>Countries <span class="hint">— pick from the geography registry</span></label>
+        {% if existing_countries %}
+          <div class="chips">
+            {% for c in existing_countries %}
+              <label class="chip"><input type="checkbox" name="countries" value="{{ c.name }}"
+                {% if c.name in posted_countries %}checked{% endif %}>
+                <span>{{ c.name }}<span class="creg">{{ c.region.name }}</span></span></label>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="chips-empty">No countries in the registry yet — add them under Countries, or type below.</p>
+        {% endif %}
+        <input name="countries_other" value="{{ posted.countries_other }}" placeholder="Add another country (comma-separated)">
+      </div>
+
+      <div class="fld" style="margin-top:.6rem;"><label>Crops <span class="hint">— pick from existing crops</span></label>
+        {% if existing_crops %}
+          <div class="chips">
+            {% for crop in existing_crops %}
+              <label class="chip"><input type="checkbox" name="crops" value="{{ crop }}"
+                {% if crop in posted_crops %}checked{% endif %}>
+                <span>{{ crop }}</span></label>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="chips-empty">No crops defined yet — type the first ones below.</p>
+        {% endif %}
+        <input name="crops_other" value="{{ posted.crops_other }}" placeholder="Add another crop (comma-separated)">
+      </div>
+
+      <div class="grid2" style="margin-top:.8rem;">
         <div class="fld"><label>Enumerator ID pattern(s)</label><input name="enid_patterns" value="{{ posted.enid_patterns }}" placeholder="^RSENRW"></div>
         <div class="fld"><label>Household ID pattern(s)</label><input name="hhid_patterns" value="{{ posted.hhid_patterns }}" placeholder="^RSHHRW"></div>
       </div>
