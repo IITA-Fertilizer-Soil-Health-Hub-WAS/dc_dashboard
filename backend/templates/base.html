@@ -507,11 +507,15 @@
               <span class="msym">category</span>Manage projects
             </a>
           {% endif %}
-          <a href="{% url 'dashboards:projects' %}" title="Browse and search all projects"
-             class="{% if request.resolver_match.url_name == 'projects' or request.resolver_match.url_name == 'index' %}active{% endif %}">
-            <span class="msym">grid_view</span>{% if user.is_staff %}Browse projects{% else %}My projects{% endif %}
-            {% if nav_projects_total %}<span class="pill neutral" style="margin-left:auto;font-size:.66rem;">{{ nav_projects_total }}</span>{% endif %}
-          </a>
+          {% if not user.is_staff %}
+            {# Staff manage every project via 'Manage projects' + the picker below,
+               so the discovery catalogue link is only for regular users. #}
+            <a href="{% url 'dashboards:projects' %}" title="Browse and search all projects"
+               class="{% if request.resolver_match.url_name == 'projects' or request.resolver_match.url_name == 'index' %}active{% endif %}">
+              <span class="msym">grid_view</span>My projects
+              {% if nav_projects_total %}<span class="pill neutral" style="margin-left:auto;font-size:.66rem;">{{ nav_projects_total }}</span>{% endif %}
+            </a>
+          {% endif %}
           {% if nav_projects %}
             <select class="nav-proj-select" aria-label="Open a project"
                     onchange="if(this.value){window.location.href=this.value;}">
@@ -520,7 +524,8 @@
                 <option value="{% url 'dashboards:project' uc.code %}">{{ uc.name|default:uc.code }}</option>
               {% endfor %}
             </select>
-          {% else %}
+          {% elif not user.is_staff %}
+            {# Empty-state CTA only for regular users — staff manage all projects. #}
             <div class="muted-note">No projects yet — <a href="{% url 'dashboards:projects' %}?scope=all" style="color:#cfe2d6;text-decoration:underline;">browse to request access</a>.</div>
           {% endif %}
 
