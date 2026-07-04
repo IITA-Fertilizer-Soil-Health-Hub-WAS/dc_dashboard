@@ -20,6 +20,15 @@ def test_collect_server_url_per_backend():
     assert collect_server_url(p) == "https://api.ona.io/projects/251274"
 
 
+def test_odk_central_defaults_to_hub(settings):
+    """An ODK Central project with no base_url falls back to the hub deployment."""
+    settings.ODK_CENTRAL_BASE_URL = "https://fieldbase.regional-hub4-fsh-was.org"
+    org = Organization.objects.create(code="o2", name="O2")
+    p = Project.objects.create(code="C", name="C", organization=org)
+    DataSource.objects.create(project=p, backend="ODK_CENTRAL", base_url="", config={})
+    assert collect_server_url(p) == "https://fieldbase.regional-hub4-fsh-was.org"
+
+
 def test_qr_is_svg_data_uri():
     uri = collect_qr_data_uri("https://api.ona.io/projects/1", "SNS")
     assert uri.startswith("data:image/svg+xml")

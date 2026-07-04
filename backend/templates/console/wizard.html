@@ -96,11 +96,23 @@
 
         <div class="conn">
           <div class="fld"><label>Collection server</label>
-            <select name="backend" id="f_backend">
+            <select name="backend" id="f_backend" onchange="syncServerHint()">
               {% for val,lbl in backends %}<option value="{{ val }}" {% if posted.backend == val %}selected{% endif %}>{{ lbl }}</option>{% endfor %}
             </select>
           </div>
           <div class="fld"><label>Server URL <span class="hint subtle">(blank = default)</span></label><input name="base_url" id="f_baseurl" value="{{ posted.base_url }}" placeholder="https://api.ona.io"></div>
+          {{ backend_defaults|json_script:"backend-defaults" }}
+          <script>
+            // Reflect each backend's configured default as the Server URL placeholder,
+            // so choosing "ODK Central" shows the hub's deployment without typing it.
+            function syncServerHint(){
+              var defs = JSON.parse(document.getElementById('backend-defaults').textContent||'{}');
+              var b = document.getElementById('f_backend').value;
+              var inp = document.getElementById('f_baseurl');
+              inp.placeholder = defs[b] || 'https://api.ona.io';
+            }
+            syncServerHint();
+          </script>
           <button type="button" class="btn btn-request mini" onclick="loadProjects()" style="height:38px;">Find projects</button>
           <div class="fld" style="grid-column:1 / -1;"><label>API token <span class="hint subtle">(blank = use configured)</span></label>
             <input name="token" id="f_token" value="{{ posted.token }}" placeholder="paste a token to use a different account/server"></div>

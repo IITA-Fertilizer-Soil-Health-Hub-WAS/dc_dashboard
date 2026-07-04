@@ -286,6 +286,11 @@ CELERY_BEAT_SCHEDULE = {
 
 # --- External integrations (parity with R .Renviron) ------------------------
 ONA_BASE_URL = env("ONA_BASE_URL", default="https://api.ona.io")
+# This hub's ODK Central deployment — the default collection server for projects
+# on the ODK_CENTRAL backend (prefilled at onboarding, used for the ODK Collect
+# server URL / QR when a project's DataSource has no explicit base_url).
+ODK_CENTRAL_BASE_URL = env("ODK_CENTRAL_BASE_URL", default="https://fieldbase.regional-hub4-fsh-was.org")
+KOBO_BASE_URL = env("KOBO_BASE_URL", default="https://kf.kobotoolbox.org")
 ONA_TOKEN = env("ONA_TOKEN", default="")
 # Write-back of reviewer edits to the source server is OFF by default (it mutates
 # live records). Enable per environment once validated against a sandbox.

@@ -808,11 +808,21 @@ class WizardView(StaffMixin, View):
     case; its *forms* become the entries. Auto-suggests mappings, then imports."""
 
     def _ctx(self, request, **extra):
+        from django.conf import settings
+
         from apps.accounts.models import User
         from apps.ingestion.backends.registry import BACKEND_CHOICES
         from apps.projects.models import Country, Crop, FormDefinition, Organization
 
         from .onboarding import CANONICAL_TARGETS
+
+        # Per-backend default server URLs the wizard prefills as a placeholder so
+        # coordinators don't type the hub's ODK Central address each time.
+        backend_defaults = {
+            "ODK_CENTRAL": getattr(settings, "ODK_CENTRAL_BASE_URL", ""),
+            "ONA": getattr(settings, "ONA_BASE_URL", "https://api.ona.io"),
+            "KOBO": getattr(settings, "KOBO_BASE_URL", ""),
+        }
 
         # Existing crops offered as pick-from chips (crops are per-project, so the
         # catalogue is the distinct set of names already in use anywhere).
@@ -836,6 +846,7 @@ class WizardView(StaffMixin, View):
             # hierarchy) and crops from what already exists — no free typing.
             "existing_countries": Country.objects.select_related("region").order_by("name"),
             "existing_crops": existing_crops,
+            "backend_defaults": backend_defaults,
         }
         ctx.update(extra)
         # Re-check the chips the user had ticked when redisplaying after an error.

@@ -12,6 +12,7 @@ import json
 import zlib
 
 import segno
+from django.conf import settings
 
 
 def collect_server_url(project) -> str:
@@ -25,8 +26,12 @@ def collect_server_url(project) -> str:
     if ds.backend == "ONA" and base and pid:
         return f"{base}/projects/{pid}"
     if ds.backend == "KOBO":
-        return (cfg.get("kc_url") or "https://kc.kobotoolbox.org").rstrip("/")
-    return base  # ODK Central root, or ONA base without a project id
+        return (cfg.get("kc_url") or getattr(settings, "KOBO_BASE_URL", "")).rstrip("/")
+    if ds.backend == "ODK_CENTRAL":
+        # The hub's ODK Central deployment is the default; a project may override
+        # by setting its own base_url on the DataSource.
+        return base or getattr(settings, "ODK_CENTRAL_BASE_URL", "").rstrip("/")
+    return base  # ONA base without a project id
 
 
 def collect_qr_data_uri(server_url: str, project_name: str = "") -> str:
