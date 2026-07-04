@@ -90,3 +90,35 @@ def test_only_owner_can_edit(client, world, django_user_model):
     dash = Dashboard.objects.create(owner=world["coord"], name="Board", shared=True, widgets=[])
     client.force_login(other)
     assert client.get(reverse("kpi:dashboard_edit", args=[dash.pk])).status_code == 404
+
+
+def test_care_widgets(django_user_model):
+    """Care coverage + defaulters are available as dashboard widgets."""
+    from datetime import date, timedelta
+
+    from apps.care.models import CareProgram
+    from apps.fieldwork.models import CollectionUnit
+    from apps.kpi.builder import METRICS, compute_widget
+    from apps.projects.models import EventScheduleItem, FormDefinition, Organization, Project
+    from apps.submissions.models import Submission
+
+    assert "care_coverage" in METRICS and "care_defaulters" in METRICS
+
+    org = Organization.objects.create(code="o", name="O")
+    p = Project.objects.create(code="CP", name="CP", organization=org)
+    CareProgram.objects.create(project=p, client_label="Farmer")
+    EventScheduleItem.objects.create(project=p, event_key="Event1", sequence=1,
+                                     anchor="SITE_SELECTION", offset_days=14, grace_days=3)
+    EventScheduleItem.objects.create(project=p, event_key="Event2", sequence=2,
+                                     anchor="SITE_SELECTION", offset_days=45, grace_days=3)
+    form = FormDefinition.objects.create(project=p, ona_form_id=1,
+                                         role=FormDefinition.Role.VALIDATION)
+    anchor = date.today() - timedelta(days=60)
+    u = CollectionUnit.objects.create(project=p, code="U1", site_selection_date=anchor)
+    Submission.objects.create(project=p, form=form, collection_unit=u, event_key="Event1",
+                              event_date=anchor + timedelta(days=14), ona_uuid="x", content_hash="h")
+    # 1 of 2 visits done -> 50%; Event2 overdue -> 1 defaulter.
+    cov = compute_widget({"metric": "care_coverage"}, [p.id])
+    assert cov["data"]["value"] == 50 and cov["data"]["suffix"] == "%"
+    dfl = compute_widget({"metric": "care_defaulters"}, [p.id])
+    assert dfl["data"]["value"] == 1

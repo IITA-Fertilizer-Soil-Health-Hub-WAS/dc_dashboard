@@ -86,6 +86,31 @@ def _top_forms(pids, since):
             "rows": [[r["form__title"] or r["form__ona_form_id"] or "—", r["n"] or 0] for r in rows]}
 
 
+def _care_rollup(pids):
+    """Aggregate visit coverage across the care programmes in scope. Returns
+    (expected, done, defaulters). Empty when no scoped project is a programme."""
+    from apps.care.models import CareProgram
+    from apps.care.plan import program_coverage
+
+    exp = done = defaulters = 0
+    for prog in CareProgram.objects.filter(project_id__in=pids, is_active=True):
+        cov = program_coverage(prog)
+        exp += cov["total_expected"]
+        done += cov["total_done"]
+        defaulters += len(cov["defaulters"])
+    return exp, done, defaulters
+
+
+def _care_coverage(pids, since):
+    exp, done, _ = _care_rollup(pids)
+    return {"kind": "number", "value": round(100 * done / exp) if exp else 0, "suffix": "%"}
+
+
+def _care_defaulters(pids, since):
+    _, _, defaulters = _care_rollup(pids)
+    return {"kind": "number", "value": defaulters}
+
+
 # key -> (label, computer, chart types it makes sense with)
 METRICS = {
     "submissions": ("Submissions over time", _submissions_series, ["line", "bar"]),
@@ -95,6 +120,9 @@ METRICS = {
     "approval_rate": ("Approval rate", _approval_rate, ["number"]),
     "top_enumerators": ("Top enumerators", _top_enumerators, ["table"]),
     "top_forms": ("Top forms", _top_forms, ["table"]),
+    # Care follow-up (only meaningful when a scoped project is a care programme).
+    "care_coverage": ("Visit coverage (care)", _care_coverage, ["number"]),
+    "care_defaulters": ("Overdue-visit clients (care)", _care_defaulters, ["number"]),
 }
 
 METRIC_CHOICES = [(k, v[0]) for k, v in METRICS.items()]
