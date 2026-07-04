@@ -3,21 +3,42 @@
 {% block crumbs %}<span class="sep">/</span><span class="cur">Manage</span><span class="sep">/</span><span class="cur">Onboard project</span>{% endblock %}
 {% block extrahead %}{{ block.super }}
 <style>
-  .wz{padding:0;overflow:hidden;}
-  .wz section{padding:1.3rem 1.5rem;border-bottom:1px solid var(--line);}
-  .wz section:last-of-type{border-bottom:none;}
-  .wz h3{display:flex;align-items:center;gap:.6rem;margin:0 0 .3rem;font-size:1rem;}
-  .wz .step-hint{font-size:.8rem;color:var(--muted);margin:.1rem 0 .9rem 2rem;}
-  .wz .num{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--brand);color:#fff;font-size:.82rem;font-weight:700;flex:none;}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:.8rem 1rem;}
-  @media (max-width:680px){.grid2,.maps{grid-template-columns:1fr;}
-    .formblock{grid-template-columns:1fr;}}
-  .fld label{display:block;font-size:.78rem;font-weight:600;color:var(--muted);margin-bottom:.25rem;}
-  .fld .hint{font-weight:400;color:var(--muted);}
+  .wz{max-width:820px;}
+  /* progress header */
+  .wz-steps{display:flex;gap:.4rem;margin:0 0 1.1rem;}
+  .wz-step{flex:1;display:flex;align-items:center;gap:.55rem;background:none;border:none;cursor:pointer;
+    padding:.7rem .8rem;border-radius:10px;text-align:left;font:inherit;color:var(--muted);
+    border:1px solid var(--line);transition:.12s;}
+  .wz-step:hover{border-color:var(--brand);}
+  .wz-step .num{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;flex:none;
+    background:var(--surface-2);color:var(--muted);font-size:.82rem;font-weight:700;transition:.12s;}
+  .wz-step .st-label{font-size:.82rem;font-weight:600;line-height:1.15;}
+  .wz-step .st-sub{font-size:.72rem;color:var(--muted);font-weight:400;}
+  .wz-step.active{border-color:var(--brand);background:var(--brand-50);color:var(--brand-900);}
+  .wz-step.active .num{background:var(--brand);color:#fff;}
+  .wz-step.done .num{background:var(--gold);color:var(--brand-900);}
+  .wz-step.done .num::after{content:"✓";}
+  .wz-step.done .num span{display:none;}
+  @media (max-width:620px){.wz-step .st-sub{display:none;}}
+  /* panels */
+  .wz-panel{animation:fade .18s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+  .wz-panel h3{margin:0 0 .2rem;font-size:1.05rem;}
+  .wz-panel .lead{font-size:.83rem;color:var(--muted);margin:0 0 1rem;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:.75rem .9rem;}
+  @media (max-width:620px){.grid2,.maps{grid-template-columns:1fr;} .formblock{grid-template-columns:1fr;}}
+  .fld{min-width:0;}
+  .fld label{display:block;font-size:.76rem;font-weight:600;color:var(--muted);margin-bottom:.22rem;}
+  .fld .hint{font-weight:400;}
   .fld input,.fld select{width:100%;padding:.5rem .65rem;border:1px solid var(--line);border-radius:8px;font-family:var(--sans);font-size:.9rem;background:var(--surface);}
   .fld input:focus,.fld select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-50);}
-  /* pick-from-existing chips (countries, crops) */
-  .chips{display:flex;flex-wrap:wrap;gap:.4rem;margin:.1rem 0 .5rem;}
+  /* connection strip */
+  .conn{display:grid;grid-template-columns:1fr 1fr auto;gap:.6rem;align-items:end;background:var(--surface-2);
+    border:1px solid var(--line);border-radius:10px;padding:.75rem .8rem;margin-bottom:.9rem;}
+  @media (max-width:620px){.conn{grid-template-columns:1fr;}}
+  .conn .fld input,.conn .fld select{background:var(--surface);}
+  /* pick-from-existing chips */
+  .chips{display:flex;flex-wrap:wrap;gap:.4rem;margin:.1rem 0 .45rem;}
   .chip{position:relative;}
   .chip input{position:absolute;opacity:0;width:0;height:0;}
   .chip span{display:inline-block;border:1px solid var(--line);background:var(--surface);border-radius:999px;
@@ -28,7 +49,14 @@
   .chip span .creg{font-size:.72rem;color:var(--muted);background:transparent;margin-left:.35rem;}
   .chip input:checked + span .creg{color:rgba(255,255,255,.8);}
   .chips-empty{font-size:.8rem;color:var(--muted);font-style:italic;margin:.1rem 0 .4rem;}
-  .formblock{border:1px solid var(--line);border-radius:10px;padding:.8rem 1rem;margin-bottom:.6rem;background:var(--surface-2);
+  /* advanced disclosure */
+  .adv{margin-top:1rem;border-top:1px dashed var(--line);padding-top:.5rem;}
+  .adv>summary{cursor:pointer;font-size:.82rem;font-weight:600;color:var(--brand);list-style:none;padding:.3rem 0;}
+  .adv>summary::-webkit-details-marker{display:none;}
+  .adv>summary::before{content:"⌄";display:inline-block;margin-right:.4rem;transition:.15s;}
+  .adv[open]>summary::before{transform:rotate(180deg);}
+  /* forms + maps */
+  .formblock{border:1px solid var(--line);border-radius:10px;padding:.7rem .9rem;margin-bottom:.55rem;background:var(--surface-2);
     display:grid;grid-template-columns:auto 1fr auto;gap:.7rem;align-items:center;}
   .formblock .fname{font-weight:600;}
   .formblock .mapwrap{grid-column:1 / -1;}
@@ -41,117 +69,153 @@
   .proj-chip:hover{border-color:var(--brand);color:var(--brand);}
   .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--brand);border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle;margin-right:.4rem;}
   @keyframes sp{to{transform:rotate(360deg)}}
+  /* footer nav */
+  .wz-nav{display:flex;align-items:center;gap:.6rem;margin-top:1.3rem;padding-top:1rem;border-top:1px solid var(--line);}
+  .wz-nav .spacer{flex:1;}
+  .wz-err{color:var(--danger,#c3531f);font-size:.82rem;}
+  .wz-review{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:.75rem .9rem;font-size:.85rem;}
+  .wz-review dt{color:var(--muted);font-size:.74rem;}
+  .wz-review dd{margin:0 0 .5rem;font-weight:600;}
 </style>
 {% endblock %}
 {% block console_main %}
-  <div class="page-head"><h2>Onboard a project to monitor</h2>
+  <div class="page-head"><h2>Onboard a project</h2>
     <a class="subtle" href="{% url 'console:onboard_yaml' %}" style="margin-left:auto;font-size:.82rem;">Advanced: paste YAML →</a>
   </div>
-  <p class="subtle" style="margin:.1rem 0 1.2rem;">Pick a project from your collection server, choose which forms to monitor, and we set the rest up.</p>
 
   {% if problems %}
     <div class="err"><strong>Couldn't onboard:</strong><ul style="margin:.4rem 0 0;">{% for p in problems %}<li>{{ p }}</li>{% endfor %}</ul></div>
   {% endif %}
 
-  <form method="post" class="wz card">
-    {% csrf_token %}
-    <section>
-      <h3><span class="num">1</span> Project</h3>
-      <div class="grid2" style="margin-bottom:.6rem;">
-        <div class="fld"><label>Collection server</label>
-          <select name="backend" id="f_backend">
-            {% for val,lbl in backends %}<option value="{{ val }}" {% if posted.backend == val %}selected{% endif %}>{{ lbl }}</option>{% endfor %}
-          </select>
-        </div>
-        <div class="fld"><label>Server URL (blank = default)</label><input name="base_url" id="f_baseurl" value="{{ posted.base_url }}" placeholder="https://api.ona.io"></div>
-        <div class="fld" style="grid-column:1 / -1;"><label>API token (blank = use configured)</label>
-          <div style="display:flex;gap:.5rem;">
-            <input name="token" id="f_token" value="{{ posted.token }}" placeholder="paste a token to use a different account/server" style="flex:1;">
-            <button type="button" class="btn btn-request mini" onclick="loadProjects()">Find projects</button>
-          </div>
-        </div>
-      </div>
-      <!-- Projects load asynchronously so the wizard opens instantly. -->
-      <div id="project-list" hx-get="{% url 'console:wizard_projects' %}" hx-trigger="load"
-           hx-vals='js:{backend: document.getElementById("f_backend").value, base_url: document.getElementById("f_baseurl").value, token: document.getElementById("f_token").value}'>
-        <span class="subtle" style="font-size:.82rem;"><span class="spin"></span>Discovering projects on the server…</span>
-      </div>
-
-      <div class="grid2" style="margin-top:.8rem;">
-        <div class="fld"><label>Project code *</label><input name="code" id="f_code" required value="{{ posted.code }}" placeholder="SNS-RWANDA"></div>
-        <div class="fld"><label>Name *</label><input name="name" id="f_name" required value="{{ posted.name }}" placeholder="SNS Rwanda"></div>
-        {% if organizations|length > 1 %}
-        <div class="fld"><label>Owning institution</label>
-          <select name="organization">
-            {% for o in organizations %}<option value="{{ o.code }}" {% if posted.organization == o.code %}selected{% endif %}>{{ o.name }}</option>{% endfor %}
-          </select>
-        </div>
-        {% endif %}
-        <div class="fld"><label>Owner * <span class="hint">— an existing user</span></label>
-          <select name="owner" required data-searchable="1"{% if organizations|length > 1 %} data-depends="organization"{% endif %} data-placeholder="Search a user by name or email…">
-            <option value="">—</option>
-            {% for u in owner_candidates %}<option value="{{ u.user_id }}" data-org="{{ u.organization.code }}" {% if posted.owner == u.user_id %}selected{% endif %}>{{ u.full_name|default:u.email }}{% if u.full_name %} · {{ u.email }}{% endif %}</option>{% endfor %}
-          </select>
-        </div>
-      </div>
-
-      <div class="fld" style="margin-top:.8rem;"><label>Countries <span class="hint">— pick from the geography registry</span></label>
-        {% if existing_countries %}
-          <div class="chips">
-            {% for c in existing_countries %}
-              <label class="chip"><input type="checkbox" name="countries" value="{{ c.name }}"
-                {% if c.name in posted_countries %}checked{% endif %}>
-                <span>{{ c.name }}<span class="creg">{{ c.region.name }}</span></span></label>
-            {% endfor %}
-          </div>
-        {% else %}
-          <p class="chips-empty">No countries in the registry yet — add them under Countries, or type below.</p>
-        {% endif %}
-        <input name="countries_other" value="{{ posted.countries_other }}" placeholder="Add another country (comma-separated)">
-      </div>
-
-      <div class="fld" style="margin-top:.6rem;"><label>Crops <span class="hint">— pick from existing crops</span></label>
-        {% if existing_crops %}
-          <div class="chips">
-            {% for crop in existing_crops %}
-              <label class="chip"><input type="checkbox" name="crops" value="{{ crop }}"
-                {% if crop in posted_crops %}checked{% endif %}>
-                <span>{{ crop }}</span></label>
-            {% endfor %}
-          </div>
-        {% else %}
-          <p class="chips-empty">No crops defined yet — type the first ones below.</p>
-        {% endif %}
-        <input name="crops_other" value="{{ posted.crops_other }}" placeholder="Add another crop (comma-separated)">
-      </div>
-
-      <div class="grid2" style="margin-top:.8rem;">
-        <div class="fld"><label>Enumerator ID pattern(s)</label><input name="enid_patterns" value="{{ posted.enid_patterns }}" placeholder="^RSENRW"></div>
-        <div class="fld"><label>Household ID pattern(s)</label><input name="hhid_patterns" value="{{ posted.hhid_patterns }}" placeholder="^RSHHRW"></div>
-      </div>
-    </section>
-
-    <section>
-      <h3><span class="num">2</span> Forms to monitor</h3>
-      <p class="subtle" style="font-size:.8rem;margin:.1rem 0 .5rem;">Tick the forms you want to monitor. Pick a project above to populate these. You can refine each form (role, field mappings) later under <em>Manage → Forms</em>.</p>
-      <div id="forms"><p class="subtle" style="font-size:.82rem;">No project selected yet.</p></div>
-      <input type="hidden" name="form_count" id="form_count" value="0">
-    </section>
-
-    <section>
-      <h3><span class="num">3</span> Visit schedule</h3>
-      <div class="grid2" style="max-width:420px;">
-        <div class="fld"><label>Number of events</label><input type="number" name="num_events" min="0" value="{{ posted.num_events|default:'3' }}"></div>
-        <div class="fld"><label>Days between events</label><input type="number" name="interval_days" min="1" value="{{ posted.interval_days|default:'14' }}"></div>
-      </div>
-      <p class="subtle" style="font-size:.78rem;margin:.4rem 0 0;">Generates Event1…N and the green/amber/red status windows. Refine later under Event schedule.</p>
-    </section>
-
-    <div class="form-actions" style="display:flex;gap:.6rem;align-items:center;">
-      <button type="submit" class="btn btn-open">Onboard project</button>
-      <a class="subtle" href="{% url 'console:list' 'projects' %}">Cancel</a>
+  <div class="wz">
+    <div class="wz-steps">
+      <button type="button" class="wz-step active" data-step="1" onclick="goStep(1)">
+        <span class="num"><span>1</span></span><span><span class="st-label">Project</span><br><span class="st-sub">code, owner, geography</span></span></button>
+      <button type="button" class="wz-step" data-step="2" onclick="goStep(2)">
+        <span class="num"><span>2</span></span><span><span class="st-label">Forms</span><br><span class="st-sub">what to monitor</span></span></button>
+      <button type="button" class="wz-step" data-step="3" onclick="goStep(3)">
+        <span class="num"><span>3</span></span><span><span class="st-label">Schedule</span><br><span class="st-sub">visit windows</span></span></button>
     </div>
-  </form>
+
+    <form method="post" class="card" style="padding:1.3rem 1.5rem;">
+      {% csrf_token %}
+
+      <!-- STEP 1 -->
+      <div class="wz-panel" data-step="1">
+        <h3>Project</h3>
+        <p class="lead">Connect to your collection server, then name the project and set who owns it.</p>
+
+        <div class="conn">
+          <div class="fld"><label>Collection server</label>
+            <select name="backend" id="f_backend">
+              {% for val,lbl in backends %}<option value="{{ val }}" {% if posted.backend == val %}selected{% endif %}>{{ lbl }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="fld"><label>Server URL <span class="hint subtle">(blank = default)</span></label><input name="base_url" id="f_baseurl" value="{{ posted.base_url }}" placeholder="https://api.ona.io"></div>
+          <button type="button" class="btn btn-request mini" onclick="loadProjects()" style="height:38px;">Find projects</button>
+          <div class="fld" style="grid-column:1 / -1;"><label>API token <span class="hint subtle">(blank = use configured)</span></label>
+            <input name="token" id="f_token" value="{{ posted.token }}" placeholder="paste a token to use a different account/server"></div>
+        </div>
+        <!-- Projects load asynchronously so the wizard opens instantly. -->
+        <div id="project-list" hx-get="{% url 'console:wizard_projects' %}" hx-trigger="load"
+             hx-vals='js:{backend: document.getElementById("f_backend").value, base_url: document.getElementById("f_baseurl").value, token: document.getElementById("f_token").value}'>
+          <span class="subtle" style="font-size:.82rem;"><span class="spin"></span>Discovering projects on the server…</span>
+        </div>
+
+        <div class="grid2" style="margin-top:1rem;">
+          <div class="fld"><label>Project code *</label><input name="code" id="f_code" value="{{ posted.code }}" placeholder="SNS-RWANDA"></div>
+          <div class="fld"><label>Name *</label><input name="name" id="f_name" value="{{ posted.name }}" placeholder="SNS Rwanda"></div>
+          {% if organizations|length > 1 %}
+          <div class="fld"><label>Owning institution</label>
+            <select name="organization">
+              {% for o in organizations %}<option value="{{ o.code }}" {% if posted.organization == o.code %}selected{% endif %}>{{ o.name }}</option>{% endfor %}
+            </select>
+          </div>
+          {% endif %}
+          <div class="fld"><label>Owner * <span class="hint subtle">— an existing user</span></label>
+            <select name="owner" id="f_owner" data-searchable="1"{% if organizations|length > 1 %} data-depends="organization"{% endif %} data-placeholder="Search a user by name or email…">
+              <option value="">—</option>
+              {% for u in owner_candidates %}<option value="{{ u.user_id }}" data-org="{{ u.organization.code }}" {% if posted.owner == u.user_id %}selected{% endif %}>{{ u.full_name|default:u.email }}{% if u.full_name %} · {{ u.email }}{% endif %}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="grid2" style="margin-top:.75rem;">
+          <div class="fld"><label>Countries <span class="hint subtle">— from the geography registry</span></label>
+            {% if existing_countries %}
+              <div class="chips">
+                {% for c in existing_countries %}
+                  <label class="chip"><input type="checkbox" name="countries" value="{{ c.name }}"
+                    {% if c.name in posted_countries %}checked{% endif %}>
+                    <span>{{ c.name }}<span class="creg">{{ c.region.name }}</span></span></label>
+                {% endfor %}
+              </div>
+            {% else %}
+              <p class="chips-empty">No countries in the registry yet — add them under Countries, or type below.</p>
+            {% endif %}
+            <input name="countries_other" value="{{ posted.countries_other }}" placeholder="Add another country (comma-separated)">
+          </div>
+          <div class="fld"><label>Crops <span class="hint subtle">— pick from existing crops</span></label>
+            {% if existing_crops %}
+              <div class="chips">
+                {% for crop in existing_crops %}
+                  <label class="chip"><input type="checkbox" name="crops" value="{{ crop }}"
+                    {% if crop in posted_crops %}checked{% endif %}>
+                    <span>{{ crop }}</span></label>
+                {% endfor %}
+              </div>
+            {% else %}
+              <p class="chips-empty">No crops defined yet — type the first ones below.</p>
+            {% endif %}
+            <input name="crops_other" value="{{ posted.crops_other }}" placeholder="Add another crop (comma-separated)">
+          </div>
+        </div>
+
+        <details class="adv"{% if posted.enid_patterns or posted.hhid_patterns %} open{% endif %}>
+          <summary>Advanced — ID validation patterns</summary>
+          <div class="grid2" style="margin-top:.6rem;">
+            <div class="fld"><label>Enumerator ID pattern(s)</label><input name="enid_patterns" value="{{ posted.enid_patterns }}" placeholder="^RSENRW"></div>
+            <div class="fld"><label>Household ID pattern(s)</label><input name="hhid_patterns" value="{{ posted.hhid_patterns }}" placeholder="^RSHHRW"></div>
+          </div>
+        </details>
+      </div>
+
+      <!-- STEP 2 -->
+      <div class="wz-panel" data-step="2" hidden>
+        <h3>Forms to monitor</h3>
+        <p class="lead">Tick the forms to monitor. Pick a project in step 1 to populate these — refine roles &amp; field mappings later under <em>Manage → Forms</em>.</p>
+        <div id="forms"><p class="subtle" style="font-size:.82rem;">No project selected yet — go back to step 1 and choose one.</p></div>
+        <input type="hidden" name="form_count" id="form_count" value="0">
+      </div>
+
+      <!-- STEP 3 -->
+      <div class="wz-panel" data-step="3" hidden>
+        <h3>Visit schedule</h3>
+        <p class="lead">Generates Event1…N and the green / amber / red status windows. Refine later under Event schedule.</p>
+        <div class="grid2" style="max-width:420px;">
+          <div class="fld"><label>Number of events</label><input type="number" name="num_events" min="0" value="{{ posted.num_events|default:'3' }}"></div>
+          <div class="fld"><label>Days between events</label><input type="number" name="interval_days" min="1" value="{{ posted.interval_days|default:'14' }}"></div>
+        </div>
+        <div class="wz-review" id="wz-review" style="margin-top:1.1rem;">
+          <dl style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;margin:0;">
+            <div><dt>Project</dt><dd id="rv-name">—</dd></div>
+            <div><dt>Owner</dt><dd id="rv-owner">—</dd></div>
+            <div><dt>Forms selected</dt><dd id="rv-forms">0</dd></div>
+            <div><dt>Countries · Crops</dt><dd id="rv-geo">—</dd></div>
+          </dl>
+        </div>
+      </div>
+
+      <div class="wz-nav">
+        <button type="button" class="btn btn-ghost" id="btnBack" onclick="goStep(current-1)" hidden>← Back</button>
+        <span class="wz-err" id="wzErr"></span>
+        <span class="spacer"></span>
+        <a class="subtle" href="{% url 'console:list' 'projects' %}">Cancel</a>
+        <button type="button" class="btn btn-request" id="btnNext" onclick="goStep(current+1)">Next →</button>
+        <button type="submit" class="btn btn-open" id="btnSubmit" hidden>Onboard project</button>
+      </div>
+    </form>
+  </div>
 
   <template id="formTpl">
     <div class="formblock" data-idx="">
@@ -170,6 +234,49 @@
   </template>
 
   <script>
+    let current = 1;
+    function goStep(n){
+      n = Math.max(1, Math.min(3, n));
+      // Gate leaving step 1 until the essentials are filled.
+      if(current === 1 && n > 1 && !validateStep1()) return;
+      current = n;
+      document.querySelectorAll('.wz-panel').forEach(p => p.hidden = (+p.dataset.step !== n));
+      document.querySelectorAll('.wz-step').forEach(s => {
+        const sn = +s.dataset.step;
+        s.classList.toggle('active', sn === n);
+        s.classList.toggle('done', sn < n);
+      });
+      document.getElementById('btnBack').hidden = n === 1;
+      document.getElementById('btnNext').hidden = n === 3;
+      document.getElementById('btnSubmit').hidden = n !== 3;
+      if(n === 3) fillReview();
+      document.getElementById('wzErr').textContent = '';
+      window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+    function validateStep1(){
+      const missing = [];
+      if(!document.getElementById('f_code').value.trim()) missing.push('project code');
+      if(!document.getElementById('f_name').value.trim()) missing.push('name');
+      if(!document.getElementById('f_owner').value) missing.push('owner');
+      if(missing.length){
+        document.getElementById('wzErr').textContent = 'Please fill: ' + missing.join(', ') + '.';
+        return false;
+      }
+      return true;
+    }
+    function fillReview(){
+      document.getElementById('rv-name').textContent =
+        (document.getElementById('f_name').value || '—') + '  (' + (document.getElementById('f_code').value || '?') + ')';
+      const ownerSel = document.getElementById('f_owner');
+      document.getElementById('rv-owner').textContent = ownerSel.options[ownerSel.selectedIndex]?.text || '—';
+      document.getElementById('rv-forms').textContent =
+        document.querySelectorAll('#forms .formblock input[type=checkbox]:checked').length;
+      const cc = [...document.querySelectorAll('input[name=countries]:checked')].map(x=>x.value);
+      const cr = [...document.querySelectorAll('input[name=crops]:checked')].map(x=>x.value);
+      document.getElementById('rv-geo').textContent =
+        (cc.join(', ') || 'none') + '  ·  ' + (cr.join(', ') || 'none');
+    }
+
     let formIdx = 0;
     function addFormRow(id, title){
       const html = document.getElementById('formTpl').innerHTML.replaceAll('IDX', formIdx);
