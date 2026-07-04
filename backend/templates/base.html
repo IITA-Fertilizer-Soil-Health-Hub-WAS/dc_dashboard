@@ -478,20 +478,15 @@
             {% endif %}
           {% endif %}
 
-          {% if console_groups %}
-            <div class="lbl">{% if user.is_staff %}Configuration{% elif can_manage_access %}Configure{% else %}Data{% endif %}</div>
-            {% for group, items in console_groups %}
-              <details class="nav-group" {% if group == console_active_group %}open{% endif %}>
-                <summary>{{ group }}<span class="msym chev">chevron_right</span></summary>
-                <div class="nav-sub">
-                  {% for it in items %}
-                    <a href="{% url 'console:list' it.key %}?project={{ active_uc.code }}" title="{{ it.description }}"
-                       class="{% if it.key == request.resolver_match.kwargs.key %}active{% endif %}">
-                      <span class="msym">{{ it.icon }}</span>{{ it.label }}
-                    </a>
-                  {% endfor %}
-                </div>
-              </details>
+          {% if workspace_config_groups %}
+            <div class="lbl">{% if can_manage_access %}Project configuration{% else %}Data{% endif %}</div>
+            {% for group, items in workspace_config_groups %}
+              {% for it in items %}
+                <a href="{% url 'console:list' it.key %}?project={{ active_uc.code }}" title="{{ it.description }}"
+                   class="{% if it.key == request.resolver_match.kwargs.key %}active{% endif %}">
+                  <span class="msym">{{ it.icon }}</span>{{ it.label }}
+                </a>
+              {% endfor %}
             {% endfor %}
           {% endif %}
 
@@ -510,6 +505,10 @@
             <a href="{% url 'kpi:overview' %}" title="Cross-project M&amp;E"
                class="{% if request.resolver_match.app_name == 'kpi' %}active{% endif %}">
               <span class="msym">insights</span>M&amp;E
+            </a>
+            <a href="{% url 'console:list' 'projects' %}" title="Create &amp; edit projects"
+               class="{% if request.resolver_match.kwargs.key == 'projects' %}active{% endif %}">
+              <span class="msym">category</span>Manage projects
             </a>
           {% endif %}
 

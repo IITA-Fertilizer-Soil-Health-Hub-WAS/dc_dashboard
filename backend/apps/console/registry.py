@@ -71,8 +71,11 @@ _ENTRIES: list[Managed] = [
             list_display=["name", "code", "region"],
             form_fields=["region", "code", "name"], search_fields=["code", "name"],
             icon="flag", description="Countries within a region."),
-    # ---- Configuration: how a project is defined & ingested ----
-    Managed("projects", Project, "Projects", "Configuration",
+    # ---- Configuration: per-project setup, shown inside a project's workspace ----
+    # 'projects' itself is managed from the Overview area (a top-level link), not a
+    # per-project config tab — group 'Setup' keeps it routable but out of the
+    # grouped nav.
+    Managed("projects", Project, "Projects", "Setup",
             list_display=["code", "name", "organization", "owner", "country", "is_active",
                           "allow_access_requests", "config_version"],
             form_fields=["code", "name", "description", "organization", "owner", "country",
@@ -107,7 +110,9 @@ _ENTRIES: list[Managed] = [
             list_display=["project", "name", "aliases"],
             form_fields=["project", "name", "aliases"], search_fields=["name"], icon="grass",
             description="Crops and their ONA name aliases."),
-    Managed("trials", Trial, "Trials", "Configuration",
+    # Trials are set per project at ingest (Submission.trial), so no standalone
+    # nav tab — 'Operations' keeps it routable but unlisted.
+    Managed("trials", Trial, "Trials", "Operations",
             list_display=["project", "name", "code"],
             form_fields=["project", "name", "code"], search_fields=["name"], icon="science",
             description="Trial / experiment types (linked to submissions at ingest)."),
@@ -292,19 +297,8 @@ def console_can_edit(user, key: str) -> bool:
 
 
 def grouped_for(user) -> list[tuple[str, list[Managed]]]:
-    """Sidebar groups visible to `user`: everything for staff; the coordinator
-    manage subset; or read-only field data for an ordinary project member."""
-    keys = _visible_console_keys(user)
-    if keys is None:
-        return grouped()
-    if not keys:
-        return []
-    out = []
-    for group, items in grouped():
-        vis = [m for m in items if m.key in keys]
-        if vis:
-            out.append((group, vis))
-    return out
+    """Global admin groups visible to `user` (for the Administration nav)."""
+    return _filter_groups_for(user, grouped())
 
 # ORM lookup from each tenant-scoped section to its owning Organization, used by
 # the hub operator's per-institution filter on console lists. Sections not listed
@@ -326,10 +320,42 @@ ORG_FILTER_PATHS: dict[str, str] = {
     "access-requests": "project__organization",
 }
 
-# Group order for sidebar rendering.
-GROUPS: list[str] = ["Institution tenancy", "Configuration", "Accounts & roles"]
+# Global admin groups — shown in the (non-workspace) Administration nav.
+GROUPS: list[str] = ["Institution tenancy", "Accounts & roles"]
+
+# Per-project config groups — shown INSIDE a project's workspace (scoped by
+# ?project=), never in the global admin list.
+WORKSPACE_GROUPS: list[str] = ["Configuration"]
+
+
+def _grouped(group_names) -> list[tuple[str, list[Managed]]]:
+    return [(g, [m for m in _ENTRIES if m.group == g]) for g in group_names]
 
 
 def grouped() -> list[tuple[str, list[Managed]]]:
-    """Return [(group, [Managed, ...]), ...] in defined order for the sidebar."""
-    return [(g, [m for m in _ENTRIES if m.group == g]) for g in GROUPS]
+    """Global admin groups (Institution tenancy, Accounts & roles)."""
+    return _grouped(GROUPS)
+
+
+def workspace_grouped() -> list[tuple[str, list[Managed]]]:
+    """Per-project config groups shown in the project workspace."""
+    return _grouped(WORKSPACE_GROUPS)
+
+
+def _filter_groups_for(user, groups) -> list[tuple[str, list[Managed]]]:
+    keys = _visible_console_keys(user)
+    if keys is None:
+        return groups
+    if not keys:
+        return []
+    out = []
+    for group, items in groups:
+        vis = [m for m in items if m.key in keys]
+        if vis:
+            out.append((group, vis))
+    return out
+
+
+def workspace_grouped_for(user) -> list[tuple[str, list[Managed]]]:
+    """Per-project config groups visible to `user` (for the workspace sidebar)."""
+    return _filter_groups_for(user, workspace_grouped())

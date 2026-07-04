@@ -25,17 +25,18 @@ def navigation(request):
         or UnitAssignment.objects.filter(enumerator=user).exists()
     )
 
-    from apps.console.registry import REGISTRY, grouped_for
+    from apps.console.registry import REGISTRY, grouped_for, workspace_grouped_for
 
-    # Staff see all console sections; coordinators see a read-only, scoped subset
-    # (their projects' configuration + field data).
+    # Global admin groups (Institution tenancy, Accounts & roles) shown in the
+    # non-workspace nav; per-project config groups (Configuration) shown inside a
+    # project's workspace, scoped by ?project=.
     console_groups = grouped_for(user)
+    workspace_config_groups = workspace_grouped_for(user)
     active_group = None
-    if console_groups:
-        match = getattr(request, "resolver_match", None)
-        if match is not None and match.app_name == "console":
-            current = REGISTRY.get(match.kwargs.get("key"))
-            active_group = current.group if current else None
+    match = getattr(request, "resolver_match", None)
+    if match is not None and match.app_name == "console":
+        current = REGISTRY.get(match.kwargs.get("key"))
+        active_group = current.group if current else None
     from apps.accounts.services import claim_admin_available
 
     manages_access = can_manage_access(user)
@@ -84,6 +85,7 @@ def navigation(request):
         "can_validate_active": can_validate_active,
         "profile_incomplete": not profile_complete,
         "console_groups": console_groups,
+        "workspace_config_groups": workspace_config_groups,
         "console_active_group": active_group,
         "can_manage_access": manages_access,
         "pending_approvals_count": pending_count,

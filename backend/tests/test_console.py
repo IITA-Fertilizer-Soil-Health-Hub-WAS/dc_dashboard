@@ -29,8 +29,10 @@ def test_list_renders_for_staff(client, staff, uc):
     assert resp.status_code == 200
     body = resp.content.decode()
     # Rendered in the app shell; management sections appear directly in the single
-    # green rail (no separate console sidebar).
-    assert "Configuration" in body
+    # green rail (no separate console sidebar). Global admin groups show under
+    # "Administration"; per-project config lives inside a project's workspace.
+    assert "Administration" in body
+    assert "Institution tenancy" in body
     assert "console-nav" not in body
 
 
