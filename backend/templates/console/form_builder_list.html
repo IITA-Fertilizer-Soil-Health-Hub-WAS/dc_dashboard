@@ -1,0 +1,41 @@
+{% extends "console/base.html" %}
+{% block title %}Forms · Manage · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<span class="sep">/</span><span class="cur">Manage</span><span class="sep">/</span><span class="cur">Design forms</span>{% endblock %}
+{% block console_main %}
+  <div class="page-head"><h2>Design forms</h2><span style="flex:1"></span>
+    <a class="btn-new" style="background:var(--gold);color:var(--brand-900);text-decoration:none;" href="{% url 'console:form_new' %}">+ Build a form</a>
+    <a class="btn-new" style="text-decoration:none;margin-left:.5rem;" href="{% url 'console:publish_form' %}">Upload XLSForm</a>
+  </div>
+  <p class="subtle" style="margin:.1rem 0 1.2rem;">Build a form here (no spreadsheet needed) and publish it straight to the collection server, or upload an existing XLSForm.</p>
+
+  {% if messages %}{% for msg in messages %}<div class="pill" style="margin-bottom:.7rem;">{{ msg }}</div>{% endfor %}{% endif %}
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col">Form</th><th scope="col">Project</th><th scope="col">Questions</th>
+          <th scope="col">Status</th><th scope="col">Vocabulary</th><th scope="col">Updated</th>
+          <th scope="col" style="text-align:right;">Actions</th></tr></thead>
+        <tbody>
+          {% for d in drafts %}
+            <tr>
+              <td><strong>{{ d.title }}</strong></td>
+              <td>{{ d.project.code }}</td>
+              <td>{{ d.question_count }}</td>
+              <td><span class="pill {% if d.status == 'PUBLISHED' %}good{% else %}neutral{% endif %}">{{ d.get_status_display }}</span></td>
+              <td>{% if d.missing_terms %}<span class="pill warn" title="{{ d.missing_terms|join:', ' }}">{{ d.missing_terms|length }} off-vocabulary</span>{% else %}<span class="subtle">✓ standard</span>{% endif %}</td>
+              <td class="subtle" style="white-space:nowrap;">{{ d.updated_at|date:"Y-m-d H:i" }}</td>
+              <td class="row-actions" style="text-align:right;white-space:nowrap;">
+                <a href="{% url 'console:form_edit' d.pk %}">Edit</a>
+                <a class="del" href="#" onclick="event.preventDefault();if(confirm('Delete this draft?'))document.getElementById('del-{{ d.pk }}').submit();">Delete</a>
+                <form id="del-{{ d.pk }}" method="post" action="{% url 'console:form_delete_draft' d.pk %}" style="display:none;">{% csrf_token %}</form>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="7"><div class="empty" style="border:none;padding:1.6rem;">No forms yet — click <strong>Build a form</strong> to design one.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

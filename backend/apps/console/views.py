@@ -397,6 +397,156 @@ class PublishFormView(GeoManagerMixin, View):
         return redirect("console:list", key="forms")
 
 
+# ---------------------------------------------------------------------------
+# In-app form builder (Tier 2): author a form spec, generate an XLSForm, publish.
+# ---------------------------------------------------------------------------
+def _builder_projects(request):
+    from apps.projects.models import Project
+
+    if request.user.is_staff:
+        return Project.objects.filter(is_active=True).order_by("code")
+    from apps.rbac.permissions import visible_projects
+
+    return visible_projects(request.user).filter(is_active=True).order_by("code")
+
+
+def _scoped_draft(request, pk):
+    from apps.projects.models import FormDraft
+
+    return get_object_or_404(
+        FormDraft.objects.filter(project__in=_builder_projects(request)), pk=pk
+    )
+
+
+class FormBuilderListView(GeoManagerMixin, View):
+    """Hub: existing drafts + entry points to build a new form or upload one."""
+
+    def get(self, request):
+        from apps.projects.models import FormDraft
+
+        drafts = FormDraft.objects.filter(
+            project__in=_builder_projects(request)
+        ).select_related("project", "created_by").order_by("-updated_at")[:200]
+        return render(request, "console/form_builder_list.html",
+                      {"groups": grouped(), "console_key": "forms", "drafts": drafts})
+
+
+class FormDraftEditView(GeoManagerMixin, View):
+    """Create or edit a draft: the question editor. Saves the posted spec JSON."""
+
+    def _ctx(self, request, draft=None, **extra):
+        from apps.projects.models import FormDefinition
+        from apps.vocabulary.models import VocabularyVariable
+
+        ctx = {
+            "groups": grouped(),
+            "console_key": "forms",
+            "projects": _builder_projects(request),
+            "roles": FormDefinition.Role.choices,
+            "draft": draft,
+            "posted": {"title": "", "spec": ""},
+            "vocab": list(
+                VocabularyVariable.objects.values("name", "data_type", "unit",
+                                                  "valid_min", "valid_max", "value_list")
+            ),
+        }
+        ctx.update(extra)
+        return ctx
+
+    def get(self, request, pk=None):
+        draft = _scoped_draft(request, pk) if pk else None
+        return render(request, "console/form_builder_edit.html", self._ctx(request, draft))
+
+    def post(self, request, pk=None):
+        import json
+
+        from apps.ingestion.xlsform import XlsFormError, build_xlsform
+        from apps.projects.models import FormDraft
+        from apps.vocabulary.importer import match_terms
+
+        draft = _scoped_draft(request, pk) if pk else None
+        uc = _builder_projects(request).filter(pk=request.POST.get("project")).first()
+        title = (request.POST.get("title") or "").strip()
+        try:
+            spec = json.loads(request.POST.get("spec") or "{}")
+        except json.JSONDecodeError:
+            spec = {}
+        if uc is None or not title or not spec.get("questions"):
+            return render(request, "console/form_builder_edit.html", self._ctx(
+                request, draft, error="Pick a project, give a title, and add at least one question.",
+                posted={"title": title, "spec": request.POST.get("spec") or ""}))
+
+        spec.setdefault("settings", {})
+        spec["settings"].setdefault("form_title", title)
+        # Dry-run the generation so bad specs are caught before saving.
+        try:
+            build_xlsform(spec)
+        except XlsFormError as exc:
+            return render(request, "console/form_builder_edit.html", self._ctx(
+                request, draft, error=f"Form isn't valid yet: {exc}",
+                posted={"title": title, "spec": request.POST.get("spec") or ""}))
+
+        names = [q.get("name") for q in spec["questions"]
+                 if (q.get("type") or "text") not in {
+                     "begin_group", "end_group", "begin_repeat", "end_repeat"}]
+        missing = match_terms(names).missing
+
+        if draft is None:
+            draft = FormDraft(project=uc, created_by=request.user)
+        draft.project = uc
+        draft.title = title
+        draft.form_id = (request.POST.get("form_id") or "").strip()
+        draft.role = request.POST.get("role") or "VALIDATION"
+        draft.spec = spec
+        draft.missing_terms = missing
+        draft.save()
+        messages.success(request, f"Saved draft “{draft.title}”"
+                                  + (f" — {len(missing)} term(s) not in the vocabulary." if missing else "."))
+        if request.POST.get("action") == "publish":
+            return redirect("console:form_publish_draft", pk=draft.pk)
+        return redirect("console:form_edit", pk=draft.pk)
+
+
+class FormDraftPublishView(GeoManagerMixin, View):
+    """Generate the XLSForm from a draft and push it to the project's server."""
+
+    def post(self, request, pk):
+        from django.utils import timezone
+
+        from apps.ingestion.publishing import publish_xlsform
+        from apps.ingestion.xlsform import XlsFormError, build_xlsform
+
+        draft = _scoped_draft(request, pk)
+        try:
+            xlsx = build_xlsform(draft.spec)
+        except XlsFormError as exc:
+            messages.error(request, f"Couldn't generate the form: {exc}")
+            return redirect("console:form_edit", pk=draft.pk)
+
+        form, result = publish_xlsform(
+            draft.project, xlsx, filename=f"{draft.form_id or 'form'}.xlsx",
+            role=draft.role, title=draft.title,
+        )
+        if not result.ok:
+            messages.error(request, f"Publish failed: {result.message}")
+            return redirect("console:form_edit", pk=draft.pk)
+
+        draft.status = draft.Status.PUBLISHED
+        draft.published_form = form
+        draft.published_at = timezone.now()
+        draft.save(update_fields=["status", "published_form", "published_at", "updated_at"])
+        messages.success(request, f"Published “{draft.title}” to {draft.project.code}.")
+        return redirect("console:list", key="forms")
+
+
+class FormDraftDeleteView(GeoManagerMixin, View):
+    def post(self, request, pk):
+        draft = _scoped_draft(request, pk)
+        draft.delete()
+        messages.success(request, "Draft deleted.")
+        return redirect("console:form_builder")
+
+
 class OnboardProjectView(StaffMixin, View):
     """Onboard a new project to monitor, end to end, from inside the app:
 

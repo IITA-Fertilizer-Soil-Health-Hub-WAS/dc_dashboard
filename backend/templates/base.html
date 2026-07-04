@@ -571,9 +571,9 @@
           {% if can_publish_forms or user.is_staff %}
             <div class="lbl">System</div>
             {% if can_publish_forms %}
-              <a href="{% url 'console:publish_form' %}" title="Design a form and publish it to the collection server"
-                 class="{% if request.resolver_match.url_name == 'publish_form' %}active{% endif %}">
-                <span class="msym">upload_file</span>Design &amp; publish form
+              <a href="{% url 'console:form_builder' %}" title="Design a form and publish it to the collection server"
+                 class="{% if request.resolver_match.url_name == 'form_builder' or request.resolver_match.url_name == 'form_new' or request.resolver_match.url_name == 'form_edit' or request.resolver_match.url_name == 'publish_form' %}active{% endif %}">
+                <span class="msym">edit_note</span>Design forms
               </a>
             {% endif %}
             {% if user.is_staff %}

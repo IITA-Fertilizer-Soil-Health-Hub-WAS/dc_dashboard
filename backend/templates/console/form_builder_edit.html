@@ -1,0 +1,168 @@
+{% extends "console/base.html" %}
+{% block title %}{% if draft %}Edit form{% else %}Build a form{% endif %} · Manage · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<span class="sep">/</span><a href="{% url 'console:form_builder' %}">Design forms</a><span class="sep">/</span><span class="cur">{% if draft %}{{ draft.title }}{% else %}New form{% endif %}</span>{% endblock %}
+{% block extrahead %}{{ block.super }}
+<style>
+  .fb .fld label{display:block;font-size:.76rem;font-weight:600;color:var(--muted);margin-bottom:.22rem;}
+  .fb .fld input,.fb .fld select{width:100%;padding:.5rem .65rem;border:1px solid var(--line);border-radius:8px;font-size:.9rem;background:var(--surface);}
+  .fb .grid3{display:grid;grid-template-columns:2fr 1fr 1fr;gap:.75rem;}
+  .qtable{width:100%;border-collapse:collapse;margin-top:.5rem;}
+  .qtable th{font-size:.72rem;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);text-align:left;padding:.3rem .4rem;}
+  .qrow td{padding:.25rem .3rem;vertical-align:top;}
+  .qrow input,.qrow select{width:100%;padding:.38rem .5rem;border:1px solid var(--line);border-radius:7px;font-size:.84rem;background:var(--surface);}
+  .qrow .drag{cursor:grab;color:var(--faint);padding-top:.5rem;}
+  .qrow .rm{color:var(--red);cursor:pointer;background:none;border:none;font-size:1.1rem;padding-top:.3rem;}
+  .qrow.structural{background:var(--surface-2);}
+  .clist{border:1px solid var(--line);border-radius:9px;padding:.7rem .8rem;margin-bottom:.6rem;background:var(--surface-2);}
+  .clist textarea{width:100%;min-height:64px;border:1px solid var(--line);border-radius:7px;font-family:var(--mono);font-size:.82rem;padding:.4rem .5rem;background:var(--surface);}
+  .addbtn{background:var(--brand-50);color:var(--brand-700);border:1px dashed var(--brand);border-radius:8px;padding:.4rem .8rem;font-size:.83rem;font-weight:600;cursor:pointer;}
+  .miss{background:#fff6ec;border:1px solid #fdb415;color:#8a5a00;border-radius:8px;padding:.5rem .7rem;font-size:.83rem;margin:.6rem 0;}
+</style>
+{% endblock %}
+{% block console_main %}
+  <div class="page-head"><h2>{% if draft %}Edit form{% else %}Build a form{% endif %}</h2></div>
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+  {% if draft.missing_terms %}
+    <div class="miss"><strong>{{ draft.missing_terms|length }} field(s) aren't in the Terminag vocabulary:</strong>
+      {{ draft.missing_terms|join:", " }} — rename them to standard variables where you can, for cross-project comparability.</div>
+  {% endif %}
+
+  <form method="post" class="fb" id="fbform"
+        action="{% if draft %}{% url 'console:form_edit' draft.pk %}{% else %}{% url 'console:form_new' %}{% endif %}">
+    {% csrf_token %}
+    <input type="hidden" name="spec" id="spec">
+    <div class="card" style="padding:1.1rem 1.3rem;margin-bottom:1rem;">
+      <div class="grid3">
+        <div class="fld"><label>Form title *</label><input name="title" id="f_title" value="{{ draft.title|default:posted.title|default:'' }}" placeholder="Household baseline"></div>
+        <div class="fld"><label>Project *</label>
+          <select name="project" id="f_project">
+            <option value="">—</option>
+            {% for p in projects %}<option value="{{ p.pk }}" {% if draft.project_id == p.pk %}selected{% endif %}>{{ p.code }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="fld"><label>Role</label>
+          <select name="role">
+            {% for val,lbl in roles %}<option value="{{ val }}" {% if draft.role == val %}selected{% endif %}>{{ lbl }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:1.1rem 1.3rem;margin-bottom:1rem;">
+      <h3 style="margin:.1rem 0 .3rem;">Questions</h3>
+      <p class="subtle" style="font-size:.8rem;margin:0 0 .3rem;">Start a field name and pick from the Terminag list where possible — the type and range fill in automatically.</p>
+      <table class="qtable"><thead><tr>
+        <th style="width:22px;"></th><th>Type</th><th>Field name</th><th>Label</th>
+        <th style="width:64px;">Required</th><th>Choice list</th><th>Constraint</th><th style="width:22px;"></th>
+      </tr></thead><tbody id="qbody"></tbody></table>
+      <div style="margin-top:.6rem;display:flex;gap:.5rem;flex-wrap:wrap;">
+        <button type="button" class="addbtn" onclick="addQ()">+ Question</button>
+        <button type="button" class="addbtn" onclick="addQ({type:'begin_group',label:'Group'})">+ Group</button>
+        <button type="button" class="addbtn" onclick="addQ({type:'begin_repeat',label:'Repeat'})">+ Repeat</button>
+      </div>
+    </div>
+
+    <div class="card" style="padding:1.1rem 1.3rem;margin-bottom:1rem;">
+      <h3 style="margin:.1rem 0 .3rem;">Choice lists</h3>
+      <p class="subtle" style="font-size:.8rem;margin:0 0 .5rem;">For each <code>select_one</code>/<code>select_multiple</code>, define its list here (one <code>value, label</code> per line).</p>
+      <div id="clists"></div>
+      <button type="button" class="addbtn" onclick="addList()">+ Choice list</button>
+    </div>
+
+    <datalist id="vocablist">{% for v in vocab %}<option value="{{ v.name }}"></option>{% endfor %}</datalist>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-open" name="action" value="save">Save draft</button>
+      <button type="submit" class="btn btn-request" name="action" value="publish">Save &amp; publish to server</button>
+      <a class="subtle" href="{% url 'console:form_builder' %}">Cancel</a>
+    </div>
+  </form>
+
+  {{ vocab|json_script:"vocab-data" }}
+  {% if draft %}{{ draft.spec|json_script:"draft-spec" }}{% endif %}
+  <script>
+    const VOCAB = {}; (JSON.parse(document.getElementById('vocab-data').textContent)||[]).forEach(v=>VOCAB[v.name.toLowerCase()]=v);
+    const TYPES = ['text','integer','decimal','select_one','select_multiple','date','time','geopoint','note','calculate'];
+    const STRUCT = {begin_group:'end_group',begin_repeat:'end_repeat'};
+
+    function addQ(q){
+      q = q || {};
+      const tb = document.getElementById('qbody');
+      const tr = document.createElement('tr'); tr.className = 'qrow' + (STRUCT[q.type]?' structural':'');
+      const isStruct = !!STRUCT[q.type];
+      const typeOpts = (isStruct ? [q.type] : TYPES).map(t=>`<option ${t===q.type?'selected':''}>${t}</option>`).join('');
+      tr.innerHTML = `
+        <td class="drag" title="drag to reorder">⠿</td>
+        <td><select class="q-type" onchange="onType(this)">${typeOpts}</select></td>
+        <td><input class="q-name" list="vocablist" placeholder="field_name" value="${q.name||''}" onchange="onName(this)"></td>
+        <td><input class="q-label" placeholder="Question text" value="${q.label||''}"></td>
+        <td style="text-align:center;"><input type="checkbox" class="q-req" ${q.required?'checked':''}></td>
+        <td><input class="q-list" placeholder="list name" value="${q.list||''}"></td>
+        <td><input class="q-constraint" placeholder=". >= 0" value="${q.constraint||''}"></td>
+        <td><button type="button" class="rm" title="remove" onclick="this.closest('tr').remove()">×</button></td>`;
+      tb.appendChild(tr);
+      onType(tr.querySelector('.q-type'));
+    }
+    function onType(sel){
+      const tr = sel.closest('tr');
+      const isSelect = sel.value.startsWith('select');
+      tr.querySelector('.q-list').style.visibility = isSelect ? 'visible':'hidden';
+    }
+    function onName(inp){
+      const v = VOCAB[(inp.value||'').toLowerCase()];
+      if(!v) return;
+      const tr = inp.closest('tr');
+      if(!tr.querySelector('.q-label').value) tr.querySelector('.q-label').value = inp.value;
+      const map = {character:'text',integer:'integer',numeric:'decimal',date:'date',time:'time',logical:'select_one'};
+      const t = map[v.data_type]; if(t){ tr.querySelector('.q-type').value = t; onType(tr.querySelector('.q-type')); }
+      if(v.value_list) tr.querySelector('.q-list').value = v.value_list;
+      const parts=[]; if(v.valid_min!=null&&v.valid_min!=='') parts.push('. >= '+v.valid_min);
+      if(v.valid_max!=null&&v.valid_max!=='') parts.push('. <= '+v.valid_max);
+      if(parts.length && !tr.querySelector('.q-constraint').value) tr.querySelector('.q-constraint').value = parts.join(' and ');
+    }
+    function addList(name, opts){
+      const wrap = document.getElementById('clists');
+      const div = document.createElement('div'); div.className='clist';
+      div.innerHTML = `<div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.35rem;">
+        <input class="cl-name" placeholder="list name (e.g. crop)" value="${name||''}" style="flex:1;padding:.4rem .5rem;border:1px solid var(--line);border-radius:7px;">
+        <button type="button" class="rm" onclick="this.closest('.clist').remove()">×</button></div>
+        <textarea class="cl-opts" placeholder="maize, Maize&#10;potato, Potato">${opts||''}</textarea>`;
+      wrap.appendChild(div);
+    }
+
+    function collectSpec(){
+      const questions = [];
+      document.querySelectorAll('#qbody .qrow').forEach(tr=>{
+        const type = tr.querySelector('.q-type').value;
+        const q = {type};
+        if(STRUCT[type]){ q.label = tr.querySelector('.q-label').value; q.name = tr.querySelector('.q-name').value; questions.push(q); questions.push({type:STRUCT[type]}); return; }
+        q.name = tr.querySelector('.q-name').value;
+        q.label = tr.querySelector('.q-label').value;
+        if(tr.querySelector('.q-req').checked) q.required = true;
+        const list = tr.querySelector('.q-list').value.trim(); if(list) q.list = list;
+        const con = tr.querySelector('.q-constraint').value.trim(); if(con) q.constraint = con;
+        questions.push(q);
+      });
+      const choices = {};
+      document.querySelectorAll('#clists .clist').forEach(d=>{
+        const ln = d.querySelector('.cl-name').value.trim(); if(!ln) return;
+        choices[ln] = d.querySelector('.cl-opts').value.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{
+          const [name,...rest]=l.split(','); return {name:name.trim(), label:(rest.join(',').trim()||name.trim())};
+        });
+      });
+      return {settings:{form_title:document.getElementById('f_title').value, form_id:'{{ draft.form_id }}'}, questions, choices};
+    }
+    document.getElementById('fbform').addEventListener('submit', function(){
+      document.getElementById('spec').value = JSON.stringify(collectSpec());
+    });
+
+    // Load an existing draft, else start with one blank question.
+    const specEl = document.getElementById('draft-spec');
+    if(specEl){
+      const spec = JSON.parse(specEl.textContent||'{}');
+      const qs = spec.questions||[]; const opened = [];
+      qs.forEach(q=>{ if(q.type==='end_group'||q.type==='end_repeat') return; addQ(q); });
+      Object.entries(spec.choices||{}).forEach(([ln,opts])=>addList(ln, opts.map(o=>`${o.name}, ${o.label}`).join('\n')));
+    } else { addQ(); }
+  </script>
+{% endblock %}
