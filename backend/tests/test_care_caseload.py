@@ -109,3 +109,23 @@ def test_care_enrolled_widget(world):
     assert "care_enrolled" in METRICS
     w = compute_widget({"metric": "care_enrolled"}, [world["proj"].id])
     assert w["data"]["value"] == 1  # the one enrolled client
+
+
+# --- Phase 5: offline caseload export ---------------------------------------
+def test_my_caseload_csv_export(client, world):
+    assign_client(world["prog"], world["unit"], world["w1"], by=world["coord"])
+    client.force_login(world["w1"])
+    resp = client.get(reverse("care:my_caseload_csv"))
+    assert resp.status_code == 200
+    assert resp["Content-Type"].startswith("text/csv")
+    assert 'filename="my_caseload.csv"' in resp["Content-Disposition"]
+    body = resp.content.decode()
+    assert "FRM001" in body and "Event2" in body and "Overdue" in body
+
+
+def test_caseload_csv_only_my_clients(client, world):
+    """The export is scoped to the requesting worker's own caseload."""
+    assign_client(world["prog"], world["unit"], world["w1"], by=world["coord"])
+    client.force_login(world["w2"])  # w2 has no clients
+    body = client.get(reverse("care:my_caseload_csv")).content.decode()
+    assert "FRM001" not in body

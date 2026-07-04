@@ -9,6 +9,7 @@ app_name = "care"
 urlpatterns = [
     path("", views.programs, name="programs"),
     path("my-caseload/", views.my_caseload, name="my_caseload"),
+    path("my-caseload.csv", views.my_caseload_csv, name="my_caseload_csv"),
     path("<slug:code>/clients/", views.clients, name="clients"),
     path("<slug:code>/assign/", views.assign, name="assign"),
     path("<slug:code>/coverage/", views.coverage, name="coverage"),

@@ -100,6 +100,37 @@ def my_caseload(request):
 
 
 @login_required
+def my_caseload_csv(request):
+    """The worker's caseload as CSV — clients + their open (due/overdue) visits —
+    to reference offline in the field. Collection itself stays in ODK Collect."""
+    import csv
+
+    from django.http import HttpResponse
+
+    from .plan import client_visit_plan
+    from .services import worker_caseload
+
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = 'attachment; filename="my_caseload.csv"'
+    writer = csv.writer(response)
+    writer.writerow(["Client ID", "Name", "Location", "Programme", "Open visit",
+                     "Status", "Due date"])
+    for a in worker_caseload(request.user):
+        unit = a.unit
+        encounters = list(Submission.objects.filter(collection_unit=unit).select_related("crop"))
+        plan = client_visit_plan(unit, list(a.program.project.schedule.all()), encounters)
+        open_visits = [v for v in plan if v["is_open"]]
+        loc = unit.district or unit.region or ""
+        prog = a.program.name or a.program.project.code
+        if not open_visits:
+            writer.writerow([unit.code, unit.name, loc, prog, "", "up to date", ""])
+        for v in open_visits:
+            writer.writerow([unit.code, unit.name, loc, prog, v["event_key"],
+                             v["label"], v["target"].isoformat() if v["target"] else ""])
+    return response
+
+
+@login_required
 def client_timeline(request, code, unit_id):
     from .plan import client_visit_plan, plan_summary
 
