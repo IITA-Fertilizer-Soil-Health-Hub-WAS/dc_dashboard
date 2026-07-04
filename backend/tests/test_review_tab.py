@@ -57,6 +57,21 @@ def test_review_tab_shows_validate_for_gate2(client, world):
     assert b"Validate" in resp.content
 
 
+def test_contextual_config_links(client, world):
+    # Rejection reasons sit with Review; validation Rules sit with Issues —
+    # coordinators get a link to each from the screen it powers; viewers don't.
+    uc = world["uc"]
+    client.force_login(world["tc"])
+    rev = client.get(reverse("dashboards:tab_review", args=[uc.code])).content
+    iss = client.get(reverse("dashboards:tab_issues", args=[uc.code])).content
+    assert f"/manage/rejection-reasons/?project={uc.code}".encode() in rev
+    assert f"/manage/validation-rules/?project={uc.code}".encode() in iss
+
+    client.force_login(world["viewer"])
+    iss_v = client.get(reverse("dashboards:tab_issues", args=[uc.code])).content
+    assert b"/manage/validation-rules/" not in iss_v   # read-only viewer: no config link
+
+
 def test_review_tab_readonly_for_viewer(client, world):
     _sub(world["uc"], 1, ReviewState.IN_REVIEW)
     client.force_login(world["viewer"])

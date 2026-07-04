@@ -1,5 +1,11 @@
 <div class="card" style="margin-top:1rem;" id="issues-panel">
-  <h3>Issues <span class="pill">{{ flags|length }} open</span></h3>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:.6rem;">
+    <h3 style="margin:0;">Issues <span class="pill">{{ flags|length }} open</span></h3>
+    {% if can_edit_rules %}
+      <a class="btn btn-ghost" style="text-decoration:none;" href="{% url 'console:list' 'validation-rules' %}?project={{ uc.code }}"
+         title="Manage the checks that flag submissions"><span class="msym" style="font-size:15px;vertical-align:-2px;">rule</span> Rules</a>
+    {% endif %}
+  </div>
   {% if ok %}<div class="pill" style="margin:.3rem 0;background:#e7f0ea;color:#0a4630;">{{ ok }}</div>{% endif %}
   {% if error %}<div class="err">{{ error }}</div>{% endif %}
 

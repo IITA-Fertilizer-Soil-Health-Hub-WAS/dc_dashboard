@@ -289,10 +289,13 @@ def tab_review(request, code):
     ) if can_endorse else []
     approved = Submission.objects.filter(project=uc, review__state=ReviewState.APPROVED).count()
 
+    from apps.console.registry import console_can_edit
+
     return render(request, "dashboards/_review.html", {
         "uc": uc, "to_validate": to_validate, "to_endorse": to_endorse,
         "can_endorse": can_endorse, "can_validate": can_validate,
         "approved_count": approved,
+        "can_edit_reasons": console_can_edit(request.user, "rejection-reasons"),
     })
 
 
@@ -880,9 +883,12 @@ def _issues_context(request, uc) -> dict:
         "final_approve": user_can(request.user, "final_approve", uc),
         "open_review": user_can(request.user, "open_review", uc),
     }
+    from apps.console.registry import console_can_edit
+
     return {
         "uc": uc, "flags": flags, "can": can, "filters": f,
         "event_options": events,
         "state_options": ReviewState.choices,
         "severity_options": ValidationRule.Severity.choices,
+        "can_edit_rules": console_can_edit(request.user, "validation-rules"),
     }

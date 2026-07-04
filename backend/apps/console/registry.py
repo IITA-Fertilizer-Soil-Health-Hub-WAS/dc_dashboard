@@ -116,13 +116,16 @@ _ENTRIES: list[Managed] = [
             list_display=["project", "name", "code"],
             form_fields=["project", "name", "code"], search_fields=["name"], icon="science",
             description="Trial / experiment types (linked to submissions at ingest)."),
-    Managed("validation-rules", ValidationRule, "Validation rules", "Configuration",
+    # Validation rules feed the Issues tab and rejection reasons feed the Review
+    # decline action, so they're surfaced from those screens (contextual links),
+    # not the config list — 'Operations' keeps them routable but unlisted.
+    Managed("validation-rules", ValidationRule, "Validation rules", "Operations",
             list_display=["project", "code", "rule_type", "severity", "is_enabled"],
             form_fields=["project", "code", "rule_type", "params", "severity",
                          "auto_flag_state", "is_enabled"],
             search_fields=["code"], icon="rule",
             description="Checks that flag submissions for review."),
-    Managed("rejection-reasons", RejectionReason, "Rejection reasons", "Configuration",
+    Managed("rejection-reasons", RejectionReason, "Rejection reasons", "Operations",
             list_display=["project", "code", "label", "order", "is_active"],
             form_fields=["project", "code", "label", "order", "is_active"],
             search_fields=["code", "label"], icon="block",
