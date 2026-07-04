@@ -19,7 +19,7 @@
       <table>
         <thead><tr><th scope="col">{{ program.client_label }} ID</th><th scope="col">Name</th>
           <th scope="col">Location</th><th scope="col">Visits</th><th scope="col">Last visit</th>
-          <th scope="col" style="text-align:right;">Record</th></tr></thead>
+          <th scope="col">Worker</th><th scope="col" style="text-align:right;">Record</th></tr></thead>
         <tbody>
           {% for u in units %}
             <tr>
@@ -28,10 +28,21 @@
               <td class="subtle">{{ u.district|default:u.region|default:"—" }}</td>
               <td>{{ u.visits }}</td>
               <td class="subtle" style="white-space:nowrap;">{{ u.last_visit|date:"Y-m-d"|default:"—" }}</td>
+              <td>
+                {% if can_assign %}
+                  <form method="post" action="{% url 'care:assign' program.project.code %}?q={{ q }}" style="display:flex;gap:.3rem;">
+                    {% csrf_token %}<input type="hidden" name="unit" value="{{ u.pk }}">
+                    <select name="worker" onchange="this.form.submit()" style="font-size:.8rem;padding:.25rem .4rem;max-width:180px;">
+                      <option value="">{% if u.worker %}{{ u.worker.full_name|default:u.worker.email }}{% else %}— assign —{% endif %}</option>
+                      {% for w in workers %}<option value="{{ w.pk }}">{{ w.full_name|default:w.email }}</option>{% endfor %}
+                    </select>
+                  </form>
+                {% else %}{{ u.worker.full_name|default:u.worker.email|default:"—" }}{% endif %}
+              </td>
               <td style="text-align:right;"><a href="{% url 'care:client_timeline' program.project.code u.pk %}">Timeline →</a></td>
             </tr>
           {% empty %}
-            <tr><td colspan="6"><div class="empty" style="border:none;padding:1.6rem;">
+            <tr><td colspan="7"><div class="empty" style="border:none;padding:1.6rem;">
               No {{ program.client_label_plural|lower }}{% if q %} match “{{ q }}”{% else %} enrolled yet{% endif %}.</div></td></tr>
           {% endfor %}
         </tbody>

@@ -8,10 +8,12 @@ from __future__ import annotations
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Max, Q
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.views.decorators.http import require_POST
 
 from apps.fieldwork.models import CollectionUnit
-from apps.rbac.permissions import visible_projects
+from apps.rbac.permissions import can_manage_access, visible_projects
 from apps.submissions.models import Submission
 
 from .models import CareProgram
@@ -36,11 +38,65 @@ def clients(request, code):
     units = CollectionUnit.objects.filter(project=program.project)
     if q:
         units = units.filter(Q(code__icontains=q) | Q(name__icontains=q))
-    units = units.annotate(
+    units = list(units.annotate(
         visits=Count("submissions", distinct=True),
         last_visit=Max("submissions__event_date"),
-    ).order_by("code")[:500]
-    return render(request, "care/clients.html", {"program": program, "units": units, "q": q})
+    ).order_by("code")[:500])
+
+    # Current worker per unit (active assignment) so the register shows caseload.
+    from .models import CareAssignment
+
+    worker_by_unit = {
+        a.unit_id: a.worker for a in CareAssignment.objects.filter(
+            unit__in=units, is_active=True).select_related("worker")
+    }
+    for u in units:
+        u.worker = worker_by_unit.get(u.id)
+
+    from apps.accounts.models import User
+
+    can_assign = request.user.is_staff or can_manage_access(request.user)
+    workers = User.objects.filter(
+        organization=program.project.organization_id, is_active=True
+    ).order_by("full_name", "email") if program.project.organization_id else User.objects.none()
+    return render(request, "care/clients.html", {
+        "program": program, "units": units, "q": q,
+        "workers": workers, "can_assign": can_assign,
+    })
+
+
+@login_required
+@require_POST
+def assign(request, code):
+    program = get_object_or_404(_visible_programs(request.user), project__code=code)
+    unit = get_object_or_404(CollectionUnit, pk=request.POST.get("unit"), project=program.project)
+    from apps.accounts.models import User
+
+    from .services import assign_client
+
+    worker = User.objects.filter(pk=request.POST.get("worker")).first()
+    if worker is not None:
+        assign_client(program, unit, worker, by=request.user,
+                      note=(request.POST.get("note") or "").strip())
+    return redirect(f"{reverse('care:clients', args=[code])}?q={request.GET.get('q', '')}")
+
+
+@login_required
+def my_caseload(request):
+    from .plan import client_visit_plan, plan_summary
+    from .services import worker_caseload
+
+    rows = []
+    for a in worker_caseload(request.user):
+        encounters = list(Submission.objects.filter(collection_unit=a.unit).select_related("crop"))
+        plan = client_visit_plan(a.unit, list(a.program.project.schedule.all()), encounters)
+        summary = plan_summary(plan)
+        next_due = next((v for v in plan if v["is_open"]), None)
+        rows.append({"a": a, "summary": summary, "next_due": next_due,
+                     "open": [v for v in plan if v["is_open"]]})
+    # Overdue caseload first.
+    rows.sort(key=lambda r: (-r["summary"]["overdue"], -r["summary"]["due"], r["a"].unit.code))
+    return render(request, "care/my_caseload.html", {"rows": rows})
 
 
 @login_required

@@ -86,11 +86,13 @@ def navigation(request):
 
     # Show the Care section only when a project the user can see is a health-service
     # programme (keeps the nav clean for pure agronomic deployments).
-    from apps.care.models import CareProgram
+    from apps.care.models import CareAssignment, CareProgram
 
     show_care = CareProgram.objects.filter(
         project__in=visible, is_active=True
     ).exists()
+    # A worker sees 'My caseload' once clients are assigned to them.
+    show_my_caseload = CareAssignment.objects.filter(worker=user, is_active=True).exists()
 
     return {
         "nav_projects": nav_projects,
@@ -107,4 +109,5 @@ def navigation(request):
         "show_my_assignments": show_my_assignments,
         "can_publish_forms": can_publish_forms,
         "show_care": show_care,
+        "show_my_caseload": show_my_caseload,
     }

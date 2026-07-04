@@ -1,7 +1,15 @@
 {% comment %}Personal "My work" sidebar links — included in both the project-workspace
 and all-projects sidebar variants (see base.html) so the block is defined once.{% endcomment %}
-{% if show_my_assignments %}
+{% if show_my_assignments or show_my_caseload %}
   <div class="lbl">My work</div>
+{% endif %}
+{% if show_my_caseload %}
+  <a href="{% url 'care:my_caseload' %}"
+     class="{% if request.resolver_match.url_name == 'my_caseload' %}active{% endif %}">
+    <span class="msym">groups</span>My caseload
+  </a>
+{% endif %}
+{% if show_my_assignments %}
   <a href="{% url 'dashboards:my_assignments' %}"
      class="{% if request.resolver_match.url_name == 'my_assignments' %}active{% endif %}">
     <span class="msym">assignment_turned_in</span>My assignments
