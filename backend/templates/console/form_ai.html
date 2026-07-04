@@ -1,0 +1,51 @@
+{% extends "console/base.html" %}
+{% block title %}Draft from a protocol · Manage · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<span class="sep">/</span><a href="{% url 'console:form_builder' %}">Design forms</a><span class="sep">/</span><span class="cur">Draft from a protocol</span>{% endblock %}
+{% block extrahead %}{{ block.super }}
+<style>
+  .ai .fld{margin-bottom:1rem;}
+  .ai label{display:block;font-size:.78rem;font-weight:600;color:var(--muted);margin-bottom:.25rem;}
+  .ai input,.ai select,.ai textarea{width:100%;padding:.55rem .7rem;border:1px solid var(--line);border-radius:9px;font-size:.9rem;background:var(--surface);}
+  .ai textarea{min-height:200px;font-family:var(--mono);font-size:.82rem;line-height:1.5;}
+  .ai .grid2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+  @media (max-width:620px){.ai .grid2{grid-template-columns:1fr;}}
+  .aihint{background:var(--brand-50);border:1px solid rgba(13,92,63,.14);border-radius:10px;padding:.7rem .9rem;font-size:.85rem;color:var(--brand-900);margin-bottom:1.1rem;display:flex;gap:.6rem;align-items:flex-start;}
+  .offbanner{background:#fff6ec;border:1px solid #fdb415;color:#8a5a00;border-radius:10px;padding:.7rem .9rem;font-size:.85rem;margin-bottom:1.1rem;}
+</style>
+{% endblock %}
+{% block console_main %}
+  <div class="page-head"><h2>Draft a form from a protocol</h2></div>
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+
+  <div class="aihint">
+    <span class="msym" style="font-size:20px;">auto_awesome</span>
+    <div>Upload a protocol or questionnaire (or paste its text). The AI extracts the questions, types and
+      constraints, maps them to standard <strong>Terminag</strong> variables where it can, and opens a
+      <strong>draft</strong> in the builder. You review and edit before anything is published — the AI never publishes a form.</div>
+  </div>
+
+  {% if not ai_enabled %}
+    <div class="offbanner"><strong>AI drafting is off.</strong> Set a real <code>FORM_AI_API_KEY</code> (and
+      <code>FORM_AI_ENABLED=true</code>) to enable it. You can still <a href="{% url 'console:form_new' %}">build a form by hand</a>.</div>
+  {% endif %}
+
+  <form method="post" class="ai card" style="padding:1.2rem 1.4rem;" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="grid2">
+      <div class="fld"><label>Form title *</label><input name="title" placeholder="Household baseline"></div>
+      <div class="fld"><label>Project *</label>
+        <select name="project"><option value="">—</option>
+          {% for p in projects %}<option value="{{ p.pk }}">{{ p.code }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="fld"><label>Upload protocol <span class="subtle">(.docx or .txt — PDFs: paste the text)</span></label>
+      <input type="file" name="protocol_file" accept=".docx,.txt,.md,.csv"></div>
+    <div class="fld"><label>…or paste the protocol text</label>
+      <textarea name="protocol_text" placeholder="Paste the questionnaire / protocol here…"></textarea></div>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-open" {% if not ai_enabled %}disabled title="Enable AI drafting first"{% endif %}>Draft the form →</button>
+      <a class="subtle" href="{% url 'console:form_builder' %}">Cancel</a>
+    </div>
+  </form>
+{% endblock %}

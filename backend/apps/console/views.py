@@ -547,6 +547,70 @@ class FormDraftDeleteView(GeoManagerMixin, View):
         return redirect("console:form_builder")
 
 
+class FormAIDraftView(GeoManagerMixin, View):
+    """Tier 3: upload/paste a protocol, let the AI draft a form into the builder
+    for review. Human-in-the-loop — the draft is never auto-published."""
+
+    def _ctx(self, request, **extra):
+        from apps.ingestion import form_ai
+
+        ctx = {
+            "groups": grouped(),
+            "console_key": "forms",
+            "projects": _builder_projects(request),
+            "ai_enabled": form_ai.is_enabled(),
+        }
+        ctx.update(extra)
+        return ctx
+
+    def get(self, request):
+        return render(request, "console/form_ai.html", self._ctx(request))
+
+    def post(self, request):
+        from django.utils import timezone
+
+        from apps.ingestion import form_ai
+        from apps.ingestion.protocol_text import ProtocolError, extract_text
+        from apps.ingestion.xlsform import XlsFormError, build_xlsform
+        from apps.projects.models import FormDraft
+        from apps.vocabulary.importer import match_terms
+
+        uc = _builder_projects(request).filter(pk=request.POST.get("project")).first()
+        title = (request.POST.get("title") or "").strip()
+        if uc is None or not title:
+            return render(request, "console/form_ai.html",
+                          self._ctx(request, error="Pick a project and give the form a title."))
+
+        # Text from a pasted box or an uploaded protocol file.
+        text = (request.POST.get("protocol_text") or "").strip()
+        upload = request.FILES.get("protocol_file")
+        if upload is not None and not text:
+            try:
+                text = extract_text(upload.name, upload.read())
+            except ProtocolError as exc:
+                return render(request, "console/form_ai.html", self._ctx(request, error=str(exc)))
+        if not text:
+            return render(request, "console/form_ai.html",
+                          self._ctx(request, error="Paste the protocol text or upload a file."))
+
+        try:
+            spec = form_ai.draft_spec(text)
+            spec.setdefault("settings", {})["form_title"] = title
+            build_xlsform(spec)  # validate the AI output before saving
+        except (form_ai.FormAIError, XlsFormError) as exc:
+            return render(request, "console/form_ai.html", self._ctx(request, error=str(exc)))
+
+        names = [q.get("name") for q in spec["questions"]
+                 if (q.get("type") or "text") not in {
+                     "begin_group", "end_group", "begin_repeat", "end_repeat"}]
+        draft = FormDraft.objects.create(
+            project=uc, title=title, spec=spec, created_by=request.user,
+            source=FormDraft.Source.AI, missing_terms=match_terms(names).missing,
+        )
+        messages.success(request, "Drafted from the protocol — review and edit before publishing.")
+        return redirect("console:form_edit", pk=draft.pk)
+
+
 class OnboardProjectView(StaffMixin, View):
     """Onboard a new project to monitor, end to end, from inside the app:
 

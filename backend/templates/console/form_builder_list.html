@@ -4,9 +4,10 @@
 {% block console_main %}
   <div class="page-head"><h2>Design forms</h2><span style="flex:1"></span>
     <a class="btn-new" style="background:var(--gold);color:var(--brand-900);text-decoration:none;" href="{% url 'console:form_new' %}">+ Build a form</a>
+    <a class="btn-new" style="text-decoration:none;margin-left:.5rem;" href="{% url 'console:form_ai' %}"><span class="msym" style="font-size:15px;vertical-align:-2px;">auto_awesome</span> Draft from a protocol</a>
     <a class="btn-new" style="text-decoration:none;margin-left:.5rem;" href="{% url 'console:publish_form' %}">Upload XLSForm</a>
   </div>
-  <p class="subtle" style="margin:.1rem 0 1.2rem;">Build a form here (no spreadsheet needed) and publish it straight to the collection server, or upload an existing XLSForm.</p>
+  <p class="subtle" style="margin:.1rem 0 1.2rem;">Build a form here (no spreadsheet needed), draft one from a protocol with AI, or upload an existing XLSForm — then publish straight to the collection server.</p>
 
   {% if messages %}{% for msg in messages %}<div class="pill" style="margin-bottom:.7rem;">{{ msg }}</div>{% endfor %}{% endif %}
 

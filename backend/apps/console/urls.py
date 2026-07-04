@@ -19,6 +19,7 @@ urlpatterns = [
          name="form_publish_draft"),
     path("form-builder/<uuid:pk>/delete/", views.FormDraftDeleteView.as_view(),
          name="form_delete_draft"),
+    path("form-ai/", views.FormAIDraftView.as_view(), name="form_ai"),
     path("collection-units/import/", views.ImportCollectionUnitsView.as_view(),
          name="import_units"),
     path("plot-election/", views.PlotElectionQueueView.as_view(), name="plot_election"),
