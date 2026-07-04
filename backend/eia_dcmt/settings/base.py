@@ -279,6 +279,12 @@ ONA_TOKEN = env("ONA_TOKEN", default="")
 # Write-back of reviewer edits to the source server is OFF by default (it mutates
 # live records). Enable per environment once validated against a sandbox.
 WRITEBACK_ENABLED = env.bool("WRITEBACK_ENABLED", default=False)
+# Mirror platform accounts onto the collection server (ODK Central / ONA / Kobo):
+# creating a user, and granting them a project, creates/links their collector
+# account there. OFF by default — it makes live account changes on an external
+# server. Enable per environment only after verifying each backend against a
+# sandbox (see apps/ingestion/provisioning.py).
+AUTO_PROVISION_COLLECTORS = env.bool("AUTO_PROVISION_COLLECTORS", default=False)
 IPINFO_BASE_URL = env("IPINFO_BASE_URL", default="https://ipinfo.io")
 # Shared secret guarding the collection-server webhook (ODK Central / ONA →
 # instant re-sync). Empty = webhooks disabled (endpoint returns 503). The server

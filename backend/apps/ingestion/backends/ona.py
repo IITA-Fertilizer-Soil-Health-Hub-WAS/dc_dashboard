@@ -13,7 +13,7 @@ import httpx
 from django.conf import settings
 
 from ..ona_client import OnaClient
-from .base import PublishResult, RemoteForm, RemoteProject
+from .base import ProvisionResult, PublishResult, RemoteForm, RemoteProject
 from .odk import OdkBackend
 
 
@@ -23,6 +23,7 @@ class OnaBackend(OdkBackend):
     supports_discovery = True
     supports_writeback = True  # gated globally by settings.WRITEBACK_ENABLED
     supports_publish = True
+    supports_provisioning = True
 
     def _client(self) -> OnaClient:
         return OnaClient(base_url=self.base_url or None, token=self.token or None)
@@ -135,7 +136,72 @@ class OnaBackend(OdkBackend):
         )
 
 
+    # --- provisioning ---
+    # Verify against a live ONA/onadata before enabling AUTO_PROVISION_COLLECTORS.
+    def provision_account(
+        self, *, username: str, email: str = "", full_name: str = "",
+        remote_project_id: str = "",
+    ) -> ProvisionResult:
+        """Create an ONA account (``POST /api/v1/profiles``) with a generated
+        password, then share the project with it (``POST /api/v1/projects/{pid}/share``
+        as ``dataentry``). Requires an admin token. Idempotent: a taken username is
+        treated as already-provisioned and the share is still (re)applied."""
+        uname = _ona_username(username or email)
+        if not uname:
+            return ProvisionResult(ok=False, message="ONA needs a username or email")
+        password = _random_secret()
+        existed = False
+        url = f"{self._base()}/api/v1/profiles"
+        first, _, last = (full_name or "").partition(" ")
+        body = {"username": uname, "name": full_name or uname, "email": email,
+                "password1": password, "password2": password,
+                "first_name": first or uname, "last_name": last}
+        try:
+            with httpx.Client(timeout=30.0) as client:
+                resp = client.post(url, headers=self._headers(), json=body)
+        except Exception as exc:
+            return ProvisionResult(ok=False, message=f"Could not reach ONA: {exc}")
+        if resp.status_code in (200, 201):
+            secret = password
+        elif resp.status_code == 400 and "username" in resp.text.lower():
+            existed, secret = True, ""  # username already taken → already provisioned
+        else:
+            return ProvisionResult(ok=False, message=_ona_error(resp))
+
+        pid = remote_project_id or self.config.get("project_id")
+        if pid:
+            self._share_project(pid, uname, "dataentry")
+        return ProvisionResult(
+            ok=True, remote_id=uname, username=uname, secret=secret,
+            url=f"{self._base()}/{uname}", already_existed=existed,
+            message=("Linked existing ONA user." if existed else "Created ONA user."),
+        )
+
+    def _share_project(self, project_id, username: str, role: str) -> None:
+        url = f"{self._base()}/api/v1/projects/{project_id}/share"
+        with httpx.Client(timeout=30.0) as client:
+            resp = client.post(url, headers=self._headers(),
+                               json={"username": username, "role": role})
+        if resp.status_code not in (200, 201, 204):
+            raise RuntimeError(f"ONA project share HTTP {resp.status_code}: {resp.text[:200]}")
+
+
 XLSX_MEDIA = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+def _ona_username(seed: str) -> str:
+    """A valid ONA username from an email/name: lowercase alphanumerics + underscore."""
+    import re
+
+    local = (seed or "").split("@")[0].lower()
+    cleaned = re.sub(r"[^a-z0-9_]", "_", local).strip("_")
+    return cleaned[:30]
+
+
+def _random_secret() -> str:
+    import secrets
+
+    return secrets.token_urlsafe(12)
 
 
 def _ona_error(resp) -> str:

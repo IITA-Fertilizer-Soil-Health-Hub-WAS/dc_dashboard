@@ -55,6 +55,26 @@ class PublishResult:
     warnings: list[str] = field(default_factory=list)
 
 
+@dataclass
+class ProvisionResult:
+    """Outcome of creating/linking a collector account on the source server.
+
+    `remote_id` is the server's own identifier for the account (ODK Central user
+    or app-user id, ONA user pk, Kobo username) so a later grant/revoke can act on
+    it. `username` is what the collector signs in / is referenced with. `secret`
+    is a one-time password or token the server generated, surfaced once so an
+    admin can hand it to the collector; it is not stored in cleartext.
+    """
+
+    ok: bool
+    remote_id: str = ""
+    username: str = ""
+    secret: str = ""
+    url: str = ""
+    message: str = ""
+    already_existed: bool = False
+
+
 class CollectionBackend:
     """Abstract backend. Subclasses set `type`/`label` and implement the methods."""
 
@@ -63,6 +83,7 @@ class CollectionBackend:
     supports_discovery: bool = False
     supports_writeback: bool = False
     supports_publish: bool = False
+    supports_provisioning: bool = False
 
     def __init__(self, *, base_url: str = "", token: str = "", config: dict | None = None):
         self.base_url = base_url
@@ -121,4 +142,29 @@ class CollectionBackend:
         """
         return PublishResult(
             ok=False, message=f"{self.label or self.type} does not support form publishing"
+        )
+
+    # --- provisioning ---
+    def provision_account(
+        self,
+        *,
+        username: str,
+        email: str = "",
+        full_name: str = "",
+        remote_project_id: str = "",
+    ) -> ProvisionResult:
+        """Create (or find) an account for a collector on the source server, and
+        grant it access to ``remote_project_id`` when given.
+
+        This lets the platform mirror its own accounts onto the collection tool
+        so a new user can sign in to collect without a second manual step. The
+        default is unsupported; ODK-family backends override it against their
+        user / app-user APIs.
+
+        Implementations must be idempotent: if the account already exists, return
+        ``ok=True, already_existed=True`` rather than erroring, so re-runs (and the
+        grant-time trigger firing after the user-creation trigger) are safe.
+        """
+        return ProvisionResult(
+            ok=False, message=f"{self.label or self.type} does not support account provisioning"
         )

@@ -178,3 +178,60 @@ class SubmissionValue(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.submission_id}:{self.field_key}"
+
+
+class CollectorAccount(BaseModel):
+    """A platform user's mirrored identity on a collection server.
+
+    When auto-provisioning is on, creating a user (and granting them a project)
+    creates or links their account on the project's backend (ODK Central, ONA,
+    Kobo) so they can collect without a separate manual signup. One row per
+    (user, project) captures the outcome: the server's ``remote_id``/``username``
+    and a status. The one-time secret the server generates is **not** stored in
+    cleartext — it's surfaced once at provisioning time for an admin to relay.
+    ``project`` is null for a server-wide account created at user-creation time
+    before any project grant.
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        ACTIVE = "ACTIVE", "Active"
+        LINKED = "LINKED", "Linked (already existed)"
+        FAILED = "FAILED", "Failed"
+        UNSUPPORTED = "UNSUPPORTED", "Backend has no provisioning"
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="collector_accounts"
+    )
+    project = models.ForeignKey(
+        Project, null=True, blank=True, on_delete=models.CASCADE,
+        related_name="collector_accounts",
+    )
+    backend = models.CharField(max_length=32)  # backend type: ONA / ODK_CENTRAL / KOBO
+    remote_id = models.CharField(max_length=128, blank=True)
+    username = models.CharField(max_length=150, blank=True)
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.PENDING)
+    message = models.TextField(blank=True)
+    provisioned_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            # One row per (user, project); NULLs are distinct on most DBs, so the
+            # server-wide (project=NULL) row is kept unique by the app's
+            # get_or_create keyed on (user, project=None).
+            models.UniqueConstraint(
+                fields=["user", "project"],
+                condition=models.Q(project__isnull=False),
+                name="uniq_collector_account_user_project",
+            ),
+            models.UniqueConstraint(
+                fields=["user"],
+                condition=models.Q(project__isnull=True),
+                name="uniq_collector_account_user_serverwide",
+            ),
+        ]
+        ordering = ["user", "project"]
+
+    def __str__(self) -> str:
+        scope = self.project.code if self.project_id else "(server-wide)"
+        return f"{self.user} @ {self.backend}/{scope} = {self.status}"

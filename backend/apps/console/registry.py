@@ -25,7 +25,7 @@ from apps.projects.models import (
 )
 from apps.rbac.models import Membership, ProjectAccessRequest
 from apps.review.models import RejectionReason
-from apps.submissions.models import Enumerator
+from apps.submissions.models import CollectorAccount, Enumerator
 from apps.validation.models import ValidationRule
 
 from .actions import PROJECT_ACTIONS, USER_ACTIONS, Action
@@ -154,6 +154,13 @@ _ENTRIES: list[Managed] = [
             list_display=["user", "full_name", "gender", "country", "completed_at"],
             search_fields=["user__email", "user__full_name"], readonly=True,
             icon="badge", description="The register-once identity profiles (read-only)."),
+    Managed("collector-accounts", CollectorAccount, "Server accounts", "Accounts & roles",
+            list_display=["user", "project", "backend", "username", "status",
+                          "provisioned_at"],
+            search_fields=["user__email", "username", "project__code"], readonly=True,
+            icon="cloud_sync",
+            description="Mirrored collector accounts on the collection server "
+                        "(auto-provisioning outcomes, read-only)."),
     # Jobs live in the sidebar's Manage section ("Jobs & assignments"), not the
     # config console — so their group is intentionally outside GROUPS (routable +
     # editable, but not repeated in the Field data list). Same pattern as Monitoring.

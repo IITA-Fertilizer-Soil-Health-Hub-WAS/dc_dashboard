@@ -17,7 +17,7 @@ from typing import Any
 
 import httpx
 
-from .base import BackendError, RemoteForm, RemoteProject
+from .base import BackendError, ProvisionResult, RemoteForm, RemoteProject
 from .odk import OdkBackend
 
 
@@ -26,6 +26,7 @@ class KoboBackend(OdkBackend):
     label = "KoboToolbox"
     supports_discovery = True
     supports_writeback = True
+    supports_provisioning = True
 
     def _kpi(self) -> str:
         return (self.base_url or "https://kf.kobotoolbox.org").rstrip("/")
@@ -92,3 +93,47 @@ class KoboBackend(OdkBackend):
         if resp.status_code not in (200, 201, 202):
             raise BackendError(f"Kobo submit edit HTTP {resp.status_code}: {resp.text[:200]}")
         return None
+
+    # --- provisioning ---
+    # Verify against a live Kobo before enabling AUTO_PROVISION_COLLECTORS.
+    def provision_account(
+        self, *, username: str, email: str = "", full_name: str = "",
+        remote_project_id: str = "",
+    ) -> ProvisionResult:
+        """Kobo (hosted KPI) has no public API to create arbitrary accounts —
+        collectors self-register or a self-hosted admin creates them. What the API
+        *does* allow is granting an existing Kobo user access to a survey asset via
+        a permission-assignment. So: if a project (asset uid) is given, share it
+        with ``username`` (``add_submissions`` + ``view_asset``); account creation
+        is reported as a manual step."""
+        uname = (username or email or "").split("@")[0]
+        if not uname:
+            return ProvisionResult(ok=False, message="Kobo needs a username or email")
+        if not remote_project_id:
+            return ProvisionResult(
+                ok=True, username=uname, already_existed=True,
+                message="Kobo accounts are self-registered; nothing to create until a survey is shared.",
+            )
+        user_url = f"{self._kpi()}/api/v2/users/{uname}/"
+        assigned = []
+        for perm in ("view_asset", "add_submissions"):
+            perm_url = f"{self._kpi()}/api/v2/permissions/{perm}/"
+            resp = self._post_json(
+                f"{self._kpi()}/api/v2/assets/{remote_project_id}/permission-assignments/",
+                {"user": user_url, "permission": perm_url},
+            )
+            if resp.status_code in (200, 201):
+                assigned.append(perm)
+            elif resp.status_code not in (400, 409):  # 400/409 = already granted / bad user
+                raise BackendError(
+                    f"Kobo permission HTTP {resp.status_code}: {resp.text[:200]}")
+        return ProvisionResult(
+            ok=True, remote_id=uname, username=uname,
+            url=f"{self._kpi()}/#/forms/{remote_project_id}", already_existed=True,
+            message=f"Shared Kobo survey with {uname} ({', '.join(assigned) or 'already had access'}).",
+        )
+
+    def _post_json(self, url: str, body: dict):
+        headers = {**self._headers(), "Content-Type": "application/json"}
+        with httpx.Client(timeout=30.0) as client:
+            return client.post(url, headers=headers, json=body)

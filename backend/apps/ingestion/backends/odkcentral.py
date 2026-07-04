@@ -16,7 +16,7 @@ from typing import Any
 
 import httpx
 
-from .base import BackendError, PublishResult, RemoteForm, RemoteProject
+from .base import BackendError, ProvisionResult, PublishResult, RemoteForm, RemoteProject
 from .odk import OdkBackend
 
 XLSX_MEDIA = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -28,6 +28,7 @@ class OdkCentralBackend(OdkBackend):
     supports_discovery = True
     supports_writeback = True
     supports_publish = True
+    supports_provisioning = True
 
     def _base(self) -> str:
         return (self.base_url or "").rstrip("/")
@@ -174,6 +175,76 @@ class OdkCentralBackend(OdkBackend):
             url=f"{self._base()}/#/projects/{pid}/forms/{xml_form_id}",
             message="Form published to ODK Central.",
         )
+
+    # --- provisioning ---
+    # Verify against a live ODK Central before enabling AUTO_PROVISION_COLLECTORS.
+    def provision_account(
+        self, *, username: str, email: str = "", full_name: str = "",
+        remote_project_id: str = "",
+    ) -> ProvisionResult:
+        """Create a Central web user (``POST /v1/users``) with a generated
+        password, then, if a project is given, grant it the Data Collector role
+        (``POST /v1/projects/{pid}/assignments/formfill/{actorId}``). Requires an
+        admin bearer token. Idempotent: an existing email is looked up and
+        returned rather than re-created."""
+        login = email or username
+        if not login:
+            return ProvisionResult(ok=False, message="ODK Central needs an email to create a user")
+        password = _random_secret()
+        actor_id, secret, existed = self._ensure_web_user(login, full_name, password)
+        if actor_id is None:
+            return ProvisionResult(ok=False, message="Could not create or find the ODK Central user")
+
+        pid = remote_project_id or self.config.get("project_id")
+        if pid:
+            self._assign_role(pid, "formfill", actor_id)
+        return ProvisionResult(
+            ok=True, remote_id=str(actor_id), username=login, secret=secret,
+            url=f"{self._base()}/#/users", already_existed=existed,
+            message=("Linked existing ODK Central user." if existed
+                     else "Created ODK Central user."),
+        )
+
+    def _post_json(self, path: str, body: dict) -> httpx.Response:
+        headers = {**self._headers(), "Content-Type": "application/json"}
+        with httpx.Client(timeout=30.0) as client:
+            return client.post(f"{self._base()}{path}", headers=headers, json=body)
+
+    def _ensure_web_user(self, email: str, full_name: str, password: str):
+        """Return (actorId, one-time-secret, already_existed). Falls back to a
+        lookup on HTTP 409/400 (email already taken)."""
+        resp = self._post_json("/v1/users", {"email": email, "password": password,
+                                             "displayName": full_name or email})
+        if resp.status_code in (200, 201):
+            return resp.json().get("id"), password, False
+        if resp.status_code in (400, 409):
+            existing = self._find_user(email)
+            if existing is not None:
+                return existing, "", True
+        raise BackendError(f"ODK Central create user HTTP {resp.status_code}: {resp.text[:200]}")
+
+    def _find_user(self, email: str):
+        try:
+            for u in self._get_json(f"/v1/users?q={email}"):
+                if (u.get("email") or "").lower() == email.lower():
+                    return u.get("id")
+        except BackendError:
+            return None
+        return None
+
+    def _assign_role(self, project_id, role: str, actor_id) -> None:
+        resp = self._post_json(f"/v1/projects/{project_id}/assignments/{role}/{actor_id}", {})
+        # 200/201 = assigned; 409 = already had the role — both fine.
+        if resp.status_code not in (200, 201, 409):
+            raise BackendError(
+                f"ODK Central role assignment HTTP {resp.status_code}: {resp.text[:200]}")
+
+
+def _random_secret() -> str:
+    """A strong throwaway password meeting Central's 10-char minimum."""
+    import secrets
+
+    return secrets.token_urlsafe(12)
 
 
 def _central_error(resp) -> str:
