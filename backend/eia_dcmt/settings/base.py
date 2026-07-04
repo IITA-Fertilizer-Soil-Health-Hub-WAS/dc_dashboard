@@ -86,6 +86,7 @@ LOCAL_APPS = [
     "apps.validation",
     "apps.fieldwork",
     "apps.kpi",
+    "apps.vocabulary",
     "apps.dashboards",
     "apps.console",
     "apps.api",
@@ -289,6 +290,16 @@ WRITEBACK_ENABLED = env.bool("WRITEBACK_ENABLED", default=False)
 # server. Enable per environment only after verifying each backend against a
 # sandbox (see apps/ingestion/provisioning.py).
 AUTO_PROVISION_COLLECTORS = env.bool("AUTO_PROVISION_COLLECTORS", default=False)
+
+# --- Form authoring: controlled vocabulary + AI drafting --------------------
+# Terminag controlled vocabulary (agricultural research variables + value lists),
+# imported by `manage.py import_vocabulary` and used to standardise form fields.
+TERMINAG_REPO_URL = env("TERMINAG_REPO_URL", default="https://github.com/controvoc/terminag.git")
+# Optional AI drafting of a form from an uploaded protocol (Tier 3). OFF unless a
+# real key is set — the placeholder default keeps the pipeline reachable but inert.
+FORM_AI_API_KEY = env("FORM_AI_API_KEY", default="")
+FORM_AI_MODEL = env("FORM_AI_MODEL", default="claude-opus-4-8")
+FORM_AI_ENABLED = env.bool("FORM_AI_ENABLED", default=bool(FORM_AI_API_KEY))
 IPINFO_BASE_URL = env("IPINFO_BASE_URL", default="https://ipinfo.io")
 # Shared secret guarding the collection-server webhook (ODK Central / ONA →
 # instant re-sync). Empty = webhooks disabled (endpoint returns 503). The server
