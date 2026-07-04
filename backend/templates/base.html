@@ -528,6 +528,12 @@
                class="{% if request.resolver_match.app_name == 'kpi' %}active{% endif %}">
               <span class="msym">insights</span>M&amp;E
             </a>
+            {% if show_care %}
+            <a href="{% url 'care:programs' %}" title="Health service delivery — clients &amp; longitudinal records"
+               class="{% if request.resolver_match.app_name == 'care' %}active{% endif %}">
+              <span class="msym">vaccines</span>Care
+            </a>
+            {% endif %}
             <a href="{% url 'console:list' 'projects' %}" title="Create &amp; edit projects"
                class="{% if request.resolver_match.kwargs.key == 'projects' %}active{% endif %}">
               <span class="msym">category</span>Manage projects

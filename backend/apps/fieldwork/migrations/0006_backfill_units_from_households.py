@@ -11,7 +11,14 @@ from django.db import migrations
 
 
 def backfill(apps, schema_editor):
-    Household = apps.get_model("submissions", "Household")
+    # Robust to migration-graph ordering: if Household has already been merged
+    # away by the time this data migration runs (e.g. a fresh DB where the graph
+    # ordered submissions' Household-deletion first), there is nothing to
+    # backfill — skip cleanly instead of raising LookupError.
+    try:
+        Household = apps.get_model("submissions", "Household")
+    except LookupError:
+        return
     CollectionUnit = apps.get_model("fieldwork", "CollectionUnit")
     Submission = apps.get_model("submissions", "Submission")
 

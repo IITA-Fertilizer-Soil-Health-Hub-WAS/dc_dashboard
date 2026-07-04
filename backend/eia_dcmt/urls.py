@@ -23,6 +23,7 @@ urlpatterns = [
     path("healthz/", healthcheck, name="healthcheck"),
     path("api/", include("apps.api.urls")),
     path("kpi/", include("apps.kpi.urls")),
+    path("care/", include("apps.care.urls")),
     path("manage/", include("apps.console.urls")),
     path("", include("apps.dashboards.urls")),
 ]

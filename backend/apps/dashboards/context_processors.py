@@ -84,6 +84,14 @@ def navigation(request):
 
     can_publish_forms = is_geo_manager(user)
 
+    # Show the Care section only when a project the user can see is a health-service
+    # programme (keeps the nav clean for pure agronomic deployments).
+    from apps.care.models import CareProgram
+
+    show_care = CareProgram.objects.filter(
+        project__in=visible, is_active=True
+    ).exists()
+
     return {
         "nav_projects": nav_projects,
         "nav_projects_total": nav_projects_total,
@@ -98,4 +106,5 @@ def navigation(request):
         "show_claim_admin": claim_admin_available(user),
         "show_my_assignments": show_my_assignments,
         "can_publish_forms": can_publish_forms,
+        "show_care": show_care,
     }

@@ -86,6 +86,7 @@ LOCAL_APPS = [
     "apps.validation",
     "apps.fieldwork",
     "apps.kpi",
+    "apps.care",
     "apps.vocabulary",
     "apps.dashboards",
     "apps.console",

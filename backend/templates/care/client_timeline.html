@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ unit.code }} · {{ program.client_label }} record · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<span class="sep">/</span><a href="{% url 'care:programs' %}">Care</a><span class="sep">/</span><a href="{% url 'care:clients' program.project.code %}">{{ program.client_label_plural }}</a><span class="sep">/</span><span class="cur">{{ unit.code }}</span>{% endblock %}
+{% block extrahead %}{{ block.super }}
+<style>
+  .tl{position:relative;margin:1rem 0 0;padding-left:1.4rem;}
+  .tl::before{content:"";position:absolute;left:6px;top:.4rem;bottom:.4rem;width:2px;background:var(--line);}
+  .tl-item{position:relative;padding:0 0 1.1rem;}
+  .tl-item::before{content:"";position:absolute;left:-1.4rem;top:.35rem;width:12px;height:12px;border-radius:50%;
+    background:var(--surface);border:2px solid var(--brand);}
+  .tl-item.declined::before{border-color:var(--red);}
+  .tl-date{font-size:.78rem;color:var(--muted);font-weight:600;}
+  .tl-card{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:.6rem .85rem;margin-top:.25rem;}
+  .tl-card .ev{font-weight:650;}
+  .tl-meta{font-size:.8rem;color:var(--muted);margin-top:.15rem;display:flex;gap:.9rem;flex-wrap:wrap;}
+</style>
+{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h2>{{ unit.name|default:unit.code }}</h2>
+    <span class="pill">{{ unit.code }}</span>
+    <span style="flex:1"></span>
+    <span class="subtle">{{ encounters|length }} encounter{{ encounters|length|pluralize }}</span>
+  </div>
+  <p class="lede">{{ program.client_label }} record in {{ program.name|default:program.project.name }} —
+    {% if unit.district or unit.region %}{{ unit.district|default:unit.region }} · {% endif %}every visit this {{ program.client_label|lower }} has had.</p>
+
+  <div class="tl">
+    {% for e in encounters %}
+      <div class="tl-item {% if e.review.state == 'DECLINED' %}declined{% endif %}">
+        <div class="tl-date">{{ e.event_date|date:"Y-m-d"|default:"undated" }}</div>
+        <div class="tl-card">
+          <div class="ev">{{ e.event_key|default:"Visit" }}{% if e.form %} · <span class="subtle" style="font-weight:400;">{{ e.form.title|default:e.form.role }}</span>{% endif %}</div>
+          <div class="tl-meta">
+            <span>Enumerator: {{ e.enumerator.enid|default:"—" }}</span>
+            <span>State: <span class="pill {% if e.review.state == 'APPROVED' %}good{% elif e.review.state == 'DECLINED' %}warn{% else %}neutral{% endif %}">{{ e.review.get_state_display|default:"—" }}</span></span>
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <div class="empty" style="border:none;padding:1.4rem;">No encounters recorded for this {{ program.client_label|lower }} yet.</div>
+    {% endfor %}
+  </div>
+{% endblock %}

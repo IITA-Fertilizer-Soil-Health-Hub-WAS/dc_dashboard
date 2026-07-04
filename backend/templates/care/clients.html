@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ program.client_label_plural }} · {{ program.project.code }} · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<span class="sep">/</span><a href="{% url 'care:programs' %}">Care</a><span class="sep">/</span><span class="cur">{{ program.project.code }}</span>{% endblock %}
+{% block content %}
+  <div class="page-head"><h2>{{ program.client_label_plural }}</h2><span class="subtle" style="margin-left:.5rem;">{{ program.name|default:program.project.name }}</span></div>
+
+  <div class="toolbar">
+    <form method="get">
+      <input class="search" type="search" name="q" value="{{ q }}" placeholder="Search {{ program.client_label_plural|lower }}…">
+      <button class="btn btn-request" type="submit">Search</button>
+    </form>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col">{{ program.client_label }} ID</th><th scope="col">Name</th>
+          <th scope="col">Location</th><th scope="col">Visits</th><th scope="col">Last visit</th>
+          <th scope="col" style="text-align:right;">Record</th></tr></thead>
+        <tbody>
+          {% for u in units %}
+            <tr>
+              <td class="mono" style="font-size:.83rem;">{{ u.code }}</td>
+              <td>{{ u.name|default:"—" }}</td>
+              <td class="subtle">{{ u.district|default:u.region|default:"—" }}</td>
+              <td>{{ u.visits }}</td>
+              <td class="subtle" style="white-space:nowrap;">{{ u.last_visit|date:"Y-m-d"|default:"—" }}</td>
+              <td style="text-align:right;"><a href="{% url 'care:client_timeline' program.project.code u.pk %}">Timeline →</a></td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6"><div class="empty" style="border:none;padding:1.6rem;">
+              No {{ program.client_label_plural|lower }}{% if q %} match “{{ q }}”{% else %} enrolled yet{% endif %}.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}
