@@ -30,9 +30,19 @@ class Organization(BaseModel):
     code = models.SlugField(max_length=32, unique=True)
     name = models.CharField(max_length=255)
     is_active = models.BooleanField(default=True)
-    # Reserved for the database-per-tenant promotion path: the alias of the
-    # Django database this org's data lives in ("default" = the shared DB).
-    database_alias = models.CharField(max_length=64, default="default")
+    # Database-per-tenant: an institution keeps its data in its own database.
+    # Provide EITHER a Django settings alias (for a DB this deployment already
+    # knows) OR a full connection URL the institution has granted this platform
+    # access to. Leave both as the default/blank to use the shared DB.
+    database_alias = models.CharField(
+        max_length=64, default="default",
+        help_text="Django DATABASES alias (default = shared platform DB).",
+    )
+    database_url = models.CharField(
+        max_length=500, blank=True,
+        help_text="Or a full DB connection URL this institution grants access to "
+                  "(e.g. postgres://user:pass@host:5432/db). Overrides the alias.",
+    )
 
     class Meta:
         ordering = ["name"]

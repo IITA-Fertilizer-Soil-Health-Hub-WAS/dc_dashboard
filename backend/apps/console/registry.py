@@ -55,18 +55,19 @@ class Managed:
 
 # Order here defines sidebar order within each group.
 _ENTRIES: list[Managed] = [
-    # ---- Tenancy: the institutions (organizations) that own everything ----
-    Managed("organizations", Organization, "Institutions", "Tenancy",
+    # ---- Institution tenancy: the institutions and the region → country
+    # hierarchy their projects hang off ----
+    Managed("organizations", Organization, "Institutions", "Institution tenancy",
             list_display=["code", "name", "is_active", "database_alias"],
-            form_fields=["code", "name", "is_active", "database_alias"],
+            form_fields=["code", "name", "is_active", "database_alias", "database_url"],
             search_fields=["code", "name"], icon="domain",
-            description="Institutions (tenants) — each owns its own data."),
-    # ---- Geography: the region → country hierarchy projects hang off ----
-    Managed("regions", Region, "Regions", "Geography",
+            description="Institutions (tenants) — each owns its own data, in the "
+                        "shared DB or its own (alias / URL)."),
+    Managed("regions", Region, "Regions", "Institution tenancy",
             list_display=["organization", "code", "name"],
             form_fields=["organization", "code", "name"], search_fields=["code", "name"],
             icon="public", description="Geographic regions a Regional Coordinator oversees."),
-    Managed("countries", Country, "Countries", "Geography",
+    Managed("countries", Country, "Countries", "Institution tenancy",
             list_display=["name", "code", "region"],
             form_fields=["region", "code", "name"], search_fields=["code", "name"],
             icon="flag", description="Countries within a region."),
@@ -194,11 +195,31 @@ REGISTRY: dict[str, Managed] = {m.key: m for m in _ENTRIES}
 # (staff) only; coordinators handle access through the in-app Team & access screen
 # (so access-requests is intentionally NOT a separate console section for them).
 COORDINATOR_CONSOLE_KEYS: set[str] = {
-    "forms", "field-mappings", "event-schedule", "crops", "trials",
+    "forms", "field-mappings", "event-schedule", "trials",
     "validation-rules", "rejection-reasons", "jobs", "collection-units",
     "enumerators",
     "alert-rules", "alert-events",
 }
+
+# Institution-structure sections — regions, countries and crops — that only a
+# Platform Admin or a Regional/Country Coordinator may create/edit (never a
+# Trial Coordinator or below). Scoped to the user's own institution.
+GEO_CONSOLE_KEYS: set[str] = {"regions", "countries", "crops"}
+
+
+def is_geo_manager(user) -> bool:
+    """Platform Admin or a Regional/Country Coordinator — the roles allowed to
+    manage the institution's geography (regions, countries) and crops."""
+    if getattr(user, "is_staff", False):
+        return True
+    if not getattr(user, "is_authenticated", False):
+        return False
+    from apps.rbac.models import Membership, Role
+
+    return Membership.objects.filter(
+        user=user,
+        role__in=[Role.REGIONAL_COORDINATOR, Role.COUNTRY_COORDINATOR],
+    ).exists()
 
 # Field-data sections an ordinary member (viewer / enumerator) may VIEW, read-only
 # and scoped to projects they belong to. They already see this data via the project
@@ -237,7 +258,10 @@ def _visible_console_keys(user) -> set[str] | None:
     from apps.rbac.permissions import can_manage_access, visible_projects
 
     if can_manage_access(user):
-        return COORDINATOR_CONSOLE_KEYS
+        keys = set(COORDINATOR_CONSOLE_KEYS)
+        if is_geo_manager(user):  # Regional/Country Coordinators also get geography + crops
+            keys |= GEO_CONSOLE_KEYS
+        return keys
     if visible_projects(user).exists():
         return MEMBER_READ_KEYS
     return set()
@@ -259,6 +283,9 @@ def console_can_edit(user, key: str) -> bool:
         return False
     if getattr(user, "is_staff", False):
         return True
+    # Regions/countries/crops: only a Regional/Country Coordinator (or admin).
+    if key in GEO_CONSOLE_KEYS:
+        return is_geo_manager(user)
     from apps.rbac.permissions import can_manage_access
 
     return can_manage_access(user) and key in COORDINATOR_CONSOLE_KEYS
@@ -300,7 +327,7 @@ ORG_FILTER_PATHS: dict[str, str] = {
 }
 
 # Group order for sidebar rendering.
-GROUPS: list[str] = ["Tenancy", "Geography", "Configuration", "Accounts & roles"]
+GROUPS: list[str] = ["Institution tenancy", "Configuration", "Accounts & roles"]
 
 
 def grouped() -> list[tuple[str, list[Managed]]]:

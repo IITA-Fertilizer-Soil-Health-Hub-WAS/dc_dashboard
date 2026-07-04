@@ -99,15 +99,23 @@ class ConsoleListView(UserPassesTestMixin, View):
         path = PROJECT_FILTER_PATHS.get(key)
         # Non-staff only ever see rows belonging to their own projects:
         # coordinators to the projects they coordinate, ordinary members to the
-        # projects they belong to (read-only field data).
+        # projects they belong to (read-only field data). Geography/crops sections
+        # are scoped to the Regional/Country Coordinator's own institution.
         if not is_staff:
             from apps.rbac.permissions import can_manage_access, visible_projects
 
-            if can_manage_access(request.user):
+            from .registry import GEO_CONSOLE_KEYS, is_geo_manager
+
+            if key in GEO_CONSOLE_KEYS and is_geo_manager(request.user):
+                opath = ORG_FILTER_PATHS.get(key)
+                org_id = getattr(request.user, "organization_id", None)
+                qs = qs.filter(**{opath: org_id}) if (opath and org_id) else qs.none()
+            elif can_manage_access(request.user):
                 uc_ids = _coordinator_uc_ids(request.user)
+                qs = qs.filter(**{f"{path}__in": uc_ids}) if path else qs.none()
             else:
                 uc_ids = list(visible_projects(request.user).values_list("id", flat=True))
-            qs = qs.filter(**{f"{path}__in": uc_ids}) if path else qs.none()
+                qs = qs.filter(**{f"{path}__in": uc_ids}) if path else qs.none()
 
         # Workspace scope: a ?project=<code> filter (within what's allowed above)
         # narrows the list to one project — used by the project-workspace sidebar.
@@ -212,11 +220,18 @@ class ImportCollectionUnitsView(UserPassesTestMixin, View):
 
 
 def _scoped_get(user, m, key, pk):
-    """Fetch an object — staff: any; coordinator: only within their projects."""
+    """Fetch an object — staff: any; Regional/Country Coordinator: geography &
+    crops within their institution; other coordinators: within their projects."""
     if user.is_staff:
         return get_object_or_404(m.model, pk=pk)
-    from .registry import PROJECT_FILTER_PATHS
+    from .registry import GEO_CONSOLE_KEYS, ORG_FILTER_PATHS, PROJECT_FILTER_PATHS, is_geo_manager
 
+    if key in GEO_CONSOLE_KEYS and is_geo_manager(user):
+        opath = ORG_FILTER_PATHS.get(key)
+        org_id = getattr(user, "organization_id", None)
+        if not opath or not org_id:
+            raise Http404("Not available.")
+        return get_object_or_404(m.model, pk=pk, **{opath: org_id})
     path = PROJECT_FILTER_PATHS.get(key)
     if path is None:
         raise Http404("Not available.")
@@ -224,13 +239,15 @@ def _scoped_get(user, m, key, pk):
 
 
 def _restrict_form_to_scope(form, user):
-    """Limit a form's foreign-key choices to the coordinator's own projects, so
-    they can never attach a row to a project they don't coordinate."""
+    """Limit a form's foreign-key choices so a coordinator can never attach a row
+    outside their authority — their own projects, and their own institution's
+    organization/region/country (for Regional/Country Coordinators)."""
     if user.is_staff:
         return
-    from apps.projects.models import Project
+    from apps.projects.models import Country, Organization, Project, Region
 
     uc_ids = _coordinator_uc_ids(user)
+    org_id = getattr(user, "organization_id", None)
     for field in form.fields.values():
         qs = getattr(field, "queryset", None)
         if qs is None:
@@ -238,6 +255,12 @@ def _restrict_form_to_scope(form, user):
         model = qs.model
         if model is Project:
             field.queryset = qs.filter(id__in=uc_ids)
+        elif model is Organization and org_id:
+            field.queryset = qs.filter(id=org_id)
+        elif model is Region and org_id:
+            field.queryset = qs.filter(organization_id=org_id)
+        elif model is Country and org_id:
+            field.queryset = qs.filter(region__organization_id=org_id)
         elif any(f.name == "project" for f in model._meta.fields):
             field.queryset = qs.filter(project_id__in=uc_ids)
 

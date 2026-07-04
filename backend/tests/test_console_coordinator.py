@@ -49,10 +49,10 @@ def test_grouped_for_coordinator_is_scoped_subset(world):
     # never tenancy, geography, or the accounts & roles registry (access is the
     # Team & access screen, not a console section).
     assert set(groups) <= {"Configuration", "Field data", "Monitoring"}
-    assert "Tenancy" not in groups and "Geography" not in groups
+    assert "Institution tenancy" not in groups
     assert "Accounts & roles" not in groups
-    # Staff get the full set.
-    assert "Tenancy" in dict(grouped_for(world["staff"]))
+    # Staff get the full set, including institution tenancy.
+    assert "Institution tenancy" in dict(grouped_for(world["staff"]))
 
 
 def test_coordinator_sees_only_their_projects_forms(client, world):
@@ -95,21 +95,56 @@ def test_coordinator_create_form_only_offers_own_project(client, world):
 
 
 def test_coordinator_can_create_in_own_project(client, world):
+    # A Trial Coordinator can create project-scoped config (e.g. a trial) in
+    # their own project.
     client.force_login(world["coord"])
+    resp = client.post(reverse("console:create", args=["trials"]),
+                       {"project": str(world["mine"].pk), "name": "T1", "code": "T1"})
+    assert resp.status_code == 302
+    from apps.projects.models import Trial
+    assert Trial.objects.filter(project=world["mine"], name="T1").exists()
+
+
+def test_coordinator_cannot_create_in_other_project(client, world):
+    client.force_login(world["coord"])
+    resp = client.post(reverse("console:create", args=["trials"]),
+                       {"project": str(world["other"].pk), "name": "T2", "code": "T2"})
+    assert resp.status_code == 200  # re-renders: project not an allowed choice
+    from apps.projects.models import Trial
+    assert not Trial.objects.filter(project=world["other"]).exists()
+
+
+def test_trial_coordinator_cannot_touch_geography_or_crops(client, world):
+    # Regions/countries/crops are only for admins and Regional/Country
+    # Coordinators — a Trial Coordinator is refused.
+    from apps.console.registry import console_can_edit, console_key_allowed
+
+    coord = world["coord"]  # TRIAL_COORDINATOR
+    for key in ("regions", "countries", "crops"):
+        assert not console_key_allowed(coord, key)
+        assert not console_can_edit(coord, key)
+    assert client.login(username="c@x.org", password="pw")
+    assert client.get(reverse("console:list", args=["crops"])).status_code == 403
+
+
+def test_regional_coordinator_manages_geography_and_crops(client, django_user_model, world):
+    # A Regional Coordinator may create regions/countries/crops in their own
+    # institution.
+    rc = django_user_model.objects.create_user(
+        "rc@x.org", "pw", is_active=True, organization=world["mine"].organization
+    )
+    Membership.objects.create(
+        user=rc, region=world["mine"].country.region, role=Role.REGIONAL_COORDINATOR
+    )
+    from apps.console.registry import console_can_edit
+
+    assert console_can_edit(rc, "crops") and console_can_edit(rc, "countries")
+    client.force_login(rc)
     resp = client.post(reverse("console:create", args=["crops"]),
                        {"project": str(world["mine"].pk), "name": "maize", "aliases": "[]"})
     assert resp.status_code == 302
     from apps.projects.models import Crop
     assert Crop.objects.filter(project=world["mine"], name="maize").exists()
-
-
-def test_coordinator_cannot_create_in_other_project(client, world):
-    client.force_login(world["coord"])
-    resp = client.post(reverse("console:create", args=["crops"]),
-                       {"project": str(world["other"].pk), "name": "rice", "aliases": "[]"})
-    assert resp.status_code == 200  # re-renders: project not an allowed choice
-    from apps.projects.models import Crop
-    assert not Crop.objects.filter(project=world["other"]).exists()
 
 
 def test_coordinator_cannot_edit_other_project_object(client, world):
