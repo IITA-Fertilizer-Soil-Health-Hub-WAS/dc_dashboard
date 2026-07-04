@@ -114,6 +114,20 @@ def test_owner_picker_lists_accounts_without_an_institution(django_user_model, o
     assert b"Fresh Account" in str(form["owner"]).encode()
 
 
+def test_user_admin_form_requires_institution(org_world):
+    # An admin-created (non-superuser) account must be linked to an institution.
+    from apps.console.forms import UserAdminForm
+
+    form = UserAdminForm(data={"email": "n@x.org", "full_name": "N", "is_active": "on"})
+    assert not form.is_valid()
+    assert "organization" in form.errors
+    ok = UserAdminForm(data={
+        "email": "n@x.org", "full_name": "N",
+        "organization": str(org_world["org"].id),
+    })
+    assert ok.is_valid(), ok.errors
+
+
 def test_project_form_requires_owner(org_world):
     # Every project must be owned by a specific user — no owner ⇒ invalid.
     from apps.console.forms import ProjectAdminForm

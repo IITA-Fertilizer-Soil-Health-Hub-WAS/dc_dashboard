@@ -4,7 +4,30 @@ from __future__ import annotations
 from django import forms
 
 from apps.accounts.models import User
-from apps.projects.models import Project
+from apps.projects.models import Organization, Project
+
+
+class UserAdminForm(forms.ModelForm):
+    """Admin create/edit of an account. Every real (non-superuser) account must be
+    linked to an institution — a hub operator (superuser) spans all tenants and
+    has none."""
+
+    class Meta:
+        model = User
+        fields = [
+            "email", "full_name", "phone", "organization",
+            "is_active", "email_verified", "is_staff", "is_superuser",
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["organization"].queryset = Organization.objects.filter(is_active=True)
+
+    def clean(self):
+        cleaned = super().clean()
+        if not cleaned.get("is_superuser") and not cleaned.get("organization"):
+            self.add_error("organization", "Pick the institution this account belongs to.")
+        return cleaned
 
 
 class OwnerSelect(forms.Select):

@@ -35,6 +35,21 @@ class SocialSignupForm(SocialSignupBase):
     phone_alt = forms.CharField(max_length=32, required=False, label="Alternate phone")
     country = forms.CharField(max_length=64, label="Country")
 
+    # Optional self-service institution. Left blank for field enumerators who
+    # don't belong to a listed institution — an admin can bind them at approval.
+    organization = forms.ModelChoiceField(
+        queryset=None, required=False, label="Institution (if you belong to one)",
+        empty_label="— none / not sure —",
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from apps.projects.models import Organization
+
+        self.fields["organization"].queryset = Organization.objects.filter(
+            is_active=True
+        ).order_by("name")
+
     consent_personal_info = forms.BooleanField(
         required=False, label="I consent to the platform storing my personal information."
     )
@@ -52,7 +67,11 @@ class SocialSignupForm(SocialSignupBase):
         parts = [cd.get("first_name"), cd.get("second_name"), cd.get("family_name")]
         user.full_name = " ".join(p for p in parts if p).strip()
         user.phone = cd["phone"]
-        user.save(update_fields=["full_name", "phone", "updated_at"])
+        fields = ["full_name", "phone", "updated_at"]
+        if cd.get("organization"):
+            user.organization = cd["organization"]
+            fields.append("organization")
+        user.save(update_fields=fields)
 
         UserProfile.objects.update_or_create(
             user=user,

@@ -60,6 +60,9 @@ def user_approve(request, user):
     # there's nothing to review yet.
     if not UserProfile.objects.filter(user=user, completed_at__isnull=False).exists():
         return f"{user.email} hasn't submitted their profile yet — can't approve."
+    # Every approved (non-superuser) account must belong to an institution.
+    if not user.is_superuser and user.organization_id is None:
+        return f"{user.email} has no institution yet — set one before approving."
     user.approve(by=request.user)
     return f"Approved {user.email}."
 

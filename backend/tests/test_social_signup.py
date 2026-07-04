@@ -67,6 +67,19 @@ def test_signup_captures_completed_profile(django_user_model):
     assert prof.consent_personal_info is True
 
 
+def test_signup_can_pick_institution(django_user_model):
+    # Self-service institution is optional but, when chosen, links the account.
+    from apps.projects.models import Organization
+
+    org = Organization.objects.create(code="iita", name="IITA")
+    form = _bound_form(organization=str(org.id))
+    assert form.is_valid(), form.errors
+    user = django_user_model.objects.create_user("newbie@x.org", "pw")
+    form.custom_signup(_make_request(), user)
+    user.refresh_from_db()
+    assert user.organization_id == org.id
+
+
 def test_signup_requires_name_and_country():
     form = _bound_form(first_name="", family_name="", country="")
     assert not form.is_valid()

@@ -32,9 +32,13 @@ def test_approve_action_activates_and_audits(django_user_model):
     from django.utils import timezone
 
     from apps.accounts.models import UserProfile
+    from apps.projects.models import Organization
 
     admin_user = django_user_model.objects.create_superuser("admin@x.org", "pw")
-    pending = django_user_model.objects.create_user("pending@x.org", "pw")
+    org = Organization.objects.create(code="inst", name="Institution")
+    pending = django_user_model.objects.create_user(
+        "pending@x.org", "pw", organization=org
+    )
     assert pending.is_active is False
     # Approval reviews the profile submitted at registration.
     UserProfile.objects.create(user=pending, completed_at=timezone.now())
@@ -45,6 +49,22 @@ def test_approve_action_activates_and_audits(django_user_model):
     assert pending.is_active is True
     assert pending.approved_by == admin_user
     assert pending.approved_at is not None
+
+
+def test_approve_refused_without_institution(django_user_model):
+    from django.utils import timezone
+
+    from apps.accounts.models import UserProfile
+
+    admin_user = django_user_model.objects.create_superuser("admin3@x.org", "pw")
+    pending = django_user_model.objects.create_user("noorg@x.org", "pw")  # no org
+    UserProfile.objects.create(user=pending, completed_at=timezone.now())
+
+    msg = user_approve(_request(admin_user), pending)
+
+    pending.refresh_from_db()
+    assert pending.is_active is False              # not approved without an institution
+    assert "institution" in msg.lower()
 
 
 def test_approve_refused_without_submitted_profile(django_user_model):

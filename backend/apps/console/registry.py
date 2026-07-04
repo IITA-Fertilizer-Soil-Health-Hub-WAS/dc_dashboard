@@ -29,7 +29,7 @@ from apps.submissions.models import Enumerator
 from apps.validation.models import ValidationRule
 
 from .actions import PROJECT_ACTIONS, USER_ACTIONS, Action
-from .forms import ProjectAdminForm
+from .forms import ProjectAdminForm, UserAdminForm
 
 
 @dataclass(frozen=True)
@@ -127,6 +127,7 @@ _ENTRIES: list[Managed] = [
                           "is_staff", "is_superuser", "approved_at"],
             form_fields=["email", "full_name", "phone", "organization", "is_active",
                          "email_verified", "is_staff", "is_superuser"],
+            form_class=UserAdminForm,
             search_fields=["user_id", "email", "full_name"], ordering=["email"], icon="person",
             actions=USER_ACTIONS, description="People and account approval status."),
     Managed("memberships", Membership, "Memberships", "Accounts & roles",
