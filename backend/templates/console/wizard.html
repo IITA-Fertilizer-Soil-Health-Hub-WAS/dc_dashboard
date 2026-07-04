@@ -71,6 +71,12 @@
           </select>
         </div>
         {% endif %}
+        <div class="fld"><label>Owner *</label>
+          <select name="owner" required data-searchable="1"{% if organizations|length > 1 %} data-depends="organization"{% endif %} data-placeholder="Search a user by name or email…">
+            <option value="">—</option>
+            {% for u in owner_candidates %}<option value="{{ u.user_id }}" data-org="{{ u.organization.code }}" {% if posted.owner == u.user_id %}selected{% endif %}>{{ u.full_name|default:u.email }}{% if u.full_name %} · {{ u.email }}{% endif %}</option>{% endfor %}
+          </select>
+        </div>
         <div class="fld"><label>Countries (comma)</label><input name="countries" value="{{ posted.countries }}" placeholder="Rwanda"></div>
         <div class="fld"><label>Crops (comma)</label><input name="crops" value="{{ posted.crops }}" placeholder="maize, potato"></div>
         <div class="fld"><label>Enumerator ID pattern(s)</label><input name="enid_patterns" value="{{ posted.enid_patterns }}" placeholder="^RSENRW"></div>

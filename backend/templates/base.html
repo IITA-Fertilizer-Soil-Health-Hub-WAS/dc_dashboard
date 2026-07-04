@@ -643,6 +643,9 @@
         var wrap = document.createElement('div'); wrap.className = 'ss-wrap';
         sel.parentNode.insertBefore(wrap, sel); wrap.appendChild(sel);
         sel.style.display = 'none';
+        // A hidden `required` select makes the browser refuse to submit with a
+        // non-focusable-control error; enforce required on the server instead.
+        sel.removeAttribute('required');
         var input = document.createElement('input');
         input.type = 'text'; input.className = 'input'; input.autocomplete = 'off';
         input.placeholder = sel.getAttribute('data-placeholder') || 'Search…';

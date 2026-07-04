@@ -75,6 +75,8 @@ def build_config(post) -> dict[str, Any]:
             "is_active": True,
             # Which institution owns this project (blank → default tenant).
             "organization": (post.get("organization") or "").strip(),
+            # The specific user who owns/stewards it (a User.user_id).
+            "owner": (post.get("owner") or "").strip(),
             "countries": _csv(post.get("countries")),
             "enid_patterns": enid_patterns,
             "hhid_patterns": hhid_patterns,

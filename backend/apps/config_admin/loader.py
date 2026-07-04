@@ -89,6 +89,18 @@ def import_config(data: dict[str, Any]) -> Project:
     org = resolve_organization(meta.get("organization"))
     if org is not None and uc.organization_id is None:
         uc.organization = org
+    # Optional owner: a specific existing user, referenced by user_id / email / pk.
+    owner_ref = meta.get("owner")
+    if owner_ref:
+        from apps.accounts.models import User
+
+        owner = (
+            User.objects.filter(user_id=owner_ref).first()
+            or User.objects.filter(email__iexact=owner_ref).first()
+            or User.objects.filter(pk=owner_ref).first()
+        )
+        if owner is not None:
+            uc.owner = owner
     uc.name = meta.get("name", uc.name)
     uc.is_active = meta.get("is_active", True)
     uc.countries = meta.get("countries", [])

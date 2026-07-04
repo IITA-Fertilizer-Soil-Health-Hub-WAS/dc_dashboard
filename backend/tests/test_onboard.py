@@ -127,12 +127,21 @@ def test_build_config_skips_unincluded_forms():
     assert ids == [200]  # only the included form
 
 
-def test_wizard_onboards_forms_without_event_key(client, staff):
+@pytest.fixture
+def owner(django_user_model):
+    from apps.projects.models import Organization
+    org = Organization.objects.create(code="own-org", name="Owner Org")
+    return django_user_model.objects.create_user(
+        "owner@x.org", "pw", is_active=True, full_name="Ada Owner", organization=org
+    )
+
+
+def test_wizard_onboards_forms_without_event_key(client, staff, owner):
     # Multi-form projects (each form a stage) don't map event_key at onboarding;
     # validation must NOT block this — mappings are configured later.
     client.force_login(staff)
     post = {
-        "code": "HUB-SL", "name": "Hub SL",
+        "code": "HUB-SL", "name": "Hub SL", "owner": owner.user_id,
         "form_count": "2",
         "form-0-present": "1", "form-0-include": "1", "form-0-id": "885626",
         "form-1-present": "1", "form-1-include": "1", "form-1-id": "885629",
@@ -141,12 +150,24 @@ def test_wizard_onboards_forms_without_event_key(client, staff):
     assert resp.status_code == 302  # onboarded, no event_key error
     uc = Project.objects.get(code="HUB-SL")
     assert uc.forms.count() == 2
+    assert uc.owner == owner  # owner captured at creation
 
 
-def test_wizard_creates_project(client, staff):
+def test_wizard_requires_owner(client, staff):
+    client.force_login(staff)
+    resp = client.post("/manage/new-project/", {
+        "code": "NO-OWN", "name": "No Owner", "form_count": "1", "form-0-id": "1",
+    })
+    assert resp.status_code == 200  # re-rendered with an error, not onboarded
+    assert b"Choose an owner" in resp.content
+    assert not Project.objects.filter(code="NO-OWN").exists()
+
+
+def test_wizard_creates_project(client, staff, owner):
     client.force_login(staff)
     post = {
         "code": "WZ-1", "name": "Wizard One", "enid_patterns": "^EN",
+        "owner": owner.user_id,
         "num_events": "1", "interval_days": "14",
         "form_count": "1", "form-0-id": "999", "form-0-role": "VALIDATION",
         "map-0-ENID": "intro/enumerator_id", "map-0-event_key": "intro/event",

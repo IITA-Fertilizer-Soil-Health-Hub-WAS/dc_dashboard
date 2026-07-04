@@ -464,6 +464,7 @@ class WizardView(StaffMixin, View):
     case; its *forms* become the entries. Auto-suggests mappings, then imports."""
 
     def _ctx(self, request, **extra):
+        from apps.accounts.models import User
         from apps.ingestion.backends.registry import BACKEND_CHOICES
         from apps.projects.models import FormDefinition, Organization
 
@@ -478,6 +479,10 @@ class WizardView(StaffMixin, View):
             "backends": BACKEND_CHOICES,
             "targets": CANONICAL_TARGETS,
             "organizations": Organization.objects.filter(is_active=True),
+            # Owner candidates for the searchable, institution-scoped picker.
+            "owner_candidates": User.objects.filter(
+                organization__isnull=False
+            ).order_by("full_name", "email"),
         }
         ctx.update(extra)
         return ctx
@@ -493,6 +498,9 @@ class WizardView(StaffMixin, View):
         try:
             data = build_config(request.POST)
             problems = validate_config(data)
+            # Every project must be owned by a specific existing user.
+            if not (request.POST.get("owner") or "").strip():
+                problems = ["Choose an owner for this project."] + problems
             if not problems:
                 uc = import_config(data)
                 messages.success(

@@ -111,6 +111,23 @@ def test_backfill_assigns_project_coordinator_as_owner(org_world):
     assert uc.owner_id == org_world["coord"].id
 
 
+def test_cascade_backfill_uses_country_coordinator(org_world):
+    # 0018: an owner-less project with no project-level coordinator adopts a
+    # coordinator over its country (scope cascade).
+    import importlib
+
+    from django.apps import apps as django_apps
+
+    mod = importlib.import_module("apps.projects.migrations.0018_backfill_owner_cascade")
+
+    uc = org_world["uc_b"]              # country=Rwanda, no owner, no direct coordinator
+    assert uc.owner_id is None
+    # org_world["coord"] is a COUNTRY_COORDINATOR over Rwanda already.
+    mod.backfill_owner_cascade(django_apps, None)
+    uc.refresh_from_db()
+    assert uc.owner_id == org_world["coord"].id
+
+
 def test_owner_can_reopen_closed_project(client, django_user_model, org_world):
     owner = django_user_model.objects.create_user(
         "own@x.org", "pw", is_active=True, organization=org_world["org"]
