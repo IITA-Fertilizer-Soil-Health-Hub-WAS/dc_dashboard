@@ -50,7 +50,10 @@ def _make_request():
 def test_signup_captures_completed_profile(django_user_model):
     # allauth validates (no account exists yet), creates the inactive account,
     # then calls custom_signup — our code — to persist name/phone + the profile.
-    form = _bound_form()
+    from apps.projects.models import Organization
+
+    org = Organization.objects.create(code="iita", name="IITA")
+    form = _bound_form(organization=str(org.id))
     assert form.is_valid(), form.errors
     user = django_user_model.objects.create_user("newbie@x.org", "pw")  # inactive by default
     form.custom_signup(_make_request(), user)
@@ -80,21 +83,22 @@ def test_signup_can_pick_institution(django_user_model):
     assert user.organization_id == org.id
 
 
-def test_signup_requires_institution_once_any_exist():
-    # Institution is enforced as soon as the Platform Admin has onboarded one —
-    # the dropdown is that onboarded list, and a real choice is mandatory.
+def test_signup_requires_institution_when_onboarded():
+    # Institution is mandatory; the dropdown is the Platform-Admin-onboarded list.
     from apps.projects.models import Organization
 
     Organization.objects.create(code="iita", name="IITA")
-    form = _bound_form()                 # no organization chosen
+    form = _bound_form()                 # institution onboarded but none chosen
     assert not form.is_valid()
     assert "organization" in form.errors
 
 
-def test_signup_institution_optional_on_fresh_system():
-    # Brand-new system with no institution yet — registration isn't a dead end.
+def test_signup_always_requires_institution():
+    # Enforced even with none onboarded yet — registration never slips through
+    # without one (the first admin bootstraps via Create-platform-admin instead).
     form = _bound_form()                 # no orgs exist, none chosen
-    assert form.is_valid(), form.errors
+    assert not form.is_valid()
+    assert "organization" in form.errors
 
 
 def test_signup_requires_name_and_country():

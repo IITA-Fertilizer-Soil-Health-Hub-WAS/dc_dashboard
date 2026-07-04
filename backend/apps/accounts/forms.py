@@ -35,24 +35,23 @@ class SocialSignupForm(SocialSignupBase):
     phone_alt = forms.CharField(max_length=32, required=False, label="Alternate phone")
     country = forms.CharField(max_length=64, label="Country")
 
-    # The institution the person belongs to — chosen from the list the Platform
-    # Admin has onboarded (console → Tenancy → Institutions). Required as soon as
-    # any institution exists; only optional on a brand-new system with none yet.
+    # The institution the person belongs to — REQUIRED, chosen from the list the
+    # Platform Admin has onboarded (console → Tenancy → Institutions). No free
+    # text, no skipping. (The very first admin bootstraps via "Create platform
+    # admin", which doesn't use this form, so an empty-list system isn't a trap.)
     organization = forms.ModelChoiceField(
-        queryset=None, required=False, label="Institution",
+        queryset=None, required=True, label="Institution",
+        empty_label="Select your institution…",
+        error_messages={"required": "Select the institution you belong to."},
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         from apps.projects.models import Organization
 
-        field = self.fields["organization"]
-        field.queryset = Organization.objects.filter(is_active=True).order_by("name")
-        if field.queryset.exists():
-            field.required = True
-            field.empty_label = "Select your institution…"
-        else:
-            field.empty_label = "— none / not sure —"
+        self.fields["organization"].queryset = Organization.objects.filter(
+            is_active=True
+        ).order_by("name")
 
     consent_personal_info = forms.BooleanField(
         required=False, label="I consent to the platform storing my personal information."
