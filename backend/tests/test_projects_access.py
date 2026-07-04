@@ -80,6 +80,37 @@ def test_project_form_scopes_and_validates_owner(django_user_model, org_world):
     assert "data-searchable" in widget_html and 'data-depends="organization"' in widget_html
 
 
+def test_project_form_requires_owner(org_world):
+    # Every project must be owned by a specific user — no owner ⇒ invalid.
+    from apps.console.forms import ProjectAdminForm
+
+    form = ProjectAdminForm(data={
+        "code": "NO-OWNER", "name": "No owner", "organization": str(org_world["org"].id),
+        "unit_type": "FARMER_HOUSEHOLD", "timezone": "UTC", "household_label": "Household",
+    })
+    assert not form.is_valid()
+    assert "owner" in form.errors
+
+
+def test_backfill_assigns_project_coordinator_as_owner(org_world):
+    # The 0017 backfill logic: an owner-less project with a coordinator sitting on
+    # it adopts that coordinator as its owner.
+    import importlib
+
+    from django.apps import apps as django_apps
+
+    mod = importlib.import_module("apps.projects.migrations.0017_backfill_project_owner")
+
+    uc = org_world["uc_a"]
+    assert uc.owner_id is None
+    Membership.objects.create(
+        user=org_world["coord"], project=uc, role=Role.TRIAL_COORDINATOR
+    )
+    mod.backfill_owner(django_apps, None)
+    uc.refresh_from_db()
+    assert uc.owner_id == org_world["coord"].id
+
+
 def test_owner_can_reopen_closed_project(client, django_user_model, org_world):
     owner = django_user_model.objects.create_user(
         "own@x.org", "pw", is_active=True, organization=org_world["org"]

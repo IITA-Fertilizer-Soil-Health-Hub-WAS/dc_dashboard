@@ -36,11 +36,13 @@ class ProjectAdminForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         owner = self.fields["owner"]
-        # Only real, approved-ish people who belong to an institution are eligible.
+        # Only real people who belong to an institution are eligible.
         owner.queryset = User.objects.filter(
             organization__isnull=False
         ).order_by("full_name", "email")
-        owner.required = False
+        # Every project must be owned by a specific user — required at creation and
+        # enforced on edit, so any legacy owner-less project gets one when touched.
+        owner.required = True
         # Show a human name (searchable), not just the email.
         owner.label_from_instance = lambda u: (
             f"{u.full_name} · {u.email}" if u.full_name else u.email
