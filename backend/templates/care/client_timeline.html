@@ -25,6 +25,27 @@
   <p class="lede">{{ program.client_label }} record in {{ program.name|default:program.project.name }} —
     {% if unit.district or unit.region %}{{ unit.district|default:unit.region }} · {% endif %}every visit this {{ program.client_label|lower }} has had.</p>
 
+  {% if plan %}
+    <h3 style="margin:1.2rem 0 .5rem;font-size:1.05rem;">Visit plan
+      <span class="subtle" style="font-weight:400;font-size:.85rem;">· {{ plan_summary.done }}/{{ plan_summary.total }} done{% if plan_summary.overdue %} · <span style="color:#c3531f;font-weight:600;">{{ plan_summary.overdue }} overdue</span>{% endif %}</span></h3>
+    <div class="card" style="padding:.8rem .95rem;">
+      <div style="display:flex;flex-wrap:wrap;gap:.55rem;">
+        {% for v in plan %}
+          <div style="border:1px solid var(--line);border-radius:9px;padding:.5rem .7rem;min-width:110px;">
+            <div style="display:flex;align-items:center;gap:.4rem;">
+              <span style="width:9px;height:9px;border-radius:50%;background:{{ v.color }};display:inline-block;"></span>
+              <b style="font-size:.86rem;">{{ v.event_key }}</b>
+            </div>
+            <div class="subtle" style="font-size:.74rem;margin-top:.2rem;">
+              {{ v.label }}{% if v.done %} · {{ v.done|date:"M j" }}{% elif v.target %} · due {{ v.target|date:"M j" }}{% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  <h3 style="margin:1.3rem 0 .3rem;font-size:1.05rem;">Encounters</h3>
   <div class="tl">
     {% for e in encounters %}
       <div class="tl-item {% if e.review.state == 'DECLINED' %}declined{% endif %}">

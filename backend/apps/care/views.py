@@ -45,13 +45,27 @@ def clients(request, code):
 
 @login_required
 def client_timeline(request, code, unit_id):
+    from .plan import client_visit_plan, plan_summary
+
     program = get_object_or_404(_visible_programs(request.user), project__code=code)
     unit = get_object_or_404(CollectionUnit, pk=unit_id, project=program.project)
-    encounters = (
+    encounters = list(
         Submission.objects.filter(collection_unit=unit)
-        .select_related("enumerator", "form", "review")
+        .select_related("enumerator", "form", "review", "crop")
         .order_by("-event_date", "-ingested_at")[:200]
     )
+    schedule = list(program.project.schedule.all())
+    plan = client_visit_plan(unit, schedule, encounters)
     return render(request, "care/client_timeline.html", {
         "program": program, "unit": unit, "encounters": encounters,
+        "plan": plan, "plan_summary": plan_summary(plan),
     })
+
+
+@login_required
+def coverage(request, code):
+    from .plan import program_coverage
+
+    program = get_object_or_404(_visible_programs(request.user), project__code=code)
+    return render(request, "care/coverage.html",
+                  {"program": program, "cov": program_coverage(program)})

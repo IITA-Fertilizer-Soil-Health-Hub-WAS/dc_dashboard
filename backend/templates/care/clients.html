@@ -2,7 +2,10 @@
 {% block title %}{{ program.client_label_plural }} · {{ program.project.code }} · {{ SITE_NAME }}{% endblock %}
 {% block crumbs %}<span class="sep">/</span><a href="{% url 'care:programs' %}">Care</a><span class="sep">/</span><span class="cur">{{ program.project.code }}</span>{% endblock %}
 {% block content %}
-  <div class="page-head"><h2>{{ program.client_label_plural }}</h2><span class="subtle" style="margin-left:.5rem;">{{ program.name|default:program.project.name }}</span></div>
+  <div class="page-head"><h2>{{ program.client_label_plural }}</h2><span class="subtle" style="margin-left:.5rem;">{{ program.name|default:program.project.name }}</span>
+    <span style="flex:1"></span>
+    <a class="seg" style="text-decoration:none;" href="{% url 'care:coverage' program.project.code %}"><span class="msym" style="font-size:15px;vertical-align:-2px;">insights</span> Coverage</a>
+  </div>
 
   <div class="toolbar">
     <form method="get">
