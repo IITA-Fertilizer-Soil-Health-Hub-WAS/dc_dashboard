@@ -11,6 +11,7 @@ urlpatterns = [
     path("", projects_views.projects, name="index"),
     path("projects/", projects_views.projects, name="projects"),
     path("projects/<slug:code>/request/", projects_views.project_request, name="project_request"),
+    path("projects/<slug:code>/access-policy/", projects_views.project_access_policy, name="project_access_policy"),
     path("my-assignments/", views.my_assignments, name="my_assignments"),
     path("my-submissions/", views.my_submissions, name="my_submissions"),
     path("my-performance/", views.my_performance, name="my_performance"),

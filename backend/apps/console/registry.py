@@ -29,6 +29,7 @@ from apps.submissions.models import Enumerator
 from apps.validation.models import ValidationRule
 
 from .actions import PROJECT_ACTIONS, USER_ACTIONS, Action
+from .forms import ProjectAdminForm
 
 
 @dataclass(frozen=True)
@@ -45,6 +46,7 @@ class Managed:
     icon: str = "table_rows"
     description: str = ""  # shown as a tooltip in the sidebar
     actions: tuple[Action, ...] = ()
+    form_class: type | None = None  # custom ModelForm; else one is built from form_fields
 
     @property
     def singular(self) -> str:
@@ -77,6 +79,7 @@ _ENTRIES: list[Managed] = [
                          "enid_patterns", "hhid_patterns", "plugin_path", "timezone",
                          "household_label"],
             search_fields=["code", "name"], icon="category", actions=PROJECT_ACTIONS,
+            form_class=ProjectAdminForm,
             description="Projects you monitor — ONA forms, ID patterns, sync."),
     Managed("forms", FormDefinition, "Forms", "Configuration",
             list_display=["project", "title", "role", "server_form_id", "publish_status",

@@ -268,6 +268,8 @@ class ConsoleFormView(UserPassesTestMixin, View):
         return console_can_edit(self.request.user, self.kwargs.get("key"))
 
     def _form_class(self, m: Managed):
+        if m.form_class is not None:
+            return m.form_class
         return modelform_factory(m.model, fields=m.form_fields or "__all__")
 
     def get(self, request, key, pk=None):

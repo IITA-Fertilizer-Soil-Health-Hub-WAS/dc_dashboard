@@ -85,6 +85,9 @@
             </div>
           </div>
           <div class="pcard-actions">
+            {% if r.is_owner %}
+              <a class="btn btn-ghost" style="text-decoration:none;" href="{% url 'dashboards:project_access_policy' r.uc.code %}" title="Open or close this project to access requests">Manage</a>
+            {% endif %}
             {% if r.is_member %}
               {# Members can always open and read details. #}
               <button type="button" class="btn btn-ghost" onclick="document.getElementById('info-{{ r.uc.pk }}').showModal()">Info</button>

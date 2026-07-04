@@ -271,6 +271,15 @@
     select:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-50);}
     select:disabled{opacity:.55; cursor:not-allowed;}
     select option{color:var(--ink); background:#fff;}
+    /* Searchable combobox (progressive enhancement of select[data-searchable]) */
+    .ss-wrap{position:relative;}
+    .ss-menu{position:absolute; left:0; right:0; top:100%; z-index:40; background:var(--surface);
+      border:1px solid var(--line); border-radius:8px; margin-top:3px; max-height:230px;
+      overflow:auto; box-shadow:var(--shadow);}
+    .ss-item{padding:.46rem .6rem; font-size:.88rem; cursor:pointer; white-space:nowrap;
+      overflow:hidden; text-overflow:ellipsis;}
+    .ss-item:hover,.ss-item.on{background:var(--brand-50); color:var(--brand-700);}
+    .ss-empty{padding:.5rem .6rem; font-size:.83rem; color:var(--muted);}
     /* Dark sidebar dropdowns keep their translucent styling but need a light chevron. */
     .nav select{
       background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%23e7dcc2' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E");
@@ -608,6 +617,64 @@
         document.documentElement.classList.remove('nav-open');
       });
     });
+
+    // ---- Searchable / institution-dependent select comboboxes ----
+    // select[data-depends="<name>"] hides options whose data-org != the depended
+    // select's value; select[data-searchable] is upgraded to a typeahead.
+    (function () {
+      function applyDepends(sel) {
+        var dep = document.querySelector('[name="' + sel.dataset.depends + '"]');
+        if (!dep) return;
+        function filter() {
+          var v = dep.value;
+          Array.prototype.forEach.call(sel.options, function (o) {
+            var og = o.getAttribute('data-org');
+            o.dataset.hidden = (og && v && og !== v) ? '1' : '';
+          });
+          var cur = sel.options[sel.selectedIndex];
+          if (cur && cur.dataset.hidden === '1') { sel.value = ''; }
+          sel.dispatchEvent(new Event('ss:refresh'));
+        }
+        dep.addEventListener('change', filter);
+        filter();
+      }
+      function initSearchable(sel) {
+        if (sel.dataset.ssReady) return; sel.dataset.ssReady = '1';
+        var wrap = document.createElement('div'); wrap.className = 'ss-wrap';
+        sel.parentNode.insertBefore(wrap, sel); wrap.appendChild(sel);
+        sel.style.display = 'none';
+        var input = document.createElement('input');
+        input.type = 'text'; input.className = 'input'; input.autocomplete = 'off';
+        input.placeholder = sel.getAttribute('data-placeholder') || 'Search…';
+        var menu = document.createElement('div'); menu.className = 'ss-menu'; menu.hidden = true;
+        wrap.appendChild(input); wrap.appendChild(menu);
+        function label() { var o = sel.options[sel.selectedIndex]; return (o && o.value) ? o.text : ''; }
+        function sync() { input.value = label(); }
+        function build(f) {
+          menu.innerHTML = ''; f = (f || '').toLowerCase(); var n = 0;
+          Array.prototype.forEach.call(sel.options, function (o) {
+            if (o.dataset.hidden === '1') return;
+            if (f && o.text.toLowerCase().indexOf(f) === -1) return;
+            var it = document.createElement('div'); it.className = 'ss-item';
+            it.textContent = o.text || '—';
+            it.onmousedown = function (e) {
+              e.preventDefault(); sel.value = o.value;
+              sel.dispatchEvent(new Event('change', { bubbles: true })); sync(); menu.hidden = true;
+            };
+            menu.appendChild(it); n++;
+          });
+          if (!n) { var em = document.createElement('div'); em.className = 'ss-empty'; em.textContent = 'No matches'; menu.appendChild(em); }
+          menu.hidden = false;
+        }
+        input.addEventListener('focus', function () { build(''); });
+        input.addEventListener('input', function () { build(input.value); });
+        input.addEventListener('blur', function () { setTimeout(function () { menu.hidden = true; sync(); }, 140); });
+        sel.addEventListener('ss:refresh', sync);
+        sync();
+      }
+      document.querySelectorAll('select[data-depends]').forEach(applyDepends);
+      document.querySelectorAll('select[data-searchable]').forEach(initSearchable);
+    })();
   </script>
 {% else %}
   <div class="auth-wrap">{% block guest_content %}{% endblock %}</div>

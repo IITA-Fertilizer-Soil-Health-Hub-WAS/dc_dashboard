@@ -60,6 +60,50 @@ def test_filter_by_owner(client, django_user_model, org_world):
     assert b"Ada Owner" in resp.content
 
 
+def test_project_form_scopes_and_validates_owner(django_user_model, org_world):
+    # Owner must belong to the project's institution (a relationship, not text).
+    from apps.console.forms import ProjectAdminForm
+
+    other = Organization.objects.create(code="oth", name="Other")
+    outsider = django_user_model.objects.create_user(
+        "out@x.org", "pw", is_active=True, organization=other
+    )
+    form = ProjectAdminForm(data={
+        "code": "NEW-UC", "name": "New", "organization": str(org_world["org"].id),
+        "owner": str(outsider.id), "unit_type": "FARMER_HOUSEHOLD",
+        "timezone": "UTC", "household_label": "Household",
+    })
+    assert not form.is_valid()
+    assert "owner" in form.errors                      # outsider rejected
+    # The picker is searchable and scoped to institutions.
+    widget_html = str(ProjectAdminForm()["owner"])
+    assert "data-searchable" in widget_html and 'data-depends="organization"' in widget_html
+
+
+def test_owner_can_reopen_closed_project(client, django_user_model, org_world):
+    owner = django_user_model.objects.create_user(
+        "own@x.org", "pw", is_active=True, organization=org_world["org"]
+    )
+    uc = org_world["uc_a"]
+    uc.owner = owner
+    uc.allow_access_requests = False
+    uc.save(update_fields=["owner", "allow_access_requests"])
+    client.force_login(owner)
+    resp = client.post(reverse("dashboards:project_access_policy", args=["UC-A"]),
+                       {"allow": "on"})
+    assert resp.status_code == 302
+    uc.refresh_from_db()
+    assert uc.allow_access_requests is True
+
+
+def test_non_owner_cannot_change_access_policy(client, org_world):
+    # A plain member (not owner, not coordinator) is forbidden.
+    client.force_login(org_world["member"])
+    resp = client.post(reverse("dashboards:project_access_policy", args=["UC-A"]),
+                       {"allow": "off"})
+    assert resp.status_code == 403
+
+
 def test_request_form_renders(client, org_world):
     client.force_login(org_world["member"])
     resp = client.get(reverse("dashboards:project_request", args=["UC-B"]))

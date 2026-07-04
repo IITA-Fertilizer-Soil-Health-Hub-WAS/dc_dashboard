@@ -119,6 +119,8 @@ def projects(request):
             "pending": uc.id in pending_ids,
             # Owner opened this project to outside requests — drives the buttons.
             "open": uc.allow_access_requests,
+            # The signed-in user owns this project (can manage its access policy).
+            "is_owner": uc.owner_id == user.id,
         }
         for uc in page
     ]
@@ -185,3 +187,36 @@ def project_request(request, code):
     return render(request, "dashboards/project_request.html", {
         "uc": uc, "existing": existing, "note": existing.note if existing else "",
     })
+
+
+def _can_set_policy(user, uc) -> bool:
+    """Who may open/close a project to access requests: the project's owner, a
+    Platform Admin, or a coordinator with granting authority over it."""
+    from apps.rbac.models import Role
+    from apps.rbac.permissions import can_grant
+
+    if getattr(user, "is_platform_admin", False):
+        return True
+    if uc.owner_id and uc.owner_id == user.id:
+        return True
+    return can_grant(user, uc, Role.VIEWER)
+
+
+@require_http_methods(["GET", "POST"])
+@login_required
+def project_access_policy(request, code):
+    """A light, owner-facing screen to open or close a project to access
+    requests — reachable even for a closed project (whose card is otherwise
+    inert), so the owner can always re-open it."""
+    uc = get_object_or_404(Project, code=code, is_active=True)
+    if not _can_set_policy(request.user, uc):
+        raise PermissionDenied("Only the project's owner or a coordinator can change this.")
+
+    if request.method == "POST":
+        uc.allow_access_requests = request.POST.get("allow") == "on"
+        uc.save(update_fields=["allow_access_requests", "updated_at"])
+        state = "open to" if uc.allow_access_requests else "closed to"
+        messages.success(request, f"{uc.code} is now {state} access requests.")
+        return redirect("dashboards:projects")
+
+    return render(request, "dashboards/project_access_policy.html", {"uc": uc})

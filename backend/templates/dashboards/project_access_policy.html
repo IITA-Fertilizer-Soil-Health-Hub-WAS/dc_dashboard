@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Access policy · {{ uc.code }} · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<span class="sep">/</span><a href="{% url 'dashboards:projects' %}">Projects</a><span class="sep">/</span><span class="cur">Access policy</span>{% endblock %}
+{% block content %}
+  <div class="page-head"><h2>Access policy</h2></div>
+  <p class="lede">{{ uc.name }} <span class="mono subtle">· {{ uc.code }}</span></p>
+
+  <div class="card" style="max-width:540px;">
+    <form method="post">
+      {% csrf_token %}
+      <label class="chk" style="display:flex;gap:.6rem;align-items:flex-start;">
+        <input type="checkbox" name="allow" {% if uc.allow_access_requests %}checked{% endif %} style="margin-top:.2rem;">
+        <span>
+          <b>Accept access requests</b>
+          <div class="subtle" style="font-size:.85rem;margin-top:.2rem;line-height:1.5;">
+            When on, this project appears in the discovery catalogue with active
+            <em>Info</em> and <em>Request access</em> buttons. When off, the card
+            still lists but is greyed and inert — nobody can request access or read
+            the details until you re-open it here.
+          </div>
+        </span>
+      </label>
+      <div class="form-actions" style="margin-top:1.2rem;display:flex;gap:.6rem;align-items:center;">
+        <button class="btn btn-open" type="submit">Save</button>
+        <a class="subtle" href="{% url 'dashboards:projects' %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}
