@@ -162,6 +162,10 @@ AUTHENTICATION_BACKENDS = [
 # so the platform can be white-labelled per deployment.
 SITE_NAME = env("SITE_NAME", default="Fieldbase")
 
+# The platform operator a prospective user can reach when they can't yet register
+# (no institution onboarded) or otherwise need an admin. Shown as a mailto link.
+PLATFORM_ADMIN_EMAIL = env("PLATFORM_ADMIN_EMAIL", default="s.kouiho@cgiar.org")
+
 # Sender for platform email (digests, alerts, notifications).
 DEFAULT_FROM_EMAIL = env(
     "DEFAULT_FROM_EMAIL", default=f"{SITE_NAME} <no-reply@fieldbase.local>"
