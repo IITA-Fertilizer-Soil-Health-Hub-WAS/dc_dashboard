@@ -96,7 +96,13 @@ class Project(BaseModel):
         "Country", null=True, blank=True, on_delete=models.SET_NULL, related_name="projects"
     )
     name = models.CharField(max_length=255)
+    # Public blurb shown in the discovery catalogue's Info panel.
+    description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)  # replaces active_project_list
+    # Whether people outside the project may request access from the public
+    # catalogue. When False the project still appears in the directory but its
+    # card is inert (greyed) — no request, no info — until an owner opens it up.
+    allow_access_requests = models.BooleanField(default=True)
     countries = models.JSONField(default=list, blank=True)
 
     # ID validation patterns (was patternissues / patternissuesE in app.R).

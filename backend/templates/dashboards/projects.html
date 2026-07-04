@@ -8,7 +8,7 @@
     <span class="pill neutral">{{ page.paginator.count }}</span>
   </div>
   <p class="lede">
-    {% if scope == 'all' %}Every project in your institution — open the ones you belong to, or request access to others.
+    {% if scope == 'all' %}Discover projects across every institution. Open the ones you belong to, or request access where the owner allows it.
     {% else %}The projects you have access to.{% endif %}
   </p>
 
@@ -43,14 +43,20 @@
 
   <div class="toolbar" style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-bottom:1rem;">
     <div class="tabs" style="margin:0;">
-      <a class="seg {% if scope == 'mine' %}on{% endif %}" href="?scope=mine{% if q %}&q={{ q }}{% endif %}">Mine ({{ mine_count }})</a>
-      <a class="seg {% if scope == 'all' %}on{% endif %}" href="?scope=all{% if q %}&q={{ q }}{% endif %}">All in institution</a>
+      <a class="seg {% if scope == 'all' %}on{% endif %}" href="?scope=all">All projects</a>
+      <a class="seg {% if scope == 'mine' %}on{% endif %}" href="?scope=mine">Mine ({{ mine_count }})</a>
     </div>
-    <form method="get" style="display:flex;gap:.5rem;flex:1;min-width:240px;">
+    <form method="get" style="display:flex;gap:.5rem;flex:1;flex-wrap:wrap;min-width:240px;">
       <input type="hidden" name="scope" value="{{ scope }}">
-      <input class="input" type="search" name="q" value="{{ q }}" placeholder="Search projects by code or name…" style="flex:1;">
+      <input class="input" type="search" name="q" value="{{ q }}" placeholder="Search by name, code or description…" style="flex:1;min-width:180px;">
+      {% if orgs %}
+        <select class="input" name="org" onchange="this.form.submit()" aria-label="Institution">
+          <option value="">All institutions</option>
+          {% for o in orgs %}<option value="{{ o.code }}" {% if org == o.code %}selected{% endif %}>{{ o.name }}</option>{% endfor %}
+        </select>
+      {% endif %}
       {% if countries %}
-        <select class="input" name="country" onchange="this.form.submit()">
+        <select class="input" name="country" onchange="this.form.submit()" aria-label="Country">
           <option value="">All countries</option>
           {% for c in countries %}<option value="{{ c.code }}" {% if country == c.code %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
         </select>
@@ -60,22 +66,61 @@
   </div>
 
   {% if rows %}
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1rem;">
       {% for r in rows %}
-        <div class="card" style="display:flex;align-items:center;gap:.9rem;padding:1rem 1.1rem;">
-          <span class="uc-mark" style="width:38px;height:38px;border-radius:10px;background:var(--brand-50);color:var(--brand);display:grid;place-items:center;font-family:var(--serif);font-weight:600;flex-shrink:0;">{{ r.uc.name|slice:":1"|upper }}</span>
-          <div style="flex:1;min-width:0;">
-            <b style="font-family:var(--serif);font-size:1rem;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.uc.name }}</b>
-            <div class="subtle" style="font-size:.78rem;">
-              <span class="mono">{{ r.uc.code }}</span>{% if r.uc.country %} · {{ r.uc.country.name }}{% endif %}
+        <div class="card pcard {% if not r.is_member and not r.open %}pcard-closed{% endif %}">
+          <div class="pcard-body">
+            <span class="uc-mark">{{ r.uc.name|slice:":1"|upper }}</span>
+            <div style="flex:1;min-width:0;">
+              <b class="pcard-name">{{ r.uc.name }}</b>
+              <div class="subtle" style="font-size:.78rem;">
+                <span class="mono">{{ r.uc.code }}</span>{% if r.uc.organization %} · {{ r.uc.organization.name }}{% endif %}{% if r.uc.country %} · {{ r.uc.country.name }}{% endif %}
+              </div>
             </div>
           </div>
-          {% if r.is_member %}
-            <a class="btn btn-open" style="text-decoration:none;" href="{% url 'dashboards:project' r.uc.code %}">Open</a>
-          {% elif r.pending %}
-            <span class="pill warn">Requested</span>
-          {% else %}
-            <a class="btn btn-request" style="text-decoration:none;" href="{% url 'dashboards:project_request' r.uc.code %}">Request access</a>
+          <div class="pcard-actions">
+            {% if r.is_member %}
+              {# Members can always open and read details. #}
+              <button type="button" class="btn btn-ghost" onclick="document.getElementById('info-{{ r.uc.pk }}').showModal()">Info</button>
+              <a class="btn btn-open" style="text-decoration:none;" href="{% url 'dashboards:project' r.uc.code %}">Open</a>
+            {% elif r.open %}
+              {# Owner allows requests → both buttons active. #}
+              <button type="button" class="btn btn-ghost" onclick="document.getElementById('info-{{ r.uc.pk }}').showModal()">Info</button>
+              {% if r.pending %}
+                <span class="pill warn" title="Your request is awaiting review">Requested</span>
+              {% else %}
+                <a class="btn btn-request" style="text-decoration:none;" href="{% url 'dashboards:project_request' r.uc.code %}">Request access</a>
+              {% endif %}
+            {% else %}
+              {# Closed to outside requests → both buttons inert (greyed). #}
+              <button type="button" class="btn is-disabled" disabled title="This project isn't accepting access requests">Info</button>
+              <button type="button" class="btn is-disabled" disabled title="This project isn't accepting access requests">Request access</button>
+            {% endif %}
+          </div>
+
+          {% if r.is_member or r.open %}
+            <dialog id="info-{{ r.uc.pk }}" class="pinfo">
+              <div class="pinfo-head">
+                <b style="font-family:var(--serif);font-size:1.1rem;">{{ r.uc.name }}</b>
+                <button type="button" class="pinfo-x" onclick="this.closest('dialog').close()" aria-label="Close">✕</button>
+              </div>
+              <div class="subtle" style="font-size:.8rem;margin-bottom:.7rem;">
+                <span class="mono">{{ r.uc.code }}</span>{% if r.uc.organization %} · {{ r.uc.organization.name }}{% endif %}{% if r.uc.country %} · {{ r.uc.country.name }}{% endif %}
+              </div>
+              <p style="font-size:.9rem;line-height:1.55;margin:0;">
+                {% if r.uc.description %}{{ r.uc.description }}{% else %}<span class="subtle">No description provided for this project yet.</span>{% endif %}
+              </p>
+              <div class="pinfo-foot">
+                {% if r.is_member %}
+                  <a class="btn btn-open" style="text-decoration:none;" href="{% url 'dashboards:project' r.uc.code %}">Open project</a>
+                {% elif r.pending %}
+                  <span class="pill warn">Access requested</span>
+                {% else %}
+                  <a class="btn btn-request" style="text-decoration:none;" href="{% url 'dashboards:project_request' r.uc.code %}">Request access</a>
+                {% endif %}
+                <button type="button" class="btn btn-ghost" onclick="this.closest('dialog').close()">Close</button>
+              </div>
+            </dialog>
           {% endif %}
         </div>
       {% endfor %}
@@ -83,16 +128,35 @@
 
     {% if page.has_other_pages %}
       <div class="pager" style="margin-top:1.4rem;">
-        {% if page.has_previous %}<a href="?scope={{ scope }}&q={{ q }}&country={{ country }}&page={{ page.previous_page_number }}">← Prev</a>{% endif %}
+        {% if page.has_previous %}<a href="?scope={{ scope }}&q={{ q }}&org={{ org }}&country={{ country }}&page={{ page.previous_page_number }}">← Prev</a>{% endif %}
         <span class="subtle">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
-        {% if page.has_next %}<a href="?scope={{ scope }}&q={{ q }}&country={{ country }}&page={{ page.next_page_number }}">Next →</a>{% endif %}
+        {% if page.has_next %}<a href="?scope={{ scope }}&q={{ q }}&org={{ org }}&country={{ country }}&page={{ page.next_page_number }}">Next →</a>{% endif %}
       </div>
     {% endif %}
   {% else %}
     <div class="empty">
       {% if scope == 'mine' %}You don't belong to any project yet.<br>
         <a href="?scope=all">Browse all projects</a> to request access.
-      {% else %}No projects match.{% if q %} <a href="?scope=all">Clear search</a>{% endif %}{% endif %}
+      {% else %}No projects match your filters.{% if q or org or country %} <a href="?scope=all">Clear filters</a>{% endif %}{% endif %}
     </div>
   {% endif %}
+
+  <style>
+    .pcard{display:flex; flex-direction:column; gap:.8rem; padding:1rem 1.1rem;}
+    .pcard-body{display:flex; align-items:center; gap:.9rem; min-width:0;}
+    .pcard .uc-mark{width:38px; height:38px; border-radius:10px; background:var(--brand-50);
+      color:var(--brand); display:grid; place-items:center; font-family:var(--serif);
+      font-weight:600; flex-shrink:0;}
+    .pcard-name{font-family:var(--serif); font-size:1rem; display:block; white-space:nowrap;
+      overflow:hidden; text-overflow:ellipsis;}
+    .pcard-actions{display:flex; gap:.45rem; align-items:center; justify-content:flex-end;}
+    .pcard-closed{opacity:.72; background:var(--surface-2);}
+    .pcard-closed .uc-mark{background:var(--line); color:var(--muted);}
+    dialog.pinfo{border:1px solid var(--line); border-radius:12px; padding:1.3rem 1.4rem;
+      max-width:440px; width:calc(100% - 2rem); box-shadow:var(--shadow); color:var(--ink);}
+    dialog.pinfo::backdrop{background:rgba(20,28,24,.42);}
+    .pinfo-head{display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; margin-bottom:.35rem;}
+    .pinfo-x{border:none; background:none; font-size:1rem; cursor:pointer; color:var(--muted); line-height:1;}
+    .pinfo-foot{display:flex; gap:.5rem; align-items:center; margin-top:1.2rem;}
+  </style>
 {% endblock %}

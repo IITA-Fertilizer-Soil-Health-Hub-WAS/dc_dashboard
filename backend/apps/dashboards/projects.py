@@ -15,7 +15,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
 
-from apps.projects.models import Country, Project
+from apps.projects.models import Country, Organization, Project
 from apps.rbac.models import ProjectAccessRequest
 from apps.rbac.permissions import can_manage_access, visible_projects
 
@@ -51,24 +51,24 @@ def _home_summary(user, member_ids):
     return out
 
 
-def _org_projects(user):
-    """Active projects the user may see in the directory: their institution's
-    (a hub operator sees all; a user with no institution yet sees none)."""
-    qs = Project.objects.filter(is_active=True).select_related("country", "organization")
-    if getattr(user, "is_platform_admin", False):
-        return qs
-    if user.organization_id:
-        return qs.filter(organization_id=user.organization_id)
-    return qs.none()
+def _catalogue():
+    """The public discovery catalogue: every active project across all
+    institutions. Only names/metadata are exposed here — data stays private
+    until access is granted (see visible_projects for the data gate)."""
+    return Project.objects.filter(is_active=True).select_related("country", "organization")
 
 
 @login_required
 def projects(request):
-    """Directory of projects: 'mine' (default) or 'all' in my institution.
+    """Directory of projects. Two scopes:
+
+    * ``all`` (default) — the global catalogue: every institution's projects,
+      each with Info + Request-access, filterable by institution/keyword/country.
+      A card is inert (greyed) when its owner hasn't opened access requests.
+    * ``mine`` — just the projects you belong to.
 
     Project = workspace: on the bare landing, a user with exactly one project is
-    taken straight into it; several show this picker. Opening the directory also
-    clears any active workspace so the sidebar returns to the cross-project view.
+    taken straight into it. Opening the directory clears any active workspace.
     """
     user = request.user
     is_index = bool(request.resolver_match and request.resolver_match.url_name == "index")
@@ -78,24 +78,28 @@ def projects(request):
             return redirect("dashboards:project", code=mine.first().code)
     request.session.pop("active_project", None)  # browsing the directory = leave the workspace
 
-    scope = "all" if request.GET.get("scope") == "all" else "mine"
+    scope = "mine" if request.GET.get("scope") == "mine" else "all"
     q = (request.GET.get("q") or "").strip()
     country = (request.GET.get("country") or "").strip()
+    org = (request.GET.get("org") or "").strip()
 
     member_ids = set(visible_projects(user).values_list("id", flat=True))
-    org_qs = _org_projects(user)
 
-    # 'mine' = projects you belong to (membership is the authorization, no org
-    # gate needed); 'all' = the institution directory you may request access in.
-    if scope == "all":
-        base = org_qs
-    else:
+    # 'mine' = projects you belong to; 'all' = the global catalogue you can
+    # discover and request access in.
+    if scope == "mine":
         base = visible_projects(user).select_related("country", "organization")
+    else:
+        base = _catalogue()
     if q:
-        base = base.filter(Q(code__icontains=q) | Q(name__icontains=q))
+        base = base.filter(
+            Q(code__icontains=q) | Q(name__icontains=q) | Q(description__icontains=q)
+        )
+    if org:
+        base = base.filter(organization__code=org)
     if country:
         base = base.filter(country__code=country)
-    base = base.order_by("code")
+    base = base.order_by("name")
 
     page = Paginator(base, PAGE_SIZE).get_page(request.GET.get("page"))
     pending_ids = set(
@@ -104,21 +108,30 @@ def projects(request):
         ).values_list("project_id", flat=True)
     )
     rows = [
-        {"uc": uc, "is_member": uc.id in member_ids, "pending": uc.id in pending_ids}
+        {
+            "uc": uc,
+            "is_member": uc.id in member_ids,
+            "pending": uc.id in pending_ids,
+            # Owner opened this project to outside requests — drives the buttons.
+            "open": uc.allow_access_requests,
+        }
         for uc in page
     ]
+    # Filter options span the whole catalogue (global discovery).
+    orgs = Organization.objects.filter(
+        projects__is_active=True
+    ).distinct().order_by("name")
     countries = Country.objects.filter(
-        projects__in=org_qs
+        projects__is_active=True
     ).distinct().order_by("name")
 
-    # Personal 'attention' strip only on the default (your-projects) landing —
-    # not when browsing/searching the wider directory.
-    is_landing = scope == "mine" and not q and not country
+    # Personal 'attention' strip only on the your-projects landing.
+    is_landing = scope == "mine" and not q and not country and not org
     home = _home_summary(user, member_ids) if is_landing else {}
 
     return render(request, "dashboards/projects.html", {
         "rows": rows, "page": page, "scope": scope, "q": q,
-        "country": country, "countries": countries,
+        "country": country, "countries": countries, "org": org, "orgs": orgs,
         "mine_count": len(member_ids), "home": home, "is_landing": is_landing,
     })
 
@@ -131,14 +144,14 @@ def project_request(request, code):
     user = request.user
     uc = get_object_or_404(Project, code=code, is_active=True)
 
-    # Tenant guard: you can only request projects in your own institution.
-    if not getattr(user, "is_platform_admin", False):
-        if not user.organization_id or uc.organization_id != user.organization_id:
-            raise PermissionDenied("That project is in another institution.")
-
     if visible_projects(user).filter(pk=uc.pk).exists():
         messages.info(request, f"You already have access to {uc.code}.")
         return redirect("dashboards:projects")
+
+    # The owner/institution must have opened this project to outside requests.
+    # (Discovery is global, but a closed project is inert — see the catalogue.)
+    if not uc.allow_access_requests:
+        raise PermissionDenied("This project is not accepting access requests.")
 
     existing = ProjectAccessRequest.objects.filter(
         user=user, project=uc, status=ProjectAccessRequest.Status.PENDING

@@ -29,7 +29,7 @@ def org_world(django_user_model):
 
 def test_mine_shows_only_member_projects(client, org_world):
     client.force_login(org_world["member"])
-    resp = client.get(reverse("dashboards:projects"))  # scope=mine default
+    resp = client.get(reverse("dashboards:projects") + "?scope=mine")
     assert resp.status_code == 200
     assert b"UC-A" in resp.content       # member
     assert b"UC-B" not in resp.content   # not a member
@@ -76,13 +76,51 @@ def test_request_existing_membership_is_noop(client, org_world):
     assert not ProjectAccessRequest.objects.filter(project=org_world["uc_a"]).exists()
 
 
-def test_cannot_request_other_org_project(client, django_user_model, org_world):
+def test_catalogue_is_global_across_institutions(client, org_world):
+    # Discovery is global: a member of one institution sees another's projects.
+    other_org = Organization.objects.create(code="other", name="Other Inst")
+    Project.objects.create(code="OTHER-UC", name="Other Project", organization=other_org)
+    client.force_login(org_world["member"])
+    resp = client.get(reverse("dashboards:projects") + "?scope=all")
+    assert b"OTHER-UC" in resp.content
+
+
+def test_can_request_open_project_in_other_org(client, django_user_model, org_world):
+    # Cross-institution requests are allowed when the project is open.
     other_org = Organization.objects.create(code="other", name="Other")
     other_uc = Project.objects.create(code="OTHER-UC", name="Other", organization=other_org)
     client.force_login(org_world["member"])  # belongs to 'org'
-    resp = client.post(reverse("dashboards:project_request", args=["OTHER-UC"]))
+    resp = client.post(reverse("dashboards:project_request", args=["OTHER-UC"]),
+                       {"note": "Collaborating from another institution"})
+    assert resp.status_code == 302
+    assert ProjectAccessRequest.objects.filter(
+        project=other_uc, user=org_world["member"]
+    ).exists()
+
+
+def test_cannot_request_closed_project(client, org_world):
+    # A project closed to access requests refuses the request (inert card).
+    closed = Project.objects.create(
+        code="CLOSED-UC", name="Closed", organization=org_world["org"],
+        allow_access_requests=False,
+    )
+    client.force_login(org_world["member"])
+    resp = client.post(reverse("dashboards:project_request", args=["CLOSED-UC"]),
+                       {"note": "let me in"})
     assert resp.status_code == 403
-    assert not ProjectAccessRequest.objects.filter(project=other_uc).exists()
+    assert not ProjectAccessRequest.objects.filter(project=closed).exists()
+
+
+def test_closed_project_card_is_inert(client, org_world):
+    Project.objects.create(
+        code="CLOSED-UC", name="Closed Project", organization=org_world["org"],
+        allow_access_requests=False,
+    )
+    client.force_login(org_world["member"])
+    resp = client.get(reverse("dashboards:projects") + "?scope=all")
+    html = resp.content.decode()
+    assert "CLOSED-UC" in html                                   # still listed…
+    assert "isn't accepting access requests" in html            # …but buttons disabled
 
 
 def test_coordinator_approves_request_grants_access(client, org_world):
