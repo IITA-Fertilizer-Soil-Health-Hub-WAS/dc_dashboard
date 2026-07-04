@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Review log · {{ uc.name }} · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}
+  <span class="sep">/</span><a href="{% url 'dashboards:index' %}">Projects</a>
+  <span class="sep">/</span><a href="{% url 'dashboards:project' uc.code %}">{{ uc.name }}</a>
+  <span class="sep">/</span><span class="cur">Review log</span>
+{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h2>Review log <span class="subtle" style="font-weight:400;">· {{ uc.name }}</span></h2>
+    <span class="pill">{{ uc.code }}</span>
+    <span style="flex:1"></span>
+    <a class="btn btn-request" style="text-decoration:none;font-size:.82rem;"
+       href="{% url 'dashboards:export_audit' uc.code %}"><span class="msym" style="font-size:15px;vertical-align:-2px;">download</span> Export CSV</a>
+    <a class="subtle" style="font-size:.82rem;margin-left:.6rem;" href="{% url 'dashboards:project' uc.code %}?tab=review">← Back to Review</a>
+  </div>
+  <p class="subtle" style="margin:.1rem 0 1rem;font-size:.85rem;">
+    The append-only audit trail of every review action on this project — who did what, and when.
+  </p>
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th scope="col">When</th><th scope="col">Actor</th><th scope="col">Submission</th>
+          <th scope="col">Action</th><th scope="col">From → To</th><th scope="col">Field</th>
+          <th scope="col">Note</th>
+        </tr></thead>
+        <tbody>
+          {% for log in logs %}
+            <tr>
+              <td class="subtle" style="white-space:nowrap;">{{ log.created_at|date:"Y-m-d H:i" }}</td>
+              <td>{{ log.actor.email|default:"system" }}</td>
+              <td class="mono" style="font-size:.8rem;">{{ log.submission.ona_uuid|truncatechars:12 }}</td>
+              <td><span class="pill neutral">{{ log.action }}</span></td>
+              <td class="subtle">{{ log.from_state|default:"—" }} → {{ log.to_state|default:"—" }}</td>
+              <td class="subtle">{{ log.field_key|default:"—" }}</td>
+              <td>{{ log.note|default:"" }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="7"><div class="empty" style="border:none;padding:1.6rem;">No review actions recorded yet.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% if logs|length == 500 %}<p class="subtle" style="font-size:.78rem;margin-top:.6rem;">Showing the most recent 500 actions — use Export CSV for the full history.</p>{% endif %}
+{% endblock %}

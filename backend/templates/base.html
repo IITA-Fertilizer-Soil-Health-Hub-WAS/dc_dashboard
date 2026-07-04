@@ -572,7 +572,7 @@
                class="{% if request.resolver_match.url_name == 'publish_form' %}active{% endif %}">
               <span class="msym">upload_file</span>Publish form
             </a>
-            <a href="/admin/" class="nav-sys" title="System settings: review audit, groups, scheduled tasks">
+            <a href="/admin/" class="nav-sys" title="System settings: scheduled tasks, groups, sites, social apps">
               <span class="msym">settings</span>Admin console
             </a>
           {% endif %}
@@ -721,11 +721,16 @@
         labels.forEach(function (l) { menu.appendChild(l); });
         box.appendChild(trigger); box.appendChild(menu);
 
+        function esc(s) { var d = document.createElement('span'); d.textContent = s; return d.innerHTML; }
+        function tagText(c) {
+          var l = c.closest('label'); var t = l && l.querySelector('.mtxt');
+          return t ? t.textContent : c.value;
+        }
         function render() {
           var sel = checks.filter(function (c) { return c.checked; });
-          if (!sel.length) { trigger.innerHTML = '<span class="msel-ph">' + ph + '</span>'; return; }
+          if (!sel.length) { trigger.innerHTML = '<span class="msel-ph">' + esc(ph) + '</span>'; return; }
           var shown = sel.slice(0, 6).map(function (c) {
-            return '<span class="msel-tag">' + c.value + '</span>';
+            return '<span class="msel-tag">' + esc(tagText(c)) + '</span>';
           }).join('');
           var extra = sel.length > 6 ? '<span class="msel-count">+' + (sel.length - 6) + '</span>' : '';
           trigger.innerHTML = '<span class="msel-tags">' + shown + '</span>' + extra;
@@ -752,7 +757,32 @@
         document.addEventListener('click', function (e) { if (!box.contains(e.target)) open(false); });
         render();
       }
+      // A native <select multiple> (e.g. a ModelForm M2M field in the console)
+      // is upgraded to the same dropdown: we mirror its options as checkboxes
+      // that drive option.selected, and hide the select — which stays the form
+      // input, so submission is unchanged.
+      function enhanceMultiSelect(sel) {
+        if (sel.dataset.mReady) return; sel.dataset.mReady = '1';
+        var box = document.createElement('div'); box.className = 'msel';
+        box.dataset.placeholder = sel.getAttribute('data-placeholder')
+          || sel.getAttribute('placeholder') || 'Select…';
+        sel.parentNode.insertBefore(box, sel);
+        sel.style.display = 'none'; box.appendChild(sel);
+        Array.prototype.forEach.call(sel.options, function (o) {
+          var l = document.createElement('label');
+          var c = document.createElement('input'); c.type = 'checkbox';
+          c.checked = o.selected; c.value = o.value;
+          c.addEventListener('change', function () {
+            o.selected = c.checked;
+            sel.dispatchEvent(new Event('change', { bubbles: true }));
+          });
+          var t = document.createElement('span'); t.className = 'mtxt'; t.textContent = o.text;
+          l.appendChild(c); l.appendChild(t); box.appendChild(l);
+        });
+        initMulti(box);
+      }
       document.querySelectorAll('[data-msel]').forEach(initMulti);
+      document.querySelectorAll('select[multiple]').forEach(enhanceMultiSelect);
     })();
   </script>
 {% else %}

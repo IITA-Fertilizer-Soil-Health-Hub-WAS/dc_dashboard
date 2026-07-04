@@ -344,20 +344,29 @@ UNFOLD = {
             "950": "4 33 22",
         },
     },
-    # The admin holds only system-level models now (review/audit + Django/3rd-party
-    # system tables); all project config, access and field data live in the in-app
-    # console. Let unfold auto-build the nav from whatever stays registered.
+    # The admin holds only low-level system tables now (scheduled tasks, auth
+    # groups, sites, social apps). All project config, access, field data AND the
+    # review queue / review log live in the in-app app. One flat sidebar — no
+    # nested per-app tree (show_all_applications is off).
     "SIDEBAR": {
         "show_search": True,
-        "show_all_applications": True,
+        "show_all_applications": False,
         "navigation": [
             {
                 "items": [
                     {"title": "Open dashboard", "icon": "arrow_back", "link": "/"},
-                    {"title": "Reviews", "icon": "fact_check",
-                     "link": reverse_lazy("admin:review_review_changelist")},
-                    {"title": "Review actions", "icon": "history",
-                     "link": reverse_lazy("admin:review_reviewactionlog_changelist")},
+                    {"title": "Scheduled tasks", "icon": "schedule",
+                     "link": reverse_lazy("admin:django_celery_beat_periodictask_changelist")},
+                    {"title": "Interval schedules", "icon": "timelapse",
+                     "link": reverse_lazy("admin:django_celery_beat_intervalschedule_changelist")},
+                    {"title": "Crontab schedules", "icon": "calendar_month",
+                     "link": reverse_lazy("admin:django_celery_beat_crontabschedule_changelist")},
+                    {"title": "Groups", "icon": "group",
+                     "link": reverse_lazy("admin:auth_group_changelist")},
+                    {"title": "Social applications", "icon": "key",
+                     "link": reverse_lazy("admin:socialaccount_socialapp_changelist")},
+                    {"title": "Sites", "icon": "public",
+                     "link": reverse_lazy("admin:sites_site_changelist")},
                 ],
             },
         ],

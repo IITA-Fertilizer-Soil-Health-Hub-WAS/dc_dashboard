@@ -126,6 +126,20 @@ def overview(request):
 
 
 @login_required
+def review_log(request, code):
+    """On-screen review-actions log for a project — the append-only audit trail
+    of every endorse / validate / decline / edit. Project-scoped (replaces the
+    global admin ReviewActionLog list); the CSV export sits alongside it."""
+    uc = get_scoped_project(request, code)
+    logs = (
+        ReviewActionLog.objects.filter(submission__project=uc)
+        .select_related("actor", "submission", "submission__collected_by")
+        .order_by("-created_at")[:500]
+    )
+    return render(request, "dashboards/review_log.html", {"uc": uc, "logs": logs})
+
+
+@login_required
 def export_audit(request, code):
     """CSV of the review audit trail for a project."""
     uc = get_scoped_project(request, code)

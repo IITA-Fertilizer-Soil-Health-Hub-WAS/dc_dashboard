@@ -23,6 +23,7 @@ urlpatterns = [
     path("team/revoke/", team.team_revoke, name="team_revoke"),
     path("team/request/", team.team_request_decision, name="team_request_decision"),
     path("project/<slug:code>/", views.project_detail, name="project"),
+    path("project/<slug:code>/review-log/", views.review_log, name="review_log"),
     path("project/<slug:code>/audit.csv", views.export_audit, name="export_audit"),
     path("project/<slug:code>/tab/summary/", views.tab_summary, name="tab_summary"),
     path("project/<slug:code>/tab/review/", views.tab_review, name="tab_review"),
