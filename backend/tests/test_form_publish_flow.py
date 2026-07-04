@@ -108,7 +108,47 @@ def test_publish_view_shows_error(client, django_user_model, monkeypatch, uc):
     assert FormDefinition.objects.count() == 0
 
 
-def test_publish_view_staff_only(client, django_user_model, uc):
+def test_publish_view_blocked_for_plain_member(client, django_user_model, uc):
     user = django_user_model.objects.create_user("u@x.org", "pw", is_active=True)
     client.force_login(user)
     assert client.get(reverse("console:publish_form")).status_code == 403
+
+
+def test_publish_view_open_to_regional_coordinator(client, django_user_model):
+    """Design & publish is open to Regional/Country Coordinators, not staff-only."""
+    from apps.projects.models import Country, Organization, Region
+    from apps.rbac.models import Membership, Role
+
+    org = Organization.objects.create(code="o", name="O")
+    region = Region.objects.create(organization=org, code="EA", name="EA")
+    country = Country.objects.create(region=region, code="RW", name="Rwanda")
+    mine = Project.objects.create(code="MINE", name="Mine", organization=org, country=country)
+    coord = django_user_model.objects.create_user("rc@x.org", "pw", is_active=True, organization=org)
+    Membership.objects.create(user=coord, region=region, role=Role.REGIONAL_COORDINATOR)
+    client.force_login(coord)
+    resp = client.get(reverse("console:publish_form"))
+    assert resp.status_code == 200
+    assert b"MINE" in resp.content
+
+
+def test_publish_view_scopes_target_to_own_projects(client, django_user_model, monkeypatch):
+    """A coordinator can't publish into a project outside their region, even by
+    posting its id directly."""
+    from apps.projects.models import Country, Organization, Region
+    from apps.rbac.models import Membership, Role
+
+    org = Organization.objects.create(code="o", name="O")
+    region = Region.objects.create(organization=org, code="EA", name="EA")
+    country = Country.objects.create(region=region, code="RW", name="Rwanda")
+    Project.objects.create(code="MINE", name="Mine", organization=org, country=country)
+    other = Project.objects.create(code="OTHER", name="Other")  # different org, not theirs
+    coord = django_user_model.objects.create_user("rc@x.org", "pw", is_active=True, organization=org)
+    Membership.objects.create(user=coord, region=region, role=Role.REGIONAL_COORDINATOR)
+    _patch_backend(monkeypatch, PublishResult(ok=True, server_form_id="x"))
+    client.force_login(coord)
+    # OTHER isn't in the coordinator's scope → not published, error re-render.
+    upload = SimpleUploadedFile("f.xlsx", b"<x>")
+    resp = client.post(reverse("console:publish_form"),
+                       {"project": str(other.pk), "role": "VALIDATION", "xlsform": upload})
+    assert resp.status_code == 200
+    assert not FormDefinition.objects.filter(project=other).exists()

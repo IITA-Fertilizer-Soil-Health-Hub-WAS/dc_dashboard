@@ -38,6 +38,20 @@ class ManageMixin(UserPassesTestMixin):
         return can_manage_access(u)
 
 
+class GeoManagerMixin(UserPassesTestMixin):
+    """Platform Admin or a Regional/Country Coordinator — the roles allowed to
+    design and publish forms to the collection server. Non-staff users MUST have
+    their project choices scoped to what they can see (visible_projects)."""
+
+    def test_func(self) -> bool:
+        u = self.request.user
+        if not (u.is_authenticated and u.is_active):
+            return False
+        from .registry import is_geo_manager
+
+        return is_geo_manager(u)
+
+
 def _managed(key: str) -> Managed:
     m = REGISTRY.get(key)
     if m is None:
@@ -325,17 +339,28 @@ class ConsoleFormView(UserPassesTestMixin, View):
         return render(request, "console/form.html", _base_ctx(m) | {"form": form, "instance": instance})
 
 
-class PublishFormView(StaffMixin, View):
-    """Platform Admin uploads an XLSForm and publishes it to a project's server,
-    then (on success) the form is recorded and ready to grant + collect."""
+class PublishFormView(GeoManagerMixin, View):
+    """Design & publish: an Admin or Regional/Country Coordinator uploads an
+    XLSForm and publishes it to a project's collection server; on success the
+    form is recorded and ready to grant + collect. Non-staff users may only
+    publish to projects they can see (their region/country)."""
+
+    def _projects(self, request):
+        from apps.projects.models import Project
+
+        if request.user.is_staff:
+            return Project.objects.filter(is_active=True).order_by("code")
+        from apps.rbac.permissions import visible_projects
+
+        return visible_projects(request.user).filter(is_active=True).order_by("code")
 
     def _ctx(self, request, **extra):
-        from apps.projects.models import FormDefinition, Project
+        from apps.projects.models import FormDefinition
 
         ctx = {
             "groups": grouped(),
             "console_key": "forms",
-            "projects": Project.objects.filter(is_active=True).order_by("code"),
+            "projects": self._projects(request),
             "roles": FormDefinition.Role.choices,
         }
         ctx.update(extra)
@@ -346,9 +371,10 @@ class PublishFormView(StaffMixin, View):
 
     def post(self, request):
         from apps.ingestion.publishing import publish_xlsform
-        from apps.projects.models import Project
 
-        uc = Project.objects.filter(pk=request.POST.get("project")).first()
+        # Scope the target to what this user may publish to (a coordinator can't
+        # publish into another region's project by posting its id).
+        uc = self._projects(request).filter(pk=request.POST.get("project")).first()
         upload = request.FILES.get("xlsform")
         role = request.POST.get("role") or "VALIDATION"
         if uc is None or upload is None:

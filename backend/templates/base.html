@@ -567,14 +567,20 @@
                 </a>
               {% endfor %}
             {% endfor %}
+          {% endif %}
+          {% if can_publish_forms or user.is_staff %}
             <div class="lbl">System</div>
-            <a href="{% url 'console:publish_form' %}"
-               class="{% if request.resolver_match.url_name == 'publish_form' %}active{% endif %}">
-              <span class="msym">upload_file</span>Publish form
-            </a>
-            <a href="/admin/" class="nav-sys" title="System settings: scheduled tasks, groups, sites, social apps">
-              <span class="msym">settings</span>Admin console
-            </a>
+            {% if can_publish_forms %}
+              <a href="{% url 'console:publish_form' %}" title="Design a form and publish it to the collection server"
+                 class="{% if request.resolver_match.url_name == 'publish_form' %}active{% endif %}">
+                <span class="msym">upload_file</span>Design &amp; publish form
+              </a>
+            {% endif %}
+            {% if user.is_staff %}
+              <a href="/admin/" class="nav-sys" title="System settings: scheduled tasks, groups, sites, social apps">
+                <span class="msym">settings</span>Admin console
+              </a>
+            {% endif %}
           {% endif %}
         {% endif %}
       </nav>

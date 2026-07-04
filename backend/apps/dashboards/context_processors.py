@@ -78,6 +78,12 @@ def navigation(request):
         user=user, completed_at__isnull=False
     ).exists()
 
+    # Designing + publishing forms to the collection server is open to Platform
+    # Admins and Regional/Country Coordinators.
+    from apps.console.registry import is_geo_manager
+
+    can_publish_forms = is_geo_manager(user)
+
     return {
         "nav_projects": nav_projects,
         "nav_projects_total": nav_projects_total,
@@ -91,4 +97,5 @@ def navigation(request):
         "pending_approvals_count": pending_count,
         "show_claim_admin": claim_admin_available(user),
         "show_my_assignments": show_my_assignments,
+        "can_publish_forms": can_publish_forms,
     }
