@@ -11,6 +11,7 @@ from __future__ import annotations
 from django.conf import settings
 from django.db import models
 
+from apps.common.fields import EncryptedCharField
 from apps.common.models import BaseModel
 
 # Small list-of-strings fields use JSONField(default=list) rather than Postgres
@@ -38,10 +39,11 @@ class Organization(BaseModel):
         max_length=64, default="default",
         help_text="Django DATABASES alias (default = shared platform DB).",
     )
-    database_url = models.CharField(
-        max_length=500, blank=True,
+    database_url = EncryptedCharField(
+        max_length=1200, blank=True,
         help_text="Or a full DB connection URL this institution grants access to "
-                  "(e.g. postgres://user:pass@host:5432/db). Overrides the alias.",
+                  "(e.g. postgres://user:pass@host:5432/db). Overrides the alias. "
+                  "Encrypted at rest.",
     )
 
     class Meta:

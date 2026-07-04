@@ -105,7 +105,18 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Binds the request's tenant database when TENANT_DB_ROUTING is on (no-op
+    # otherwise). After AuthenticationMiddleware — it needs request.user.
+    "apps.projects.db_routing.TenantDBMiddleware",
 ]
+
+# Database-per-tenant routing (off by default: everything in the shared DB).
+TENANT_DB_ROUTING = env.bool("TENANT_DB_ROUTING", default=False)
+DATABASE_ROUTERS = ["apps.projects.db_routing.TenantRouter"]
+
+# Fernet key (urlsafe base64, 32 bytes) for at-rest encryption of secret columns
+# such as Organization.database_url. Kept in the environment, never in the DB.
+FIELD_ENCRYPTION_KEY = env("FIELD_ENCRYPTION_KEY", default="")
 
 ROOT_URLCONF = "eia_dcmt.urls"
 
