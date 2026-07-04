@@ -150,6 +150,18 @@ DATABASES = {
         default="postgres://eia:eia@localhost:5432/eia_dcmt",
     )
 }
+# Anchor a relative sqlite path to BASE_DIR so the DB is the same file no matter
+# what working directory the server/manage.py is launched from (a relative
+# "dev.sqlite3" would otherwise resolve against cwd and silently create an empty
+# database elsewhere).
+_db_name = DATABASES["default"].get("NAME")
+if (
+    DATABASES["default"].get("ENGINE") == "django.db.backends.sqlite3"
+    and _db_name
+    and not str(_db_name).startswith(":")  # not :memory:
+    and not Path(str(_db_name)).is_absolute()
+):
+    DATABASES["default"]["NAME"] = str(BASE_DIR / _db_name)
 
 # --- Auth -------------------------------------------------------------------
 AUTH_USER_MODEL = "accounts.User"
