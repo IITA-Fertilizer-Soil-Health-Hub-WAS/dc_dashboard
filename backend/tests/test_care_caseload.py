@@ -87,3 +87,25 @@ def test_register_shows_assign_control_for_coordinator(client, world):
     client.force_login(world["coord"])
     html = client.get(reverse("care:clients", args=["EXT"])).content
     assert b"Worker One" in html and b'name="worker"' in html
+
+
+# --- Phase 4: report + indicators -------------------------------------------
+def test_worker_breakdown_and_report_csv(client, world):
+    assign_client(world["prog"], world["unit"], world["w1"], by=world["coord"])
+    client.force_login(world["coord"])
+    # Coverage page now carries a per-worker breakdown.
+    cov = client.get(reverse("care:coverage", args=["EXT"])).content
+    assert b"By worker" in cov and b"Worker One" in cov
+    # CSV export of the programme status.
+    csv_resp = client.get(reverse("care:report_csv", args=["EXT"]))
+    assert csv_resp.status_code == 200
+    assert csv_resp["Content-Type"].startswith("text/csv")
+    body = csv_resp.content.decode()
+    assert "FRM001" in body and "Worker One" in body and "Overdue" in body
+
+
+def test_care_enrolled_widget(world):
+    from apps.kpi.builder import METRICS, compute_widget
+    assert "care_enrolled" in METRICS
+    w = compute_widget({"metric": "care_enrolled"}, [world["proj"].id])
+    assert w["data"]["value"] == 1  # the one enrolled client

@@ -111,6 +111,16 @@ def _care_defaulters(pids, since):
     return {"kind": "number", "value": defaulters}
 
 
+def _care_enrolled(pids, since):
+    from apps.care.models import CareProgram
+    from apps.fieldwork.models import CollectionUnit
+
+    prog_pids = CareProgram.objects.filter(
+        project_id__in=pids, is_active=True).values_list("project_id", flat=True)
+    n = CollectionUnit.objects.filter(project_id__in=list(prog_pids)).count()
+    return {"kind": "number", "value": n}
+
+
 # key -> (label, computer, chart types it makes sense with)
 METRICS = {
     "submissions": ("Submissions over time", _submissions_series, ["line", "bar"]),
@@ -123,6 +133,7 @@ METRICS = {
     # Care follow-up (only meaningful when a scoped project is a care programme).
     "care_coverage": ("Visit coverage (care)", _care_coverage, ["number"]),
     "care_defaulters": ("Overdue-visit clients (care)", _care_defaulters, ["number"]),
+    "care_enrolled": ("Enrolled clients (care)", _care_enrolled, ["number"]),
 }
 
 METRIC_CHOICES = [(k, v[0]) for k, v in METRICS.items()]

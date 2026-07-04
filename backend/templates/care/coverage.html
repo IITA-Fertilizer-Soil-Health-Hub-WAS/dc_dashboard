@@ -4,7 +4,8 @@
 {% block content %}
   <div class="page-head"><h2>Visit coverage</h2><span class="subtle" style="margin-left:.5rem;">{{ program.name|default:program.project.name }}</span>
     <span style="flex:1"></span>
-    <a class="seg" style="text-decoration:none;" href="{% url 'care:clients' program.project.code %}">{{ program.client_label_plural }}</a>
+    <a class="seg" style="text-decoration:none;" href="{% url 'care:report_csv' program.project.code %}"><span class="msym" style="font-size:15px;vertical-align:-2px;">download</span> Export CSV</a>
+    <a class="seg" style="text-decoration:none;margin-left:.4rem;" href="{% url 'care:clients' program.project.code %}">{{ program.client_label_plural }}</a>
   </div>
   <p class="lede">Are enrolled {{ program.client_label_plural|lower }} getting their scheduled visits?</p>
 
@@ -14,6 +15,30 @@
     <div class="card infobox"><div class="n">{{ cov.clients }}</div><div class="l">{{ program.client_label_plural }}</div></div>
     <div class="card infobox"><div class="n" style="color:{% if cov.defaulters %}#c3531f{% endif %};">{{ cov.defaulters|length }}</div><div class="l">With overdue visits</div></div>
   </div>
+
+  {% if workers %}
+    <h3 style="margin:1.4rem 0 .4rem;font-size:1.05rem;">By worker
+      <span class="subtle" style="font-weight:400;font-size:.85rem;">· caseload accountability</span></h3>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">Worker</th><th scope="col">Caseload</th><th scope="col">Coverage</th>
+            <th scope="col">Done</th><th scope="col">Overdue</th></tr></thead>
+          <tbody>
+            {% for w in workers %}
+              <tr>
+                <td>{{ w.worker.full_name|default:w.worker.email }}</td>
+                <td>{{ w.caseload }}</td>
+                <td>{{ w.coverage }}%</td>
+                <td class="subtle">{{ w.done }}/{{ w.expected }}</td>
+                <td>{% if w.overdue %}<span class="pill warn">{{ w.overdue }}</span>{% else %}<span class="subtle">0</span>{% endif %}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endif %}
 
   <h3 style="margin:1.4rem 0 .4rem;font-size:1.05rem;">Defaulters
     <span class="subtle" style="font-weight:400;font-size:.85rem;">· {{ program.client_label_plural|lower }} with an overdue visit</span></h3>

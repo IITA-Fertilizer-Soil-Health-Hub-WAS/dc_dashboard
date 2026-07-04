@@ -105,3 +105,76 @@ def program_coverage(program, today=None):
         "coverage": coverage, "defaulters": defaulters,
         "schedule_len": len(schedule),
     }
+
+
+def worker_breakdown(program, today=None):
+    """Per-worker accountability: caseload size, visits done / expected, overdue,
+    and coverage %, for the workers with active assignments in this programme."""
+    from apps.submissions.models import Submission
+
+    from .models import CareAssignment
+
+    today = today or timezone.localdate()
+    schedule = list(program.project.schedule.all())
+    assignments = list(
+        CareAssignment.objects.filter(program=program, is_active=True)
+        .select_related("worker", "unit")
+    )
+    subs = list(Submission.objects.filter(project=program.project)
+                .select_related("crop").only("collection_unit_id", "event_key",
+                                              "event_date", "crop"))
+    by_unit: dict = {}
+    for s in subs:
+        by_unit.setdefault(s.collection_unit_id, []).append(s)
+
+    workers: dict = {}
+    for a in assignments:
+        plan = client_visit_plan(a.unit, schedule, by_unit.get(a.unit_id, []), today)
+        s = plan_summary(plan)
+        w = workers.setdefault(a.worker_id, {
+            "worker": a.worker, "caseload": 0, "expected": 0, "done": 0, "overdue": 0,
+        })
+        w["caseload"] += 1
+        w["expected"] += s["total"]
+        w["done"] += s["done"]
+        w["overdue"] += s["overdue"]
+    rows = list(workers.values())
+    for w in rows:
+        w["coverage"] = round(100 * w["done"] / w["expected"]) if w["expected"] else 0
+    rows.sort(key=lambda w: (-w["overdue"], w["worker"].full_name or w["worker"].email))
+    return rows
+
+
+def program_status_rows(program, today=None):
+    """Flat per-client status for the CSV export: code, name, worker, visits
+    done/expected, overdue, last visit."""
+    from apps.fieldwork.models import CollectionUnit
+    from apps.submissions.models import Submission
+
+    from .models import CareAssignment
+
+    today = today or timezone.localdate()
+    schedule = list(program.project.schedule.all())
+    worker_by_unit = {
+        a.unit_id: a.worker for a in
+        CareAssignment.objects.filter(program=program, is_active=True).select_related("worker")
+    }
+    subs = list(Submission.objects.filter(project=program.project).select_related("crop"))
+    by_unit: dict = {}
+    for s in subs:
+        by_unit.setdefault(s.collection_unit_id, []).append(s)
+
+    out = []
+    for u in CollectionUnit.objects.filter(project=program.project).order_by("code"):
+        encs = by_unit.get(u.id, [])
+        plan = client_visit_plan(u, schedule, encs, today)
+        s = plan_summary(plan)
+        w = worker_by_unit.get(u.id)
+        last = max((e.event_date for e in encs if e.event_date), default=None)
+        out.append({
+            "code": u.code, "name": u.name,
+            "worker": (w.full_name or w.email) if w else "",
+            "done": s["done"], "expected": s["total"], "overdue": s["overdue"],
+            "last_visit": last.isoformat() if last else "",
+        })
+    return out

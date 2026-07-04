@@ -120,8 +120,31 @@ def client_timeline(request, code, unit_id):
 
 @login_required
 def coverage(request, code):
-    from .plan import program_coverage
+    from .plan import program_coverage, worker_breakdown
 
     program = get_object_or_404(_visible_programs(request.user), project__code=code)
-    return render(request, "care/coverage.html",
-                  {"program": program, "cov": program_coverage(program)})
+    return render(request, "care/coverage.html", {
+        "program": program, "cov": program_coverage(program),
+        "workers": worker_breakdown(program),
+    })
+
+
+@login_required
+def report_csv(request, code):
+    import csv
+
+    from django.http import HttpResponse
+
+    from .plan import program_status_rows
+
+    program = get_object_or_404(_visible_programs(request.user), project__code=code)
+    rows = program_status_rows(program)
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = f'attachment; filename="{code.lower()}_care_status.csv"'
+    writer = csv.writer(response)
+    writer.writerow([program.client_label + " ID", "Name", "Worker", "Visits done",
+                     "Visits expected", "Overdue", "Last visit"])
+    for r in rows:
+        writer.writerow([r["code"], r["name"], r["worker"], r["done"], r["expected"],
+                         r["overdue"], r["last_visit"]])
+    return response
