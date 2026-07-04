@@ -693,6 +693,19 @@
       }
       document.querySelectorAll('select[data-depends]').forEach(applyDepends);
       document.querySelectorAll('select[data-searchable]').forEach(initSearchable);
+
+      // Modern single-value dropdown where it helps: auto-upgrade a *single*
+      // <select> with a long option list to the searchable combobox. Short
+      // selects (a handful of choices) keep the clean styled native control, and
+      // multi-value selects are never touched here — single stays single.
+      document.querySelectorAll('select:not([multiple])').forEach(function (sel) {
+        if (sel.dataset.ssReady || sel.dataset.mReady) return;         // already enhanced
+        if (sel.dataset.searchable !== undefined) return;              // handled above
+        if (sel.dataset.depends !== undefined) return;                 // dependency-filtered
+        if (sel.closest('.nav')) return;                               // sidebar nav selects
+        if (sel.getAttribute('onchange')) return;                      // navigation selects
+        if (sel.options.length > 8) initSearchable(sel);
+      });
     })();
 
     // ---- Multi-select dropdown (data-msel) ----
