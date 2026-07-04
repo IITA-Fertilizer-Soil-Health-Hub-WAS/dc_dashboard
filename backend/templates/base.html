@@ -491,9 +491,9 @@
           {% endif %}
 
         {% else %}
-          {# ===================== All projects / picker ===================== #}
+          {# ===================== Projects ===================== #}
+          <div class="lbl">Projects</div>
           {% if user.is_staff %}
-            <div class="lbl">All projects</div>
             <a href="{% url 'dashboards:overview' %}" title="Cross-project overview"
                class="{% if request.resolver_match.url_name == 'overview' %}active{% endif %}">
               <span class="msym">dashboard</span>Overview
@@ -507,8 +507,6 @@
               <span class="msym">category</span>Manage projects
             </a>
           {% endif %}
-
-          <div class="lbl">Projects</div>
           <a href="{% url 'dashboards:projects' %}" title="Browse and search all projects"
              class="{% if request.resolver_match.url_name == 'projects' or request.resolver_match.url_name == 'index' %}active{% endif %}">
             <span class="msym">grid_view</span>{% if user.is_staff %}Browse projects{% else %}My projects{% endif %}
@@ -530,7 +528,7 @@
 
           {% if user.is_staff and console_groups %}
             {% for group, items in console_groups %}
-              <div class="lbl">{{ group }}</div>
+              {% if group != "Institution tenancy" %}<div class="lbl">{{ group }}</div>{% endif %}
               {% for it in items %}
                 <a href="{% url 'console:list' it.key %}" title="{{ it.description }}"
                    class="{% if it.key == request.resolver_match.kwargs.key %}active{% endif %}">
