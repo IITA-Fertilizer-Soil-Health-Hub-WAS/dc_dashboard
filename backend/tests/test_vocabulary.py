@@ -95,3 +95,24 @@ def test_daily_sync_task_is_fail_soft(monkeypatch, settings):
     monkeypatch.setattr(importer, "sync_from_repo", boom)
     result = tasks.sync_terminag_task()
     assert result["ok"] is False and "network down" in result["error"]
+
+
+def test_vocabulary_browse(client, django_user_model):
+    from django.urls import reverse
+
+    VocabularyVariable.objects.create(name="soil_ph", category="soil", data_type="numeric")
+    VocabularyVariable.objects.create(name="rainfall", category="weather", data_type="numeric")
+    admin = django_user_model.objects.create_superuser("a@x.org", "pw")
+    client.force_login(admin)
+    # Full list, then a filtered search.
+    assert b"soil_ph" in client.get(reverse("console:vocabulary")).content
+    filtered = client.get(reverse("console:vocabulary"), {"q": "rain"}).content
+    assert b"rainfall" in filtered and b"soil_ph" not in filtered
+
+
+def test_vocabulary_browse_blocked_for_member(client, django_user_model):
+    from django.urls import reverse
+
+    u = django_user_model.objects.create_user("v@x.org", "pw", is_active=True)
+    client.force_login(u)
+    assert client.get(reverse("console:vocabulary")).status_code == 403

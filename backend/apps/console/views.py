@@ -547,6 +547,33 @@ class FormDraftDeleteView(GeoManagerMixin, View):
         return redirect("console:form_builder")
 
 
+class VocabularyBrowseView(GeoManagerMixin, View):
+    """Read-only browse of the Terminag controlled vocabulary — so a form
+    designer can see the standard variable names and their constraints."""
+
+    def get(self, request):
+        from apps.vocabulary.models import VocabularyVariable
+
+        q = (request.GET.get("q") or "").strip()
+        category = (request.GET.get("category") or "").strip()
+        qs = VocabularyVariable.objects.all()
+        if q:
+            qs = qs.filter(Q(name__icontains=q) | Q(description__icontains=q))
+        if category:
+            qs = qs.filter(category=category)
+
+        categories = list(
+            VocabularyVariable.objects.order_by("category")
+            .values_list("category", flat=True).distinct()
+        )
+        page = Paginator(qs.order_by("category", "name"), 100).get_page(request.GET.get("page"))
+        return render(request, "console/vocabulary.html", {
+            "groups": grouped(), "console_key": "forms",
+            "page": page, "q": q, "category": category, "categories": categories,
+            "total": VocabularyVariable.objects.count(),
+        })
+
+
 class FormAIDraftView(GeoManagerMixin, View):
     """Tier 3: upload/paste a protocol, let the AI draft a form into the builder
     for review. Human-in-the-loop — the draft is never auto-published."""

@@ -1,0 +1,56 @@
+{% extends "console/base.html" %}
+{% block title %}Vocabulary · Manage · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<span class="sep">/</span><a href="{% url 'console:form_builder' %}">Design forms</a><span class="sep">/</span><span class="cur">Vocabulary</span>{% endblock %}
+{% block console_main %}
+  <div class="page-head"><h2>Controlled vocabulary</h2><span class="pill">{{ total }}</span></div>
+  <p class="subtle" style="margin:.1rem 0 1rem;">The Terminag standard variables. Use these names in your forms so data stays comparable across projects — the form builder offers them as you type.</p>
+
+  <div class="toolbar">
+    <form method="get">
+      <input class="search" type="search" name="q" value="{{ q }}" placeholder="Search variables…">
+      {% if category %}<input type="hidden" name="category" value="{{ category }}">{% endif %}
+      <button class="btn btn-request" type="submit">Search</button>
+    </form>
+    <form method="get" style="margin-left:.4rem;">
+      {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
+      <select class="search" name="category" onchange="this.form.submit()" style="max-width:220px;">
+        <option value="">All categories</option>
+        {% for c in categories %}<option value="{{ c }}" {% if category == c %}selected{% endif %}>{{ c }}</option>{% endfor %}
+      </select>
+    </form>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col">Variable</th><th scope="col">Category</th><th scope="col">Type</th>
+          <th scope="col">Unit</th><th scope="col">Range</th><th scope="col">Values from</th>
+          <th scope="col">Description</th></tr></thead>
+        <tbody>
+          {% for v in page %}
+            <tr>
+              <td class="mono" style="font-size:.82rem;">{{ v.name }}</td>
+              <td class="subtle">{{ v.category }}</td>
+              <td>{{ v.data_type|default:"—" }}</td>
+              <td class="subtle">{{ v.unit|default:"—" }}</td>
+              <td class="subtle">{% if v.valid_min is not None or v.valid_max is not None %}{{ v.valid_min|default:"" }}–{{ v.valid_max|default:"" }}{% else %}—{% endif %}</td>
+              <td class="subtle">{{ v.value_list|default:"—" }}</td>
+              <td class="subtle" style="max-width:340px;">{{ v.description|truncatechars:90 }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="7"><div class="empty" style="border:none;padding:1.6rem;">
+              No variables{% if q or category %} match{% else %} yet — run <code>manage.py import_vocabulary</code>{% endif %}.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if page.has_other_pages %}
+    <div class="pager">
+      {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if category %}&category={{ category }}{% endif %}">← Prev</a>{% endif %}
+      <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+      {% if page.has_next %}<a href="?page={{ page.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if category %}&category={{ category }}{% endif %}">Next →</a>{% endif %}
+    </div>
+  {% endif %}
+{% endblock %}
