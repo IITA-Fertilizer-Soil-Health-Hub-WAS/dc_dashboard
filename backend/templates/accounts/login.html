@@ -26,18 +26,21 @@
 
   <div class="card" style="padding:1.6rem;">
     {% if auth0_configured %}
+      <div class="subtle" style="font-size:.8rem;font-weight:600;margin-bottom:.5rem;">Existing members</div>
       <a class="btn btn-open" style="display:block;font-size:.95rem;padding:.7rem;text-align:center;text-decoration:none;"
          href="{{ auth0_login_url }}{% if next %}?next={{ next|urlencode }}{% endif %}">
         Sign in
       </a>
-      <a style="display:block;font-size:.92rem;padding:.62rem;margin-top:.6rem;text-align:center;text-decoration:none;
+      <div class="divider"><span>new here?</span></div>
+      <a style="display:block;font-size:.92rem;padding:.62rem;text-align:center;text-decoration:none;
                 border:1px solid var(--brand);color:var(--brand);border-radius:8px;font-weight:600;background:var(--surface);"
          href="{{ auth0_login_url }}{% if next %}?next={{ next|urlencode }}{% endif %}">
         Create an account
       </a>
       <p class="subtle" style="font-size:.78rem;margin:.9rem 0 0;text-align:center;line-height:1.5;">
-        Both use Auth0. New here? Signing in the first time creates your account —
-        a coordinator then approves access and assigns your role.
+        Both verify your identity with Auth0. If you don't have an account yet,
+        you'll be guided through a short registration; a coordinator then approves
+        your access and assigns your role.
       </p>
       {% if entra_configured %}
         <a class="btn btn-request" style="display:block;font-size:.9rem;padding:.6rem;margin-top:.9rem;text-align:center;text-decoration:none;"

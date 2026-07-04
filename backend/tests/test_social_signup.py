@@ -73,3 +73,21 @@ def test_signup_requires_name_and_country():
     assert "first_name" in form.errors
     assert "family_name" in form.errors
     assert "country" in form.errors
+
+
+def test_new_user_is_routed_to_create_account_not_signed_in():
+    """A first-time Auth0 user must NOT be silently signed in. With auto-signup
+    off, allauth's process_signup sends a brand-new social login to the
+    create-account form (redirect_to_signup) instead of creating + logging in
+    the account. This guards the decision point that enforces that."""
+    from django.conf import settings
+    from django.test import RequestFactory
+
+    from apps.accounts.adapters import SocialAccountAdapter
+
+    assert settings.SOCIALACCOUNT_AUTO_SIGNUP is False
+    new_login = _sociallogin("first.timer@cgiar.org")
+    allowed = SocialAccountAdapter().is_auto_signup_allowed(
+        RequestFactory().get("/"), new_login
+    )
+    assert allowed is False  # → allauth redirects to the create-account form
