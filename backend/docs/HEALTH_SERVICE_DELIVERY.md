@@ -19,30 +19,31 @@ so we build a care-management *layer* on top rather than starting over.
 So the new work is: a **client-centric view** of that data, plus care-specific
 concepts (programmes, enrollment, tasks, indicators) that don't exist yet.
 
-## Phases
+## Phases — all delivered
 
-**Phase 1 — Client register + longitudinal record  *(this commit)***
-- `CareProgram` marks a project as a health-service programme (client label,
-  active).
-- Clients list (the programme's collection units, with last visit + status) and a
-  per-client **timeline** of encounters against the visit schedule.
+**Phase 1 — Client register + longitudinal record  ✅**
+- `CareProgram` marks a project as a health-service programme (client label).
+- Clients list (collection units, visit count, last visit) + a per-client
+  **timeline** of encounters.
 
-**Phase 2 — Enrollment + care plans**
-- Enroll a client into a programme with a start/anchor date; generate the visit
-  schedule (from `EventScheduleItem`) as concrete due dates; show
-  due / overdue / done per visit.
+**Phase 2 — Care plans + coverage  ✅**
+- Per-client **visit plan** (done / due / overdue / upcoming) from
+  `EventScheduleItem`, reusing the shared event-status engine; programme
+  **coverage** view + defaulters.
 
-**Phase 3 — Tasks + worker workflow**
-- Per-worker task list (reuse `Job`/`UnitAssignment`): "visit these clients this
-  week", complete a task by submitting the visit form; referrals between workers.
+**Phase 3 — Worker caseload + tasks + referrals  ✅**
+- `CareAssignment` (client → worker); reassignment = referral with history.
+- **My caseload** worklist (overdue first); coordinators assign/refer from the
+  register.
 
-**Phase 4 — Indicators + reporting**
-- Care indicators (coverage, defaulters, visit adherence) as dashboard widgets
-  (reuse the self-serve dashboard builder) + programme-level reports.
+**Phase 4 — Report + indicators  ✅**
+- Per-worker breakdown on the coverage page; programme-status **CSV export**;
+  care metrics (coverage, defaulters, enrolled) in the self-serve dashboard
+  builder.
 
-**Phase 5 — Offline + scale**
-- Field collection stays ODK Collect (offline) as today; add client-list sync so
-  a worker can pull their caseload. Longitudinal continuity across visits.
+**Phase 5 — Offline caseload  ✅**
+- A worker downloads their caseload (clients + open visits) as CSV to reference
+  in the field. Collection itself stays ODK Collect (offline), by design.
 
 ## Non-goals (explicitly out of scope for now)
 - Clinical decision support / drug dosing.
