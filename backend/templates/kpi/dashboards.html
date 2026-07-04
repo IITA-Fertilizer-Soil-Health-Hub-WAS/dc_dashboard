@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}My dashboards · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<span class="sep">/</span><a href="{% url 'kpi:overview' %}">M&amp;E</a><span class="sep">/</span><span class="cur">Dashboards</span>{% endblock %}
+{% block content %}
+  <div class="page-head"><h2>Dashboards</h2><span style="flex:1"></span>
+    <a class="btn btn-open" style="text-decoration:none;" href="{% url 'kpi:dashboard_new' %}">+ New dashboard</a>
+  </div>
+  <p class="lede">Build your own view — pick the metrics and charts you care about, then save or share it with your institution.</p>
+
+  <div class="cards" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr));">
+    {% for d in dashboards %}
+      <a class="card" style="text-decoration:none;color:inherit;display:block;padding:1rem 1.1rem;" href="{% url 'kpi:dashboard_view' d.pk %}">
+        <div style="font-weight:700;font-size:1.02rem;">{{ d.name }}</div>
+        <div class="subtle" style="font-size:.82rem;margin-top:.3rem;">
+          {{ d.widgets|length }} widget{{ d.widgets|length|pluralize }} ·
+          {% if d.project %}{{ d.project.code }}{% else %}All my projects{% endif %}
+        </div>
+        <div style="margin-top:.5rem;">
+          {% if d.shared %}<span class="pill good">Shared</span>{% else %}<span class="pill neutral">Private</span>{% endif %}
+          {% if d.owner_id != request.user.id %}<span class="subtle" style="font-size:.76rem;margin-left:.3rem;">by {{ d.owner.full_name|default:d.owner.email }}</span>{% endif %}
+        </div>
+      </a>
+    {% empty %}
+      <div class="card" style="grid-column:1/-1;"><div class="empty" style="border:none;padding:1.6rem;">
+        No dashboards yet — click <strong>New dashboard</strong> to build one.</div></div>
+    {% endfor %}
+  </div>
+{% endblock %}

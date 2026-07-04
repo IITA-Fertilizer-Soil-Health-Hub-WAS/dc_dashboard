@@ -124,3 +124,105 @@ def kpi_alerts(request):
         "active_rules": rules.count(),
         "supported_metrics": METRICS,
     })
+
+
+# ---------------------------------------------------------------------------
+# Self-serve dashboard builder — users assemble metric widgets into a saved,
+# optionally-shared dashboard (closes the "flexible analytics" gap).
+# ---------------------------------------------------------------------------
+def _visible_dashboards(user):
+    """The dashboards a user may open: their own, plus institution-shared ones."""
+    from django.db.models import Q
+
+    from .models import Dashboard
+
+    scope = Q(owner=user)
+    if getattr(user, "organization_id", None):
+        scope |= Q(shared=True, owner__organization_id=user.organization_id)
+    elif getattr(user, "is_superuser", False):
+        scope |= Q(shared=True)
+    return Dashboard.objects.filter(scope).select_related("owner", "project").distinct()
+
+
+def _dashboard_scope_ids(user, dashboard):
+    """Project ids a dashboard's metrics run over — the viewer's visible projects,
+    narrowed to the dashboard's project when it pins one."""
+    from apps.rbac.permissions import visible_projects
+
+    ids = set(visible_projects(user).values_list("id", flat=True))
+    if dashboard.project_id:
+        return ids & {dashboard.project_id}
+    return ids
+
+
+@login_required
+def dashboards(request):
+    return render(request, "kpi/dashboards.html",
+                  {"dashboards": _visible_dashboards(request.user).order_by("name")})
+
+
+@login_required
+def dashboard_view(request, pk):
+    from django.shortcuts import get_object_or_404
+
+    from .builder import compute_widget
+
+    dash = get_object_or_404(_visible_dashboards(request.user), pk=pk)
+    pids = _dashboard_scope_ids(request.user, dash)
+    widgets = [compute_widget(w, pids) for w in (dash.widgets or [])]
+    return render(request, "kpi/dashboard_view.html", {
+        "dash": dash, "widgets": widgets, "can_edit": dash.owner_id == request.user.id,
+    })
+
+
+@login_required
+def dashboard_edit(request, pk=None):
+    import json
+
+    from django.shortcuts import get_object_or_404, redirect
+
+    from apps.rbac.permissions import visible_projects
+
+    from .builder import CHARTS, METRIC_CHOICES, PERIODS
+    from .models import Dashboard
+
+    dash = get_object_or_404(Dashboard, pk=pk, owner=request.user) if pk else None
+    ctx = {
+        "dash": dash,
+        "projects": visible_projects(request.user).order_by("code"),
+        "metric_choices": METRIC_CHOICES, "charts": CHARTS, "periods": PERIODS,
+    }
+    if request.method == "POST":
+        name = (request.POST.get("name") or "").strip()
+        try:
+            widgets = json.loads(request.POST.get("widgets") or "[]")
+        except json.JSONDecodeError:
+            widgets = []
+        if not name or not widgets:
+            ctx["error"] = "Give the dashboard a name and add at least one widget."
+            return render(request, "kpi/dashboard_edit.html", ctx)
+        proj = None
+        if request.POST.get("project"):
+            proj = visible_projects(request.user).filter(pk=request.POST["project"]).first()
+        if dash is None:
+            dash = Dashboard(owner=request.user)
+        dash.name = name
+        dash.project = proj
+        dash.shared = bool(request.POST.get("shared"))
+        dash.widgets = widgets
+        dash.save()
+        return redirect("kpi:dashboard_view", pk=dash.pk)
+    return render(request, "kpi/dashboard_edit.html", ctx)
+
+
+@login_required
+def dashboard_delete(request, pk):
+    from django.shortcuts import get_object_or_404, redirect
+    from django.views.decorators.http import require_POST
+
+    from .models import Dashboard
+
+    if request.method != "POST":
+        return redirect("kpi:dashboards")
+    get_object_or_404(Dashboard, pk=pk, owner=request.user).delete()
+    return redirect("kpi:dashboards")

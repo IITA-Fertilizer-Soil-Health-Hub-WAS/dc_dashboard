@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{{ dash.name }} · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<span class="sep">/</span><a href="{% url 'kpi:overview' %}">M&amp;E</a><span class="sep">/</span><a href="{% url 'kpi:dashboards' %}">Dashboards</a><span class="sep">/</span><span class="cur">{{ dash.name }}</span>{% endblock %}
+{% block extrahead %}{{ block.super }}
+<style>
+  .dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;margin-top:1rem;}
+  .w{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:1rem 1.15rem;}
+  .w .wt{font-size:.82rem;font-weight:650;color:var(--muted);display:flex;justify-content:space-between;gap:.5rem;}
+  .w .wp{font-size:.7rem;color:var(--faint);font-weight:400;}
+  .w .big{font-size:2.5rem;font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-top:.4rem;font-variant-numeric:tabular-nums;}
+  .w .big small{font-size:1.1rem;font-weight:700;color:var(--muted);}
+  .wbars{display:flex;align-items:flex-end;gap:2px;height:90px;margin-top:.7rem;}
+  .wbars i{flex:1;background:linear-gradient(180deg,var(--brand),#3f9142);border-radius:2px 2px 0 0;min-height:2px;}
+  .wtable{width:100%;border-collapse:collapse;margin-top:.5rem;font-size:.85rem;}
+  .wtable th{text-align:left;color:var(--muted);font-size:.72rem;text-transform:uppercase;padding:.2rem .3rem;font-weight:600;}
+  .wtable td{padding:.28rem .3rem;border-top:1px solid var(--line);font-variant-numeric:tabular-nums;}
+  .wtable td:last-child{text-align:right;font-weight:600;}
+  .spark{margin-top:.7rem;}
+  .empty-w{color:var(--faint);font-size:.85rem;margin-top:.8rem;}
+</style>
+{% endblock %}
+{% block content %}
+  <div class="page-head"><h2>{{ dash.name }}</h2>
+    <span class="subtle" style="margin-left:.5rem;">{% if dash.project %}{{ dash.project.code }}{% else %}All my projects{% endif %}</span>
+    <span style="flex:1"></span>
+    {% if can_edit %}
+      <a class="seg" style="text-decoration:none;" href="{% url 'kpi:dashboard_edit' dash.pk %}">Edit</a>
+      <a class="seg" style="text-decoration:none;margin-left:.4rem;color:var(--red);" href="#"
+         onclick="event.preventDefault();if(confirm('Delete this dashboard?'))document.getElementById('del').submit();">Delete</a>
+      <form id="del" method="post" action="{% url 'kpi:dashboard_delete' dash.pk %}" style="display:none;">{% csrf_token %}</form>
+    {% endif %}
+  </div>
+
+  <div class="dgrid">
+    {% for w in widgets %}
+      <div class="w">
+        <div class="wt"><span>{{ w.title }}</span><span class="wp">{{ w.period_label }}</span></div>
+        {% if w.data.kind == 'number' %}
+          <div class="big">{{ w.data.value }}{% if w.data.suffix %}<small>{{ w.data.suffix }}</small>{% endif %}</div>
+        {% elif w.data.kind == 'series' %}
+          {% if w.data.points %}
+            {% if w.chart == 'bar' %}
+              <div class="wbars">{% for p in w.data.points %}<i style="height:{% widthratio p.value w.series_max 100 %}%" title="{{ p.label }}: {{ p.value }}"></i>{% endfor %}</div>
+            {% else %}
+              <div class="spark">{{ w.spark_svg|safe }}</div>
+            {% endif %}
+            <div class="subtle" style="font-size:.74rem;margin-top:.35rem;">{{ w.first_label }} → {{ w.last_label }}</div>
+          {% else %}<div class="empty-w">No data in this period.</div>{% endif %}
+        {% elif w.data.kind == 'rows' %}
+          {% if w.data.rows %}
+            <table class="wtable"><thead><tr>{% for h in w.data.head %}<th>{{ h }}</th>{% endfor %}</tr></thead>
+              <tbody>{% for r in w.data.rows %}<tr>{% for c in r %}<td>{{ c }}</td>{% endfor %}</tr>{% endfor %}</tbody></table>
+          {% else %}<div class="empty-w">No data in this period.</div>{% endif %}
+        {% endif %}
+      </div>
+    {% empty %}
+      <div class="w" style="grid-column:1/-1;"><div class="empty-w">This dashboard has no widgets yet.{% if can_edit %} <a href="{% url 'kpi:dashboard_edit' dash.pk %}">Add some →</a>{% endif %}</div></div>
+    {% endfor %}
+  </div>
+{% endblock %}

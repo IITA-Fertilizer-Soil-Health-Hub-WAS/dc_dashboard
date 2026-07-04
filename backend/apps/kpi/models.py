@@ -8,6 +8,7 @@ of these; the daily rows are the expensive-to-recompute time series.
 """
 from __future__ import annotations
 
+from django.conf import settings
 from django.db import models
 
 from apps.common.models import BaseModel
@@ -111,3 +112,32 @@ class AlertEvent(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.severity}: {self.message[:60]}"
+
+
+class Dashboard(BaseModel):
+    """A self-serve analytics dashboard a user assembles from metric widgets.
+
+    Unlike the fixed KPI screens, a Dashboard is user-authored: pick a scope (one
+    project or all the projects you can see), then add widgets (a metric + a chart
+    type + a period). Widgets are stored as a JSON list rather than a child table
+    so the whole layout saves in one write and reorders freely. Owner-private by
+    default; ``shared`` exposes it read-only to the owner's institution.
+    """
+
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="dashboards"
+    )
+    name = models.CharField(max_length=200)
+    # Scope: a single project, or null = across everything the viewer can see.
+    project = models.ForeignKey(
+        Project, null=True, blank=True, on_delete=models.CASCADE, related_name="dashboards"
+    )
+    shared = models.BooleanField(default=False)  # visible to the owner's institution
+    # [{title, metric, chart, period}] — see apps.kpi.builder.
+    widgets = models.JSONField(default=list, blank=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return self.name

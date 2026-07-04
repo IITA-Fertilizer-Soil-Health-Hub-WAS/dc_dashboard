@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}{% if dash %}Edit dashboard{% else %}New dashboard{% endif %} · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<span class="sep">/</span><a href="{% url 'kpi:overview' %}">M&amp;E</a><span class="sep">/</span><a href="{% url 'kpi:dashboards' %}">Dashboards</a><span class="sep">/</span><span class="cur">{% if dash %}Edit{% else %}New{% endif %}</span>{% endblock %}
+{% block extrahead %}{{ block.super }}
+<style>
+  .db .fld label{display:block;font-size:.76rem;font-weight:600;color:var(--muted);margin-bottom:.22rem;}
+  .db .fld input,.db .fld select{width:100%;padding:.5rem .65rem;border:1px solid var(--line);border-radius:9px;font-size:.9rem;background:var(--surface);}
+  .db .grid3{display:grid;grid-template-columns:2fr 1fr auto;gap:.9rem;align-items:end;}
+  @media(max-width:620px){.db .grid3{grid-template-columns:1fr;}}
+  .wrow{display:grid;grid-template-columns:1.4fr 1.2fr 1fr 1fr auto;gap:.5rem;align-items:center;
+    border:1px solid var(--line);border-radius:10px;padding:.5rem .6rem;margin-bottom:.5rem;background:var(--surface-2);}
+  @media(max-width:720px){.wrow{grid-template-columns:1fr 1fr;}}
+  .wrow input,.wrow select{width:100%;padding:.4rem .5rem;border:1px solid var(--line);border-radius:7px;font-size:.84rem;background:var(--surface);}
+  .wrow .rm{color:var(--red);background:none;border:none;font-size:1.1rem;cursor:pointer;}
+  .addbtn{background:var(--brand-50);color:var(--brand-700);border:1px dashed var(--brand);border-radius:8px;padding:.4rem .8rem;font-size:.83rem;font-weight:600;cursor:pointer;}
+</style>
+{% endblock %}
+{% block content %}
+  <div class="page-head"><h2>{% if dash %}Edit dashboard{% else %}Build a dashboard{% endif %}</h2></div>
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+
+  <form method="post" class="db" id="dbform"
+        action="{% if dash %}{% url 'kpi:dashboard_edit' dash.pk %}{% else %}{% url 'kpi:dashboard_new' %}{% endif %}">
+    {% csrf_token %}
+    <input type="hidden" name="widgets" id="widgets">
+    <div class="card" style="padding:1.1rem 1.3rem;margin-bottom:1rem;">
+      <div class="grid3">
+        <div class="fld"><label>Dashboard name *</label><input name="name" id="d_name" value="{{ dash.name|default:'' }}" placeholder="My programme overview"></div>
+        <div class="fld"><label>Scope</label>
+          <select name="project">
+            <option value="">All my projects</option>
+            {% for p in projects %}<option value="{{ p.pk }}" {% if dash.project_id == p.pk %}selected{% endif %}>{{ p.code }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="fld"><label style="white-space:nowrap;">Share with institution</label>
+          <input type="checkbox" name="shared" {% if dash.shared %}checked{% endif %} style="width:auto;transform:scale(1.2);margin-top:.5rem;"></div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:1.1rem 1.3rem;margin-bottom:1rem;">
+      <h3 style="margin:.1rem 0 .3rem;">Widgets</h3>
+      <p class="subtle" style="font-size:.8rem;margin:0 0 .5rem;">Each widget is a metric shown as a number, chart or table over a period.</p>
+      <div id="wbody"></div>
+      <button type="button" class="addbtn" onclick="addWidget()">+ Add widget</button>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-open">Save dashboard</button>
+      <a class="subtle" href="{% url 'kpi:dashboards' %}">Cancel</a>
+    </div>
+  </form>
+
+  <script>
+    const METRICS = [{% for k,label in metric_choices %}{v:"{{ k }}",t:"{{ label|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}];
+    const CHARTS = { {% for k,label in charts.items %}"{{ k }}":"{{ label|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %} };
+    const PERIODS = { {% for k,label in periods.items %}"{{ k }}":"{{ label|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %} };
+
+    function opts(map, sel){ return Object.entries(map).map(([v,t])=>`<option value="${v}" ${v===sel?'selected':''}>${t}</option>`).join(''); }
+    function metricOpts(sel){ return METRICS.map(m=>`<option value="${m.v}" ${m.v===sel?'selected':''}>${m.t}</option>`).join(''); }
+
+    function addWidget(w){
+      w = w || {};
+      const row = document.createElement('div'); row.className='wrow';
+      row.innerHTML = `
+        <input class="w-title" placeholder="Title (optional)" value="${(w.title||'').replace(/"/g,'&quot;')}">
+        <select class="w-metric">${metricOpts(w.metric)}</select>
+        <select class="w-chart">${opts(CHARTS, w.chart||'number')}</select>
+        <select class="w-period">${opts(PERIODS, w.period||'30')}</select>
+        <button type="button" class="rm" title="remove" onclick="this.closest('.wrow').remove()">×</button>`;
+      document.getElementById('wbody').appendChild(row);
+    }
+    function collect(){
+      return [...document.querySelectorAll('#wbody .wrow')].map(r=>({
+        title:r.querySelector('.w-title').value.trim(),
+        metric:r.querySelector('.w-metric').value,
+        chart:r.querySelector('.w-chart').value,
+        period:r.querySelector('.w-period').value,
+      }));
+    }
+    document.getElementById('dbform').addEventListener('submit', function(){
+      document.getElementById('widgets').value = JSON.stringify(collect());
+    });
+
+    const _el = document.getElementById('existing-widgets');
+    const existing = _el ? JSON.parse(_el.textContent || '[]') : [];
+    if(existing.length){ existing.forEach(addWidget); } else { addWidget(); }
+  </script>
+  {% if dash %}{{ dash.widgets|json_script:"existing-widgets" }}{% endif %}
+{% endblock %}
