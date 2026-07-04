@@ -547,6 +547,60 @@ class FormDraftDeleteView(GeoManagerMixin, View):
         return redirect("console:form_builder")
 
 
+class FormOverviewView(ManageMixin, View):
+    """A per-form landing (ONA-style): health stats + trend + how a field worker
+    collects it (server URL + ODK Collect QR). Open to staff and coordinators who
+    manage the form's project (scoped below); reachable from Manage → Forms."""
+
+    ROLE_RELATION = {
+        "ENUM_REG": "Registers enumerators",
+        "HH_REG": "Registers households / clients",
+        "VALIDATION": "Collects validation data",
+        "NOT": "Nutrient-omission trial data",
+        "INTERCROP": "Intercropping data",
+        "EXTRA": "Extra data",
+    }
+
+    def get(self, request, pk):
+        from datetime import date, timedelta
+
+        from django.db.models import Max
+        from django.utils import timezone
+
+        from apps.kpi.builder import _spark_svg
+        from apps.kpi.models import FormKpiDaily
+        from apps.projects.models import FormDefinition
+        from apps.submissions.models import Submission
+
+        from .collect import collect_qr_data_uri, collect_server_url
+
+        forms = FormDefinition.objects.select_related("project", "project__data_source")
+        if not request.user.is_staff:
+            forms = forms.filter(project__in=_builder_projects(request))
+        form = get_object_or_404(forms, pk=pk)
+
+        subs = Submission.objects.filter(form=form)
+        total = subs.count()
+        contributors = subs.filter(enumerator__isnull=False).values("enumerator").distinct().count()
+        last = subs.aggregate(m=Max("ingested_at"))["m"]
+
+        since = timezone.localdate() - timedelta(days=30)
+        rows = (FormKpiDaily.objects.filter(form=form, date__gte=since)
+                .order_by("date").values("date", "submissions"))
+        points = [{"label": r["date"].isoformat(), "value": r["submissions"] or 0} for r in rows]
+        spark = _spark_svg([p["value"] for p in points]) if points else ""
+
+        server_url = collect_server_url(form.project)
+        return render(request, "console/form_overview.html", {
+            "groups": grouped(), "console_key": "forms", "form": form,
+            "total": total, "contributors": contributors, "last": last,
+            "spark_svg": spark, "points_n": len(points),
+            "relation": self.ROLE_RELATION.get(form.role, form.get_role_display()),
+            "server_url": server_url,
+            "qr": collect_qr_data_uri(server_url, form.project.name) if server_url else "",
+        })
+
+
 class VocabularyBrowseView(GeoManagerMixin, View):
     """Read-only browse of the Terminag controlled vocabulary — so a form
     designer can see the standard variable names and their constraints."""

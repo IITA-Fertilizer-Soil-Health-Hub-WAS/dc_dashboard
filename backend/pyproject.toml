@@ -26,6 +26,7 @@ dependencies = [
     "openpyxl>=3.1",          # XLSX exports
     "pandas>=2.2",            # tabular frame for the stats exports
     "pyreadstat>=1.2",        # SPSS (.sav) + STATA (.dta) exports
+    "segno>=1.6",             # QR codes (ODK Collect config, form overview)
 ]
 
 [project.optional-dependencies]

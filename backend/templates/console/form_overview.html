@@ -1,0 +1,60 @@
+{% extends "console/base.html" %}
+{% block title %}{{ form.title|default:form.server_ref }} · Forms · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<span class="sep">/</span><span class="cur">Manage</span><span class="sep">/</span><a href="{% url 'console:list' 'forms' %}">Forms</a><span class="sep">/</span><span class="cur">{{ form.title|default:form.server_ref }}</span>{% endblock %}
+{% block extrahead %}{{ block.super }}
+<style>
+  .fo-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:1rem;margin-top:1rem;}
+  @media(max-width:820px){.fo-grid{grid-template-columns:1fr;}}
+  .fo-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;}
+  .fo-stats .card{padding:1rem 1.1rem;}
+  .fo-stats .n{font-size:1.9rem;font-weight:800;letter-spacing:-.02em;line-height:1.1;font-variant-numeric:tabular-nums;}
+  .fo-stats .l{font-size:.76rem;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-top:.15rem;}
+  .collect{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:1.1rem 1.2rem;}
+  .collect h3{margin:0 0 .5rem;font-size:1rem;}
+  .collect .url{font-family:var(--mono);font-size:.82rem;background:var(--surface-2);border:1px solid var(--line);
+    border-radius:8px;padding:.5rem .6rem;word-break:break-all;margin:.3rem 0 .7rem;}
+  .collect ol{margin:.4rem 0 0;padding-left:1.1rem;font-size:.85rem;color:var(--ink);line-height:1.6;}
+  .collect .qr{text-align:center;margin:.4rem 0 .2rem;}
+  .collect .qr img{width:172px;height:172px;}
+</style>
+{% endblock %}
+{% block console_main %}
+  <div class="page-head">
+    <h2>{{ form.title|default:form.server_ref }}</h2>
+    <span class="pill {% if form.publish_status == 'FAILED' %}warn{% else %}good{% endif %}">{{ form.get_publish_status_display|default:"Active" }}</span>
+    <span style="flex:1"></span>
+    <a class="subtle" style="font-size:.82rem;" href="{% url 'console:form_mappings' form.pk %}">Field mappings →</a>
+  </div>
+  <p class="subtle" style="margin:.1rem 0 .2rem;">{{ relation }} · in <a href="{% url 'dashboards:project' form.project.code %}">{{ form.project.code }}</a>{% if form.server_ref %} · <span class="mono" style="font-size:.8rem;">{{ form.server_ref }}</span>{% endif %}</p>
+
+  <div class="fo-grid">
+    <div>
+      <div class="fo-stats">
+        <div class="card"><div class="n">{{ total }}</div><div class="l">Submissions</div></div>
+        <div class="card"><div class="n">{{ contributors }}</div><div class="l">Contributors</div></div>
+        <div class="card"><div class="n" style="font-size:1.2rem;">{{ last|timesince|default:"—" }}{% if last %} ago{% endif %}</div><div class="l">Last submission</div></div>
+      </div>
+      <div class="card" style="margin-top:1rem;padding:1rem 1.15rem;">
+        <div style="font-size:.82rem;font-weight:650;color:var(--muted);margin-bottom:.3rem;">Submissions · last 30 days</div>
+        {% if points_n %}{{ spark_svg|safe }}{% else %}<div class="subtle" style="font-size:.85rem;padding:.6rem 0;">No submissions in the last 30 days.</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="collect">
+      <h3>Collect this form</h3>
+      {% if server_url %}
+        <p class="subtle" style="font-size:.83rem;margin:0 0 .3rem;">Set this as the server in ODK Collect (Settings → Configure platform), or scan the QR:</p>
+        <div class="url">{{ server_url }}</div>
+        {% if qr %}<div class="qr"><img src="{{ qr }}" alt="ODK Collect configuration QR"></div>
+          <p class="subtle" style="font-size:.78rem;text-align:center;margin:.1rem 0 .6rem;">Scan in ODK Collect → Configure via QR code</p>{% endif %}
+        <ol>
+          <li>Install <strong>ODK Collect</strong> on the phone.</li>
+          <li>Menu → <strong>Configure via QR code</strong> and scan, or enter the server URL above.</li>
+          <li>Sign in, then <strong>Get Blank Form</strong> → “{{ form.title|default:form.server_ref }}”.</li>
+        </ol>
+      {% else %}
+        <p class="subtle" style="font-size:.85rem;">This form's project has no collection server configured yet — add a data source under the project to enable field collection.</p>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

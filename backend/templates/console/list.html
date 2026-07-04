@@ -66,6 +66,9 @@
                   </form>
                 {% endfor %}
               {% endif %}
+              {% if m.key == 'forms' %}
+                <a href="{% url 'console:form_overview' row.pk %}">Overview</a>
+              {% endif %}
               {% if m.key == 'forms' and user.is_staff %}
                 <a href="{% url 'console:form_mappings' row.pk %}">Mappings</a>
               {% endif %}
