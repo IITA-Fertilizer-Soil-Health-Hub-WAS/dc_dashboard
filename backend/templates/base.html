@@ -537,17 +537,37 @@
 
         {% else %}
           {# ===================== Projects ===================== #}
-          <div class="lbl">Projects</div>
           {% if user.is_staff %}
-            {# Admin flow: set up projects → operate → monitor. #}
-            <a href="{% url 'console:list' 'projects' %}" title="Create &amp; edit projects"
-               class="{% if request.resolver_match.kwargs.key == 'projects' %}active{% endif %}">
-              <span class="msym">category</span>Manage projects
-            </a>
+            {% comment %}Admin home mirrors the in-project flow: overview first, then set up -> accounts -> monitor. Institution tenancy (Institutions/Regions/Countries) + Manage projects form the "Set up" stage; M&E + Care are "Monitor".{% endcomment %}
+            <div class="lbl">Overview</div>
             <a href="{% url 'dashboards:overview' %}" title="Cross-project review &amp; write-back status"
                class="{% if request.resolver_match.url_name == 'overview' %}active{% endif %}">
               <span class="msym">dashboard</span>Operations
             </a>
+
+            <div class="lbl">Set up</div>
+            {% for group, items in console_groups %}{% if group == "Institution tenancy" %}{% for it in items %}
+              <a href="{% url 'console:list' it.key %}" title="{{ it.description }}"
+                 class="{% if it.key == request.resolver_match.kwargs.key %}active{% endif %}">
+                <span class="msym">{{ it.icon }}</span>{{ it.label }}
+              </a>
+            {% endfor %}{% endif %}{% endfor %}
+            <a href="{% url 'console:list' 'projects' %}" title="Create &amp; edit projects"
+               class="{% if request.resolver_match.kwargs.key == 'projects' %}active{% endif %}">
+              <span class="msym">category</span>Manage projects
+            </a>
+
+            {% for group, items in console_groups %}{% if group == "Accounts & roles" %}
+              <div class="lbl">{{ group }}</div>
+              {% for it in items %}
+                <a href="{% url 'console:list' it.key %}" title="{{ it.description }}"
+                   class="{% if it.key == request.resolver_match.kwargs.key %}active{% endif %}">
+                  <span class="msym">{{ it.icon }}</span>{{ it.label }}
+                </a>
+              {% endfor %}
+            {% endif %}{% endfor %}
+
+            <div class="lbl">Monitor</div>
             <a href="{% url 'kpi:overview' %}" title="Cross-project M&amp;E"
                class="{% if request.resolver_match.app_name == 'kpi' %}active{% endif %}">
               <span class="msym">insights</span>M&amp;E
@@ -558,41 +578,40 @@
               <span class="msym">vaccines</span>Care
             </a>
             {% endif %}
-          {% endif %}
-          {% if not user.is_staff %}
+
+            {% if nav_projects %}
+              <div class="lbl">Open a project</div>
+              <select class="nav-proj-select" aria-label="Open a project"
+                      onchange="if(this.value){window.location.href=this.value;}">
+                <option value="">Choose a project…</option>
+                {% for uc in nav_projects %}
+                  <option value="{% url 'dashboards:project' uc.code %}">{{ uc.name|default:uc.code }}</option>
+                {% endfor %}
+              </select>
+            {% endif %}
+
+          {% else %}
+            <div class="lbl">Projects</div>
             {% comment %}Staff manage every project via 'Manage projects' + the picker below, so the discovery catalogue link is only for regular users.{% endcomment %}
             <a href="{% url 'dashboards:projects' %}" title="Browse and search all projects"
                class="{% if request.resolver_match.url_name == 'projects' or request.resolver_match.url_name == 'index' %}active{% endif %}">
               <span class="msym">grid_view</span>My projects
               {% if nav_projects_total %}<span class="pill neutral" style="margin-left:auto;font-size:.66rem;">{{ nav_projects_total }}</span>{% endif %}
             </a>
-          {% endif %}
-          {% if nav_projects %}
-            <select class="nav-proj-select" aria-label="Open a project"
-                    onchange="if(this.value){window.location.href=this.value;}">
-              <option value="">Open a project…</option>
-              {% for uc in nav_projects %}
-                <option value="{% url 'dashboards:project' uc.code %}">{{ uc.name|default:uc.code }}</option>
-              {% endfor %}
-            </select>
-          {% elif not user.is_staff %}
-            {# Empty-state CTA only for regular users — staff manage all projects. #}
-            <div class="muted-note">No projects yet — <a href="{% url 'dashboards:projects' %}?scope=all" style="color:#cfe2d6;text-decoration:underline;">browse to request access</a>.</div>
+            {% if nav_projects %}
+              <select class="nav-proj-select" aria-label="Open a project"
+                      onchange="if(this.value){window.location.href=this.value;}">
+                <option value="">Open a project…</option>
+                {% for uc in nav_projects %}
+                  <option value="{% url 'dashboards:project' uc.code %}">{{ uc.name|default:uc.code }}</option>
+                {% endfor %}
+              </select>
+            {% else %}
+              <div class="muted-note">No projects yet — <a href="{% url 'dashboards:projects' %}?scope=all" style="color:#cfe2d6;text-decoration:underline;">browse to request access</a>.</div>
+            {% endif %}
           {% endif %}
 
           {% include "_my_work_nav.html" %}
-
-          {% if user.is_staff and console_groups %}
-            {% for group, items in console_groups %}
-              {% if group != "Institution tenancy" %}<div class="lbl">{{ group }}</div>{% endif %}
-              {% for it in items %}
-                <a href="{% url 'console:list' it.key %}" title="{{ it.description }}"
-                   class="{% if it.key == request.resolver_match.kwargs.key %}active{% endif %}">
-                  <span class="msym">{{ it.icon }}</span>{{ it.label }}
-                </a>
-              {% endfor %}
-            {% endfor %}
-          {% endif %}
           {% if can_publish_forms or user.is_staff %}
             <div class="lbl">System</div>
             {% if can_publish_forms %}
