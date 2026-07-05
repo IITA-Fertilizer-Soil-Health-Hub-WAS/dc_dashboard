@@ -244,7 +244,10 @@
     return wrap;
   }
   function note(){ const d=document.createElement('div'); d.className='nofields';
-    d.textContent='No fields found for this form yet — map its fields (Field mappings) or sync some data first.'; return d; }
+    d.textContent = formSel.value
+      ? 'No fields loaded for this form yet — click “Import fields & names from server” above.'
+      : 'Choose a form above (not “Whole project”) to load its fields.';
+    return d; }
 
   function render(){
     const spec = SPECS[typeSel.value] || {help:'',c:[]};
