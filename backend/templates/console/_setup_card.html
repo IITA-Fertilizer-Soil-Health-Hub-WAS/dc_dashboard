@@ -1,0 +1,52 @@
+{% comment %}One setup card. Rendered on the hub page and returned by the inline
+quick-add endpoint (swapped in via HTMX). `c` is the card dict; `form_error`
+opens the add form on a validation error; `added` shows a brief confirmation.{% endcomment %}
+<div class="scard">
+  <div class="top">
+    <span class="ic"><span class="msym">{{ c.icon }}</span></span>
+    <h4>{{ c.label }}</h4>
+    {% if c.count is not None %}<span class="count">{{ c.count }}</span>{% endif %}
+  </div>
+  <p class="desc">{{ c.desc }}</p>
+
+  {% if c.items %}
+    <div class="chips">
+      {% for it in c.items %}<span class="chip">{{ it }}</span>{% endfor %}
+    </div>
+  {% endif %}
+  {% if added %}<div class="qok"><span class="msym">check_circle</span>Added</div>{% endif %}
+
+  {% if c.quick %}
+    <details class="qadd"{% if form_error %} open{% endif %}>
+      <summary><span class="msym">add</span>Add {{ c.label|lower }}</summary>
+      <form hx-post="{{ c.add_url }}" hx-target="closest .scard" hx-swap="outerHTML">
+        {% csrf_token %}
+        {% for f in c.quick %}
+          <label class="qf">
+            <span>{{ f.label }}{% if f.required %} *{% endif %}</span>
+            {% if f.kind == 'select' %}
+              <select name="{{ f.name }}"{% if f.required %} required{% endif %}>
+                <option value="">—</option>
+                {% for val, lbl in f.options %}<option value="{{ val }}"{% if f.value|stringformat:'s' == val %} selected{% endif %}>{{ lbl }}</option>{% endfor %}
+              </select>
+            {% else %}
+              <input name="{{ f.name }}" value="{{ f.value }}"{% if f.required %} required{% endif %} autocomplete="off">
+            {% endif %}
+            {% if f.error %}<span class="qerr">{{ f.error }}</span>{% endif %}
+          </label>
+        {% endfor %}
+        <button type="submit" class="qbtn">Add</button>
+      </form>
+    </details>
+  {% endif %}
+
+  <div class="foot">
+    <a href="{{ c.url }}"><span class="msym" style="font-size:16px;">tune</span>Open</a>
+    {% if c.new_url %}<a class="new" href="{{ c.new_url }}"><span class="msym" style="font-size:16px;">add</span>New</a>{% endif %}
+    <span style="flex:1"></span>
+    {% if c.count is not None %}
+      {% if c.done %}<span class="state on"><span class="dot"></span>Set</span>
+      {% else %}<span class="state off"><span class="dot"></span>Empty</span>{% endif %}
+    {% endif %}
+  </div>
+</div>

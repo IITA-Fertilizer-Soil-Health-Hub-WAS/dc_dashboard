@@ -28,10 +28,11 @@ def test_list_renders_for_staff(client, staff, uc):
     resp = client.get("/manage/projects/")
     assert resp.status_code == 200
     body = resp.content.decode()
-    # Rendered in the app shell; management sections appear directly in the single
-    # green rail (no separate console sidebar). Tenancy items are flat, standalone
-    # links; per-project config lives inside a project's workspace.
-    assert "Institutions" in body and "Countries" in body
+    # Rendered in the app shell; management lives in the single green rail (no
+    # separate console sidebar). Tenancy (institutions/regions/countries) is
+    # consolidated behind the admin "Structure & projects" Set up hub.
+    assert "Structure &amp; projects" in body
+    assert "/manage/setup/structure/" in body
     assert "console-nav" not in body
 
 

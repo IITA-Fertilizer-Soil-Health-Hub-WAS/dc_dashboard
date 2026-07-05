@@ -25,6 +25,8 @@ urlpatterns = [
     path("collection-units/import/", views.ImportCollectionUnitsView.as_view(),
          name="import_units"),
     path("setup/", views.SetupHubView.as_view(), name="setup"),
+    path("setup/structure/", views.AdminSetupHubView.as_view(), name="admin_setup"),
+    path("setup/add/<slug:key>/", views.SetupAddView.as_view(), name="setup_add"),
     path("plot-election/", views.PlotElectionQueueView.as_view(), name="plot_election"),
     path("plot-election/<slug:code>/<str:trial_key>/", views.PlotElectionView.as_view(),
          name="plot_elect"),

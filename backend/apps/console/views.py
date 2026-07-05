@@ -1316,97 +1316,238 @@ class PlotElectionView(ManageMixin, View):
         return redirect(queue_url)
 
 
-# The console sections that make up a project's setup surface, in workflow order.
-# Drives both the one-page Set up hub and the sidebar's active-state highlight.
-SETUP_KEYS: tuple[str, ...] = (
-    "forms", "field-mappings", "event-schedule", "crops", "trials",
-    "validation-rules", "rejection-reasons",
-)
+# ---------------------------------------------------------------------------
+# One-page Set up hubs — a project's whole config surface (and the admin's
+# tenancy structure) on a single screen, with inline quick-add on the simple
+# sections so a coordinator can e.g. add a crop without leaving the page.
+# ---------------------------------------------------------------------------
+
+# label, icon, one-line description per setup section.
+SETUP_CARD_META: dict[str, tuple[str, str, str]] = {
+    "forms": ("Forms", "description", "Survey forms feeding this project."),
+    "field-mappings": ("Field mappings", "swap_horiz",
+                       "Map raw server fields to canonical fields."),
+    "event-schedule": ("Event schedule", "event",
+                       "Visit timeline & day offsets that drive the status colours."),
+    "crops": ("Crops", "grass", "Crops and their server name aliases."),
+    "trials": ("Trials", "science", "Trial / experiment types."),
+    "validation-rules": ("Validation rules", "rule",
+                         "Checks that flag submissions for review."),
+    "rejection-reasons": ("Rejection reasons", "block",
+                         "Reasons a reviewer can decline a submission for."),
+    "plot-election": ("Plot election", "where_to_vote",
+                     "Review proposed plots and elect the trial plots."),
+    "organizations": ("Institutions", "domain",
+                     "Institutions (tenants) that own projects and data."),
+    "regions": ("Regions", "public", "Geographic regions a Regional Coordinator oversees."),
+    "countries": ("Countries", "flag", "Countries within a region."),
+    "projects": ("Projects", "category", "Projects — ONA forms, ID patterns, sync."),
+}
+
+# Sections that support inline quick-add, and the minimal fields to ask for.
+SETUP_QUICK: dict[str, list[str]] = {
+    "crops": ["name"],
+    "trials": ["name", "code"],
+    "rejection-reasons": ["code", "label"],
+    "regions": ["organization", "code", "name"],
+    "countries": ["region", "code", "name"],
+    "organizations": ["code", "name"],
+}
+# Quick-add sections whose new row is auto-scoped to the active project.
+SETUP_PROJECT_SCOPED: set[str] = {"crops", "trials", "rejection-reasons"}
+# Sections whose count is per-project (vs. global tenancy counts).
+_SETUP_PROJECT_COUNTED: set[str] = {
+    "forms", "event-schedule", "crops", "trials", "validation-rules", "rejection-reasons",
+}
+
+
+def _setup_count(key: str, uc) -> int:
+    m = REGISTRY[key]
+    qs = m.model.objects.all()
+    if key == "field-mappings":
+        return qs.filter(form__project=uc).count() if uc else qs.count()
+    if key in _SETUP_PROJECT_COUNTED:
+        return qs.filter(project=uc).count() if uc else qs.count()
+    return qs.count()
+
+
+def _setup_recent(key: str, uc) -> list[str]:
+    m = REGISTRY[key]
+    qs = m.model.objects.all()
+    if key in SETUP_PROJECT_SCOPED and uc is not None:
+        qs = qs.filter(project=uc)
+    return [str(o) for o in qs.order_by("-pk")[:8]]
+
+
+def _setup_quick_fields(key, data=None, errors=None):
+    """Descriptors (text / select) for a section's inline quick-add form."""
+    m = REGISTRY[key]
+    data, errors, out = data or {}, errors or {}, []
+    for fname in SETUP_QUICK.get(key, []):
+        f = m.model._meta.get_field(fname)
+        d = {"name": fname, "label": f.verbose_name.title(),
+             "required": not f.blank, "value": data.get(fname, ""),
+             "error": errors.get(fname)}
+        if f.is_relation:
+            rel = f.related_model
+            ordering = list(rel._meta.ordering) or ["pk"]
+            d["kind"] = "select"
+            d["options"] = [(str(o.pk), str(o)) for o in rel.objects.order_by(*ordering)[:500]]
+        else:
+            d["kind"] = "text"
+        out.append(d)
+    return out
+
+
+def build_setup_card(request, key, uc, *, count=None, url=None, new=True,
+                     external=False, quick_data=None, quick_errors=None) -> dict:
+    """Assemble one setup card (label, count, links, and inline quick-add fields)."""
+    from django.urls import reverse
+
+    from .registry import console_can_edit
+
+    label, icon, desc = SETUP_CARD_META.get(key, (key, "tune", ""))
+    in_registry = key in REGISTRY
+    can_edit = console_can_edit(request.user, key) if in_registry else True
+    scope = f"?project={uc.code}" if uc is not None else ""
+    if count is None and in_registry:
+        count = _setup_count(key, uc)
+    if url is None and in_registry:
+        url = f"{reverse('console:list', args=[key])}{scope}"
+    quick = (_setup_quick_fields(key, quick_data, quick_errors)
+             if key in SETUP_QUICK and can_edit else [])
+    return {
+        "key": key, "label": label, "icon": icon, "desc": desc,
+        "count": count, "done": bool(count), "url": url,
+        "new_url": (f"{reverse('console:create', args=[key])}{scope}"
+                    if new and not external and can_edit and in_registry else None),
+        "add_url": (f"{reverse('console:setup_add', args=[key])}{scope}" if quick else None),
+        "quick": quick, "items": _setup_recent(key, uc) if quick else [],
+    }
+
+
+def _setup_sections(request, uc, layout):
+    """Build visible, permission-filtered card sections from a layout spec.
+
+    layout: list of (title, icon, desc, [(key, kwargs), ...]).
+    """
+    from .registry import console_key_allowed
+
+    out = []
+    for title, icon, desc, entries in layout:
+        cards = []
+        for key, kw in entries:
+            if key in REGISTRY and not console_key_allowed(request.user, key):
+                continue  # user can't view this section — hide the card
+            cards.append(build_setup_card(request, key, uc, **kw))
+        if cards:
+            out.append({"title": title, "icon": icon, "desc": desc, "cards": cards})
+    return out
+
+
+def _setup_render(request, *, uc, sections, title, subtitle):
+    counted = [c for s in sections for c in s["cards"] if c["count"] is not None]
+    return render(request, "console/setup.html", {
+        "uc": uc, "sections": sections, "console_key": "setup",
+        "hub_title": title, "hub_subtitle": subtitle,
+        "done_count": sum(1 for c in counted if c["done"]),
+        "total_count": len(counted),
+    })
 
 
 class SetupHubView(ManageMixin, View):
-    """One page for a project's whole setup surface: grouped cards with live
-    counts and quick links, so a coordinator configures a project from a single
-    well-organised screen instead of hunting through separate sidebar tabs."""
+    """A project's whole setup surface on one page — grouped cards with live
+    counts, inline quick-add, and deep links to the full editors."""
 
     def get(self, request):
         from django.urls import reverse
-
-        from apps.projects.models import (
-            Crop,
-            EventScheduleItem,
-            FieldMapping,
-            FormDefinition,
-            Trial,
-        )
-        from apps.review.models import RejectionReason
-        from apps.validation.models import ValidationRule
 
         projects = _builder_projects(request)
         code = request.GET.get("project") or request.session.get("active_project")
         uc = projects.filter(code=code).first() or projects.first()
         if uc is None:
-            return render(request, "console/setup.html",
-                          {"uc": None, "sections": [], "console_key": "setup"})
-
-        def link(key):
-            return f"{reverse('console:list', args=[key])}?project={uc.code}"
-
-        def card(key, label, icon, count, desc, url, new=True):
-            return {"key": key, "label": label, "icon": icon, "count": count,
-                    "desc": desc, "url": url, "done": bool(count),
-                    "new_url": f"{reverse('console:create', args=[key])}?project={uc.code}"
-                    if new and count is not None else None}
-
-        sections = [
-            {"title": "Instrument", "icon": "description",
-             "desc": "What is collected, and how raw server fields map to your dataset.",
-             "cards": [
-                 card("forms", "Forms", "description",
-                      FormDefinition.objects.filter(project=uc).count(),
-                      "Survey forms feeding this project.", link("forms")),
-                 card("field-mappings", "Field mappings", "swap_horiz",
-                      FieldMapping.objects.filter(form__project=uc).count(),
-                      "Map raw server fields to canonical fields.", link("field-mappings"),
-                      new=False),
-             ]},
-            {"title": "Schedule & crops", "icon": "event",
-             "desc": "The visit timeline and the crops under trial.",
-             "cards": [
-                 card("event-schedule", "Event schedule", "event",
-                      EventScheduleItem.objects.filter(project=uc).count(),
-                      "Visit timeline & day offsets that drive the status colours.",
-                      link("event-schedule")),
-                 card("crops", "Crops", "grass",
-                      Crop.objects.filter(project=uc).count(),
-                      "Crops and their server name aliases.", link("crops")),
-                 card("trials", "Trials", "science",
-                      Trial.objects.filter(project=uc).count(),
-                      "Trial / experiment types.", link("trials")),
-             ]},
-            {"title": "Plots", "icon": "where_to_vote",
-             "desc": "Elect which GIS-proposed plots become collection units.",
-             "cards": [
-                 card("plot-election", "Plot election", "where_to_vote", None,
-                      "Review proposed plots and elect the trial plots.",
-                      f"{reverse('console:plot_election')}?project={uc.code}", new=False),
-             ]},
-            {"title": "Quality rules", "icon": "rule",
-             "desc": "Automatic checks, and the reasons a reviewer can decline for.",
-             "cards": [
-                 card("validation-rules", "Validation rules", "rule",
-                      ValidationRule.objects.filter(project=uc).count(),
-                      "Checks that flag submissions for review.", link("validation-rules")),
-                 card("rejection-reasons", "Rejection reasons", "block",
-                      RejectionReason.objects.filter(project=uc).count(),
-                      "Categorised reasons for declining a submission.",
-                      link("rejection-reasons")),
-             ]},
+            return _setup_render(request, uc=None, sections=[],
+                                 title="Set up", subtitle="")
+        plot_url = f"{reverse('console:plot_election')}?project={uc.code}"
+        layout = [
+            ("Instrument", "description",
+             "What is collected, and how raw server fields map to your dataset.",
+             [("forms", {}), ("field-mappings", {"new": False})]),
+            ("Schedule & crops", "event", "The visit timeline and the crops under trial.",
+             [("event-schedule", {}), ("crops", {}), ("trials", {})]),
+            ("Plots", "where_to_vote", "Elect which GIS-proposed plots become collection units.",
+             [("plot-election", {"count": None, "url": plot_url, "external": True})]),
+            ("Quality rules", "rule",
+             "Automatic checks, and the reasons a reviewer can decline for.",
+             [("validation-rules", {}), ("rejection-reasons", {})]),
         ]
-        counted = [c for s in sections for c in s["cards"] if c["count"] is not None]
-        return render(request, "console/setup.html", {
-            "uc": uc, "sections": sections, "projects": projects,
-            "console_key": "setup",
-            "done_count": sum(1 for c in counted if c["done"]),
-            "total_count": len(counted),
-        })
+        return _setup_render(request, uc=uc, sections=_setup_sections(request, uc, layout),
+                             title="Set up", subtitle=uc.name)
+
+
+class AdminSetupHubView(StaffMixin, View):
+    """The hub operator's tenancy structure on one page: institutions, geography
+    and projects, with inline quick-add for the geography."""
+
+    def get(self, request):
+        layout = [
+            ("Institutions & geography", "domain",
+             "The tenants and the region → country hierarchy their projects hang off.",
+             [("organizations", {}), ("regions", {}), ("countries", {})]),
+            ("Projects", "category", "Every project across the platform.",
+             [("projects", {"new": False})]),
+        ]
+        return _setup_render(request, uc=None,
+                             sections=_setup_sections(request, None, layout),
+                             title="Set up", subtitle="Institutions & structure")
+
+
+def _apply_setup_defaults(key, obj, uc):
+    """Fill the fields the quick-add form intentionally doesn't ask for."""
+    if key == "rejection-reasons":
+        from apps.review.models import RejectionReason
+        obj.is_active = True
+        if not obj.order:
+            last = RejectionReason.objects.filter(project=uc).order_by("-order").first()
+            obj.order = (last.order + 1) if last else 1
+    elif key == "organizations":
+        obj.is_active = True
+        if not getattr(obj, "database_alias", ""):
+            obj.database_alias = "default"
+
+
+class SetupAddView(ManageMixin, View):
+    """HTMX endpoint: create one row from a card's inline quick-add form and
+    return the refreshed card (updated count + recent entries)."""
+
+    def post(self, request, key):
+        from .registry import console_can_edit
+
+        if key not in SETUP_QUICK:
+            raise Http404("Not a quick-add section.")
+        if not console_can_edit(request.user, key):
+            raise PermissionDenied("You cannot edit this section.")
+
+        uc = None
+        if key in SETUP_PROJECT_SCOPED:
+            code = request.GET.get("project") or request.session.get("active_project")
+            uc = _builder_projects(request).filter(code=code).first()
+            if uc is None:
+                raise Http404("No project in scope.")
+
+        m = REGISTRY[key]
+        form = modelform_factory(m.model, fields=SETUP_QUICK[key])(request.POST)
+        if form.is_valid():
+            obj = form.save(commit=False)
+            if key in SETUP_PROJECT_SCOPED:
+                obj.project = uc
+            _apply_setup_defaults(key, obj, uc)
+            obj.save()
+            form.save_m2m()
+            card = build_setup_card(request, key, uc)
+            return render(request, "console/_setup_card.html", {"c": card, "added": True})
+
+        errors = {f: " ".join(e) for f, e in form.errors.items()}
+        card = build_setup_card(request, key, uc, quick_data=request.POST,
+                                quick_errors=errors)
+        return render(request, "console/_setup_card.html", {"c": card, "form_error": True})

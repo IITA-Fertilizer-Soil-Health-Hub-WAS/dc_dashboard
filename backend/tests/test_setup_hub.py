@@ -58,3 +58,54 @@ def test_setup_hub_denied_for_plain_member(client, proj, django_user_model):
     client.force_login(member)
     resp = client.get(reverse("console:setup") + f"?project={proj['p'].code}")
     assert resp.status_code == 403
+
+
+def test_inline_quick_add_creates_and_returns_card(client, proj):
+    """POST to a card's quick-add creates the row (auto-scoped to the project)
+    and returns the refreshed card with the new count."""
+    from apps.review.models import RejectionReason
+
+    client.force_login(proj["admin"])
+    session = client.session
+    session["active_project"] = proj["p"].code
+    session.save()
+    url = reverse("console:setup_add", args=["rejection-reasons"]) + f"?project={proj['p'].code}"
+    resp = client.post(url, {"code": "DUP", "label": "Duplicate record"})
+    assert resp.status_code == 200
+    rr = RejectionReason.objects.get(project=proj["p"], code="DUP")
+    assert rr.label == "Duplicate record" and rr.is_active and rr.order >= 1  # defaults applied
+    body = resp.content.decode()
+    assert 'class="scard"' in body and "Duplicate record" in body
+
+
+def test_inline_quick_add_invalid_reopens_with_error(client, proj):
+    client.force_login(proj["admin"])
+    session = client.session
+    session["active_project"] = proj["p"].code
+    session.save()
+    url = reverse("console:setup_add", args=["crops"]) + f"?project={proj['p'].code}"
+    resp = client.post(url, {"name": ""})  # name required
+    assert resp.status_code == 200
+    assert "<details class=\"qadd\" open>" in resp.content.decode()
+
+
+def test_quick_add_denied_for_wrong_scope(client, proj, django_user_model):
+    """A trial coordinator (not a geo manager) cannot quick-add crops."""
+    coord = proj["coord"]
+    client.force_login(coord)
+    session = client.session
+    session["active_project"] = proj["p"].code
+    session.save()
+    url = reverse("console:setup_add", args=["crops"]) + f"?project={proj['p'].code}"
+    assert client.post(url, {"name": "Maize"}).status_code == 403
+
+
+def test_admin_setup_hub(client, proj, django_user_model):
+    client.force_login(proj["admin"])
+    resp = client.get(reverse("console:admin_setup"))
+    assert resp.status_code == 200
+    body = resp.content.decode()
+    assert "Institutions" in body and "Regions" in body and "Countries" in body
+    # Non-staff cannot reach the tenancy hub.
+    client.force_login(proj["coord"])
+    assert client.get(reverse("console:admin_setup")).status_code == 403
