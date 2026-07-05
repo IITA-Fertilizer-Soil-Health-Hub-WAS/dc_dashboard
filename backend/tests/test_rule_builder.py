@@ -89,6 +89,50 @@ def _sub(project, form, uuid, values):
     return s
 
 
+def test_field_choices_from_schema_labels_notes_filtered(setup):
+    from apps.console.views import _form_field_choices
+
+    f = setup["f2"]
+    f.field_schema = [
+        {"path": "grp/note1", "label": "<b>Big note</b>", "type": "note"},   # dropped
+        {"path": "grp/yield", "label": "Yield (kg/ha)", "type": "integer"},
+    ]
+    f.save(update_fields=["field_schema"])
+    choices = _form_field_choices(f)
+    keys = {c["key"]: c["label"] for c in choices}
+    assert "grp/note1" not in keys                 # display-only note excluded
+    assert keys["grp/yield"] == "Yield (kg/ha)"    # real field, human label
+
+
+def test_rule_test_preview_counts(client, setup):
+    """The Test button previews the flag count without saving a rule."""
+    p = setup["p"]
+    _sub(p, setup["f2"], "d1", {"barcode": "X"})
+    _sub(p, setup["f2"], "d2", {"barcode": "X"})   # duplicate
+    _sub(p, setup["f2"], "u1", {"barcode": "Y"})
+    _login(client, setup["admin"], p)
+    resp = client.post(reverse("console:rule_test"), {
+        "project": p.code, "rule_type": "UNIQUE_FIELD", "form": str(setup["f2"].id),
+        "params": json.dumps({"field": "barcode"})})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["count"] == 2 and data["scope"] == 3
+    assert not ValidationRule.objects.filter(project=p).exists()  # nothing persisted
+
+
+def test_rule_targets_raw_payload_field(setup):
+    """A rule can target a raw form field (from raw_payload) even with no mapping."""
+    from apps.validation import rules
+
+    p = setup["p"]
+    s = Submission.objects.create(project=p, form=setup["f2"], ona_uuid="r1",
+                                  content_hash="r1", raw_payload={"grp/qty": "7"})
+    # No SubmissionValue for grp/qty — value_of must fall back to raw_payload.
+    assert rules.value_of(s, "grp/qty") == "7"
+    fired = rules.numeric_range(s, {"field": "grp/qty", "min": 10, "max": 20})
+    assert fired and fired[0].detail["value"] == 7
+
+
 def test_form_scoped_rule_ignores_other_forms(client, setup):
     """A REQUIRED_FIELD rule bound to form f2 must not flag f1's submissions."""
     p = setup["p"]

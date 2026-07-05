@@ -37,6 +37,13 @@
   .rb .btn-save{background:var(--brand);color:#fff;border:none;border-radius:9px;padding:.6rem 1.2rem;
     font-weight:650;font-size:.9rem;cursor:pointer;}
   .rb .btn-cancel{color:var(--muted);text-decoration:none;font-size:.88rem;}
+  .rb .btn-test{background:var(--surface);color:var(--brand);border:1px solid var(--brand);border-radius:9px;
+    padding:.55rem 1rem;font-weight:600;font-size:.88rem;cursor:pointer;}
+  .rb .btn-test:hover{background:var(--brand-50);}
+  .rb .testout{font-size:.86rem;font-weight:600;}
+  .rb .testout.ok{color:#3f9142;} .rb .testout.warn{color:var(--red);}
+  .rb .linkbtn{background:none;border:none;color:var(--brand);font-size:.75rem;cursor:pointer;padding:0;
+    text-decoration:underline;font-family:inherit;}
   .rb .toggle{display:flex;align-items:center;gap:.5rem;}
   .rb .toggle input{width:auto;}
 </style>
@@ -72,7 +79,8 @@
               <option value="{{ f.id }}" {% if rule.form_id == f.id or posted.form == f.id|stringformat:'s' %}selected{% endif %}>{{ f.title|default:f.server_ref|default:f.server_form_id }}</option>
             {% endfor %}
           </select>
-          <span class="hint">Field checks read this form's fields.</span>
+          <span class="hint"><span id="rb-fieldcount"></span>
+            <button type="submit" form="rb-import-form" class="linkbtn">Import fields &amp; names from server</button></span>
         </div>
         <div class="fld">
           <label for="rb-type">Rule type</label>
@@ -114,8 +122,17 @@
     <input type="hidden" name="params" id="rb-params">
     <div class="actions">
       <button type="submit" class="btn-save">{% if rule %}Save changes{% else %}Create rule{% endif %}</button>
+      <button type="button" class="btn-test" id="rb-test">Test rule</button>
+      <span id="rb-testout" class="testout"></span>
+      <span style="flex:1"></span>
       <a class="btn-cancel" href="{% url 'console:list' 'validation-rules' %}?project={{ project.code }}">Cancel</a>
     </div>
+  </form>
+
+  <form id="rb-import-form" method="post" style="display:none;"
+        action="{% url 'console:rule_import_fields' %}?project={{ project.code }}">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
   </form>
 
 <script>
@@ -195,12 +212,13 @@
       s.value = state[key]!=null?state[key]:CH[key][0][0]; state[key]=s.value;
       s.onchange=()=>{state[key]=s.value; render();}; wrap.appendChild(s);
     } else if(kind==='field'){
+      if(!fields().length){ wrap.appendChild(note()); return wrap; }
+      const keys=fields().map(f=>f.key);
       const s=document.createElement('select');
       const blank=document.createElement('option'); blank.value=''; blank.textContent='—'; s.appendChild(blank);
-      for(const f of fields()){const o=document.createElement('option');o.value=f;o.textContent=f;s.appendChild(o);}
-      if(!fields().includes(state[key])) state[key]='';
+      for(const f of fields()){const o=document.createElement('option');o.value=f.key;o.textContent=f.label;s.appendChild(o);}
+      if(!keys.includes(state[key])) state[key]='';
       s.value=state[key]||''; s.onchange=()=>{state[key]=s.value; live();};
-      if(!fields().length){ wrap.appendChild(note()); return wrap; }
       wrap.appendChild(s);
     } else if(kind==='fields'){
       wrap.style.gridColumn='1 / -1';
@@ -208,13 +226,14 @@
       const cur = new Set(Array.isArray(state[key])?state[key]:[]);
       const chips=document.createElement('div'); chips.className='chips';
       fields().forEach(f=>{
-        const lab=document.createElement('label'); lab.className='chip'+(cur.has(f)?' on':'');
-        const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=cur.has(f);
-        cb.onchange=()=>{ cb.checked?cur.add(f):cur.delete(f); state[key]=[...cur];
+        const lab=document.createElement('label'); lab.className='chip'+(cur.has(f.key)?' on':'');
+        const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=cur.has(f.key);
+        cb.onchange=()=>{ cb.checked?cur.add(f.key):cur.delete(f.key); state[key]=[...cur];
           lab.classList.toggle('on',cb.checked); live(); };
-        lab.appendChild(cb); lab.appendChild(document.createTextNode(f)); chips.appendChild(lab);
+        lab.appendChild(cb); lab.appendChild(document.createTextNode(f.label)); chips.appendChild(lab);
       });
-      state[key]=[...cur]; wrap.appendChild(chips);
+      const valid=new Set(fields().map(f=>f.key));
+      state[key]=[...cur].filter(k=>valid.has(k)); wrap.appendChild(chips);
     } else if(kind==='lines'){
       wrap.style.gridColumn='1 / -1';
       const t=document.createElement('textarea');
@@ -230,6 +249,8 @@
   function render(){
     const spec = SPECS[typeSel.value] || {help:'',c:[]};
     help.textContent = spec.help;
+    const fc = $('rb-fieldcount');
+    fc.textContent = formSel.value ? `${fields().length} field(s) available · ` : 'Pick a form to load its fields · ';
     box.innerHTML='';
     for(const [key,kind,label] of spec.c){
       if(showIf[key] && !showIf[key](state)) continue;
@@ -302,6 +323,22 @@
   typeSel.onchange = ()=>{ ['fields','field','min','max','target','tol','op','compare','rhs_mode','rhs_fields','rhs_op','method','z','k','group_by','min_n','patterns','max_m','precision','max','window_min','require','when_field','when_op','when_value'].forEach(k=>delete state[k]); render(); };
   formSel.onchange = render;
   $('rb-form').closest('form').addEventListener('submit', ()=>{ hidden.value = JSON.stringify(finalize()); });
+
+  $('rb-test').onclick = ()=>{
+    const out=$('rb-testout'); out.textContent='Testing…'; out.className='testout';
+    const body=new URLSearchParams({project:'{{ project.code }}', rule_type:typeSel.value,
+      form:formSel.value, params:JSON.stringify(finalize())});
+    fetch('{% url "console:rule_test" %}', {method:'POST', body,
+      headers:{'X-CSRFToken':document.querySelector('#rb-form [name=csrfmiddlewaretoken]').value,
+        'Content-Type':'application/x-www-form-urlencoded'}})
+      .then(r=>r.json()).then(d=>{
+        if(d.error){ out.className='testout warn'; out.textContent=d.error; return; }
+        out.className='testout '+(d.count?'warn':'ok');
+        out.textContent = d.count
+          ? `Would flag ${d.count} of ${d.scope} submission(s)`+(d.samples&&d.samples.length?` — e.g. “${d.samples[0]}”`:'.')
+          : `No submissions flagged (of ${d.scope}).`;
+      }).catch(()=>{ out.className='testout warn'; out.textContent='Test failed.'; });
+  };
 
   seed(); render();
 })();

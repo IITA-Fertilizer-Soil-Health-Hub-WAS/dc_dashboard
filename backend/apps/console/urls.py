@@ -25,6 +25,8 @@ urlpatterns = [
     path("collection-units/import/", views.ImportCollectionUnitsView.as_view(),
          name="import_units"),
     path("rules/new/", views.RuleBuilderView.as_view(), name="rule_new"),
+    path("rules/test/", views.RuleTestView.as_view(), name="rule_test"),
+    path("rules/import-fields/", views.RuleSchemaSyncView.as_view(), name="rule_import_fields"),
     path("rules/<uuid:pk>/", views.RuleBuilderView.as_view(), name="rule_edit"),
     path("setup/", views.SetupHubView.as_view(), name="setup"),
     path("setup/structure/", views.AdminSetupHubView.as_view(), name="admin_setup"),

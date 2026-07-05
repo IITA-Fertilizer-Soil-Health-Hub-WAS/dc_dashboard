@@ -64,11 +64,22 @@ def sync_project_schemas(project) -> dict:
     from apps.ingestion.backends.registry import get_backend_for
 
     backend = get_backend_for(project)
+    # One cheap call gives every form's human name — fill in blank titles so the
+    # UI shows names, not numeric server ids.
+    titles: dict = {}
+    try:
+        titles = {str(f.id): f.title for f in backend.list_forms() if f.title}
+    except Exception:
+        titles = {}
+
     result: dict = {}
     for form in project.forms.all():
         ref = form.server_ref
         if not ref:
             continue
+        if not (form.title or "").strip() and titles.get(str(ref)):
+            form.title = titles[str(ref)][:255]
+            form.save(update_fields=["title"])
         try:
             schema = backend.get_form_schema(ref)
         except Exception as exc:  # keep going across forms; report per-form

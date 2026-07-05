@@ -1322,20 +1322,37 @@ class PlotElectionView(ManageMixin, View):
 # controls. The client assembles `params`; the server validates and stores it.
 # ---------------------------------------------------------------------------
 
-def _form_field_choices(form) -> list[str]:
-    """The field keys a rule can target on a form: its mapped canonical fields
-    plus any field key already seen in that form's submitted data."""
+def _form_field_choices(form) -> list[dict]:
+    """Every field a rule can target on a form, as {key, label}: the imported form
+    schema (all questions, with human labels), plus mapped canonical fields and any
+    field key seen in submitted data. Ordered by label."""
     from apps.projects.models import FieldMapping
     from apps.submissions.models import SubmissionValue
 
-    fields = set(
-        FieldMapping.objects.filter(form=form).values_list("target_field", flat=True)
-    )
-    fields |= set(
-        SubmissionValue.objects.filter(submission__form=form)
-        .values_list("field_key", flat=True).distinct()
-    )
-    return sorted(f for f in fields if f)
+    import re
+
+    def clean(label, path):
+        text = re.sub(r"<[^>]+>", "", str(label or ""))          # strip any HTML
+        text = re.sub(r"\s+", " ", text).strip()
+        if not text:
+            return path
+        return text if len(text) <= 80 else text[:77] + "…"
+
+    labels: dict = {}
+    for f in (form.field_schema or []):
+        path = f.get("path")
+        # Skip display-only notes — they carry no data to check.
+        if path and f.get("type") != "note":
+            labels.setdefault(path, clean(f.get("label"), path))
+    for t in FieldMapping.objects.filter(form=form).values_list("target_field", flat=True):
+        if t:
+            labels.setdefault(t, t)
+    for k in (SubmissionValue.objects.filter(submission__form=form)
+              .values_list("field_key", flat=True).distinct()):
+        if k:
+            labels.setdefault(k, k)
+    return [{"key": k, "label": lbl}
+            for k, lbl in sorted(labels.items(), key=lambda kv: str(kv[1]).lower())]
 
 
 class RuleBuilderView(ManageMixin, View):
@@ -1437,6 +1454,75 @@ class RuleBuilderView(ManageMixin, View):
         obj.save()
         messages.success(request, f"Rule “{code}” saved.")
         return redirect(f"{reverse('console:list', args=['validation-rules'])}?project={project.code}")
+
+
+class RuleSchemaSyncView(ManageMixin, View):
+    """Import / refresh every form's name and full field list from the collection
+    server, so the builder's pickers offer all fields (by their labels)."""
+
+    def post(self, request):
+        from django.urls import reverse
+
+        from apps.ingestion.form_schema import sync_project_schemas
+
+        code = request.POST.get("project") or request.session.get("active_project")
+        project = _builder_projects(request).filter(code=code).first()
+        if project is None:
+            messages.error(request, "Pick a project first.")
+            return redirect("console:list", key="validation-rules")
+        try:
+            result = sync_project_schemas(project)
+            fields = sum(v for v in result.values() if isinstance(v, int))
+            messages.success(
+                request,
+                f"Imported {fields} field(s) across {len(result)} form(s) from the server.")
+        except Exception as exc:
+            messages.error(request, f"Couldn't reach the collection server: {exc}")
+        back = request.POST.get("next") or f"{reverse('console:rule_new')}?project={project.code}"
+        return redirect(back)
+
+
+class RuleTestView(ManageMixin, View):
+    """Preview how many current submissions a (possibly unsaved) rule would flag."""
+
+    def post(self, request):
+        import json
+
+        from django.http import JsonResponse
+
+        from apps.projects.models import FormDefinition
+        from apps.submissions.models import Submission
+        from apps.validation.engine import _run_rule
+        from apps.validation.models import ValidationRule
+
+        code = request.POST.get("project") or request.session.get("active_project")
+        project = _builder_projects(request).filter(code=code).first()
+        if project is None:
+            return JsonResponse({"error": "Pick a project first."}, status=400)
+        try:
+            params = json.loads(request.POST.get("params") or "{}")
+            if not isinstance(params, dict):
+                params = {}
+        except (ValueError, json.JSONDecodeError):
+            params = {}
+        form = None
+        if request.POST.get("form"):
+            form = FormDefinition.objects.filter(
+                project=project, pk=request.POST["form"]).first()
+        rule = ValidationRule(project=project, form=form,
+                              rule_type=request.POST.get("rule_type", ""),
+                              params=params, severity="WARNING")
+        subs = list(Submission.objects.filter(project=project).select_related("collection_unit"))
+        try:
+            results = _run_rule(rule, subs)
+        except Exception as exc:
+            return JsonResponse({"error": f"Couldn't run the rule: {exc}"})
+        flagged = {r.submission_id for r in results}
+        scope = len([s for s in subs if form is None or s.form_id == form.id])
+        return JsonResponse({
+            "count": len(flagged), "scope": scope,
+            "samples": [r.message for r in results[:3]],
+        })
 
 
 # ---------------------------------------------------------------------------

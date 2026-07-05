@@ -25,9 +25,16 @@ class FlagResult:
 
 
 def value_of(submission: Submission, field_key: str) -> Any:
-    """The authoritative (current) value of a field on a submission."""
+    """The authoritative (current) value of a field on a submission.
+
+    Falls back to the raw payload so a rule can target ANY imported form field,
+    not only the mapped canonical ones (ONA/ODK records are flat slash-keyed,
+    matching the form schema paths)."""
     v = SubmissionValue.objects.filter(submission=submission, field_key=field_key).first()
-    return v.current_value if v else None
+    if v is not None:
+        return v.current_value
+    raw = submission.raw_payload or {}
+    return raw.get(field_key)
 
 
 def _to_float(v: Any) -> float | None:
@@ -271,6 +278,23 @@ def _val_filter(project, form) -> dict:
     return f
 
 
+def _field_values(project, form, field_key) -> dict:
+    """submission_id -> value for a field across a project (optionally one form),
+    preferring the authoritative SubmissionValue and falling back to the raw
+    payload so statistical/uniqueness rules also work on any imported field."""
+    out: dict = {}
+    for sid, val in SubmissionValue.objects.filter(
+        **_val_filter(project, form), field_key=field_key
+    ).values_list("submission_id", "current_value"):
+        out[sid] = val
+    for sid, raw in _sub_qs(project, form).values_list("id", "raw_payload"):
+        if sid not in out and raw:
+            v = raw.get(field_key)
+            if v not in (None, ""):
+                out[sid] = v
+    return out
+
+
 def numeric_outlier(project, params, form=None) -> list[FlagResult]:
     """Flag numeric values that are statistical outliers for their field — values
     that may sit *inside* the allowed range yet lie far from the norm (a unit slip
@@ -295,19 +319,14 @@ def numeric_outlier(project, params, form=None) -> list[FlagResult]:
     min_n = int(params.get("min_n", 20))
     group_by = params.get("group_by")
 
-    base = _val_filter(project, form)
     values_by_sid: dict = {}
-    for sid, raw in SubmissionValue.objects.filter(
-        **base, field_key=field_key
-    ).values_list("submission_id", "current_value"):
+    for sid, raw in _field_values(project, form, field_key).items():
         n = _to_float(raw)
         if n is not None:
             values_by_sid[sid] = n
     group_of: dict = {}
     if group_by:
-        for sid, gval in SubmissionValue.objects.filter(
-            **base, field_key=group_by
-        ).values_list("submission_id", "current_value"):
+        for sid, gval in _field_values(project, form, group_by).items():
             group_of[sid] = str(gval)
 
     buckets: dict = {}
@@ -369,9 +388,7 @@ def unique_field(project, params, form=None) -> list[FlagResult]:
         return []
     ignore_blank = params.get("ignore_blank", True)
     by_val: dict = {}
-    for sid, val in SubmissionValue.objects.filter(
-        **_val_filter(project, form), field_key=field_key
-    ).values_list("submission_id", "current_value"):
+    for sid, val in _field_values(project, form, field_key).items():
         if ignore_blank and val in (None, ""):
             continue
         by_val.setdefault(str(val), []).append(sid)
