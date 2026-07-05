@@ -452,20 +452,12 @@
           {% comment %}An enumerator's own work comes first — it's what they act on daily. Renders only when they have assignments / a caseload.{% endcomment %}
           {% include "_my_work_nav.html" %}
 
-          {% comment %}1 · Set up — configure the study: forms, schedule, crops, and elect the plots to collect on (coordinators / admins).{% endcomment %}
+          {% comment %}1 · Set up — one page gathering all project configuration (forms, schedule, crops, plot election, quality rules). Coordinators / admins only.{% endcomment %}
           {% if can_manage_access %}
             <div class="lbl">Set up</div>
-            {% for group, items in workspace_config_groups %}
-              {% for it in items %}
-                <a href="{% url 'console:list' it.key %}?project={{ active_uc.code }}" title="{{ it.description }}"
-                   class="{% if it.key == request.resolver_match.kwargs.key %}active{% endif %}">
-                  <span class="msym">{{ it.icon }}</span>{{ it.label }}
-                </a>
-              {% endfor %}
-            {% endfor %}
-            <a href="{% url 'console:plot_election' %}?project={{ active_uc.code }}"
-               class="{% if request.resolver_match.url_name == 'plot_election' or request.resolver_match.url_name == 'plot_elect' %}active{% endif %}">
-              <span class="msym">where_to_vote</span>Plot election
+            <a href="{% url 'console:setup' %}?project={{ active_uc.code }}"
+               class="{% if request.resolver_match.url_name == 'setup' or request.resolver_match.url_name == 'plot_election' or request.resolver_match.url_name == 'plot_elect' or request.resolver_match.kwargs.key == 'forms' or request.resolver_match.kwargs.key == 'field-mappings' or request.resolver_match.kwargs.key == 'event-schedule' or request.resolver_match.kwargs.key == 'crops' or request.resolver_match.kwargs.key == 'trials' or request.resolver_match.kwargs.key == 'validation-rules' or request.resolver_match.kwargs.key == 'rejection-reasons' %}active{% endif %}">
+              <span class="msym">tune</span>Project setup
             </a>
           {% endif %}
 

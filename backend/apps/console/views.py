@@ -1314,3 +1314,99 @@ class PlotElectionView(ManageMixin, View):
         elect_candidate(request.user, chosen, note=note)
         messages.success(request, f"Trial {trial_key}: elected plot {chosen.candidate_ref}.")
         return redirect(queue_url)
+
+
+# The console sections that make up a project's setup surface, in workflow order.
+# Drives both the one-page Set up hub and the sidebar's active-state highlight.
+SETUP_KEYS: tuple[str, ...] = (
+    "forms", "field-mappings", "event-schedule", "crops", "trials",
+    "validation-rules", "rejection-reasons",
+)
+
+
+class SetupHubView(ManageMixin, View):
+    """One page for a project's whole setup surface: grouped cards with live
+    counts and quick links, so a coordinator configures a project from a single
+    well-organised screen instead of hunting through separate sidebar tabs."""
+
+    def get(self, request):
+        from django.urls import reverse
+
+        from apps.projects.models import (
+            Crop,
+            EventScheduleItem,
+            FieldMapping,
+            FormDefinition,
+            Trial,
+        )
+        from apps.review.models import RejectionReason
+        from apps.validation.models import ValidationRule
+
+        projects = _builder_projects(request)
+        code = request.GET.get("project") or request.session.get("active_project")
+        uc = projects.filter(code=code).first() or projects.first()
+        if uc is None:
+            return render(request, "console/setup.html",
+                          {"uc": None, "sections": [], "console_key": "setup"})
+
+        def link(key):
+            return f"{reverse('console:list', args=[key])}?project={uc.code}"
+
+        def card(key, label, icon, count, desc, url, new=True):
+            return {"key": key, "label": label, "icon": icon, "count": count,
+                    "desc": desc, "url": url, "done": bool(count),
+                    "new_url": f"{reverse('console:create', args=[key])}?project={uc.code}"
+                    if new and count is not None else None}
+
+        sections = [
+            {"title": "Instrument", "icon": "description",
+             "desc": "What is collected, and how raw server fields map to your dataset.",
+             "cards": [
+                 card("forms", "Forms", "description",
+                      FormDefinition.objects.filter(project=uc).count(),
+                      "Survey forms feeding this project.", link("forms")),
+                 card("field-mappings", "Field mappings", "swap_horiz",
+                      FieldMapping.objects.filter(form__project=uc).count(),
+                      "Map raw server fields to canonical fields.", link("field-mappings"),
+                      new=False),
+             ]},
+            {"title": "Schedule & crops", "icon": "event",
+             "desc": "The visit timeline and the crops under trial.",
+             "cards": [
+                 card("event-schedule", "Event schedule", "event",
+                      EventScheduleItem.objects.filter(project=uc).count(),
+                      "Visit timeline & day offsets that drive the status colours.",
+                      link("event-schedule")),
+                 card("crops", "Crops", "grass",
+                      Crop.objects.filter(project=uc).count(),
+                      "Crops and their server name aliases.", link("crops")),
+                 card("trials", "Trials", "science",
+                      Trial.objects.filter(project=uc).count(),
+                      "Trial / experiment types.", link("trials")),
+             ]},
+            {"title": "Plots", "icon": "where_to_vote",
+             "desc": "Elect which GIS-proposed plots become collection units.",
+             "cards": [
+                 card("plot-election", "Plot election", "where_to_vote", None,
+                      "Review proposed plots and elect the trial plots.",
+                      f"{reverse('console:plot_election')}?project={uc.code}", new=False),
+             ]},
+            {"title": "Quality rules", "icon": "rule",
+             "desc": "Automatic checks, and the reasons a reviewer can decline for.",
+             "cards": [
+                 card("validation-rules", "Validation rules", "rule",
+                      ValidationRule.objects.filter(project=uc).count(),
+                      "Checks that flag submissions for review.", link("validation-rules")),
+                 card("rejection-reasons", "Rejection reasons", "block",
+                      RejectionReason.objects.filter(project=uc).count(),
+                      "Categorised reasons for declining a submission.",
+                      link("rejection-reasons")),
+             ]},
+        ]
+        counted = [c for s in sections for c in s["cards"] if c["count"] is not None]
+        return render(request, "console/setup.html", {
+            "uc": uc, "sections": sections, "projects": projects,
+            "console_key": "setup",
+            "done_count": sum(1 for c in counted if c["done"]),
+            "total_count": len(counted),
+        })

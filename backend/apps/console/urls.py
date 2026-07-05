@@ -24,6 +24,7 @@ urlpatterns = [
     path("vocabulary/", views.VocabularyBrowseView.as_view(), name="vocabulary"),
     path("collection-units/import/", views.ImportCollectionUnitsView.as_view(),
          name="import_units"),
+    path("setup/", views.SetupHubView.as_view(), name="setup"),
     path("plot-election/", views.PlotElectionQueueView.as_view(), name="plot_election"),
     path("plot-election/<slug:code>/<str:trial_key>/", views.PlotElectionView.as_view(),
          name="plot_elect"),
