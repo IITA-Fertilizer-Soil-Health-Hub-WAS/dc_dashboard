@@ -440,17 +440,16 @@
             {% endif %}
           </div>
 
-          {# Sidebar order follows each role's sequence of work:
-             Dashboard → (My work) → Set up → Field register → Review & correct
-             → Finalize → Monitor. Every tab keeps its existing visibility guard;
-             only the order and the stage labels change. #}
+          {% comment %}Sidebar order follows each role's sequence of work: Dashboard
+          -> (My work) -> Set up -> Field register -> Review & correct -> Finalize ->
+          Monitor. Every tab keeps its existing visibility guard; only the order and
+          the stage labels change.{% endcomment %}
           <a href="{% url 'dashboards:project' active_uc.code %}"
              class="{% if request.resolver_match.url_name == 'project' and active_tab == 'summary' %}active{% endif %}">
             <span class="msym">dashboard</span>Dashboard
           </a>
 
-          {# An enumerator's own work comes first — it's what they act on daily.
-             (Renders only when they have assignments / a caseload.) #}
+          {% comment %}An enumerator's own work comes first — it's what they act on daily. Renders only when they have assignments / a caseload.{% endcomment %}
           {% include "_my_work_nav.html" %}
 
           {# 1 · Set up — configure what is collected (coordinators / admins). #}
@@ -558,8 +557,7 @@
             {% endif %}
           {% endif %}
           {% if not user.is_staff %}
-            {# Staff manage every project via 'Manage projects' + the picker below,
-               so the discovery catalogue link is only for regular users. #}
+            {% comment %}Staff manage every project via 'Manage projects' + the picker below, so the discovery catalogue link is only for regular users.{% endcomment %}
             <a href="{% url 'dashboards:projects' %}" title="Browse and search all projects"
                class="{% if request.resolver_match.url_name == 'projects' or request.resolver_match.url_name == 'index' %}active{% endif %}">
               <span class="msym">grid_view</span>My projects
