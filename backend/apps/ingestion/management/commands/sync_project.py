@@ -35,7 +35,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(
                 f"{uc.code}: +{stats.created} new, ~{stats.updated} updated, "
                 f"={stats.unchanged} unchanged, {stats.enumerators} enumerators, "
-                f"{stats.households} households, {stats.skipped_test} test-skipped | "
+                f"{stats.units} units, {stats.skipped_test} test-skipped | "
                 f"flags +{vstats.opened} / resolved {vstats.resolved}, "
                 f"{vstats.flagged_submissions} submissions flagged"
             ))
