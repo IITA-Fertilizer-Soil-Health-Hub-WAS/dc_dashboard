@@ -452,8 +452,8 @@
           {% comment %}An enumerator's own work comes first — it's what they act on daily. Renders only when they have assignments / a caseload.{% endcomment %}
           {% include "_my_work_nav.html" %}
 
-          {# 1 · Set up — configure what is collected (coordinators / admins). #}
-          {% if can_manage_access and workspace_config_groups %}
+          {% comment %}1 · Set up — configure the study: forms, schedule, crops, and elect the plots to collect on (coordinators / admins).{% endcomment %}
+          {% if can_manage_access %}
             <div class="lbl">Set up</div>
             {% for group, items in workspace_config_groups %}
               {% for it in items %}
@@ -463,9 +463,13 @@
                 </a>
               {% endfor %}
             {% endfor %}
+            <a href="{% url 'console:plot_election' %}?project={{ active_uc.code }}"
+               class="{% if request.resolver_match.url_name == 'plot_election' or request.resolver_match.url_name == 'plot_elect' %}active{% endif %}">
+              <span class="msym">where_to_vote</span>Plot election
+            </a>
           {% endif %}
 
-          {# 2 · Field register — who collects and where (read-only for members). #}
+          {% comment %}2 · Field register — who collects and where (read-only for members).{% endcomment %}
           <div class="lbl">Field register</div>
           <a href="{% url 'dashboards:project' active_uc.code %}?tab=enumerators"
              class="{% if active_tab == 'enumerators' %}active{% endif %}">
@@ -475,14 +479,13 @@
              class="{% if request.resolver_match.kwargs.key == 'collection-units' %}active{% endif %}">
             <span class="msym">place</span>Collection units
           </a>
+
+          {% comment %}3 · Assign & access — hand collection work to enumerators and manage who can act on the project.{% endcomment %}
           {% if can_manage_access %}
+            <div class="lbl">Assign &amp; access</div>
             <a href="{% url 'console:list' 'jobs' %}?project={{ active_uc.code }}"
                class="{% if request.resolver_match.kwargs.key == 'jobs' or request.resolver_match.url_name == 'job_assignments' %}active{% endif %}">
               <span class="msym">assignment</span>Jobs &amp; assignments
-            </a>
-            <a href="{% url 'console:plot_election' %}?project={{ active_uc.code }}"
-               class="{% if request.resolver_match.url_name == 'plot_election' or request.resolver_match.url_name == 'plot_elect' %}active{% endif %}">
-              <span class="msym">where_to_vote</span>Plot election
             </a>
             <a href="{% url 'dashboards:team' %}"
                class="{% if request.resolver_match.url_name == 'team' %}active{% endif %}">
@@ -491,7 +494,7 @@
             </a>
           {% endif %}
 
-          {# 3 · Review & correct — check incoming data and fix problems. #}
+          {% comment %}4 · Review & correct — check incoming data and fix problems.{% endcomment %}
           <div class="lbl">Review &amp; correct</div>
           <a href="{% url 'dashboards:project' active_uc.code %}?tab=data"
              class="{% if active_tab == 'data' %}active{% endif %}">
@@ -512,7 +515,7 @@
             </a>
           {% endif %}
 
-          {# 4 · Finalize — approve the clean dataset. #}
+          {# 5 · Finalize — approve the clean dataset. #}
           <div class="lbl">Finalize</div>
           <a href="{% url 'dashboards:project' active_uc.code %}?tab=final"
              class="{% if active_tab == 'final' %}active{% endif %}">
@@ -525,7 +528,7 @@
             </a>
           {% endif %}
 
-          {# 5 · Monitor — track progress and M&E. #}
+          {# 6 · Monitor — track progress and M&E. #}
           <div class="lbl">Monitor</div>
           <a href="{% url 'kpi:project' active_uc.code %}"
              class="{% if request.resolver_match.app_name == 'kpi' %}active{% endif %}">
