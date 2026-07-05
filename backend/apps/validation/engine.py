@@ -23,6 +23,8 @@ PER_SUBMISSION = {
     ValidationRule.RuleType.REGEX_ID: rule_impls.regex_id,
     ValidationRule.RuleType.REQUIRED_FIELD: rule_impls.required_field,
     ValidationRule.RuleType.NUMERIC_RANGE: rule_impls.numeric_range,
+    ValidationRule.RuleType.CROSS_FIELD: rule_impls.cross_field,
+    ValidationRule.RuleType.CONDITIONAL_REQ: rule_impls.conditional_required,
     ValidationRule.RuleType.GEO_DISTANCE: rule_impls.geo_distance,
     ValidationRule.RuleType.GEO_CONTAINMENT: rule_impls.geo_containment,
 }
@@ -31,6 +33,7 @@ PER_USE_CASE = {
     ValidationRule.RuleType.EVENT_SEQUENCE: rule_impls.event_sequence,
     ValidationRule.RuleType.DATE_WINDOW: rule_impls.date_window,
     ValidationRule.RuleType.NUMERIC_OUTLIER: rule_impls.numeric_outlier,
+    ValidationRule.RuleType.UNIQUE_FIELD: rule_impls.unique_field,
     ValidationRule.RuleType.GEO_DUPLICATE: rule_impls.geo_duplicate,
     ValidationRule.RuleType.SUBMISSION_SPEED: rule_impls.submission_speed,
     ValidationRule.RuleType.PHOTO_REUSE: rule_impls.photo_reuse,
@@ -54,7 +57,7 @@ def _run_rule(rule: ValidationRule, submissions) -> list[rule_impls.FlagResult]:
         return results
     if rule.rule_type in PER_USE_CASE:
         return PER_USE_CASE[rule.rule_type](rule.project, rule.params)
-    return []  # PLUGIN / CROSS_FIELD handled by plugin.post_validate (Phase 8)
+    return []  # PLUGIN handled by plugin.post_validate (Phase 8)
 
 
 @transaction.atomic

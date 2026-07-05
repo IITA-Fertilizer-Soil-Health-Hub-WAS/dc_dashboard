@@ -30,6 +30,54 @@ def value_of(submission: Submission, field_key: str) -> Any:
     return v.current_value if v else None
 
 
+def _to_float(v: Any) -> float | None:
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def _aggregate(op: str, values: list[float]) -> float | None:
+    if not values:
+        return None
+    if op == "mean":
+        return sum(values) / len(values)
+    if op == "min":
+        return min(values)
+    if op == "max":
+        return max(values)
+    if op == "product":
+        p = 1.0
+        for v in values:
+            p *= v
+        return p
+    if op == "diff":  # first minus the rest
+        return values[0] - sum(values[1:])
+    return sum(values)  # default
+
+
+# Comparators take (lhs, rhs, tol) and return True when the check PASSES.
+_CMP = {
+    "eq": lambda a, b, t: abs(a - b) <= t,
+    "neq": lambda a, b, t: abs(a - b) > t,
+    "lte": lambda a, b, t: a <= b + t,
+    "gte": lambda a, b, t: a >= b - t,
+    "lt": lambda a, b, t: a < b - t,
+    "gt": lambda a, b, t: a > b + t,
+}
+
+
+def _quantile(sorted_vals: list[float], q: float) -> float:
+    """Linear-interpolated quantile (same method numpy uses by default)."""
+    if not sorted_vals:
+        return 0.0
+    idx = (len(sorted_vals) - 1) * q
+    lo = int(idx)
+    hi = min(lo + 1, len(sorted_vals) - 1)
+    frac = idx - lo
+    return sorted_vals[lo] * (1 - frac) + sorted_vals[hi] * frac
+
+
 # --- Per-submission rules ----------------------------------------------------
 
 def regex_id(submission, params) -> list[FlagResult]:
@@ -68,6 +116,111 @@ def numeric_range(submission, params) -> list[FlagResult]:
         msg = params.get("message", f"{field_key} out of range [{lo}, {hi}]")
         return [FlagResult(submission.id, msg, field_key, {"value": num, "min": lo, "max": hi})]
     return []
+
+
+def cross_field(submission, params) -> list[FlagResult]:
+    """Combine several columns and check the result against a target, a range, or
+    another combination of columns — the checks a fixed per-field range can't do.
+
+    The classic case is *parts that must add up to a whole*: three land-use
+    percentages summing to 100, fertiliser splits summing to a dose, allocations
+    summing to a total. It also does field-to-field relations (planted >= harvested,
+    a + b <= capacity).
+
+    params:
+      fields: [f1, f2, ...]              columns to combine
+      op: sum|mean|min|max|product|diff  how to combine them (default sum)
+      compare: eq|neq|lte|gte|lt|gt|between   (default eq)
+      target: <number>                   constant right-hand side (eq/lte/…)
+      min, max: <number>                 bounds when compare = between
+      rhs_fields: [...], rhs_op           compare to op(rhs_fields) instead of target
+      tol: <number>                      tolerance for eq / boundaries (default 0)
+      message: <str>
+    A partly-filled set (some parts entered, some blank/non-numeric) is flagged so
+    the arithmetic can't silently pass; an all-blank set is skipped.
+    """
+    fields = params.get("fields", [])
+    if not fields:
+        return []
+    raw = {f: value_of(submission, f) for f in fields}
+    if all(v in (None, "") for v in raw.values()):
+        return []  # nothing entered — nothing to cross-check
+    nums, missing = [], []
+    for f in fields:
+        n = _to_float(raw[f])
+        (nums if n is not None else missing).append(n if n is not None else f)
+    if missing:
+        msg = params.get("message") or (
+            f"Incomplete for cross-check — {', '.join(missing)} missing or non-numeric"
+        )
+        return [FlagResult(submission.id, msg, missing[0], {"missing": missing})]
+
+    op = params.get("op", "sum")
+    lhs = _aggregate(op, nums)
+    tol = float(params.get("tol", 0) or 0)
+    compare = params.get("compare", "eq")
+    label = f"{op}({', '.join(fields)})"
+
+    if compare == "between":
+        lo, hi = params.get("min"), params.get("max")
+        if (lo is None or lhs >= lo - tol) and (hi is None or lhs <= hi + tol):
+            return []
+        msg = params.get("message") or f"{label} = {lhs:g} not in [{lo}, {hi}]"
+        return [FlagResult(submission.id, msg, fields[0],
+                           {"value": lhs, "min": lo, "max": hi})]
+
+    rhs_fields = params.get("rhs_fields")
+    if rhs_fields:
+        rnums = [_to_float(value_of(submission, f)) for f in rhs_fields]
+        if any(x is None for x in rnums):
+            return []
+        rhs = _aggregate(params.get("rhs_op", "sum"), rnums)
+        rhs_label = f"{params.get('rhs_op', 'sum')}({', '.join(rhs_fields)})"
+    else:
+        if params.get("target") is None:
+            return []
+        rhs = float(params["target"])
+        rhs_label = f"{rhs:g}"
+
+    if _CMP.get(compare, _CMP["eq"])(lhs, rhs, tol):
+        return []
+    msg = params.get("message") or f"{label} = {lhs:g} should be {compare} {rhs_label}"
+    return [FlagResult(submission.id, msg, fields[0],
+                       {"value": lhs, "expected": rhs, "compare": compare, "tol": tol})]
+
+
+def conditional_required(submission, params) -> list[FlagResult]:
+    """Skip-logic integrity: when a trigger condition holds, some fields must be
+    filled. E.g. if `fertiliser_used` = yes, then `fertiliser_type` is required;
+    if `damage` is not blank, then `damage_cause` is required. Catches the gaps a
+    plain REQUIRED_FIELD (which always fires) would over-flag.
+
+    params:
+      when: {field, equals: <v>}  or  {field, in: [..]}  or  {field, not_blank: true}
+      require: [fields]
+      message
+    """
+    cond = params.get("when", {})
+    cfield = cond.get("field")
+    if not cfield:
+        return []
+    cval = value_of(submission, cfield)
+    if "equals" in cond:
+        triggered = str(cval) == str(cond["equals"])
+    elif "in" in cond:
+        triggered = str(cval) in [str(x) for x in cond["in"]]
+    elif cond.get("not_blank"):
+        triggered = cval not in (None, "")
+    else:
+        triggered = False
+    if not triggered:
+        return []
+    out: list[FlagResult] = []
+    for f in params.get("require", []):
+        if value_of(submission, f) in (None, ""):
+            msg = params.get("message") or f"{f} required when {cfield} = {cval}"
+            out.append(FlagResult(submission.id, msg, f, {"when": cfield, "when_value": cval}))
+    return out
 
 
 def geo_distance(submission, params) -> list[FlagResult]:
@@ -111,46 +264,115 @@ def geo_containment(submission, params) -> list[FlagResult]:
 # --- Per-project rules (need the whole distribution / cross-submission view) --
 
 def numeric_outlier(project, params) -> list[FlagResult]:
-    """Flag numeric values that are statistical outliers for their field across the
-    whole project — a value that may sit *inside* the allowed range yet lies far from
-    the norm (a unit slip or data-entry error a fixed range waves through). The
-    field's mean/σ is learned from the collected data, so there is no threshold to
-    hand-set; complements (does not replace) NUMERIC_RANGE / form constraints.
+    """Flag numeric values that are statistical outliers for their field — values
+    that may sit *inside* the allowed range yet lie far from the norm (a unit slip
+    or data-entry error a fixed range waves through). The distribution is learned
+    from the collected data, so there's no threshold to hand-set.
 
-    params: {field, z?: 3.0, min_n?: 20}. No flag until at least min_n numeric values
-    exist (too few to trust the distribution) or when every value is identical."""
+    params:
+      field: <key>
+      method: zscore | iqr      (default zscore)
+      z: 3.0                     zscore: flag |value - mean| / σ ≥ z
+      k: 1.5                     iqr: flag outside [Q1 - k·IQR, Q3 + k·IQR]
+      group_by: <key>            compare within groups (e.g. per crop), so a big
+                                 crop doesn't make a small crop's values look normal
+      min_n: 20                  minimum values (per group) before trusting the shape
+      message
+
+    IQR is robust to skew and heavy tails; z-score assumes a roughly normal field."""
     import statistics
 
     field_key = params["field"]
-    z_thresh = float(params.get("z", 3.0))
+    method = params.get("method", "zscore")
     min_n = int(params.get("min_n", 20))
+    group_by = params.get("group_by")
 
-    pairs: list[tuple] = []
+    values_by_sid: dict = {}
     for sid, raw in SubmissionValue.objects.filter(
         submission__project=project, field_key=field_key
     ).values_list("submission_id", "current_value"):
-        try:
-            pairs.append((sid, float(raw)))
-        except (TypeError, ValueError):
-            continue
-    if len(pairs) < min_n:
-        return []
-    values = [v for _, v in pairs]
-    mean = statistics.fmean(values)
-    stdev = statistics.pstdev(values)
-    if stdev == 0:
-        return []
+        n = _to_float(raw)
+        if n is not None:
+            values_by_sid[sid] = n
+    group_of: dict = {}
+    if group_by:
+        for sid, gval in SubmissionValue.objects.filter(
+            submission__project=project, field_key=group_by
+        ).values_list("submission_id", "current_value"):
+            group_of[sid] = str(gval)
+
+    buckets: dict = {}
+    for sid, n in values_by_sid.items():
+        g = group_of.get(sid, "") if group_by else ""
+        buckets.setdefault(g, []).append((sid, n))
+
     out: list[FlagResult] = []
-    for sid, val in pairs:
-        z = (val - mean) / stdev
-        if abs(z) >= z_thresh:
-            msg = params.get(
-                "message", f"{field_key} = {val:g} is a statistical outlier (z={z:+.1f})"
-            )
-            out.append(FlagResult(sid, msg, field_key, {
-                "value": val, "z": round(z, 2),
-                "mean": round(mean, 2), "stdev": round(stdev, 2),
-            }))
+    for g, pairs in buckets.items():
+        if len(pairs) < min_n:
+            continue
+        values = [v for _, v in pairs]
+        gtxt = f", {g}" if group_by and g else ""
+        if method == "iqr":
+            k = float(params.get("k", 1.5))
+            sv = sorted(values)
+            q1, q3 = _quantile(sv, 0.25), _quantile(sv, 0.75)
+            iqr = q3 - q1
+            if iqr == 0:
+                continue
+            lo, hi = q1 - k * iqr, q3 + k * iqr
+            for sid, val in pairs:
+                if val < lo or val > hi:
+                    msg = params.get(
+                        "message", f"{field_key} = {val:g} is an outlier (IQR{gtxt})")
+                    d = {"value": val, "low": round(lo, 2), "high": round(hi, 2),
+                         "method": "iqr"}
+                    if group_by:
+                        d["group"] = g
+                    out.append(FlagResult(sid, msg, field_key, d))
+        else:
+            z_thresh = float(params.get("z", 3.0))
+            mean, stdev = statistics.fmean(values), statistics.pstdev(values)
+            if stdev == 0:
+                continue
+            for sid, val in pairs:
+                z = (val - mean) / stdev
+                if abs(z) >= z_thresh:
+                    msg = params.get(
+                        "message",
+                        f"{field_key} = {val:g} is a statistical outlier (z={z:+.1f}{gtxt})")
+                    d = {"value": val, "z": round(z, 2), "mean": round(mean, 2),
+                         "stdev": round(stdev, 2), "method": "zscore"}
+                    if group_by:
+                        d["group"] = g
+                    out.append(FlagResult(sid, msg, field_key, d))
+    return out
+
+
+def unique_field(project, params) -> list[FlagResult]:
+    """Flag submissions that share a value in a field meant to be unique — a
+    duplicate barcode, plot code or household ID that usually means a double-entry
+    or a mislabelled record. Every submission carrying a duplicated value is
+    flagged so a reviewer can resolve the collision.
+
+    params: {field, ignore_blank?: true, message?}."""
+    field_key = params.get("field")
+    if not field_key:
+        return []
+    ignore_blank = params.get("ignore_blank", True)
+    by_val: dict = {}
+    for sid, val in SubmissionValue.objects.filter(
+        submission__project=project, field_key=field_key
+    ).values_list("submission_id", "current_value"):
+        if ignore_blank and val in (None, ""):
+            continue
+        by_val.setdefault(str(val), []).append(sid)
+    out: list[FlagResult] = []
+    for val, sids in by_val.items():
+        if len(sids) < 2:
+            continue
+        msg = params.get("message", f"Duplicate {field_key} = {val} ({len(sids)} submissions)")
+        for sid in sids:
+            out.append(FlagResult(sid, msg, field_key, {"value": val, "count": len(sids)}))
     return out
 
 
