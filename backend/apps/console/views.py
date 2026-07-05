@@ -873,6 +873,13 @@ class WizardView(StaffMixin, View):
                 problems = ["Choose an owner for this project."] + problems
             if not problems:
                 uc = import_config(data)
+                # Import each form's name + full field list now, so the rule
+                # builder (and anything field-aware) has them from the start.
+                try:
+                    from apps.ingestion.form_schema import sync_project_schemas
+                    sync_project_schemas(uc)
+                except Exception:
+                    pass
                 messages.success(
                     request,
                     f"Project “{uc.code}” onboarded — {uc.forms.count()} form(s). "

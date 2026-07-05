@@ -325,6 +325,7 @@
 
   typeSel.onchange = ()=>{ ['fields','field','min','max','target','tol','op','compare','rhs_mode','rhs_fields','rhs_op','method','z','k','group_by','min_n','patterns','max_m','precision','max','window_min','require','when_field','when_op','when_value'].forEach(k=>delete state[k]); render(); };
   formSel.onchange = render;
+  formSel.addEventListener('change', render);  // robust to enhanced selects
   $('rb-form').closest('form').addEventListener('submit', ()=>{ hidden.value = JSON.stringify(finalize()); });
 
   $('rb-test').onclick = ()=>{

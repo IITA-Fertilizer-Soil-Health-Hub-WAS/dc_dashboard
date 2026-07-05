@@ -24,7 +24,18 @@ def sync_project_task(code: str) -> dict:
     stats = sync_project(uc)
     run_for_project(uc)  # validate immediately after ingest
     hash_media_task.delay(code)  # hash new media off the ingest path
+    _refresh_schemas(uc)  # keep form names + field lists current for the builder
     return stats.as_dict()
+
+
+def _refresh_schemas(project) -> None:
+    """Best-effort refresh of each form's name + field schema, so the validation
+    rule builder always has the full field list without a manual import."""
+    try:
+        from apps.ingestion.form_schema import sync_project_schemas
+        sync_project_schemas(project)
+    except Exception:
+        pass
 
 
 @shared_task(name="ingestion.hash_media")
