@@ -51,12 +51,15 @@ class ValidationStats:
 def _run_rule(rule: ValidationRule, submissions) -> list[rule_impls.FlagResult]:
     if rule.rule_type in PER_SUBMISSION:
         fn = PER_SUBMISSION[rule.rule_type]
+        # A form-scoped rule only evaluates that form's submissions.
+        subs = ([s for s in submissions if s.form_id == rule.form_id]
+                if rule.form_id else submissions)
         results: list[rule_impls.FlagResult] = []
-        for sub in submissions:
+        for sub in subs:
             results.extend(fn(sub, rule.params))
         return results
     if rule.rule_type in PER_USE_CASE:
-        return PER_USE_CASE[rule.rule_type](rule.project, rule.params)
+        return PER_USE_CASE[rule.rule_type](rule.project, rule.params, form=rule.form)
     return []  # PLUGIN handled by plugin.post_validate (Phase 8)
 
 

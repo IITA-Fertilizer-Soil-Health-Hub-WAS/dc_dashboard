@@ -1317,6 +1317,129 @@ class PlotElectionView(ManageMixin, View):
 
 
 # ---------------------------------------------------------------------------
+# Guided validation-rule builder — replaces raw JSON `params` with a form-scoped
+# form: pick a form, pick its fields from dropdowns, set the check with plain
+# controls. The client assembles `params`; the server validates and stores it.
+# ---------------------------------------------------------------------------
+
+def _form_field_choices(form) -> list[str]:
+    """The field keys a rule can target on a form: its mapped canonical fields
+    plus any field key already seen in that form's submitted data."""
+    from apps.projects.models import FieldMapping
+    from apps.submissions.models import SubmissionValue
+
+    fields = set(
+        FieldMapping.objects.filter(form=form).values_list("target_field", flat=True)
+    )
+    fields |= set(
+        SubmissionValue.objects.filter(submission__form=form)
+        .values_list("field_key", flat=True).distinct()
+    )
+    return sorted(f for f in fields if f)
+
+
+class RuleBuilderView(ManageMixin, View):
+    """Create / edit a ValidationRule with a guided UI instead of JSON params."""
+
+    def _rule(self, request, pk):
+        from apps.validation.models import ValidationRule
+        return get_object_or_404(
+            ValidationRule.objects.filter(project__in=_builder_projects(request)), pk=pk
+        )
+
+    def _project(self, request):
+        code = (request.GET.get("project") or request.POST.get("project")
+                or request.session.get("active_project"))
+        return _builder_projects(request).filter(code=code).first()
+
+    def _ctx(self, request, project, rule=None, error=None, posted=None):
+        from apps.validation.models import ValidationRule
+
+        forms = list(project.forms.all().order_by("title", "server_form_id"))
+        fields_by_form = {str(f.id): _form_field_choices(f) for f in forms}
+        # Rule types offered in the builder (PLUGIN is code-only, so it's excluded).
+        types = [(v, lbl) for v, lbl in ValidationRule.RuleType.choices if v != "PLUGIN"]
+        return {
+            "console_key": "validation-rules", "groups": grouped(),
+            "project": project, "rule": rule, "forms": forms,
+            "fields_by_form": fields_by_form,
+            "rule_types": types,
+            "severities": ValidationRule.Severity.choices,
+            "rule_params": rule.params if rule else {},
+            "error": error, "posted": posted or {},
+        }
+
+    def get(self, request, pk=None):
+        rule = self._rule(request, pk) if pk else None
+        project = rule.project if rule else self._project(request)
+        if project is None:
+            messages.error(request, "Pick a project first.")
+            return redirect("console:list", key="validation-rules")
+        return render(request, "console/rule_builder.html", self._ctx(request, project, rule))
+
+    def post(self, request, pk=None):
+        import json
+
+        from django.urls import reverse
+        from django.utils.text import slugify
+
+        from apps.projects.models import FormDefinition
+        from apps.validation.models import ValidationRule
+
+        rule = self._rule(request, pk) if pk else None
+        project = rule.project if rule else self._project(request)
+        if project is None:
+            messages.error(request, "Pick a project first.")
+            return redirect("console:list", key="validation-rules")
+
+        code = slugify(request.POST.get("code", "").strip())[:64]
+        rule_type = request.POST.get("rule_type", "")
+        severity = request.POST.get("severity") or ValidationRule.Severity.WARNING
+        form_id = request.POST.get("form") or None
+        enabled = request.POST.get("is_enabled") == "on"
+        try:
+            params = json.loads(request.POST.get("params") or "{}")
+            if not isinstance(params, dict):
+                raise ValueError
+        except (ValueError, json.JSONDecodeError):
+            params = {}
+
+        valid_types = {v for v, _ in ValidationRule.RuleType.choices}
+        error = None
+        if not code:
+            error = "Give the rule a short name."
+        elif rule_type not in valid_types:
+            error = "Choose a rule type."
+        form_obj = None
+        if form_id:
+            form_obj = FormDefinition.objects.filter(project=project, pk=form_id).first()
+            if form_obj is None:
+                error = "That form isn't part of this project."
+        # A duplicate code within the project (excluding self) collides on save.
+        dup = ValidationRule.objects.filter(project=project, code=code)
+        if rule:
+            dup = dup.exclude(pk=rule.pk)
+        if not error and dup.exists():
+            error = f"A rule named “{code}” already exists in this project."
+
+        if error:
+            ctx = self._ctx(request, project, rule, error=error, posted=request.POST)
+            return render(request, "console/rule_builder.html", ctx)
+
+        obj = rule or ValidationRule(project=project)
+        obj.code = code
+        obj.rule_type = rule_type
+        obj.severity = severity
+        obj.form = form_obj
+        obj.params = params
+        obj.is_enabled = enabled
+        obj.auto_flag_state = True
+        obj.save()
+        messages.success(request, f"Rule “{code}” saved.")
+        return redirect(f"{reverse('console:list', args=['validation-rules'])}?project={project.code}")
+
+
+# ---------------------------------------------------------------------------
 # One-page Set up hubs — a project's whole config surface (and the admin's
 # tenancy structure) on a single screen, with inline quick-add on the simple
 # sections so a coordinator can e.g. add a crop without leaving the page.
@@ -1416,11 +1539,17 @@ def build_setup_card(request, key, uc, *, count=None, url=None, new=True,
         url = f"{reverse('console:list', args=[key])}{scope}"
     quick = (_setup_quick_fields(key, quick_data, quick_errors)
              if key in SETUP_QUICK and can_edit else [])
+    # Validation rules use the guided builder, not the generic create form.
+    if key == "validation-rules" and new and can_edit:
+        new_url = f"{reverse('console:rule_new', args=[])}{scope}"
+    elif new and not external and can_edit and in_registry:
+        new_url = f"{reverse('console:create', args=[key])}{scope}"
+    else:
+        new_url = None
     return {
         "key": key, "label": label, "icon": icon, "desc": desc,
         "count": count, "done": bool(count), "url": url,
-        "new_url": (f"{reverse('console:create', args=[key])}{scope}"
-                    if new and not external and can_edit and in_registry else None),
+        "new_url": new_url,
         "add_url": (f"{reverse('console:setup_add', args=[key])}{scope}" if quick else None),
         "quick": quick, "items": _setup_recent(key, uc) if quick else [],
     }

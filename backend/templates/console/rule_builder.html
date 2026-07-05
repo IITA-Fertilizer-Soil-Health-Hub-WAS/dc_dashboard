@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+{% block title %}{% if rule %}Edit rule{% else %}New rule{% endif %} · {{ project.code }} · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}
+  <span class="sep">/</span><span class="cur">Manage</span>
+  <span class="sep">/</span><a href="{% url 'console:list' 'validation-rules' %}?project={{ project.code }}">Validation rules</a>
+  <span class="sep">/</span><span class="cur">{% if rule %}{{ rule.code }}{% else %}New{% endif %}</span>
+{% endblock %}
+{% block extrahead %}{{ block.super }}
+<style>
+  .rb{max-width:840px;}
+  .rb .card{padding:1.2rem 1.35rem;margin-bottom:1rem;}
+  .rb h3{margin:0 0 .2rem;font-size:1rem;}
+  .rb .sub{color:var(--muted);font-size:.83rem;margin:0 0 1rem;}
+  .rb .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:.9rem 1.1rem;}
+  .rb .fld{display:flex;flex-direction:column;gap:.3rem;min-width:0;}
+  .rb label{font-size:.76rem;font-weight:650;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;}
+  .rb input[type=text],.rb input[type=number],.rb select,.rb textarea{
+    width:100%;padding:.5rem .6rem;border:1px solid var(--line);border-radius:9px;
+    font-family:var(--sans);font-size:.9rem;background:var(--surface);}
+  .rb textarea{font-family:var(--mono);font-size:.82rem;min-height:64px;}
+  .rb input:focus,.rb select:focus,.rb textarea:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-50);}
+  .rb .hint{font-size:.75rem;color:var(--faint);}
+  .rb .typehelp{background:var(--brand-50);border-radius:9px;padding:.6rem .75rem;font-size:.84rem;color:var(--brand-900);margin-bottom:1rem;}
+  .rb .chips{display:flex;flex-wrap:wrap;gap:.4rem;}
+  .rb .chip{display:inline-flex;align-items:center;gap:.35rem;border:1px solid var(--line);border-radius:8px;
+    padding:.32rem .55rem;font-size:.85rem;cursor:pointer;background:var(--surface);user-select:none;}
+  .rb .chip input{margin:0;}
+  .rb .chip.on{border-color:var(--brand);background:var(--brand-50);color:var(--brand-900);font-weight:600;}
+  .rb .nofields{font-size:.83rem;color:var(--gold-ink,#8a6d1a);background:#faf3e0;border:1px solid #ecd9a6;
+    border-radius:8px;padding:.5rem .65rem;}
+  .rb .summary{background:var(--surface-2);border:1px dashed var(--line);border-radius:9px;padding:.7rem .85rem;
+    font-size:.88rem;color:var(--ink);line-height:1.5;}
+  .rb .summary b{color:var(--brand);}
+  .rb .err{background:#fdecea;border:1px solid #f5c2bc;color:#a03024;border-radius:9px;padding:.6rem .8rem;
+    font-size:.86rem;margin-bottom:1rem;}
+  .rb .actions{display:flex;gap:.7rem;align-items:center;margin-top:.4rem;}
+  .rb .btn-save{background:var(--brand);color:#fff;border:none;border-radius:9px;padding:.6rem 1.2rem;
+    font-weight:650;font-size:.9rem;cursor:pointer;}
+  .rb .btn-cancel{color:var(--muted);text-decoration:none;font-size:.88rem;}
+  .rb .toggle{display:flex;align-items:center;gap:.5rem;}
+  .rb .toggle input{width:auto;}
+</style>
+{% endblock %}
+{% block content %}
+  <div class="page-head"><h2>{% if rule %}Edit rule{% else %}New rule{% endif %}
+    <span class="subtle" style="font-weight:400;">· {{ project.name }}</span></h2></div>
+
+  {% if error %}<div class="err rb" style="max-width:840px;">{{ error }}</div>{% endif %}
+
+  {{ fields_by_form|json_script:"fields-by-form" }}
+  {{ rule_params|json_script:"rule-params" }}
+
+  <form method="post" class="rb" id="rb-form"
+        action="{% if rule %}{% url 'console:rule_edit' rule.pk %}{% else %}{% url 'console:rule_new' %}{% endif %}?project={{ project.code }}">
+    {% csrf_token %}
+
+    <div class="card">
+      <h3>Basics</h3>
+      <p class="sub">Name the check and choose which form and rule type it applies to.</p>
+      <div class="grid">
+        <div class="fld">
+          <label for="rb-code">Rule name</label>
+          <input type="text" id="rb-code" name="code" required placeholder="e.g. shares-sum-100"
+                 value="{% if posted.code %}{{ posted.code }}{% elif rule %}{{ rule.code }}{% endif %}">
+          <span class="hint">A short label; shown on the Issues tab.</span>
+        </div>
+        <div class="fld">
+          <label for="rb-form">Applies to form</label>
+          <select id="rb-form" name="form">
+            <option value="">Whole project (schedule / integrity)</option>
+            {% for f in forms %}
+              <option value="{{ f.id }}" {% if rule.form_id == f.id or posted.form == f.id|stringformat:'s' %}selected{% endif %}>{{ f.title|default:f.server_ref|default:f.server_form_id }}</option>
+            {% endfor %}
+          </select>
+          <span class="hint">Field checks read this form's fields.</span>
+        </div>
+        <div class="fld">
+          <label for="rb-type">Rule type</label>
+          <select id="rb-type" name="rule_type">
+            {% for v, lbl in rule_types %}
+              <option value="{{ v }}" {% if rule.rule_type == v or posted.rule_type == v %}selected{% endif %}>{{ lbl }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="fld">
+          <label for="rb-sev">Severity</label>
+          <select id="rb-sev" name="severity">
+            {% for v, lbl in severities %}
+              <option value="{{ v }}" {% if rule.severity == v or posted.severity == v %}selected{% endif %}>{{ lbl }}{% if v == 'ERROR' %} — flags for review{% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Settings</h3>
+      <p class="sub">Fill in what this rule should check. Fields come from the chosen form.</p>
+      <div id="rb-help" class="typehelp"></div>
+      <div id="rb-settings" class="grid"></div>
+      <div class="fld" style="margin-top:1rem;">
+        <label for="rb-msg">Custom message <span style="text-transform:none;font-weight:400;">(optional)</span></label>
+        <input type="text" id="rb-msg" name="_msg" placeholder="Leave blank to use an automatic message">
+      </div>
+    </div>
+
+    <div class="card">
+      <label class="toggle" style="text-transform:none;font-size:.9rem;color:var(--ink);">
+        <input type="checkbox" name="is_enabled" {% if rule.is_enabled or not rule %}checked{% endif %}> Rule is enabled
+      </label>
+      <div class="summary" id="rb-summary" style="margin-top:.9rem;"></div>
+    </div>
+
+    <input type="hidden" name="params" id="rb-params">
+    <div class="actions">
+      <button type="submit" class="btn-save">{% if rule %}Save changes{% else %}Create rule{% endif %}</button>
+      <a class="btn-cancel" href="{% url 'console:list' 'validation-rules' %}?project={{ project.code }}">Cancel</a>
+    </div>
+  </form>
+
+<script>
+(function(){
+  const FBF = JSON.parse(document.getElementById('fields-by-form').textContent || '{}');
+  const SEED = JSON.parse(document.getElementById('rule-params').textContent || '{}');
+  const $ = id => document.getElementById(id);
+  const typeSel = $('rb-type'), formSel = $('rb-form'), box = $('rb-settings'),
+        help = $('rb-help'), msg = $('rb-msg'), summary = $('rb-summary'), hidden = $('rb-params');
+
+  const NUM = new Set(['min','max','target','tol','z','k','min_n','max_m','precision','window_min']);
+  const CH = { // choice option lists
+    op: [['sum','Sum'],['mean','Average'],['min','Minimum'],['max','Maximum'],['product','Product'],['diff','First − rest']],
+    compare: [['eq','equal to'],['between','between'],['lte','≤'],['gte','≥'],['lt','<'],['gt','>'],['neq','≠']],
+    rhs_mode: [['value','a fixed value'],['columns','other columns']],
+    method: [['zscore','Z-score (normal-ish data)'],['iqr','IQR (skewed data)']],
+    when_op: [['equals','equals'],['in','is one of'],['not_blank','is filled in']],
+  };
+  // Each rule type: help text + the controls to show.
+  const SPECS = {
+    REQUIRED_FIELD: {help:"Flag a submission when any of these fields is left blank.",
+      c:[['fields','fields','Fields that must be filled']]},
+    NUMERIC_RANGE: {help:"Flag a value outside the min/max you set (or non-numeric).",
+      c:[['field','field','Field'],['min','num','Minimum'],['max','num','Maximum']]},
+    CROSS_FIELD: {help:"Combine several columns and check the result — e.g. shares that must add up to 100.",
+      c:[['fields','fields','Columns to combine'],['op','choice','Combine by'],['compare','choice','Result must be'],
+         ['rhs_mode','choice','Compared to'],['target','num','Target value'],
+         ['min','num','Minimum'],['max','num','Maximum'],
+         ['rhs_fields','fields','Other columns'],['rhs_op','choice','Those combined by'],
+         ['tol','num','Tolerance (±)']]},
+    NUMERIC_OUTLIER: {help:"Flag values far from the norm — learned from the data, no threshold to set.",
+      c:[['field','field','Field'],['method','choice','Method'],['z','num','Z threshold'],
+         ['k','num','IQR multiplier (k)'],['group_by','field','Compare within groups of (optional)'],
+         ['min_n','num','Min values before checking']]},
+    UNIQUE_FIELD: {help:"Flag submissions that share a value in a field meant to be unique (duplicate barcode / ID).",
+      c:[['field','field','Field that must be unique']]},
+    CONDITIONAL_REQ: {help:"Require fields only when a trigger condition holds (skip-logic integrity).",
+      c:[['when_field','field','When this field…'],['when_op','choice','…'],['when_value','text','this value'],
+         ['require','fields','then these are required']]},
+    REGEX_ID: {help:"Flag an ID that matches none of the allowed patterns.",
+      c:[['field','field','ID field'],['patterns','lines','Allowed patterns (one per line)']]},
+    GEO_DISTANCE: {help:"Flag a submission collected too far from its assigned plot.",
+      c:[['max_m','num','Max distance (metres)']]},
+    GEO_CONTAINMENT: {help:"Flag a submission whose GPS falls outside the elected plot boundary. No extra settings.", c:[]},
+    EVENT_SEQUENCE: {help:"Flag a household where a later event was submitted while an earlier one is missing. Project-wide — no fields to pick.", c:[]},
+    DATE_WINDOW: {help:"Flag expected events whose target date has passed. Uses the project's event schedule. Project-wide — no fields to pick.", c:[]},
+    GEO_DUPLICATE: {help:"Flag different households sharing one GPS point (possible curbstoning).",
+      c:[['precision','num','GPS decimals to match on (4 ≈ 11 m)']]},
+    SUBMISSION_SPEED: {help:"Flag an enumerator filing an implausible burst of submissions.",
+      c:[['max','num','Max submissions'],['window_min','num','within minutes']]},
+    PHOTO_REUSE: {help:"Flag the same photo reused across different households. No extra settings.", c:[]},
+  };
+  const showIf = {
+    target: v => v.compare!=='between' && (v.rhs_mode||'value')==='value',
+    min:    v => v.compare==='between',
+    max:    v => v.compare==='between',
+    rhs_fields: v => v.compare!=='between' && v.rhs_mode==='columns',
+    rhs_op:     v => v.compare!=='between' && v.rhs_mode==='columns',
+    z: v => (v.method||'zscore')==='zscore',
+    k: v => v.method==='iqr',
+    when_value: v => v.when_op!=='not_blank',
+  };
+  const state = {}; // control key -> value
+
+  function fields(){ return FBF[formSel.value] || []; }
+
+  function ctrl(key, kind, label){
+    const wrap = document.createElement('div'); wrap.className='fld';
+    const l = document.createElement('label'); l.textContent = label; wrap.appendChild(l);
+    if(kind==='num' || kind==='text'){
+      const i=document.createElement('input'); i.type = kind==='num'?'number':'text'; i.step='any';
+      i.value = state[key]!=null?state[key]:''; i.oninput=()=>{state[key]=i.value; live();};
+      wrap.appendChild(i);
+    } else if(kind==='choice'){
+      const s=document.createElement('select');
+      for(const [v,t] of CH[key]){const o=document.createElement('option');o.value=v;o.textContent=t;s.appendChild(o);}
+      s.value = state[key]!=null?state[key]:CH[key][0][0]; state[key]=s.value;
+      s.onchange=()=>{state[key]=s.value; render();}; wrap.appendChild(s);
+    } else if(kind==='field'){
+      const s=document.createElement('select');
+      const blank=document.createElement('option'); blank.value=''; blank.textContent='—'; s.appendChild(blank);
+      for(const f of fields()){const o=document.createElement('option');o.value=f;o.textContent=f;s.appendChild(o);}
+      if(!fields().includes(state[key])) state[key]='';
+      s.value=state[key]||''; s.onchange=()=>{state[key]=s.value; live();};
+      if(!fields().length){ wrap.appendChild(note()); return wrap; }
+      wrap.appendChild(s);
+    } else if(kind==='fields'){
+      wrap.style.gridColumn='1 / -1';
+      if(!fields().length){ wrap.appendChild(note()); return wrap; }
+      const cur = new Set(Array.isArray(state[key])?state[key]:[]);
+      const chips=document.createElement('div'); chips.className='chips';
+      fields().forEach(f=>{
+        const lab=document.createElement('label'); lab.className='chip'+(cur.has(f)?' on':'');
+        const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=cur.has(f);
+        cb.onchange=()=>{ cb.checked?cur.add(f):cur.delete(f); state[key]=[...cur];
+          lab.classList.toggle('on',cb.checked); live(); };
+        lab.appendChild(cb); lab.appendChild(document.createTextNode(f)); chips.appendChild(lab);
+      });
+      state[key]=[...cur]; wrap.appendChild(chips);
+    } else if(kind==='lines'){
+      wrap.style.gridColumn='1 / -1';
+      const t=document.createElement('textarea');
+      t.value = Array.isArray(state[key])?state[key].join('\n'):(state[key]||'');
+      t.oninput=()=>{state[key]=t.value.split('\n').map(s=>s.trim()).filter(Boolean); live();};
+      wrap.appendChild(t);
+    }
+    return wrap;
+  }
+  function note(){ const d=document.createElement('div'); d.className='nofields';
+    d.textContent='No fields found for this form yet — map its fields (Field mappings) or sync some data first.'; return d; }
+
+  function render(){
+    const spec = SPECS[typeSel.value] || {help:'',c:[]};
+    help.textContent = spec.help;
+    box.innerHTML='';
+    for(const [key,kind,label] of spec.c){
+      if(showIf[key] && !showIf[key](state)) continue;
+      box.appendChild(ctrl(key,kind,label));
+    }
+    live();
+  }
+
+  function finalize(){
+    const t = typeSel.value, v = state, p = {};
+    const num = k => v[k]===''||v[k]==null ? null : Number(v[k]);
+    const put = (k,val)=>{ if(val!==null && val!==undefined && val!=='' && !(Array.isArray(val)&&!val.length)) p[k]=val; };
+    if(t==='REQUIRED_FIELD'){ put('fields', v.fields); }
+    else if(t==='NUMERIC_RANGE'){ put('field',v.field); put('min',num('min')); put('max',num('max')); }
+    else if(t==='REGEX_ID'){ put('field',v.field); put('patterns',v.patterns); }
+    else if(t==='UNIQUE_FIELD'){ put('field',v.field); }
+    else if(t==='CROSS_FIELD'){ put('fields',v.fields); put('op',v.op||'sum'); put('compare',v.compare||'eq'); put('tol',num('tol'));
+      if((v.compare)==='between'){ put('min',num('min')); put('max',num('max')); }
+      else if(v.rhs_mode==='columns'){ put('rhs_fields',v.rhs_fields); put('rhs_op',v.rhs_op||'sum'); }
+      else { put('target',num('target')); } }
+    else if(t==='NUMERIC_OUTLIER'){ put('field',v.field); put('method',v.method||'zscore'); put('min_n',num('min_n'));
+      if((v.method||'zscore')==='iqr') put('k',num('k')); else put('z',num('z'));
+      put('group_by',v.group_by); }
+    else if(t==='CONDITIONAL_REQ'){ const when={field:v.when_field};
+      if(v.when_op==='not_blank') when.not_blank=true;
+      else if(v.when_op==='in') when.in=(v.when_value||'').split(',').map(s=>s.trim()).filter(Boolean);
+      else when.equals=v.when_value;
+      if(v.when_field) p.when=when; put('require',v.require); }
+    else if(t==='GEO_DISTANCE'){ put('max_m',num('max_m')); }
+    else if(t==='GEO_DUPLICATE'){ put('precision',num('precision')); }
+    else if(t==='SUBMISSION_SPEED'){ put('max',num('max')); put('window_min',num('window_min')); }
+    if(msg.value.trim()) p.message = msg.value.trim();
+    return p;
+  }
+
+  function humanFields(a){ return Array.isArray(a)&&a.length ? a.join(' + ') : '(no fields)'; }
+  function live(){
+    const p = finalize(); hidden.value = JSON.stringify(p);
+    const t = typeSel.value; let s='';
+    const cmp = {eq:'equal',between:'between',lte:'≤',gte:'≥',lt:'<',gt:'>',neq:'≠'};
+    if(t==='CROSS_FIELD'){ const rhs = p.compare==='between'?`${p.min??'?'} and ${p.max??'?'}`:(p.rhs_fields?humanFields(p.rhs_fields):(p.target??'?'));
+      s=`<b>${p.op||'sum'}</b> of <b>${humanFields(p.fields)}</b> must be <b>${cmp[p.compare]||p.compare}</b> ${rhs}${p.tol?` (±${p.tol})`:''}.`; }
+    else if(t==='REQUIRED_FIELD'){ s=`<b>${humanFields(p.fields)}</b> must not be blank.`; }
+    else if(t==='NUMERIC_RANGE'){ s=`<b>${p.field||'?'}</b> must be between <b>${p.min??'−∞'}</b> and <b>${p.max??'∞'}</b>.`; }
+    else if(t==='NUMERIC_OUTLIER'){ s=`Flag <b>${p.field||'?'}</b> values that are outliers (${p.method||'zscore'}${p.group_by?`, within each ${p.group_by}`:''}).`; }
+    else if(t==='UNIQUE_FIELD'){ s=`<b>${p.field||'?'}</b> must be unique across submissions.`; }
+    else if(t==='CONDITIONAL_REQ'){ const w=p.when||{}; const cond = w.not_blank?'is filled in':(w.in?`is one of ${w.in.join(', ')}`:`= ${w.equals??'?'}`);
+      s=`When <b>${w.field||'?'}</b> ${cond}, then <b>${humanFields(p.require)}</b> required.`; }
+    else { s = (SPECS[t]||{}).help || ''; }
+    summary.innerHTML = s;
+  }
+
+  // Seed from an existing rule's params on edit.
+  function seed(){
+    Object.keys(state).forEach(k=>delete state[k]);
+    const p = SEED || {};
+    Object.assign(state, {
+      fields:p.fields, field:p.field, min:p.min, max:p.max, target:p.target, tol:p.tol,
+      op:p.op, compare:p.compare, rhs_fields:p.rhs_fields, rhs_op:p.rhs_op,
+      rhs_mode: p.rhs_fields?'columns':'value',
+      method:p.method, z:p.z, k:p.k, group_by:p.group_by, min_n:p.min_n,
+      patterns:p.patterns, max_m:p.max_m, precision:p.precision,
+      require:p.require, when_field:(p.when||{}).field,
+      when_op: (p.when||{}).not_blank?'not_blank':((p.when||{}).in?'in':'equals'),
+      when_value: (p.when||{}).equals!=null?(p.when||{}).equals:(((p.when||{}).in)||[]).join(', '),
+    });
+    if(p.message) msg.value = p.message;
+  }
+
+  typeSel.onchange = ()=>{ ['fields','field','min','max','target','tol','op','compare','rhs_mode','rhs_fields','rhs_op','method','z','k','group_by','min_n','patterns','max_m','precision','max','window_min','require','when_field','when_op','when_value'].forEach(k=>delete state[k]); render(); };
+  formSel.onchange = render;
+  $('rb-form').closest('form').addEventListener('submit', ()=>{ hidden.value = JSON.stringify(finalize()); });
+
+  seed(); render();
+})();
+</script>
+{% endblock %}

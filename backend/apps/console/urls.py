@@ -24,6 +24,8 @@ urlpatterns = [
     path("vocabulary/", views.VocabularyBrowseView.as_view(), name="vocabulary"),
     path("collection-units/import/", views.ImportCollectionUnitsView.as_view(),
          name="import_units"),
+    path("rules/new/", views.RuleBuilderView.as_view(), name="rule_new"),
+    path("rules/<uuid:pk>/", views.RuleBuilderView.as_view(), name="rule_edit"),
     path("setup/", views.SetupHubView.as_view(), name="setup"),
     path("setup/structure/", views.AdminSetupHubView.as_view(), name="admin_setup"),
     path("setup/add/<slug:key>/", views.SetupAddView.as_view(), name="setup_add"),

@@ -11,7 +11,7 @@ from django.conf import settings
 from django.db import models
 
 from apps.common.models import BaseModel
-from apps.projects.models import Project
+from apps.projects.models import FormDefinition, Project
 from apps.submissions.models import Submission
 
 
@@ -46,6 +46,12 @@ class ValidationRule(BaseModel):
         ERROR = "ERROR", "Error"
 
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="rules")
+    # A rule targets one form's fields. Null = applies across the whole project
+    # (schedule / integrity checks that aren't tied to a single form).
+    form = models.ForeignKey(
+        FormDefinition, null=True, blank=True, on_delete=models.CASCADE,
+        related_name="rules",
+    )
     code = models.SlugField(max_length=64)
     rule_type = models.CharField(max_length=20, choices=RuleType.choices)
     params = models.JSONField(default=dict, blank=True)

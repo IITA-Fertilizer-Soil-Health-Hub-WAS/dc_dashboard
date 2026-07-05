@@ -263,7 +263,15 @@ def geo_containment(submission, params) -> list[FlagResult]:
 
 # --- Per-project rules (need the whole distribution / cross-submission view) --
 
-def numeric_outlier(project, params) -> list[FlagResult]:
+def _val_filter(project, form) -> dict:
+    """Base filter for SubmissionValue queries, optionally scoped to one form."""
+    f = {"submission__project": project}
+    if form is not None:
+        f["submission__form"] = form
+    return f
+
+
+def numeric_outlier(project, params, form=None) -> list[FlagResult]:
     """Flag numeric values that are statistical outliers for their field — values
     that may sit *inside* the allowed range yet lie far from the norm (a unit slip
     or data-entry error a fixed range waves through). The distribution is learned
@@ -287,9 +295,10 @@ def numeric_outlier(project, params) -> list[FlagResult]:
     min_n = int(params.get("min_n", 20))
     group_by = params.get("group_by")
 
+    base = _val_filter(project, form)
     values_by_sid: dict = {}
     for sid, raw in SubmissionValue.objects.filter(
-        submission__project=project, field_key=field_key
+        **base, field_key=field_key
     ).values_list("submission_id", "current_value"):
         n = _to_float(raw)
         if n is not None:
@@ -297,7 +306,7 @@ def numeric_outlier(project, params) -> list[FlagResult]:
     group_of: dict = {}
     if group_by:
         for sid, gval in SubmissionValue.objects.filter(
-            submission__project=project, field_key=group_by
+            **base, field_key=group_by
         ).values_list("submission_id", "current_value"):
             group_of[sid] = str(gval)
 
@@ -348,7 +357,7 @@ def numeric_outlier(project, params) -> list[FlagResult]:
     return out
 
 
-def unique_field(project, params) -> list[FlagResult]:
+def unique_field(project, params, form=None) -> list[FlagResult]:
     """Flag submissions that share a value in a field meant to be unique — a
     duplicate barcode, plot code or household ID that usually means a double-entry
     or a mislabelled record. Every submission carrying a duplicated value is
@@ -361,7 +370,7 @@ def unique_field(project, params) -> list[FlagResult]:
     ignore_blank = params.get("ignore_blank", True)
     by_val: dict = {}
     for sid, val in SubmissionValue.objects.filter(
-        submission__project=project, field_key=field_key
+        **_val_filter(project, form), field_key=field_key
     ).values_list("submission_id", "current_value"):
         if ignore_blank and val in (None, ""):
             continue
@@ -376,7 +385,12 @@ def unique_field(project, params) -> list[FlagResult]:
     return out
 
 
-def geo_duplicate(project, params) -> list[FlagResult]:
+def _sub_qs(project, form):
+    qs = Submission.objects.filter(project=project)
+    return qs.filter(form=form) if form is not None else qs
+
+
+def geo_duplicate(project, params, form=None) -> list[FlagResult]:
     """Data-integrity / curbstoning signal: submissions from DIFFERENT households at
     the same GPS point — an enumerator who never actually moved. Submissions are
     snapped onto a small grid; any cell holding more than one household flags every
@@ -385,8 +399,8 @@ def geo_duplicate(project, params) -> list[FlagResult]:
     params: {precision?: 4 (decimal places; 4 ≈ 11 m at the equator), message?}."""
     precision = int(params.get("precision", 4))
     cells: dict[tuple, list] = {}
-    for s in Submission.objects.filter(
-        project=project, lat__isnull=False, lon__isnull=False
+    for s in _sub_qs(project, form).filter(
+        lat__isnull=False, lon__isnull=False
     ).values("id", "lat", "lon", "collection_unit_id"):
         key = (round(float(s["lat"]), precision), round(float(s["lon"]), precision))
         cells.setdefault(key, []).append(s)
@@ -405,7 +419,7 @@ def geo_duplicate(project, params) -> list[FlagResult]:
     return out
 
 
-def submission_speed(project, params) -> list[FlagResult]:
+def submission_speed(project, params, form=None) -> list[FlagResult]:
     """Data-integrity / curbstoning signal: an enumerator filing more than `max`
     submissions inside a short window — faster than genuine field interviews allow.
     Uses the server receipt time; a sliding window flags every submission caught in
@@ -419,8 +433,8 @@ def submission_speed(project, params) -> list[FlagResult]:
     window = timedelta(minutes=window_min)
 
     by_enum: dict = {}
-    for s in Submission.objects.filter(
-        project=project, enumerator__isnull=False, ona_submission_time__isnull=False
+    for s in _sub_qs(project, form).filter(
+        enumerator__isnull=False, ona_submission_time__isnull=False
     ).values("id", "enumerator_id", "ona_submission_time"):
         by_enum.setdefault(s["enumerator_id"], []).append(s)
 
@@ -445,7 +459,7 @@ def submission_speed(project, params) -> list[FlagResult]:
     return out
 
 
-def photo_reuse(project, params) -> list[FlagResult]:
+def photo_reuse(project, params, form=None) -> list[FlagResult]:
     """Data-integrity / curbstoning signal: the same photo (identical image bytes)
     submitted for DIFFERENT households — a fabricated visit reusing an earlier
     picture. Relies on `Submission.media_hashes` (populated by the media-hashing
@@ -454,8 +468,8 @@ def photo_reuse(project, params) -> list[FlagResult]:
 
     params: {message?}."""
     by_hash: dict[str, list] = {}
-    for s in Submission.objects.filter(
-        project=project, collection_unit__isnull=False
+    for s in _sub_qs(project, form).filter(
+        collection_unit__isnull=False
     ).exclude(media_hashes=[]).values("id", "collection_unit_id", "media_hashes"):
         for h in s["media_hashes"] or []:
             by_hash.setdefault(h, []).append(s)
@@ -479,9 +493,11 @@ def photo_reuse(project, params) -> list[FlagResult]:
 
 # --- Per-household rules (need the whole event timeline) ----------------------
 
-def event_sequence(project, params) -> list[FlagResult]:
+def event_sequence(project, params, form=None) -> list[FlagResult]:
     """Flag households where an event was submitted while an earlier one is
-    missing. (R: event N filled but event N-1 missing -> "Check submission events".)"""
+    missing. (R: event N filled but event N-1 missing -> "Check submission events".)
+
+    Project-wide by design — the event timeline spans forms — so `form` is ignored."""
     message = params.get("message", "Check submission events")
     order = {e.event_key: e.sequence for e in project.schedule.all()}
     if not order:
@@ -506,9 +522,11 @@ def event_sequence(project, params) -> list[FlagResult]:
     return out
 
 
-def date_window(project, params, today: date | None = None) -> list[FlagResult]:
+def date_window(project, params, today: date | None = None, *, form=None) -> list[FlagResult]:
     """Flag overdue events: an expected event whose target date has passed but was
-    never submitted. Drives the same schedule that colours the dashboard grid."""
+    never submitted. Drives the same schedule that colours the dashboard grid.
+
+    Project-wide by design (the schedule spans forms) — `form` is ignored."""
     from django.utils import timezone
 
     today = today or timezone.localdate()

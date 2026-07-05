@@ -29,7 +29,11 @@
       <a class="btn-new" style="background:var(--gold);color:var(--brand-900);" href="{% url 'console:import_units' %}">Import CSV</a>
     {% endif %}
     {% if can_edit %}
-      <a class="btn-new" href="{% url 'console:create' m.key %}">+ New</a>
+      {% if m.key == 'validation-rules' %}
+        <a class="btn-new" href="{% url 'console:rule_new' %}?project={{ request.GET.project }}">+ New rule</a>
+      {% else %}
+        <a class="btn-new" href="{% url 'console:create' m.key %}">+ New</a>
+      {% endif %}
     {% endif %}
   </div>
   {% if not can_edit %}<p class="subtle" style="margin:.2rem 0 1rem;font-size:.82rem;">Read-only — showing the projects you coordinate.</p>{% endif %}
@@ -76,7 +80,11 @@
                 <a href="{% url 'console:job_assignments' row.pk %}">Assignments</a>
               {% endif %}
               {% if can_edit %}
-                <a href="{% url 'console:edit' m.key row.pk %}">Edit</a>
+                {% if m.key == 'validation-rules' %}
+                  <a href="{% url 'console:rule_edit' row.pk %}">Edit</a>
+                {% else %}
+                  <a href="{% url 'console:edit' m.key row.pk %}">Edit</a>
+                {% endif %}
                 <a class="del" href="{% url 'console:delete' m.key row.pk %}">Delete</a>
               {% endif %}
             </td>
