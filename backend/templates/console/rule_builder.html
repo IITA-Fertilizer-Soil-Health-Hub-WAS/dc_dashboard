@@ -57,7 +57,7 @@
   {{ fields_by_form|json_script:"fields-by-form" }}
   {{ rule_params|json_script:"rule-params" }}
 
-  <form method="post" class="rb" id="rb-form"
+  <form method="post" class="rb" id="rb-mainform"
         action="{% if rule %}{% url 'console:rule_edit' rule.pk %}{% else %}{% url 'console:rule_new' %}{% endif %}?project={{ project.code }}">
     {% csrf_token %}
 
@@ -333,7 +333,7 @@
     const body=new URLSearchParams({project:'{{ project.code }}', rule_type:typeSel.value,
       form:formSel.value, params:JSON.stringify(finalize())});
     fetch('{% url "console:rule_test" %}', {method:'POST', body,
-      headers:{'X-CSRFToken':document.querySelector('#rb-form [name=csrfmiddlewaretoken]').value,
+      headers:{'X-CSRFToken':document.querySelector('[name=csrfmiddlewaretoken]').value,
         'Content-Type':'application/x-www-form-urlencoded'}})
       .then(r=>r.json()).then(d=>{
         if(d.error){ out.className='testout warn'; out.textContent=d.error; return; }
