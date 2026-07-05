@@ -764,7 +764,15 @@ class OnboardProjectView(StaffMixin, View):
             else:
                 problems = validate_config(data)
                 if not problems:
-                    uc = import_config(data)
+                    from apps.config_admin.loader import check_duplicate_import
+                    dup = check_duplicate_import(data)
+                    if dup and request.POST.get("confirm_duplicate") != "1":
+                        problems = dup + [
+                            "Add a 'confirm_duplicate' field (or use the guided "
+                            "wizard) to onboard anyway."
+                        ]
+                    else:
+                        uc = import_config(data)
         except _yaml.YAMLError as exc:
             problems = [f"Invalid YAML: {exc}"]
         except ConfigError as exc:
@@ -861,7 +869,12 @@ class WizardView(StaffMixin, View):
         return render(request, "console/wizard.html", self._ctx(request))
 
     def post(self, request):
-        from apps.config_admin.loader import ConfigError, import_config, validate_config
+        from apps.config_admin.loader import (
+            ConfigError,
+            check_duplicate_import,
+            import_config,
+            validate_config,
+        )
 
         from .onboarding import build_config
 
@@ -872,6 +885,12 @@ class WizardView(StaffMixin, View):
             if not (request.POST.get("owner") or "").strip():
                 problems = ["Choose an owner for this project."] + problems
             if not problems:
+                # Guard against onboarding the same collection-server project twice
+                # under a different name. The user can override for genuine cases.
+                dup = check_duplicate_import(data)
+                if dup and request.POST.get("confirm_duplicate") != "1":
+                    return render(request, "console/wizard.html",
+                                  self._ctx(request, dup_warnings=dup, posted=request.POST))
                 uc = import_config(data)
                 # Import each form's name + full field list now, so the rule
                 # builder (and anything field-aware) has them from the start.

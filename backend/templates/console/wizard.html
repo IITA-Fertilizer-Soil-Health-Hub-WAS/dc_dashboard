@@ -75,6 +75,16 @@
   {% if problems %}
     <div class="err"><strong>Couldn't onboard:</strong><ul style="margin:.4rem 0 0;">{% for p in problems %}<li>{{ p }}</li>{% endfor %}</ul></div>
   {% endif %}
+  {% if dup_warnings %}
+    <div class="err" style="background:#fdf6e3;border-color:#ecd9a6;color:#7a5c12;">
+      <strong>This looks like a duplicate import:</strong>
+      <ul style="margin:.4rem 0 .3rem;">{% for w in dup_warnings %}<li>{{ w }}</li>{% endfor %}</ul>
+      <label style="display:flex;align-items:center;gap:.5rem;font-weight:600;margin-top:.5rem;">
+        <input type="checkbox" name="confirm_duplicate" value="1" form="wizardForm" style="width:auto;">
+        Onboard anyway — I understand this mirrors an already-onboarded project.
+      </label>
+    </div>
+  {% endif %}
 
   <div class="wz">
     <div class="wz-steps">
@@ -86,7 +96,7 @@
         <span class="num"><span>3</span></span><span><span class="st-label">Schedule</span><br><span class="st-sub">visit windows</span></span></button>
     </div>
 
-    <form method="post" class="card" style="padding:1.3rem 1.5rem;">
+    <form method="post" class="card" id="wizardForm" style="padding:1.3rem 1.5rem;">
       {% csrf_token %}
 
       <!-- STEP 1 -->

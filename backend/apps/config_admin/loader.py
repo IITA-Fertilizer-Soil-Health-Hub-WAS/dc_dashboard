@@ -73,6 +73,56 @@ def validate_config(data: dict[str, Any]) -> list[str]:
     return problems
 
 
+def check_duplicate_import(data: dict[str, Any]) -> list[str]:
+    """Flag when this config would mirror a collection-server project already
+    onboarded under a different code — the same server forms (or the same data
+    source) pulled into a second Fieldbase project. Re-importing the SAME code
+    (an idempotent update) is never flagged.
+
+    This is the guard against onboarding one ONA/ODK project twice under two
+    names (which is how identical forms ended up under two projects)."""
+    from django.db.models import Q
+
+    from apps.projects.models import DataSource, FormDefinition
+
+    problems: list[str] = []
+    code = (data.get("project") or {}).get("code")
+
+    ids = [f.get("ona_form_id") for f in (data.get("forms", []) or []) if f.get("ona_form_id")]
+    if ids:
+        int_ids = [int(x) for x in ids if str(x).isdigit()]
+        str_ids = [str(x) for x in ids]
+        clash = (
+            FormDefinition.objects.exclude(project__code=code)
+            .filter(Q(ona_form_id__in=int_ids) | Q(server_form_id__in=str_ids))
+            .select_related("project")
+        )
+        by_proj: dict[str, set] = {}
+        for f in clash:
+            by_proj.setdefault(f.project.code, set()).add(str(f.ona_form_id or f.server_form_id))
+        for pcode, fids in by_proj.items():
+            problems.append(
+                f"Form(s) {', '.join(sorted(fids))} are already onboarded under "
+                f"project “{pcode}”. Onboarding them here would mirror the same "
+                f"collection-server project under a second name."
+            )
+
+    ds = data.get("data_source") or {}
+    pid = (ds.get("config") or {}).get("project_id")
+    if pid:
+        dup = (
+            DataSource.objects.exclude(project__code=code)
+            .filter(backend=ds.get("backend", "ONA"), config__project_id=pid)
+            .select_related("project").first()
+        )
+        if dup:
+            problems.append(
+                f"The collection-server project (id {pid}) is already onboarded "
+                f"as “{dup.project.code}”."
+            )
+    return problems
+
+
 @transaction.atomic
 def import_config(data: dict[str, Any]) -> Project:
     """Upsert a project + all children from a config dict. Idempotent."""
