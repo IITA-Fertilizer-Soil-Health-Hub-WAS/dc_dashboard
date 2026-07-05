@@ -117,6 +117,12 @@ def build_config(post) -> dict[str, Any]:
         "validation_rules": [],
     }
 
+    # The server project this was discovered from — lets the duplicate guard flag
+    # a re-import before any form is picked. Only set when known.
+    server_pid = (post.get("server_project_id") or "").strip()
+    if server_pid:
+        data["data_source"]["config"] = {"project_id": server_pid}
+
     # Forms (entries to the project) with their auto-suggested mappings.
     form_count = int(post.get("form_count") or 0)
     for i in range(form_count):

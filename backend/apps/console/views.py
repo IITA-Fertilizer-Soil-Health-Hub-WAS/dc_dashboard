@@ -925,22 +925,49 @@ class WizardProjectsView(StaffMixin, View):
             f"{src.get('backend')}|{src.get('base_url')}|{src.get('token')}".encode()
         ).hexdigest()
         # The "Find projects" button forces a fresh fetch; auto-load uses the cache.
+        projects, error = None, None
         if request.GET.get("refresh") != "1":
             cached = cache.get(key)
             if cached is not None:
-                return render(request, "console/_wizard_projects.html", cached)
+                projects, error = cached.get("projects"), cached.get("discover_error")
+        if projects is None and error is None:
+            projects, error = [], None
+            try:
+                projects = _backend_from_request(request).discover_projects()
+            except NotImplementedError:
+                error = "This backend doesn't support discovery — enter details manually."
+            except Exception as exc:
+                error = f"Could not reach the server: {exc}"
+            if not error:
+                cache.set(key, {"projects": projects, "discover_error": error}, 300)  # 5 min
+        # Mark which discovered projects are already onboarded (fresh each render).
+        self._annotate_onboarded(projects or [])
+        return render(request, "console/_wizard_projects.html",
+                      {"projects": projects or [], "discover_error": error})
 
-        projects, error = [], None
-        try:
-            projects = _backend_from_request(request).discover_projects()
-        except NotImplementedError:
-            error = "This backend doesn't support discovery — enter details manually."
-        except Exception as exc:
-            error = f"Could not reach the server: {exc}"
-        ctx = {"projects": projects, "discover_error": error}
-        if not error:
-            cache.set(key, ctx, 300)  # 5 min
-        return render(request, "console/_wizard_projects.html", ctx)
+    def _annotate_onboarded(self, projects):
+        """Set `onboarded_as` on each RemoteProject to the code of a Fieldbase
+        project already mirroring it — by server project id, else by shared form
+        id — so the wizard can warn before any form is picked."""
+        from apps.projects.models import DataSource, FormDefinition
+
+        ds_pids: dict = {}
+        for ds in DataSource.objects.exclude(config={}).select_related("project"):
+            pid = (ds.config or {}).get("project_id")
+            if pid:
+                ds_pids.setdefault(str(pid), ds.project.code)
+        form_owner: dict = {}
+        for f in FormDefinition.objects.select_related("project"):
+            for k in filter(None, [str(f.ona_form_id or "") or "", f.server_form_id or ""]):
+                form_owner.setdefault(k, f.project.code)
+        for p in projects:
+            owner = ds_pids.get(str(p.id))
+            if not owner:
+                for rf in getattr(p, "forms", []) or []:
+                    if str(rf.id) in form_owner:
+                        owner = form_owner[str(rf.id)]
+                        break
+            p.onboarded_as = owner
 
 
 class FieldDiscoveryView(StaffMixin, View):

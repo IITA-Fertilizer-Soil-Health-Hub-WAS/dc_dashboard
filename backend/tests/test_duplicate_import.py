@@ -29,6 +29,39 @@ def test_duplicate_form_id_flagged_across_projects():
     assert check_duplicate_import(_cfg("TOGO", 999999)) == []
 
 
+def test_build_config_captures_server_project_id():
+    from django.http import QueryDict
+
+    from apps.console.onboarding import build_config
+
+    q = QueryDict(mutable=True)
+    q.update({"code": "X", "name": "X", "backend": "ONA",
+              "server_project_id": "251274", "form_count": "0"})
+    data = build_config(q)
+    assert data["data_source"]["config"]["project_id"] == "251274"
+
+
+def test_discovery_marks_already_onboarded():
+    from apps.console.views import WizardProjectsView
+    from apps.ingestion.backends.base import RemoteForm, RemoteProject
+    from apps.projects.models import DataSource
+
+    org = Organization.objects.create(code="o", name="O")
+    p = Project.objects.create(code="GHANA", name="G", organization=org)
+    FormDefinition.objects.create(project=p, ona_form_id=855917,
+                                  role=FormDefinition.Role.VALIDATION)
+    DataSource.objects.create(project=p, backend="ONA", base_url="",
+                              config={"project_id": "111"})
+
+    by_form = RemoteProject(id="999", name="Other", forms=[RemoteForm(id="855917", title="F")])
+    by_pid = RemoteProject(id="111", name="ByPid", forms=[RemoteForm(id="1", title="F")])
+    fresh = RemoteProject(id="222", name="New", forms=[RemoteForm(id="2", title="F")])
+    WizardProjectsView()._annotate_onboarded([by_form, by_pid, fresh])
+    assert by_form.onboarded_as == "GHANA"   # matched on a shared form id
+    assert by_pid.onboarded_as == "GHANA"    # matched on the server project id
+    assert fresh.onboarded_as is None
+
+
 def test_wizard_blocks_duplicate_then_allows_override(client, django_user_model):
     org = Organization.objects.create(code="o", name="O")
     admin = django_user_model.objects.create_superuser("a@x.org", "pw")

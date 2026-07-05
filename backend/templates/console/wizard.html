@@ -54,8 +54,11 @@
   .map-row select,.map-row input{width:100%;padding:.4rem .55rem;border:1px solid var(--line);border-radius:7px;font-size:.84rem;font-family:var(--mono);background:var(--surface);}
   .mini{font-size:.8rem;padding:.3rem .65rem;}
   .proj-list{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.5rem;}
-  .proj-chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:.3rem .7rem;font-size:.8rem;cursor:pointer;}
+  .proj-chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:.3rem .7rem;font-size:.8rem;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;}
   .proj-chip:hover{border-color:var(--brand);color:var(--brand);}
+  .proj-chip.onboarded{border-color:#ecd9a6;background:#fdf6e3;}
+  .dup-badge{font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:#7a5c12;background:#f3e3b0;border-radius:6px;padding:.1rem .35rem;}
+  .dup-warn{margin-top:.6rem;background:#fdf6e3;border:1px solid #ecd9a6;color:#7a5c12;border-radius:9px;padding:.55rem .75rem;font-size:.83rem;}
   .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--brand);border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle;margin-right:.4rem;}
   @keyframes sp{to{transform:rotate(360deg)}}
   /* footer nav */
@@ -132,6 +135,8 @@
              hx-vals='js:{backend: document.getElementById("f_backend").value, base_url: document.getElementById("f_baseurl").value, token: document.getElementById("f_token").value}'>
           <span class="subtle" style="font-size:.82rem;"><span class="spin"></span>Discovering projects on the server…</span>
         </div>
+        <input type="hidden" name="server_project_id" id="f_server_project_id" value="{{ posted.server_project_id }}">
+        <div id="dup-warn" class="dup-warn" style="display:none;"></div>
 
         <div class="grid2" style="margin-top:1rem;">
           <div class="fld"><label>Project code *</label><input name="code" id="f_code" value="{{ posted.code }}" placeholder="SNS-RWANDA"></div>
@@ -302,9 +307,15 @@
     }
     function prefillProject(el){
       document.getElementById('f_name').value = el.dataset.name;
+      document.getElementById('f_server_project_id').value = el.dataset.pid || '';
       if(!document.getElementById('f_code').value){
         document.getElementById('f_code').value = el.dataset.name.toUpperCase().replace(/[^A-Z0-9]+/g,'-').replace(/^-|-$/g,'');
       }
+      var warn = document.getElementById('dup-warn');
+      if(el.dataset.onboarded){
+        warn.textContent = '⚠ This server project is already onboarded as “'+el.dataset.onboarded+'”. Onboarding it again mirrors the same project under a new name.';
+        warn.style.display = 'block';
+      } else { warn.style.display = 'none'; warn.textContent=''; }
       document.getElementById('forms').innerHTML = '';
       formIdx = 0;
       const forms = JSON.parse(el.dataset.forms || '[]');
