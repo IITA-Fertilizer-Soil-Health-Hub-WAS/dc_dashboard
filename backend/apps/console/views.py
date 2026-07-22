@@ -1703,6 +1703,37 @@ class SystemStatusView(StaffMixin, View):
         })
 
 
+class DataProductsView(UserPassesTestMixin, View):
+    """Discovery catalogue for the read API — the endpoints, the caller's API
+    token, and the projects they can pull. Makes Fieldbase a data backbone
+    downstream tools (GIS, BI, research) consume, not a silo."""
+
+    def test_func(self) -> bool:
+        u = self.request.user
+        return bool(u.is_authenticated and u.is_active)
+
+    def get(self, request):
+        from rest_framework.authtoken.models import Token
+
+        from apps.rbac.permissions import visible_projects
+
+        token = Token.objects.filter(user=request.user).first()
+        return render(request, "console/data_products.html", {
+            "console_key": "data-products", "groups": grouped(),
+            "token": token.key if token else "",
+            "projects": visible_projects(request.user).order_by("code")[:200],
+            "api_base": request.build_absolute_uri("/api/v1/"),
+        })
+
+    def post(self, request):
+        from rest_framework.authtoken.models import Token
+
+        Token.objects.filter(user=request.user).delete()
+        Token.objects.create(user=request.user)
+        messages.success(request, "New API token generated.")
+        return redirect("console:data_products")
+
+
 # ---------------------------------------------------------------------------
 # One-page Set up hubs — a project's whole config surface (and the admin's
 # tenancy structure) on a single screen, with inline quick-add on the simple

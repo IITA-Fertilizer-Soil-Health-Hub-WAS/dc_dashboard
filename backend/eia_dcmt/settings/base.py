@@ -52,6 +52,7 @@ DJANGO_APPS = [
 # Django /admin login (superuser) for back-office tasks.
 THIRD_PARTY_APPS = [
     "rest_framework",
+    "rest_framework.authtoken",  # API tokens for programmatic read access
     "guardian",
     "django_celery_beat",
     "allauth",
@@ -253,6 +254,7 @@ GUARDIAN_RAISE_403 = True
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
+        "rest_framework.authentication.TokenAuthentication",  # programmatic clients
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
@@ -261,6 +263,8 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.UserRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {"user": "1000/hour"},
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 100,
 }
 
 # --- Celery -----------------------------------------------------------------

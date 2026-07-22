@@ -611,6 +611,10 @@
                  class="{% if request.resolver_match.url_name == 'system_status' %}active{% endif %}">
                 <span class="msym">monitor_heart</span>System status
               </a>
+              <a href="{% url 'console:data_products' %}" title="Read API + your access token"
+                 class="{% if request.resolver_match.url_name == 'data_products' %}active{% endif %}">
+                <span class="msym">api</span>Data products
+              </a>
               <a href="/admin/" class="nav-sys" title="System settings: scheduled tasks, groups, sites, social apps">
                 <span class="msym">settings</span>Admin console
               </a>
