@@ -101,6 +101,50 @@ def auto_map_form(form, sample_record: dict) -> int:
     return created
 
 
+def record_sync(project, *, trigger="scheduled", backend=None, client=None) -> SyncStats:
+    """Run a project sync while recording a SyncRun row, so an outcome (success
+    or failure) is always visible on the System status page. On failure it also
+    alerts the platform admins + project owner, then re-raises."""
+    from .models import SyncRun
+
+    run = SyncRun.objects.create(project=project, trigger=trigger)
+    try:
+        stats = sync_project(project, backend=backend, client=client)
+    except Exception as exc:
+        run.status = SyncRun.Status.ERROR
+        run.message = str(exc)[:4000]
+        run.finished_at = timezone.now()
+        run.save(update_fields=["status", "message", "finished_at", "updated_at"])
+        _alert_sync_failure(project, exc)
+        raise
+    run.status = SyncRun.Status.OK
+    run.created, run.updated, run.unchanged = stats.created, stats.updated, stats.unchanged
+    run.finished_at = timezone.now()
+    run.save(update_fields=["status", "created", "updated", "unchanged",
+                            "finished_at", "updated_at"])
+    return stats
+
+
+def _alert_sync_failure(project, exc) -> None:
+    from apps.accounts.models import User
+    from apps.common.email import send_safe_email
+
+    admins = list(
+        User.objects.filter(is_superuser=True, is_active=True)
+        .exclude(email="").values_list("email", flat=True)
+    )
+    owner = []
+    if project.owner_id and getattr(project.owner, "email", ""):
+        owner = [project.owner.email]
+    send_safe_email(
+        f"[Fieldbase] Sync FAILED for {project.code}",
+        f"The data sync for project “{project.name}” ({project.code}) failed:\n\n"
+        f"{exc}\n\nCheck the collection-server connection / credentials. "
+        f"No new submissions will arrive until this is fixed.",
+        admins + owner, context="sync-failure",
+    )
+
+
 def sync_project(project: Project, backend=None, client=None) -> SyncStats:
     """Sync all of a project's forms via its data-collection backend.
 

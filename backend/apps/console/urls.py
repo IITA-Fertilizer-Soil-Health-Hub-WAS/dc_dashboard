@@ -33,6 +33,7 @@ urlpatterns = [
          name="reference_delete"),
     path("reference/<uuid:pk>/coverage/", views.ReferenceCoverageView.as_view(),
          name="reference_coverage"),
+    path("system-status/", views.SystemStatusView.as_view(), name="system_status"),
     path("setup/", views.SetupHubView.as_view(), name="setup"),
     path("setup/structure/", views.AdminSetupHubView.as_view(), name="admin_setup"),
     path("setup/add/<slug:key>/", views.SetupAddView.as_view(), name="setup_add"),

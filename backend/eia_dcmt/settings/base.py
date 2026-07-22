@@ -270,10 +270,15 @@ CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 CELERY_TASK_ALWAYS_EAGER = env.bool("CELERY_TASK_ALWAYS_EAGER", default=False)
 # The DatabaseScheduler syncs these into django_celery_beat on startup.
 CELERY_BEAT_SCHEDULE = {
-    # Daily ONA sync (replaces the R `0 0 * * * Rscript dataprocessing.R` cron).
+    # Daily source sync (replaces the R `0 0 * * * Rscript dataprocessing.R` cron).
     "daily-source-sync": {
-        "task": "ingestion.sync_all_use_cases",
+        "task": "ingestion.sync_all_projects",
         "schedule": crontab(hour=0, minute=0),
+    },
+    # Silent-failure tripwire: alert when an active project stops receiving data.
+    "stale-project-check-daily": {
+        "task": "ingestion.check_stale_projects",
+        "schedule": crontab(hour=8, minute=0),
     },
     "review-digest-weekday-mornings": {
         "task": "review.send_review_digests",
@@ -409,3 +414,23 @@ UNFOLD = {
 
 # Path where per-project YAML config seeds live.
 PROJECT_CONFIG_DIR = BASE_DIR / "config" / "projects"
+
+# --- Error monitoring (optional) --------------------------------------------
+# Set SENTRY_DSN to capture unhandled errors + failing tasks. No hard dependency:
+# if the DSN is unset or sentry_sdk isn't installed, this is a silent no-op.
+SENTRY_DSN = env("SENTRY_DSN", default="")
+if SENTRY_DSN:  # pragma: no cover - exercised only in configured deployments
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.celery import CeleryIntegration
+        from sentry_sdk.integrations.django import DjangoIntegration
+
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            integrations=[DjangoIntegration(), CeleryIntegration()],
+            traces_sample_rate=float(env("SENTRY_TRACES_RATE", default="0")),
+            send_default_pii=False,
+            environment=env("DJANGO_ENV", default="prod"),
+        )
+    except Exception:
+        pass

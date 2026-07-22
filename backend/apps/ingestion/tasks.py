@@ -11,7 +11,7 @@ from celery import shared_task
 from apps.projects.models import Project
 from apps.validation.engine import run_for_project
 
-from .sync import sync_project
+from .sync import record_sync, sync_project
 
 # Cap on media fetched per run — hashing is network-bound, so we bound each pass
 # and let the recurring task drain the backlog over subsequent runs.
@@ -19,9 +19,9 @@ MEDIA_HASH_BATCH = 300
 
 
 @shared_task(name="ingestion.sync_project")
-def sync_project_task(code: str) -> dict:
+def sync_project_task(code: str, trigger: str = "manual") -> dict:
     uc = Project.objects.get(code=code)
-    stats = sync_project(uc)
+    stats = record_sync(uc, trigger=trigger)  # records a SyncRun; alerts on failure
     run_for_project(uc)  # validate immediately after ingest
     hash_media_task.delay(code)  # hash new media off the ingest path
     _refresh_schemas(uc)  # keep form names + field lists current for the builder
@@ -66,7 +66,7 @@ def webhook_ingest_task(code: str) -> dict:
     uc = Project.objects.filter(code=code).first()
     if uc is None:
         return {"code": code, "status": "unknown_project"}
-    stats = sync_project(uc)
+    stats = record_sync(uc, trigger="webhook")
     run_for_project(uc)
     rebuild_project_kpis(uc)
     hash_media_task.delay(code)
@@ -77,10 +77,47 @@ def webhook_ingest_task(code: str) -> dict:
 def sync_all_projects() -> list[dict]:
     results = []
     for uc in Project.objects.filter(is_active=True):
-        results.append(sync_project(uc).as_dict())
-        run_for_project(uc)
-        hash_media_task.delay(uc.code)  # background media hashing per project
+        # A failure on one project is recorded + alerted, and must not stop the rest.
+        try:
+            stats = record_sync(uc, trigger="scheduled")
+            run_for_project(uc)
+            hash_media_task.delay(uc.code)
+            results.append(stats.as_dict())
+        except Exception as exc:  # already recorded + alerted in record_sync
+            results.append({"project": uc.code, "error": str(exc)[:200]})
     return results
+
+
+@shared_task(name="ingestion.check_stale_projects")
+def check_stale_projects(days: int = 3) -> list[str]:
+    """Flag active projects with no submission in `days` days — a silent-failure
+    tripwire: a sync can 'succeed' yet a form/device problem means nothing new
+    arrives. Alerts the platform admins with the stale list."""
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from apps.accounts.models import User
+    from apps.common.email import send_safe_email
+    from apps.submissions.models import Submission
+
+    cutoff = timezone.now() - timedelta(days=days)
+    stale = []
+    for uc in Project.objects.filter(is_active=True):
+        last = (Submission.objects.filter(project=uc).order_by("-ingested_at")
+                .values_list("ingested_at", flat=True).first())
+        if last is None or last < cutoff:
+            stale.append(uc)
+    if stale:
+        admins = list(User.objects.filter(is_superuser=True, is_active=True)
+                      .exclude(email="").values_list("email", flat=True))
+        lines = "\n".join(f"  - {p.code} ({p.name})" for p in stale)
+        send_safe_email(
+            f"[Fieldbase] {len(stale)} project(s) with no data in {days} days",
+            f"No new submissions in the last {days} days for:\n\n{lines}\n\n"
+            f"Check the collection server, the forms, and the field teams.",
+            admins, context="stale-projects")
+    return [p.code for p in stale]
 
 
 @shared_task(name="ingestion.writeback_submission")

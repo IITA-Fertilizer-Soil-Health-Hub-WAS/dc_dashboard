@@ -1670,6 +1670,39 @@ class ReferenceCoverageView(ManageMixin, View):
         })
 
 
+class SystemStatusView(StaffMixin, View):
+    """Operational visibility: recent sync outcomes + which projects have gone
+    quiet — so a failing sync or a project that stopped receiving data can't
+    slip by unnoticed."""
+
+    def get(self, request):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from apps.ingestion.models import SyncRun
+        from apps.projects.models import Project
+        from apps.submissions.models import Submission
+
+        cutoff = timezone.now() - timedelta(days=3)
+        rows = []
+        for p in Project.objects.filter(is_active=True).select_related("organization").order_by("code"):
+            last_run = p.sync_runs.order_by("-created_at").first()
+            last_sub = (Submission.objects.filter(project=p).order_by("-ingested_at")
+                        .values_list("ingested_at", flat=True).first())
+            rows.append({
+                "p": p, "last_run": last_run, "last_sub": last_sub,
+                "stale": last_sub is None or last_sub < cutoff,
+            })
+        return render(request, "console/system_status.html", {
+            "console_key": "system", "groups": grouped(),
+            "runs": SyncRun.objects.select_related("project").order_by("-created_at")[:40],
+            "rows": rows,
+            "stale_count": sum(1 for r in rows if r["stale"]),
+            "error_count": SyncRun.objects.filter(status=SyncRun.Status.ERROR).count(),
+        })
+
+
 # ---------------------------------------------------------------------------
 # One-page Set up hubs — a project's whole config surface (and the admin's
 # tenancy structure) on a single screen, with inline quick-add on the simple

@@ -607,6 +607,10 @@
               </a>
             {% endif %}
             {% if user.is_staff %}
+              <a href="{% url 'console:system_status' %}" title="Sync health + stale-project monitoring"
+                 class="{% if request.resolver_match.url_name == 'system_status' %}active{% endif %}">
+                <span class="msym">monitor_heart</span>System status
+              </a>
               <a href="/admin/" class="nav-sys" title="System settings: scheduled tasks, groups, sites, social apps">
                 <span class="msym">settings</span>Admin console
               </a>
