@@ -21,18 +21,37 @@
   </div>
 {% endblock %}
 {% block tour %}<script>
-window.PAGE_TOUR = {id:'workspace', steps:[
-  {el:'[data-tour="dashboard"]', title:'Your project workspace',
-   body:'Everything for this project is in the left rail, ordered by how the work actually flows. This is the overview.'},
-  {el:'[data-tour="setup"]', title:'1 · Set up',
-   body:'Define the study — forms, schedule, crops, plots, validation rules and reference data. New project? Start here.'},
-  {el:'[data-tour="field"]', title:'2 · Field register',
-   body:'Who collects and where: enumerators and the collection units (farmers / plots / households).'},
-  {el:'[data-tour="review"]', title:'3 · Review &amp; correct',
-   body:'The incoming data, the review queue, flagged issues, and write-back of your fixes to the server.'},
-  {el:'[data-tour="finalize"]', title:'4 · Finalize',
-   body:'Approve the clean dataset; QC roles sign it off here.'},
-  {el:'[data-tour="monitor"]', title:'5 · Monitor',
-   body:'Track progress and M&amp;E indicators. That is the full loop: set up → collect → review → finalize → monitor.'},
-]};
+window.PAGE_TOUR = (function(){
+  var tab = "{{ active_tab|default:'summary' }}";
+  if(tab === 'review') return {id:'review', steps:[
+    {el:'[data-tour="rv-cards"]', title:'The review queue',
+     body:'How many submissions are awaiting validation, awaiting endorsement, and already approved.'},
+    {el:'[data-tour="rv-queue"]', title:'Act on a submission',
+     body:'Open one to inspect it, then Validate, Endorse, Request-edit or Decline — right from the row.'},
+    {el:'[data-tour="rv-log"]', title:'Every action is logged',
+     body:'The Review log is an append-only audit trail — who did what, when, and why.'},
+  ]};
+  if(tab === 'issues') return {id:'issues', steps:[
+    {el:'#issues-panel', title:'Flagged issues',
+     body:'Everything the validation rules flagged — bad ids, outliers, duplicates, missing data, lab mismatches — in one queue.'},
+    {el:'[data-tour="iss-filters"]', title:'Filter &amp; search',
+     body:'Narrow by event, state or severity, search an id, or show only issues assigned to you. Tick rows to act in bulk.'},
+    {el:'[data-tour="iss-rules"]', title:'Tune the checks',
+     body:'Rules generating too much noise (or too little)? Jump to the rule builder and adjust them.'},
+  ]};
+  return {id:'workspace', steps:[
+    {el:'[data-tour="dashboard"]', title:'Your project workspace',
+     body:'Everything for this project is in the left rail, ordered by how the work actually flows. This is the overview.'},
+    {el:'[data-tour="setup"]', title:'1 · Set up',
+     body:'Define the study — forms, schedule, crops, plots, validation rules and reference data. New project? Start here.'},
+    {el:'[data-tour="field"]', title:'2 · Field register',
+     body:'Who collects and where: enumerators and the collection units (farmers / plots / households).'},
+    {el:'[data-tour="review"]', title:'3 · Review &amp; correct',
+     body:'The incoming data, the review queue, flagged issues, and write-back of your fixes to the server.'},
+    {el:'[data-tour="finalize"]', title:'4 · Finalize',
+     body:'Approve the clean dataset; QC roles sign it off here.'},
+    {el:'[data-tour="monitor"]', title:'5 · Monitor',
+     body:'Track progress and M&amp;E indicators. That is the full loop: set up → collect → review → finalize → monitor.'},
+  ]};
+})();
 </script>{% endblock %}

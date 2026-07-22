@@ -3,7 +3,7 @@
     <span class="subtle">Review actions are for coordinators.</span></div>
 {% else %}
 
-  <div style="display:flex;justify-content:flex-end;gap:.5rem;margin-top:1rem;">
+  <div style="display:flex;justify-content:flex-end;gap:.5rem;margin-top:1rem;" data-tour="rv-log">
     <a class="btn btn-ghost" style="text-decoration:none;" href="{% url 'dashboards:review_log' uc.code %}"
        title="The append-only audit trail of every review action on this project"><span class="msym" style="font-size:15px;vertical-align:-2px;">history</span> Review log</a>
     {% if can_edit_reasons %}
@@ -12,14 +12,14 @@
     {% endif %}
   </div>
 
-  <div class="cards" style="margin-top:1rem;">
+  <div class="cards" style="margin-top:1rem;" data-tour="rv-cards">
     <div class="card infobox"><div class="n">{{ to_validate|length }}</div><div class="l">Awaiting validation</div></div>
     <div class="card infobox"><div class="n">{{ to_endorse|length }}</div><div class="l">Awaiting endorsement</div></div>
     <div class="card infobox"><div class="n">{{ approved_count }}</div><div class="l">Approved</div></div>
   </div>
 
   {% if can_validate %}
-    <div class="section">
+    <div class="section" data-tour="rv-queue">
       <div class="st">
         <h3><span class="msym">verified</span>Awaiting your validation <span class="pill gold">{{ to_validate|length }}</span></h3>
         <div class="desc">Endorsed submissions needing your final sign-off (Gate 2).</div>

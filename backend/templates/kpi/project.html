@@ -12,7 +12,7 @@
   <p class="lede">M&amp;E for this project — {{ period_label|lower }}.</p>
   {% include "kpi/_subnav.html" %}
 
-  <div class="card" style="margin:0 0 1.1rem;padding:.9rem 1.1rem;">
+  <div class="card" data-tour="me-export" style="margin:0 0 1.1rem;padding:.9rem 1.1rem;">
     <div style="display:flex;flex-wrap:wrap;gap:.5rem 1.4rem;align-items:center;">
       {% for d in exports.datasets %}
         <div style="display:flex;align-items:center;gap:.4rem;">
@@ -70,3 +70,15 @@
     </div>
   </div>
 {% endblock %}
+{% block tour %}<script>
+window.PAGE_TOUR = {id:'me-dashboard', steps:[
+  {el:'.subnav', title:'M&amp;E views',
+   body:'Switch between the Summary, data Quality, and Team-quality (per-enumerator) views of this project.'},
+  {el:'.page-head .tabs', title:'Time window',
+   body:'Every number on the page is for this period — last 7 / 30 / 90 days, or all time.'},
+  {el:'.cards', title:'Headline indicators',
+   body:'Submissions against target, approved count, open issues, and the auto-computed data-quality score.'},
+  {el:'[data-tour="me-export"]', title:'Export the data',
+   body:'Download the underlying datasets (CSV) or the collection units as GeoJSON for GIS.'},
+]};
+</script>{% endblock %}
