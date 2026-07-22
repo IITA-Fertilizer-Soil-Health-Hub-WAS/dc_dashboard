@@ -382,3 +382,51 @@ class EventScheduleItem(BaseModel):
         if crop_name and crop_name in self.crop_overrides:
             return int(self.crop_overrides[crop_name])
         return self.offset_days
+
+
+class ReferenceDataset(BaseModel):
+    """An external table imported into a project for reconciliation — a sampling
+    frame (expected samples), a lab-results export, or a lookup of valid IDs.
+
+    Rows are stored in ReferenceRow keyed by the value of `key_field`, so field
+    submissions can be matched against them: validate that a sample ID exists,
+    detect planned samples that were never submitted, and cross-check field
+    values against lab results. This is the missing "reference dataset" the
+    collection server (ODK/ONA) has no concept of."""
+
+    class Kind(models.TextChoices):
+        SAMPLING_FRAME = "SAMPLING_FRAME", "Sampling frame (expected records)"
+        LAB_RESULTS = "LAB_RESULTS", "Laboratory results"
+        LOOKUP = "LOOKUP", "Lookup / valid values"
+
+    project = models.ForeignKey(Project, on_delete=models.CASCADE,
+                                related_name="reference_datasets")
+    code = models.SlugField(max_length=64)
+    name = models.CharField(max_length=120)
+    kind = models.CharField(max_length=20, choices=Kind.choices, default=Kind.LOOKUP)
+    key_field = models.CharField(max_length=64)  # the column holding the join key
+    columns = models.JSONField(default=list, blank=True)  # ordered column names
+    row_count = models.PositiveIntegerField(default=0)
+    description = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        unique_together = ("project", "code")
+        ordering = ["project", "code"]
+
+    def __str__(self) -> str:
+        return f"{self.project.code}:{self.code}"
+
+
+class ReferenceRow(BaseModel):
+    """One row of a ReferenceDataset, keyed for fast join against submissions."""
+
+    dataset = models.ForeignKey(ReferenceDataset, on_delete=models.CASCADE,
+                                related_name="rows")
+    key = models.CharField(max_length=160)  # normalized value of the key column
+    data = models.JSONField(default=dict, blank=True)  # {column: value}
+
+    class Meta:
+        indexes = [models.Index(fields=["dataset", "key"])]
+
+    def __str__(self) -> str:
+        return f"{self.dataset.code}:{self.key}"

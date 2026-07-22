@@ -25,6 +25,7 @@ PER_SUBMISSION = {
     ValidationRule.RuleType.NUMERIC_RANGE: rule_impls.numeric_range,
     ValidationRule.RuleType.CROSS_FIELD: rule_impls.cross_field,
     ValidationRule.RuleType.CONDITIONAL_REQ: rule_impls.conditional_required,
+    ValidationRule.RuleType.MEDIA_REQUIRED: rule_impls.media_required,
     ValidationRule.RuleType.GEO_DISTANCE: rule_impls.geo_distance,
     ValidationRule.RuleType.GEO_CONTAINMENT: rule_impls.geo_containment,
 }
@@ -34,6 +35,8 @@ PER_USE_CASE = {
     ValidationRule.RuleType.DATE_WINDOW: rule_impls.date_window,
     ValidationRule.RuleType.NUMERIC_OUTLIER: rule_impls.numeric_outlier,
     ValidationRule.RuleType.UNIQUE_FIELD: rule_impls.unique_field,
+    ValidationRule.RuleType.REFERENCE_MATCH: rule_impls.reference_match,
+    ValidationRule.RuleType.REFERENCE_COMPARE: rule_impls.reference_compare,
     ValidationRule.RuleType.GEO_DUPLICATE: rule_impls.geo_duplicate,
     ValidationRule.RuleType.SUBMISSION_SPEED: rule_impls.submission_speed,
     ValidationRule.RuleType.PHOTO_REUSE: rule_impls.photo_reuse,

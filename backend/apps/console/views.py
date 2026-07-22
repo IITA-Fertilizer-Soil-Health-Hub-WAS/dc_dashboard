@@ -1423,16 +1423,21 @@ class RuleBuilderView(ManageMixin, View):
         return _builder_projects(request).filter(code=code).first()
 
     def _ctx(self, request, project, rule=None, error=None, posted=None):
+        from apps.projects.models import ReferenceDataset
         from apps.validation.models import ValidationRule
 
         forms = list(project.forms.all().order_by("title", "server_form_id"))
         fields_by_form = {str(f.id): _form_field_choices(f) for f in forms}
+        datasets = {
+            d.code: {"name": d.name, "columns": d.columns, "key_field": d.key_field}
+            for d in ReferenceDataset.objects.filter(project=project)
+        }
         # Rule types offered in the builder (PLUGIN is code-only, so it's excluded).
         types = [(v, lbl) for v, lbl in ValidationRule.RuleType.choices if v != "PLUGIN"]
         return {
             "console_key": "validation-rules", "groups": grouped(),
             "project": project, "rule": rule, "forms": forms,
-            "fields_by_form": fields_by_form,
+            "fields_by_form": fields_by_form, "datasets": datasets,
             "rule_types": types,
             "severities": ValidationRule.Severity.choices,
             "rule_params": rule.params if rule else {},
@@ -1578,6 +1583,93 @@ class RuleTestView(ManageMixin, View):
         })
 
 
+class ReferenceDatasetsView(ManageMixin, View):
+    """List a project's reference datasets and import new ones from CSV — the
+    sampling frames / lab results / lookups used to reconcile field data."""
+
+    def _project(self, request):
+        code = (request.GET.get("project") or request.POST.get("project")
+                or request.session.get("active_project"))
+        return _builder_projects(request).filter(code=code).first()
+
+    def get(self, request, error=None, posted=None):
+        from apps.projects.models import ReferenceDataset
+
+        project = self._project(request)
+        if project is None:
+            messages.error(request, "Pick a project first.")
+            return redirect("console:list", key="projects")
+        datasets = ReferenceDataset.objects.filter(project=project).order_by("code")
+        return render(request, "console/reference_datasets.html", {
+            "console_key": "validation-rules", "groups": grouped(),
+            "project": project, "datasets": datasets,
+            "kinds": ReferenceDataset.Kind.choices, "error": error, "posted": posted or {},
+        })
+
+    def post(self, request):
+        from apps.projects.reference import import_reference_csv
+
+        project = self._project(request)
+        if project is None:
+            messages.error(request, "Pick a project first.")
+            return redirect("console:list", key="projects")
+        from django.utils.text import slugify
+
+        f = request.FILES.get("file")
+        code = slugify(request.POST.get("code", "").strip())[:64]
+        name = (request.POST.get("name") or code).strip()[:120]
+        kind = request.POST.get("kind") or "LOOKUP"
+        key_field = (request.POST.get("key_field") or "").strip()
+        if not (f and code and key_field):
+            return self.get(request, error="Choose a CSV file, a name, and the key column.",
+                            posted=request.POST)
+        try:
+            text = f.read().decode("utf-8-sig")
+            ds = import_reference_csv(project, code=code, name=name, kind=kind,
+                                      key_field=key_field, text=text)
+        except (ValueError, UnicodeDecodeError) as exc:
+            return self.get(request, error=str(exc), posted=request.POST)
+        messages.success(request, f"Imported “{ds.name}” — {ds.row_count} row(s).")
+        return redirect(f"{reverse('console:reference_datasets')}?project={project.code}")
+
+
+class ReferenceDeleteView(ManageMixin, View):
+    def post(self, request, pk):
+        from apps.projects.models import ReferenceDataset
+
+        ds = get_object_or_404(
+            ReferenceDataset.objects.filter(project__in=_builder_projects(request)), pk=pk)
+        code = ds.project.code
+        ds.delete()
+        messages.success(request, "Reference dataset removed.")
+        return redirect(f"{reverse('console:reference_datasets')}?project={code}")
+
+
+class ReferenceCoverageView(ManageMixin, View):
+    """Reconcile a reference dataset against submissions: coverage %, planned
+    samples never submitted (missing), and submitted ids not in the frame."""
+
+    def get(self, request, pk):
+        from apps.projects.models import ReferenceDataset
+        from apps.projects.reference import reconcile
+
+        ds = get_object_or_404(
+            ReferenceDataset.objects.filter(project__in=_builder_projects(request)), pk=pk)
+        field_key = request.GET.get("field") or ""
+        result = reconcile(ds, field_key) if field_key else None
+        fields, seen = [], set()
+        for form in ds.project.forms.all():
+            for c in _form_field_choices(form):
+                if c["key"] not in seen:
+                    seen.add(c["key"])
+                    fields.append(c)
+        return render(request, "console/reference_coverage.html", {
+            "console_key": "validation-rules", "groups": grouped(),
+            "project": ds.project, "ds": ds, "field_key": field_key,
+            "result": result, "fields": fields,
+        })
+
+
 # ---------------------------------------------------------------------------
 # One-page Set up hubs — a project's whole config surface (and the admin's
 # tenancy structure) on a single screen, with inline quick-add on the simple
@@ -1597,6 +1689,8 @@ SETUP_CARD_META: dict[str, tuple[str, str, str]] = {
                          "Checks that flag submissions for review."),
     "rejection-reasons": ("Rejection reasons", "block",
                          "Reasons a reviewer can decline a submission for."),
+    "reference-datasets": ("Reference data", "dataset",
+                          "Sampling frames, lab results & lookups to reconcile field data against."),
     "plot-election": ("Plot election", "where_to_vote",
                      "Review proposed plots and elect the trial plots."),
     "organizations": ("Institutions", "domain",
@@ -1748,6 +1842,12 @@ class SetupHubView(ManageMixin, View):
             ("Quality rules", "rule",
              "Automatic checks, and the reasons a reviewer can decline for.",
              [("validation-rules", {}), ("rejection-reasons", {})]),
+            ("Reference data", "dataset",
+             "External tables to reconcile against — sampling frames, lab results, lookups.",
+             [("reference-datasets", {
+                 "count": uc.reference_datasets.count(),
+                 "url": f"{reverse('console:reference_datasets')}?project={uc.code}",
+                 "external": True})]),
         ]
         return _setup_render(request, uc=uc, sections=_setup_sections(request, uc, layout),
                              title="Set up", subtitle=uc.name)

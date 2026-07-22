@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Reference data · {{ project.code }} · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}
+  <span class="sep">/</span><span class="cur">Manage</span>
+  <span class="sep">/</span><span class="cur">Reference data</span>
+{% endblock %}
+{% block extrahead %}{{ block.super }}
+<style>
+  .rd{max-width:900px;}
+  .rd .card{padding:1.15rem 1.3rem;margin-bottom:1rem;}
+  .rd h3{margin:0 0 .2rem;font-size:1rem;}
+  .rd .sub{color:var(--muted);font-size:.84rem;margin:0 0 1rem;}
+  .rd table{width:100%;border-collapse:collapse;font-size:.88rem;}
+  .rd th,.rd td{text-align:left;padding:.5rem .6rem;border-bottom:1px solid var(--line);}
+  .rd th{font-size:.72rem;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);}
+  .rd .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.8rem 1rem;}
+  .rd .fld{display:flex;flex-direction:column;gap:.3rem;}
+  .rd label{font-size:.74rem;font-weight:650;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;}
+  .rd input,.rd select{padding:.5rem .6rem;border:1px solid var(--line);border-radius:9px;font-size:.9rem;background:var(--surface);font-family:var(--sans);}
+  .rd input:focus,.rd select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-50);}
+  .rd .hint{font-size:.75rem;color:var(--faint);}
+  .rd .btn-save{background:var(--brand);color:#fff;border:none;border-radius:9px;padding:.55rem 1.1rem;font-weight:650;font-size:.88rem;cursor:pointer;}
+  .rd .err{background:#fdecea;border:1px solid #f5c2bc;color:#a03024;border-radius:9px;padding:.55rem .8rem;font-size:.86rem;margin-bottom:.9rem;}
+  .rd .pill{background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:.05rem .4rem;font-size:.74rem;}
+  .rd .act a{font-size:.82rem;margin-right:.7rem;color:var(--brand);text-decoration:none;font-weight:600;}
+  .rd .act a.del{color:var(--red);}
+</style>
+{% endblock %}
+{% block content %}
+  <div class="page-head"><h2>Reference data <span class="subtle" style="font-weight:400;">· {{ project.name }}</span></h2></div>
+  <p class="rd sub" style="max-width:900px;">External tables the collection server doesn't hold — sampling frames (expected records), laboratory results, or lookups of valid IDs. Import them here, then reconcile field data against them (validate sample IDs, find missing samples, cross-check lab values).</p>
+
+  <div class="rd">
+    <div class="card">
+      <h3>Imported datasets</h3>
+      {% if datasets %}
+        <table>
+          <thead><tr><th>Name</th><th>Kind</th><th>Key column</th><th>Rows</th><th></th></tr></thead>
+          <tbody>
+            {% for d in datasets %}
+              <tr>
+                <td><strong>{{ d.name }}</strong> <span class="subtle mono" style="font-size:.78rem;">{{ d.code }}</span></td>
+                <td><span class="pill">{{ d.get_kind_display }}</span></td>
+                <td class="mono" style="font-size:.82rem;">{{ d.key_field }}</td>
+                <td style="font-variant-numeric:tabular-nums;">{{ d.row_count }}</td>
+                <td class="act" style="text-align:right;white-space:nowrap;">
+                  <a href="{% url 'console:reference_coverage' d.pk %}">Coverage</a>
+                  <form method="post" action="{% url 'console:reference_delete' d.pk %}" style="display:inline;" onsubmit="return confirm('Remove this reference dataset?');">
+                    {% csrf_token %}<button class="del" type="submit" style="background:none;border:none;color:var(--red);font-size:.82rem;font-weight:600;cursor:pointer;">Delete</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="subtle" style="font-size:.86rem;">No reference datasets yet — import one below.</p>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <h3>Import a CSV</h3>
+      <p class="sub">The file's first row must be column headers. Pick which column holds the join key (e.g. the sample / plot / household ID).</p>
+      {% if error %}<div class="err">{{ error }}</div>{% endif %}
+      <form method="post" enctype="multipart/form-data" action="{% url 'console:reference_datasets' %}?project={{ project.code }}">
+        {% csrf_token %}
+        <div class="grid">
+          <div class="fld"><label>Name</label><input name="name" value="{{ posted.name }}" placeholder="Soil sampling frame 2025"></div>
+          <div class="fld"><label>Code</label><input name="code" value="{{ posted.code }}" placeholder="soil-frame-2025"><span class="hint">Short id, referenced by rules.</span></div>
+          <div class="fld"><label>Kind</label>
+            <select name="kind">{% for v,lbl in kinds %}<option value="{{ v }}" {% if posted.kind == v %}selected{% endif %}>{{ lbl }}</option>{% endfor %}</select>
+          </div>
+          <div class="fld"><label>Key column</label><input name="key_field" value="{{ posted.key_field }}" placeholder="sample_id"><span class="hint">Exact header name in the CSV.</span></div>
+          <div class="fld" style="grid-column:1 / -1;"><label>CSV file</label><input type="file" name="file" accept=".csv,text/csv"></div>
+        </div>
+        <div style="margin-top:1rem;"><button type="submit" class="btn-save">Import dataset</button></div>
+      </form>
+    </div>
+  </div>
+{% endblock %}

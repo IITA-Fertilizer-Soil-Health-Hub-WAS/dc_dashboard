@@ -230,6 +230,19 @@ def conditional_required(submission, params) -> list[FlagResult]:
     return out
 
 
+def media_required(submission, params) -> list[FlagResult]:
+    """Flag a submission missing an expected attachment (e.g. a plot photo).
+    Uses the media hashes populated on ingest; fewer than `min` → flagged.
+
+    params: {min?: 1, message?}."""
+    min_n = int(params.get("min", 1))
+    have = len(submission.media_hashes or [])
+    if have >= min_n:
+        return []
+    msg = params.get("message", f"Missing attachment — {have} of {min_n} expected")
+    return [FlagResult(submission.id, msg, "", {"media": have, "min": min_n})]
+
+
 def geo_distance(submission, params) -> list[FlagResult]:
     """Flag a submission collected too far from its assigned plot — a GPS mismatch
     that usually means the wrong plot was visited, or the location was faked.
@@ -399,6 +412,75 @@ def unique_field(project, params, form=None) -> list[FlagResult]:
         msg = params.get("message", f"Duplicate {field_key} = {val} ({len(sids)} submissions)")
         for sid in sids:
             out.append(FlagResult(sid, msg, field_key, {"value": val, "count": len(sids)}))
+    return out
+
+
+def reference_match(project, params, form=None) -> list[FlagResult]:
+    """Flag submissions whose ID field value is NOT present in a reference
+    dataset — an unknown or mistyped sample id, or a record that isn't in the
+    sampling frame. (Validates sample IDs across systems.)
+
+    params: {field, dataset (code), message?}."""
+    from apps.projects.models import ReferenceDataset
+
+    field_key, code = params.get("field"), params.get("dataset")
+    if not (field_key and code):
+        return []
+    ds = ReferenceDataset.objects.filter(project=project, code=code).first()
+    if ds is None:
+        return []
+    keys = set(ds.rows.values_list("key", flat=True))
+    out: list[FlagResult] = []
+    for sid, val in _field_values(project, form, field_key).items():
+        v = str(val).strip()
+        if v and v not in keys:
+            msg = params.get("message", f"{field_key} “{v}” is not in reference “{ds.name}”")
+            out.append(FlagResult(sid, msg, field_key, {"value": v, "dataset": code}))
+    return out
+
+
+def reference_compare(project, params, form=None) -> list[FlagResult]:
+    """Cross-check a submitted value against the matching reference row — e.g. a
+    field measurement vs the laboratory result for the same sample. Joins on the
+    sample id, then compares the field to a reference column. (Lab–field
+    consistency check.) Unmatched ids are left to reference_match.
+
+    params: {key_field, dataset, ref_column, field, compare?: eq, tol?: 0, message?}."""
+    from apps.projects.models import ReferenceDataset
+
+    field_key = params.get("field")
+    code = params.get("dataset")
+    key_field = params.get("key_field")
+    ref_column = params.get("ref_column")
+    if not (field_key and code and key_field and ref_column):
+        return []
+    ds = ReferenceDataset.objects.filter(project=project, code=code).first()
+    if ds is None:
+        return []
+    ref = {r.key: (r.data or {}).get(ref_column) for r in ds.rows.all()}
+    compare = params.get("compare", "eq")
+    tol = float(params.get("tol", 0) or 0)
+    ids = _field_values(project, form, key_field)     # sid -> join id
+    vals = _field_values(project, form, field_key)    # sid -> field value
+    out: list[FlagResult] = []
+    for sid, jid in ids.items():
+        rid = str(jid).strip()
+        if rid not in ref:
+            continue  # no lab record for this id — reference_match handles unknowns
+        expected, actual = ref[rid], vals.get(sid)
+        if actual in (None, "") or expected in (None, ""):
+            continue
+        a, e = _to_float(actual), _to_float(expected)
+        if a is not None and e is not None:
+            ok = _CMP.get(compare, _CMP["eq"])(a, e, tol)
+        else:
+            ok = str(actual).strip() == str(expected).strip()
+        if not ok:
+            msg = params.get(
+                "message",
+                f"{field_key} = {actual} disagrees with lab {ref_column} = {expected} (id {rid})")
+            out.append(FlagResult(sid, msg, field_key,
+                                  {"value": actual, "expected": expected, "id": rid}))
     return out
 
 

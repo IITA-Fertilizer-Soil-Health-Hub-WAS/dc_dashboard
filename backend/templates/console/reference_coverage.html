@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Coverage · {{ ds.name }} · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}
+  <span class="sep">/</span><span class="cur">Manage</span>
+  <span class="sep">/</span><a href="{% url 'console:reference_datasets' %}?project={{ project.code }}">Reference data</a>
+  <span class="sep">/</span><span class="cur">{{ ds.name }}</span>
+{% endblock %}
+{% block extrahead %}{{ block.super }}
+<style>
+  .cov{max-width:900px;}
+  .cov .card{padding:1.15rem 1.3rem;margin-bottom:1rem;}
+  .cov .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.9rem;margin:.2rem 0 0;}
+  .cov .stat .n{font-size:1.7rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;}
+  .cov .stat .l{font-size:.74rem;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-top:.2rem;}
+  .cov .bar{height:9px;border-radius:5px;background:var(--surface-2);overflow:hidden;margin:.9rem 0 .2rem;}
+  .cov .bar span{display:block;height:100%;background:var(--brand);}
+  .cov .cols{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+  @media(max-width:720px){.cov .cols{grid-template-columns:1fr;}.cov .stats{grid-template-columns:1fr 1fr;}}
+  .cov .list{max-height:280px;overflow:auto;border:1px solid var(--line);border-radius:9px;padding:.5rem;}
+  .cov .list code{display:block;font-size:.82rem;padding:.15rem .3rem;}
+  .cov .miss{color:var(--red);} .cov .unk{color:#8a6d1a;}
+  .cov select{padding:.5rem .6rem;border:1px solid var(--line);border-radius:9px;font-size:.9rem;background:var(--surface);}
+</style>
+{% endblock %}
+{% block content %}
+  <div class="page-head"><h2>{{ ds.name }} <span class="subtle" style="font-weight:400;">· coverage</span></h2>
+    <span class="pill">{{ ds.row_count }} reference rows</span></div>
+  <p class="cov subtle" style="max-width:900px;">Pick the submission field that carries the same ID as this dataset's key (<span class="mono">{{ ds.key_field }}</span>). We then compare what was collected against what's expected.</p>
+
+  <form method="get" class="cov" style="margin:.4rem 0 1rem;">
+    <input type="hidden" name="project" value="{{ project.code }}">
+    <label style="font-size:.8rem;color:var(--muted);margin-right:.4rem;">Match on submission field:</label>
+    <select name="field" onchange="this.form.submit()">
+      <option value="">— choose a field —</option>
+      {% for f in fields %}<option value="{{ f.key }}" {% if f.key == field_key %}selected{% endif %}>{{ f.label }}</option>{% endfor %}
+    </select>
+  </form>
+
+  {% if result %}
+    <div class="cov">
+      <div class="card">
+        <div class="stats">
+          <div class="stat"><div class="n">{{ result.coverage_pct }}%</div><div class="l">Coverage</div></div>
+          <div class="stat"><div class="n">{{ result.matched }}</div><div class="l">Matched</div></div>
+          <div class="stat"><div class="n" style="color:var(--red);">{{ result.missing_n }}</div><div class="l">Missing (not submitted)</div></div>
+          <div class="stat"><div class="n" style="color:#8a6d1a;">{{ result.unknown_n }}</div><div class="l">Unknown (not in frame)</div></div>
+        </div>
+        <div class="bar"><span style="width:{{ result.coverage_pct }}%;"></span></div>
+        <p class="subtle" style="font-size:.82rem;margin:.2rem 0 0;">{{ result.matched }} of {{ result.frame }} expected records were submitted · {{ result.submitted }} distinct ids collected.</p>
+      </div>
+
+      <div class="cols">
+        <div class="card">
+          <h3 style="margin:0 0 .5rem;font-size:.95rem;" class="miss">Planned but never submitted ({{ result.missing_n }})</h3>
+          {% if result.missing %}<div class="list">{% for k in result.missing %}<code class="miss">{{ k }}</code>{% endfor %}
+            {% if result.missing_n > 500 %}<p class="subtle" style="font-size:.78rem;">…and {{ result.missing_n|add:"-500" }} more.</p>{% endif %}</div>
+          {% else %}<p class="subtle" style="font-size:.85rem;">None — every expected record was submitted. ✓</p>{% endif %}
+        </div>
+        <div class="card">
+          <h3 style="margin:0 0 .5rem;font-size:.95rem;" class="unk">Submitted but not in the frame ({{ result.unknown_n }})</h3>
+          {% if result.unknown %}<div class="list">{% for k in result.unknown %}<code class="unk">{{ k }}</code>{% endfor %}
+            {% if result.unknown_n > 500 %}<p class="subtle" style="font-size:.78rem;">…and {{ result.unknown_n|add:"-500" }} more.</p>{% endif %}</div>
+          {% else %}<p class="subtle" style="font-size:.85rem;">None — every submitted id is a known sample. ✓</p>{% endif %}
+        </div>
+      </div>
+    </div>
+  {% elif field_key %}
+    <p class="subtle">No data to reconcile yet.</p>
+  {% endif %}
+{% endblock %}
