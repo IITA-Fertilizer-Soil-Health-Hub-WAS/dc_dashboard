@@ -30,11 +30,17 @@ def value_of(submission: Submission, field_key: str) -> Any:
     Falls back to the raw payload so a rule can target ANY imported form field,
     not only the mapped canonical ones (ONA/ODK records are flat slash-keyed,
     matching the form schema paths)."""
+    # Fast path: the engine bulk-loads all values and attaches a per-submission
+    # cache, so this is an in-memory lookup (no query) during a full run.
+    cache = getattr(submission, "_value_cache", None)
+    if cache is not None:
+        if field_key in cache:
+            return cache[field_key]
+        return (submission.raw_payload or {}).get(field_key)
     v = SubmissionValue.objects.filter(submission=submission, field_key=field_key).first()
     if v is not None:
         return v.current_value
-    raw = submission.raw_payload or {}
-    return raw.get(field_key)
+    return (submission.raw_payload or {}).get(field_key)
 
 
 def _to_float(v: Any) -> float | None:

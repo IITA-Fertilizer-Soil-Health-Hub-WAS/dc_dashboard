@@ -66,12 +66,31 @@ def _run_rule(rule: ValidationRule, submissions) -> list[rule_impls.FlagResult]:
     return []  # PLUGIN handled by plugin.post_validate (Phase 8)
 
 
+def _attach_value_cache(project, submissions) -> None:
+    """Bulk-load every SubmissionValue for the project once and attach a
+    {field_key: value} dict to each submission, so per-submission rules do O(1)
+    lookups instead of a query per field (the N+1 that blocked scale)."""
+    from collections import defaultdict
+
+    from apps.submissions.models import SubmissionValue
+
+    vmap: dict = defaultdict(dict)
+    for sid, fk, cv in (
+        SubmissionValue.objects.filter(submission__project=project)
+        .values_list("submission_id", "field_key", "current_value").iterator()
+    ):
+        vmap[sid][fk] = cv
+    for sub in submissions:
+        sub._value_cache = vmap.get(sub.id, {})
+
+
 @transaction.atomic
 def run_for_project(project) -> ValidationStats:
     stats = ValidationStats(project=project.code)
     submissions = list(
         Submission.objects.filter(project=project).select_related("collection_unit")
     )
+    _attach_value_cache(project, submissions)
     error_submission_ids: set = set()
 
     for rule in project.rules.filter(is_enabled=True):

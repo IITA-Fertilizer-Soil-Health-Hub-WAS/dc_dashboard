@@ -175,6 +175,10 @@ class SubmissionValue(BaseModel):
     class Meta:
         unique_together = ("submission", "field_key")
         ordering = ["submission", "field_key"]
+        # Cross-project field scans (outlier / unique / reference rules, coverage)
+        # filter by field_key; the unique index leads on submission_id so it can't
+        # serve those. A field_key index makes them fast at scale.
+        indexes = [models.Index(fields=["field_key"])]
 
     def __str__(self) -> str:
         return f"{self.submission_id}:{self.field_key}"
