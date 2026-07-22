@@ -444,7 +444,7 @@
           -> (My work) -> Set up -> Field register -> Review & correct -> Finalize ->
           Monitor. Every tab keeps its existing visibility guard; only the order and
           the stage labels change.{% endcomment %}
-          <a href="{% url 'dashboards:project' active_uc.code %}"
+          <a href="{% url 'dashboards:project' active_uc.code %}" data-tour="dashboard"
              class="{% if request.resolver_match.url_name == 'project' and active_tab == 'summary' %}active{% endif %}">
             <span class="msym">dashboard</span>Dashboard
           </a>
@@ -454,7 +454,7 @@
 
           {% comment %}1 · Set up — one page gathering all project configuration (forms, schedule, crops, plot election, quality rules). Coordinators / admins only.{% endcomment %}
           {% if can_manage_access %}
-            <div class="lbl">Set up</div>
+            <div class="lbl" data-tour="setup">Set up</div>
             <a href="{% url 'console:setup' %}?project={{ active_uc.code }}"
                class="{% if request.resolver_match.url_name == 'setup' or request.resolver_match.url_name == 'plot_election' or request.resolver_match.url_name == 'plot_elect' or request.resolver_match.kwargs.key == 'forms' or request.resolver_match.kwargs.key == 'field-mappings' or request.resolver_match.kwargs.key == 'event-schedule' or request.resolver_match.kwargs.key == 'crops' or request.resolver_match.kwargs.key == 'trials' or request.resolver_match.kwargs.key == 'validation-rules' or request.resolver_match.kwargs.key == 'rejection-reasons' %}active{% endif %}">
               <span class="msym">tune</span>Project setup
@@ -462,7 +462,7 @@
           {% endif %}
 
           {% comment %}2 · Field register — who collects and where (read-only for members).{% endcomment %}
-          <div class="lbl">Field register</div>
+          <div class="lbl" data-tour="field">Field register</div>
           <a href="{% url 'dashboards:project' active_uc.code %}?tab=enumerators"
              class="{% if active_tab == 'enumerators' %}active{% endif %}">
             <span class="msym">badge</span>Enumerators
@@ -474,7 +474,7 @@
 
           {% comment %}3 · Assign & access — hand collection work to enumerators and manage who can act on the project.{% endcomment %}
           {% if can_manage_access %}
-            <div class="lbl">Assign &amp; access</div>
+            <div class="lbl" data-tour="assign">Assign &amp; access</div>
             <a href="{% url 'console:list' 'jobs' %}?project={{ active_uc.code }}"
                class="{% if request.resolver_match.kwargs.key == 'jobs' or request.resolver_match.url_name == 'job_assignments' %}active{% endif %}">
               <span class="msym">assignment</span>Jobs &amp; assignments
@@ -487,7 +487,7 @@
           {% endif %}
 
           {% comment %}4 · Review & correct — check incoming data and fix problems.{% endcomment %}
-          <div class="lbl">Review &amp; correct</div>
+          <div class="lbl" data-tour="review">Review &amp; correct</div>
           <a href="{% url 'dashboards:project' active_uc.code %}?tab=data"
              class="{% if active_tab == 'data' %}active{% endif %}">
             <span class="msym">table_rows</span>Data
@@ -508,7 +508,7 @@
           {% endif %}
 
           {# 5 · Finalize — approve the clean dataset. #}
-          <div class="lbl">Finalize</div>
+          <div class="lbl" data-tour="finalize">Finalize</div>
           <a href="{% url 'dashboards:project' active_uc.code %}?tab=final"
              class="{% if active_tab == 'final' %}active{% endif %}">
             <span class="msym">verified_user</span>Final data
@@ -521,7 +521,7 @@
           {% endif %}
 
           {# 6 · Monitor — track progress and M&E. #}
-          <div class="lbl">Monitor</div>
+          <div class="lbl" data-tour="monitor">Monitor</div>
           <a href="{% url 'kpi:project' active_uc.code %}"
              class="{% if request.resolver_match.app_name == 'kpi' %}active{% endif %}">
             <span class="msym">insights</span>M&amp;E
@@ -641,6 +641,10 @@
           {% block crumbs %}{% endblock %}
         </nav>
         <span class="spacer"></span>
+        <button type="button" id="tourBtn" class="tour-btn" hidden
+                onclick="window.FieldbaseTour&&FieldbaseTour.start()">
+          <span class="msym" aria-hidden="true">explore</span><span class="tb-txt">Tour this page</span>
+        </button>
       </header>
       {% if show_claim_admin %}
         <div class="banner gold" style="margin:1rem 1.8rem 0;">
@@ -833,6 +837,77 @@
       document.querySelectorAll('[data-msel]').forEach(initMulti);
       document.querySelectorAll('select[multiple]').forEach(enhanceMultiSelect);
     })();
+  </script>
+
+  {# Per-workflow guided tour. A page sets window.PAGE_TOUR = {id, steps:[{el,title,body}]}. #}
+  <style>
+    .tour-btn{display:inline-flex;align-items:center;gap:.3rem;background:var(--surface-2);border:1px solid var(--line);
+      border-radius:999px;padding:.35rem .75rem;font-size:.82rem;font-weight:600;color:var(--brand);cursor:pointer;}
+    .tour-btn:hover{background:var(--brand-50);border-color:var(--brand);}
+    .tour-btn .msym{font-size:17px;}
+    .tour-hole{position:fixed;z-index:1000;border-radius:10px;pointer-events:none;display:none;
+      box-shadow:0 0 0 9999px rgba(8,30,20,.55);transition:top .18s,left .18s,width .18s,height .18s;}
+    .tour-pop{position:fixed;z-index:1001;width:310px;max-width:calc(100vw - 16px);background:var(--surface);
+      border:1px solid var(--line);border-radius:13px;box-shadow:0 14px 40px rgba(8,30,20,.28);
+      padding:1rem 1.15rem;display:none;font-family:var(--sans);}
+    .tour-pop h4{margin:.15rem 0 .35rem;font-size:1.02rem;color:var(--ink);}
+    .tour-pop p{margin:0 0 .85rem;color:var(--muted);line-height:1.5;font-size:.87rem;}
+    .tour-pop .tp-step{font-size:.7rem;font-weight:800;color:var(--brand);text-transform:uppercase;letter-spacing:.05em;}
+    .tour-pop .tp-actions{display:flex;align-items:center;gap:.5rem;}
+    .tour-pop button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:.42rem .8rem;
+      font-size:.83rem;font-weight:600;cursor:pointer;color:var(--ink);}
+    .tour-pop .tp-next{background:var(--brand);color:#fff;border-color:var(--brand);}
+    .tour-pop .tp-skip{border:none;color:var(--muted);padding-left:0;}
+    @media(max-width:640px){.tour-btn .tb-txt{display:none;}}
+  </style>
+  {% block tour %}{% endblock %}
+  <script>
+    window.FieldbaseTour = (function(){
+      var steps=[], id='tour', i=0, hole, pop;
+      function ensure(){
+        if(hole) return;
+        hole=document.createElement('div'); hole.className='tour-hole';
+        pop=document.createElement('div'); pop.className='tour-pop'; pop.setAttribute('role','dialog');
+        document.body.appendChild(hole); document.body.appendChild(pop);
+      }
+      function esc(t){ var d=document.createElement('div'); d.textContent=t||''; return d.innerHTML; }
+      function draw(){
+        if(!pop) return;
+        var s=steps[i]; var el=s&&s.el?document.querySelector(s.el):null;
+        if(el){ var r=el.getBoundingClientRect(), pad=6;
+          hole.style.display='block';
+          hole.style.top=(r.top-pad)+'px'; hole.style.left=(r.left-pad)+'px';
+          hole.style.width=(r.width+pad*2)+'px'; hole.style.height=(r.height+pad*2)+'px';
+        } else { hole.style.display='none'; }
+        pop.innerHTML='<div class="tp-step">Step '+(i+1)+' of '+steps.length+'</div>'+
+          '<h4>'+esc(s.title)+'</h4><p>'+(s.body||'')+'</p><div class="tp-actions">'+
+          '<button class="tp-skip" data-a="skip">Skip</button><span style="flex:1"></span>'+
+          (i>0?'<button data-a="back">Back</button>':'')+
+          '<button class="tp-next" data-a="next">'+(i===steps.length-1?'Done':'Next')+'</button></div>';
+        pop.querySelectorAll('[data-a]').forEach(function(b){ b.onclick=function(){ act(b.getAttribute('data-a')); }; });
+        var pr=pop.getBoundingClientRect(), vw=innerWidth, vh=innerHeight, top, left;
+        if(el){ var q=el.getBoundingClientRect();
+          if(q.bottom+pr.height+16<vh){ top=q.bottom+12; left=Math.min(Math.max(8,q.left),vw-pr.width-8); }
+          else if(q.top-pr.height-16>0){ top=q.top-pr.height-12; left=Math.min(Math.max(8,q.left),vw-pr.width-8); }
+          else { top=(vh-pr.height)/2; left=(vw-pr.width)/2; }
+        } else { top=(vh-pr.height)/2; left=(vw-pr.width)/2; }
+        pop.style.top=Math.max(8,top)+'px'; pop.style.left=Math.max(8,left)+'px';
+      }
+      function go(){ var s=steps[i]; var el=s&&s.el?document.querySelector(s.el):null;
+        if(el) el.scrollIntoView({block:'center',behavior:'smooth'}); setTimeout(draw, el?200:0); }
+      function act(a){ if(a==='next'){ if(i>=steps.length-1) return done(); i++; go(); }
+        else if(a==='back'){ if(i>0){ i--; go(); } } else { done(); } }
+      function done(){ if(hole)hole.style.display='none'; if(pop)pop.style.display='none';
+        try{ localStorage.setItem('tour_done_'+id,'1'); }catch(e){}
+        removeEventListener('resize',draw,true); removeEventListener('scroll',draw,true); }
+      function start(){ if(!steps.length) return; ensure(); i=0; pop.style.display='block';
+        addEventListener('resize',draw,true); addEventListener('scroll',draw,true); go(); }
+      function register(t){ steps=(t&&t.steps)||[]; id=(t&&t.id)||'tour';
+        var btn=document.getElementById('tourBtn'); if(btn&&steps.length) btn.hidden=false;
+        try{ if(steps.length&&!localStorage.getItem('tour_done_'+id)) setTimeout(start,800); }catch(e){} }
+      return { start:start, register:register };
+    })();
+    if(window.PAGE_TOUR) FieldbaseTour.register(window.PAGE_TOUR);
   </script>
 {% else %}
   <div class="auth-wrap">{% block guest_content %}{% endblock %}</div>

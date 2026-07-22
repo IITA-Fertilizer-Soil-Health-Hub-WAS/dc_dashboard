@@ -124,3 +124,13 @@
     </div>
   {% endif %}
 {% endblock %}
+{% block tour %}{% if sections %}<script>
+window.PAGE_TOUR = {id:'setup-hub', steps:[
+  {el:'.setup-progress', title:'Setup progress',
+   body:'How many configuration areas have at least one entry. The goal is to fill each stage before collecting.'},
+  {el:'.steps .step:first-child', title:'Work top to bottom',
+   body:'Each numbered stage is a step in setting up data collection — instrument, schedule, plots, quality rules, reference data.'},
+  {el:'.steps .step:first-child .scard', title:'Each area is a card',
+   body:'A live count, a status chip, and quick links: Open the full editor, or add an entry inline right here.'},
+]};
+</script>{% endif %}{% endblock %}

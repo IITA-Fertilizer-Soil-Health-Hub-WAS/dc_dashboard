@@ -383,3 +383,17 @@
 })();
 </script>
 {% endblock %}
+{% block tour %}<script>
+window.PAGE_TOUR = {id:'rule-builder', steps:[
+  {el:'#rb-form', title:'Pick the form',
+   body:'A rule attaches to one form. Its fields then fill the pickers below — no field keys to memorise.'},
+  {el:'#rb-type', title:'Choose a check',
+   body:'Range, statistical outlier, cross-column sum, duplicate, conditionally-required, reference / lab match, and more.'},
+  {el:'#rb-settings', title:'Fill in the settings',
+   body:'No JSON — pick fields and values with plain controls. The summary below restates the rule in plain English.'},
+  {el:'#rb-test', title:'Test before you save',
+   body:'See how many current submissions the rule would flag, without saving it.'},
+  {el:'.btn-save', title:'Save',
+   body:'The rule starts flagging on the next validation run and appears on the project\'s Issues tab.'},
+]};
+</script>{% endblock %}

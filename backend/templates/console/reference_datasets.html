@@ -78,3 +78,13 @@
     </div>
   </div>
 {% endblock %}
+{% block tour %}<script>
+window.PAGE_TOUR = {id:'reference-data', steps:[
+  {el:'form[enctype]', title:'Import a reference table',
+   body:'Upload a CSV the collection server doesn\'t hold — a sampling frame (expected records), lab results, or a lookup of valid IDs.'},
+  {el:'input[name="key_field"]', title:'Pick the join key',
+   body:'The column that matches a field in your submissions (e.g. sample_id). Rules and the coverage report join on it.'},
+  {el:'.rd .card:first-child', title:'Reconcile your data',
+   body:'Once imported: open Coverage to see missing (planned but never submitted) and unknown ids, or add a reference-match / lab-consistency rule.'},
+]};
+</script>{% endblock %}

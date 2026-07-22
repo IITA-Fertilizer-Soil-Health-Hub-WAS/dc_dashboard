@@ -334,3 +334,15 @@
     }
   </script>
 {% endblock %}
+{% block tour %}<script>
+window.PAGE_TOUR = {id:'onboard', steps:[
+  {el:'#f_backend', title:'Connect a collection server',
+   body:'Choose ODK Central, ONA or Kobo, and optionally a URL and API token.'},
+  {el:'#project-list', title:'Pick the server project',
+   body:'We discover the projects on that server. Any already onboarded are badged so you don\'t import the same one twice.'},
+  {el:'.wz-steps', title:'Three quick steps',
+   body:'Connect → name the project & owner → confirm its forms. Form names and fields are imported automatically at the end.'},
+  {el:'#btnNext', title:'Next',
+   body:'Move through the steps; the last one onboards the project.'},
+]};
+</script>{% endblock %}
