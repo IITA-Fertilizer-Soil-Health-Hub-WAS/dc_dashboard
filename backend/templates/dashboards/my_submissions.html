@@ -24,6 +24,16 @@
             <td><span class="pill neutral">{{ s.review.get_state_display }}</span></td>
             <td>{% if s.open_flags %}<span class="pill danger">{{ s.open_flags }} open</span>{% else %}<span class="subtle">clean</span>{% endif %}</td>
           </tr>
+          {% if s.open_flag_list %}
+          <tr class="fix-row">
+            <td></td>
+            <td colspan="5" style="padding-top:0;">
+              <ul style="margin:.1rem 0 .5rem;padding-left:1.1rem;color:var(--red);font-size:.83rem;line-height:1.5;">
+                {% for f in s.open_flag_list %}<li><strong>{% if f.field_key %}{{ f.field_key }}: {% endif %}</strong>{{ f.message }}</li>{% endfor %}
+              </ul>
+            </td>
+          </tr>
+          {% endif %}
         {% empty %}
           <tr><td colspan="6"><div class="empty" style="border:none;">No submissions attributed to you yet. Collect in ODK Collect and they'll appear here after the next sync.</div></td></tr>
         {% endfor %}

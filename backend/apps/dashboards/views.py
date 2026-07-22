@@ -77,6 +77,7 @@ def my_assignments(request):
 def my_submissions(request):
     """An enumerator's own collected submissions and the open flags they need to
     fix — scoped strictly to records attributed to this user (no one else's)."""
+    from django.db.models import Prefetch
     user = request.user
     subs = (
         Submission.objects.filter(
@@ -84,6 +85,12 @@ def my_submissions(request):
         )
         .select_related("project", "form", "enumerator", "collection_unit", "review")
         .annotate(open_flags=Count("flags", filter=Q(flags__status=ValidationFlag.Status.OPEN)))
+        # The actual issues to fix — shown inline so the enumerator knows WHAT is wrong.
+        .prefetch_related(Prefetch(
+            "flags",
+            queryset=ValidationFlag.objects.filter(
+                status=ValidationFlag.Status.OPEN).select_related("rule"),
+            to_attr="open_flag_list"))
         .order_by("-event_date", "-ona_submission_time")
     )
     to_fix = sum(1 for s in subs if s.open_flags)

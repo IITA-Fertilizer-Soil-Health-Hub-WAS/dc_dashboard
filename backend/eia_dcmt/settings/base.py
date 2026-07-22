@@ -284,6 +284,11 @@ CELERY_BEAT_SCHEDULE = {
         "task": "review.send_review_digests",
         "schedule": crontab(hour=7, minute=0, day_of_week="mon-fri"),
     },
+    # Close the loop: enumerators get the open issues on their own data weekly.
+    "correction-digest-weekly": {
+        "task": "review.send_correction_digests",
+        "schedule": crontab(hour=7, minute=30, day_of_week="mon"),
+    },
     # M&E KPI aggregates — near-real-time refresh.
     "kpi-rebuild-15min": {
         "task": "kpi.rebuild_all",
