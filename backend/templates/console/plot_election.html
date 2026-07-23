@@ -1,6 +1,6 @@
 {% extends "console/base.html" %}
 {% block title %}Plot election · Manage · {{ SITE_NAME }}{% endblock %}
-{% block crumbs %}<span class="sep">/</span><span class="cur">Manage</span><span class="sep">/</span><span class="cur">Plot election</span>{% endblock %}
+{% block crumbs %}{% include "console/_ws_crumbs.html" with label="Plot election" %}{% endblock %}
 {% block console_main %}
   <div class="page-head"><h2>Plot election</h2></div>
   <p class="subtle" style="margin:.1rem 0 1rem;max-width:70ch;">

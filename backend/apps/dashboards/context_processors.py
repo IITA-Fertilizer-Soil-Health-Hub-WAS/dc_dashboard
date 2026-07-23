@@ -59,10 +59,20 @@ def navigation(request):
 
     # Project = workspace: the project the user is currently working in (sticky in
     # session, validated against what they may still see). The sidebar scopes to it.
+    # A page opened scoped to a project (?project=CODE) — every project-scoped
+    # console section links that way — IS a section of that project's workspace, so
+    # honour it first and make it sticky, exactly like opening the dashboard does.
+    # This keeps the whole shell (sidebar + the breadcrumb frame) on one project.
     active_uc = None
-    code = request.session.get("active_project") if hasattr(request, "session") else None
+    qs_code = request.GET.get("project") if hasattr(request, "GET") else None
+    code = qs_code or (request.session.get("active_project") if hasattr(request, "session") else None)
     if code:
         active_uc = visible.filter(code=code).first()
+        if active_uc is not None and qs_code and hasattr(request, "session"):
+            request.session["active_project"] = active_uc.code
+    # Only project-scoped pages (reached with ?project=) should wear the project
+    # breadcrumb frame; a global admin page must not inherit a stale session project.
+    workspace_project = active_uc if qs_code and active_uc is not None else None
 
     # Gate-2 validators (agronomic QC sign-off) get a dedicated queue link in the
     # active project.
@@ -98,6 +108,7 @@ def navigation(request):
         "nav_projects": nav_projects,
         "nav_projects_total": nav_projects_total,
         "active_uc": active_uc,
+        "workspace_project": workspace_project,
         "can_validate_active": can_validate_active,
         "profile_incomplete": not profile_complete,
         "console_groups": console_groups,

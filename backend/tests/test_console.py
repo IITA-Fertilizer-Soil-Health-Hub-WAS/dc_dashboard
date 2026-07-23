@@ -41,6 +41,25 @@ def test_non_staff_forbidden(client, plain, uc):
     assert client.get("/manage/projects/").status_code == 403
 
 
+def test_project_scoped_console_page_wears_workspace_frame(client, staff, uc):
+    """A console section opened with ?project= is a section of that project's
+    workspace, so it shows the 'Projects / <project> / <section>' breadcrumb —
+    the same frame as the ?tab= pages — instead of the global 'Manage' trail."""
+    client.force_login(staff)
+    body = client.get(f"/manage/collection-units/?project={uc.code}").content.decode()
+    assert uc.name in body  # the project name is in the breadcrumb
+    assert f'href="/project/{uc.code}/"' in body  # crumb links back to the workspace
+
+
+def test_global_admin_page_keeps_manage_frame_despite_active_project(client, staff, uc):
+    """A global admin page (no ?project=) must NOT inherit a stale session project
+    in its breadcrumb, even right after visiting a project-scoped page."""
+    client.force_login(staff)
+    client.get(f"/manage/collection-units/?project={uc.code}")  # sets active project
+    body = client.get("/manage/organizations/").content.decode()
+    assert "Manage" in body  # falls back to the global trail, not the project
+
+
 def test_create_edit_delete_cycle(client, staff, uc):
     client.force_login(staff)
     # create

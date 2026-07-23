@@ -1,6 +1,6 @@
 {% extends "console/base.html" %}
 {% block title %}Publish form · Manage · {{ SITE_NAME }}{% endblock %}
-{% block crumbs %}<span class="sep">/</span><span class="cur">Manage</span><span class="sep">/</span><span class="cur">Publish form</span>{% endblock %}
+{% block crumbs %}{% include "console/_ws_crumbs.html" with label="Publish form" %}{% endblock %}
 {% block console_main %}
   <div class="page-head"><h2>Publish a form</h2></div>
   <p class="subtle" style="margin:.1rem 0 1.2rem;max-width:64ch;">

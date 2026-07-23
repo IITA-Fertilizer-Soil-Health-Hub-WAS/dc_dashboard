@@ -1,0 +1,4 @@
+{% comment %}Just the root breadcrumb segment for a workspace page that has its own
+deeper trail: "Projects / <project>" when project-scoped, else "Manage". The
+template appends its own remaining crumbs after this include.{% endcomment %}
+{% if workspace_project %}<span class="sep">/</span><a href="{% url 'dashboards:project' workspace_project.code %}">Projects</a><span class="sep">/</span><a href="{% url 'dashboards:project' workspace_project.code %}">{{ workspace_project.name }}</a>{% else %}<span class="sep">/</span><span class="cur">Manage</span>{% endif %}

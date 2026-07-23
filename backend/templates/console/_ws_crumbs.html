@@ -1,0 +1,6 @@
+{% comment %}Breadcrumb for a console/standalone page that belongs to a project's
+workspace. When the page is project-scoped (workspace_project set via ?project=)
+it reads "Projects / <project> / <section>", identical to the ?tab= sections, so
+the whole workspace feels like one surface. Otherwise it falls back to the
+global "Manage / <section>" trail. Pass the section name as `label`.{% endcomment %}
+{% if workspace_project %}<span class="sep">/</span><a href="{% url 'dashboards:project' workspace_project.code %}">Projects</a><span class="sep">/</span><a href="{% url 'dashboards:project' workspace_project.code %}">{{ workspace_project.name }}</a><span class="sep">/</span><span class="cur">{{ label }}</span>{% else %}<span class="sep">/</span><span class="cur">Manage</span><span class="sep">/</span><span class="cur">{{ label }}</span>{% endif %}

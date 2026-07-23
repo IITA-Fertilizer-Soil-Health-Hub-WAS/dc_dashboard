@@ -1,6 +1,6 @@
 {% extends "console/base.html" %}
 {% block title %}Field mappings · {{ form }} · {{ SITE_NAME }}{% endblock %}
-{% block crumbs %}<span class="sep">/</span><span class="cur">Manage</span><span class="sep">/</span><a href="{% url 'console:list' 'forms' %}">Forms</a><span class="sep">/</span><span class="cur">Mappings</span>{% endblock %}
+{% block crumbs %}{% include "console/_ws_root.html" %}<span class="sep">/</span><a href="{% url 'console:list' 'forms' %}{% if workspace_project %}?project={{ workspace_project.code }}{% endif %}">Forms</a><span class="sep">/</span><span class="cur">Mappings</span>{% endblock %}
 {% block extrahead %}{{ block.super }}
 <style>
   .maptable input[type=text]{width:100%;padding:.35rem .5rem;border:1px solid var(--line);border-radius:6px;font-family:var(--mono);font-size:.82rem;}

@@ -1,6 +1,6 @@
 {% extends "console/base.html" %}
 {% block title %}{{ form.title|default:form.server_ref }} · Forms · {{ SITE_NAME }}{% endblock %}
-{% block crumbs %}<span class="sep">/</span><span class="cur">Manage</span><span class="sep">/</span><a href="{% url 'console:list' 'forms' %}">Forms</a><span class="sep">/</span><span class="cur">{{ form.title|default:form.server_ref }}</span>{% endblock %}
+{% block crumbs %}{% include "console/_ws_root.html" %}<span class="sep">/</span><a href="{% url 'console:list' 'forms' %}{% if workspace_project %}?project={{ workspace_project.code }}{% endif %}">Forms</a><span class="sep">/</span><span class="cur">{{ form.title|default:form.server_ref }}</span>{% endblock %}
 {% block extrahead %}{{ block.super }}
 <style>
   .fo-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:1rem;margin-top:1rem;}

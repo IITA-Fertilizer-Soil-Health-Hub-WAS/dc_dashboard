@@ -1,9 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ hub_title|default:"Set up" }} · {% if hub_subtitle %}{{ hub_subtitle }} · {% endif %}{{ SITE_NAME }}{% endblock %}
-{% block crumbs %}
-  <span class="sep">/</span><span class="cur">Manage</span>
-  <span class="sep">/</span><span class="cur">{{ hub_title|default:"Set up" }}</span>
-{% endblock %}
+{% block crumbs %}{% include "console/_ws_crumbs.html" with label=hub_title|default:"Set up" %}{% endblock %}
 {% block extrahead %}{{ block.super }}
 <style>
   .setup-head{display:flex;align-items:flex-end;gap:.9rem;flex-wrap:wrap;margin-bottom:.25rem;}

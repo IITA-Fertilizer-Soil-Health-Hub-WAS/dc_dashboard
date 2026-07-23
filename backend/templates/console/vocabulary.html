@@ -1,6 +1,6 @@
 {% extends "console/base.html" %}
 {% block title %}Vocabulary · Manage · {{ SITE_NAME }}{% endblock %}
-{% block crumbs %}<span class="sep">/</span><a href="{% url 'console:form_builder' %}">Design forms</a><span class="sep">/</span><span class="cur">Vocabulary</span>{% endblock %}
+{% block crumbs %}{% include "console/_ws_root.html" %}<span class="sep">/</span><a href="{% url 'console:form_builder' %}">Design forms</a><span class="sep">/</span><span class="cur">Vocabulary</span>{% endblock %}
 {% block console_main %}
   <div class="page-head"><h2>Controlled vocabulary</h2><span class="pill">{{ total }}</span></div>
   <p class="subtle" style="margin:.1rem 0 1rem;">The Terminag standard variables. Use these names in your forms so data stays comparable across projects — the form builder offers them as you type.</p>

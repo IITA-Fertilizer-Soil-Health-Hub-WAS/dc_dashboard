@@ -1,9 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ m.label }} · Manage · {{ SITE_NAME }}{% endblock %}
-{% block crumbs %}
-  <span class="sep">/</span><span class="cur">Manage</span>
-  <span class="sep">/</span><span class="cur">{{ m.label }}</span>
-{% endblock %}
+{% block crumbs %}{% include "console/_ws_crumbs.html" with label=m.label %}{% endblock %}
 
 {% block extrahead %}
 <style>

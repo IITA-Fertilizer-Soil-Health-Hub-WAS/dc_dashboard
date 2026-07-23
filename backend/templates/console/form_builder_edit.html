@@ -1,6 +1,6 @@
 {% extends "console/base.html" %}
 {% block title %}{% if draft %}Edit form{% else %}Build a form{% endif %} · Manage · {{ SITE_NAME }}{% endblock %}
-{% block crumbs %}<span class="sep">/</span><a href="{% url 'console:form_builder' %}">Design forms</a><span class="sep">/</span><span class="cur">{% if draft %}{{ draft.title }}{% else %}New form{% endif %}</span>{% endblock %}
+{% block crumbs %}{% include "console/_ws_root.html" %}<span class="sep">/</span><a href="{% url 'console:form_builder' %}">Design forms</a><span class="sep">/</span><span class="cur">{% if draft %}{{ draft.title }}{% else %}New form{% endif %}</span>{% endblock %}
 {% block extrahead %}{{ block.super }}
 <style>
   .fb .fld label{display:block;font-size:.76rem;font-weight:600;color:var(--muted);margin-bottom:.22rem;}
