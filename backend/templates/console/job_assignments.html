@@ -8,7 +8,7 @@
     {% if job.form %}<span class="subtle">{{ job.form.title|default:job.form.server_ref }}</span>{% endif %}
     {% if job.deadline %}<span class="pill warn">due {{ job.deadline }}</span>{% endif %}
   </div>
-  <p class="subtle" style="margin:.1rem 0 1rem;">Assign the {{ job.project.get_unit_type_display|lower }}s to enumerators. {{ assignments|length }} of {{ job.target_count }} assigned.</p>
+  <p class="subtle" style="margin:.1rem 0 1rem;">Assign this assignment's {{ job.project.unit_label_plural|lower }} to enumerators. {{ assignments|length }} of {{ job.target_count }} assigned.</p>
 
   {% if messages %}{% for msg in messages %}<div class="pill" style="margin-bottom:.7rem;">{{ msg }}</div>{% endfor %}{% endif %}
 
@@ -49,29 +49,51 @@
     {% endif %}
   </div>
 
-  {# Add one / assign all #}
+  {# Add plots: tick several, pick an enumerator, assign in one go. #}
+  {% if can_edit and job.status != 'CLOSED' %}
   <div class="card" style="margin-bottom:1.2rem;">
-    <form method="post" class="toolbar" style="margin:0;">
+    <h3 style="margin:0 0 .6rem;font-size:1rem;">Add {{ job.project.unit_label_plural|lower }}</h3>
+    <form method="post" style="margin:0;">
       {% csrf_token %}
-      <select name="unit" class="search" style="max-width:240px;">
-        <option value="">Unit…</option>
-        {% for u in available_units %}<option value="{{ u.pk }}">{{ u.code }}{% if u.name %} · {{ u.name }}{% endif %}</option>{% endfor %}
-      </select>
-      <select name="enumerator" class="search" style="max-width:240px;">
-        <option value="">Unassigned</option>
-        {% for e in enumerators %}<option value="{{ e.pk }}">{{ e.full_name|default:e.email }}</option>{% endfor %}
-      </select>
-      <button class="btn btn-open" type="submit">Add</button>
-      <span style="flex:1"></span>
-      <button class="btn btn-request" type="submit" name="action" value="assign_all"
-              onclick="return confirm('Assign all remaining units to the selected enumerator?');">Assign all remaining</button>
+      <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-bottom:.6rem;">
+        <select name="enumerator" class="search" style="max-width:240px;">
+          <option value="">Unassigned</option>
+          {% for e in enumerators %}<option value="{{ e.pk }}">{{ e.full_name|default:e.email }}</option>{% endfor %}
+        </select>
+        <button class="btn btn-open" type="submit" name="action" value="assign_selected">Assign selected</button>
+        <span style="flex:1"></span>
+        <button class="btn btn-request" type="submit" name="action" value="assign_all"
+                onclick="return confirm('Assign ALL remaining {{ job.project.unit_label_plural|lower }} to the selected enumerator?');">Assign all remaining</button>
+      </div>
+      {% if available_units %}
+        <input type="search" placeholder="Search {{ job.project.unit_label_plural|lower }}…" class="search"
+               style="max-width:320px;margin-bottom:.5rem;" oninput="filterUnits(this.value)">
+        <div style="max-height:260px;overflow-y:auto;border:1px solid var(--line);border-radius:9px;padding:.4rem .7rem;">
+          <label style="display:block;font-size:.78rem;color:var(--muted);margin-bottom:.4rem;">
+            <input type="checkbox" onclick="document.querySelectorAll('.unit-row').forEach(function(r){if(r.style.display!=='none')r.querySelector('.unit-cb').checked=this.checked;}.bind(this));"> Select all (filtered)
+          </label>
+          {% for u in available_units %}
+            <label class="unit-row" data-txt="{{ u.code|lower }} {{ u.name|lower }}"
+                   style="display:flex;align-items:center;gap:.5rem;padding:.2rem 0;font-size:.87rem;">
+              <input type="checkbox" class="unit-cb" name="units" value="{{ u.pk }}">
+              <span class="mono">{{ u.code }}</span>{% if u.name %}<span class="subtle">· {{ u.name }}</span>{% endif %}
+            </label>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="subtle" style="font-size:.85rem;margin:.2rem 0;">All {{ job.project.unit_label_plural|lower }} are assigned.</p>
+      {% endif %}
     </form>
   </div>
+  <script>
+    function filterUnits(q){q=q.toLowerCase();document.querySelectorAll('.unit-row').forEach(function(r){r.style.display=r.dataset.txt.indexOf(q)>-1?'':'none';});}
+  </script>
+  {% endif %}
 
   <div class="card" style="padding:0;overflow:hidden;">
     <div class="table-wrap">
     <table>
-      <thead><tr><th scope="col">Unit</th><th scope="col">Name</th><th scope="col">Enumerator</th><th scope="col"></th></tr></thead>
+      <thead><tr><th scope="col">{{ job.project.household_label }}</th><th scope="col">Name</th><th scope="col">Enumerator</th><th scope="col"></th></tr></thead>
       <tbody>
         {% for a in assignments %}
           <tr>

@@ -1253,6 +1253,15 @@ class JobAssignmentsView(UserPassesTestMixin, View):
             if enum:
                 job.assigned_to.add(enum)
             messages.success(request, f"Assigned {len(units)} unit(s).")
+        elif action == "assign_selected":
+            units = CollectionUnit.objects.filter(
+                project=job.project, pk__in=request.POST.getlist("units")
+            ).exclude(assignments__job=job)
+            UnitAssignment.objects.bulk_create(
+                [UnitAssignment(job=job, unit=u, enumerator=enum) for u in units])
+            if enum:
+                job.assigned_to.add(enum)
+            messages.success(request, f"Assigned {len(units)} unit(s).")
         else:  # add one
             unit = CollectionUnit.objects.filter(
                 project=job.project, pk=request.POST.get("unit")).first()

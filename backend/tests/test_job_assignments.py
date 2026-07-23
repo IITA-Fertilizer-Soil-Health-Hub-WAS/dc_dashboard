@@ -79,6 +79,19 @@ def test_my_assignments_lists_for_enumerator(client, world):
     assert b"HH0" in resp.content
 
 
+def test_assign_selected_bulk(client, world):
+    """The assignment screen bulk-assigns exactly the ticked plots to the chosen
+    enumerator; unticked plots stay out."""
+    client.force_login(world["coord"])
+    client.post(reverse("console:job_assignments", args=[world["job"].pk]),
+                {"action": "assign_selected", "enumerator": str(world["en"].pk),
+                 "units": [str(world["units"][0].pk), str(world["units"][1].pk)]})
+    assigned = UnitAssignment.objects.filter(job=world["job"])
+    assert assigned.count() == 2
+    assert not assigned.filter(unit=world["units"][2]).exists()
+    assert set(assigned.values_list("enumerator_id", flat=True)) == {world["en"].pk}
+
+
 def test_assignment_editor_lists_plots(client, world):
     """The one-screen editor offers the project's plots as a multi-select."""
     client.force_login(world["coord"])
