@@ -186,8 +186,8 @@ TAB_URL_NAMES = {
     "final": "dashboards:tab_final",
 }
 TAB_LABELS = {
-    "summary": "Dashboard", "review": "Review", "enumerators": "Enumerators",
-    "issues": "Issues", "data": "Data", "final": "Final data",
+    "summary": "Dashboard", "review": "Review queue", "enumerators": "Enumerators",
+    "issues": "Flagged issues", "data": "Submissions", "final": "Approved data",
 }
 
 

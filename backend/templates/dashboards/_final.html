@@ -1,6 +1,6 @@
 <div class="card" style="margin-top:1rem;">
   <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
-    <h3 style="margin:0;">Final data <span class="pill">{{ count }} approved</span></h3>
+    <h3 style="margin:0;">Approved data <span class="pill">{{ count }} approved</span></h3>
     <span style="flex:1"></span>
     <a class="btn btn-open" href="{% url 'dashboards:export_final' uc.code %}" style="text-decoration:none;">Download CSV</a>
   </div>
@@ -12,7 +12,7 @@
   <table>
     <thead>
       <tr><th scope="col">{{ uc.household_label }}</th><th scope="col">Enumerator</th><th scope="col">Event</th>
-        <th scope="col">Crop</th><th scope="col">Date</th><th scope="col">Edited fields</th><th scope="col">Write-back</th></tr>
+        <th scope="col">Crop</th><th scope="col">Date</th><th scope="col">Edited fields</th><th scope="col">Synced</th></tr>
     </thead>
     <tbody>
       {% for row in rows %}

@@ -1,7 +1,10 @@
 {% extends "console/base.html" %}
+{% comment %}Collection units speak the project's own noun (Households / Plots /
+Farmers) when viewed inside a project; the generic registry label stands in
+elsewhere.{% endcomment %}
 {% block console_main %}
   <div class="page-head">
-    <h2>{{ m.label }}</h2>
+    <h2>{% if m.key == 'collection-units' and workspace_project %}{{ workspace_project.unit_label_plural }}{% else %}{{ m.label }}{% endif %}</h2>
     <span class="pill">{{ count }}</span>
   </div>
 
@@ -9,7 +12,7 @@
     {% if m.search_fields %}
       <form method="get">
         <input class="search" type="search" name="q" value="{{ q }}"
-               placeholder="Search {{ m.label|lower }}…">
+               placeholder="Search {% if m.key == 'collection-units' and workspace_project %}{{ workspace_project.unit_label_plural|lower }}{% else %}{{ m.label|lower }}{% endif %}…">
         <button class="btn btn-request" type="submit">Search</button>
       </form>
     {% else %}<span style="flex:1"></span>{% endif %}

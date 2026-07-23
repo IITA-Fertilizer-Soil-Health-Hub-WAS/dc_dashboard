@@ -8,7 +8,7 @@
        title="The append-only audit trail of every review action on this project"><span class="msym" style="font-size:15px;vertical-align:-2px;">history</span> Review log</a>
     {% if can_edit_reasons %}
       <a class="btn btn-ghost" style="text-decoration:none;" href="{% url 'console:list' 'rejection-reasons' %}?project={{ uc.code }}"
-         title="Manage the categories a reviewer can decline for"><span class="msym" style="font-size:15px;vertical-align:-2px;">block</span> Rejection reasons</a>
+         title="Manage the categories a reviewer can decline for"><span class="msym" style="font-size:15px;vertical-align:-2px;">block</span> Decline reasons</a>
     {% endif %}
   </div>
 

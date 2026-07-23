@@ -151,6 +151,14 @@ class Project(BaseModel):
     def __str__(self) -> str:
         return self.code
 
+    @property
+    def unit_label_plural(self) -> str:
+        """Plural of the per-project collection-unit noun (Households / Plots /
+        Farmers), driven off household_label so the nav speaks the project's own
+        language. Mirrors CareProgram.client_label_plural."""
+        label = (self.household_label or "Household").strip()
+        return label + ("es" if label.lower().endswith("s") else "s")
+
     def bump_version(self) -> None:
         self.config_version = models.F("config_version") + 1
         self.save(update_fields=["config_version", "updated_at"])

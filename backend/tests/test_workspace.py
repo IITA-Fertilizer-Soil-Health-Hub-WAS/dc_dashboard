@@ -77,6 +77,19 @@ def test_sidebar_shows_four_numbered_lifecycle_phases(client, django_user_model,
         assert gone not in body
 
 
+def test_sidebar_uses_per_project_unit_noun(client, django_user_model, org):
+    """Bold naming: the Collect phase names the unit by the project's own noun
+    (household_label pluralised), so a plot trial shows 'Plots', not the generic
+    'Collection units'."""
+    uc = Project.objects.create(code="PLOTX", name="Plot trial", organization=org,
+                                household_label="Plot")
+    admin = django_user_model.objects.create_superuser("plotadmin@x.org", "pw")
+    client.force_login(admin)
+    body = client.get(reverse("dashboards:project", args=["PLOTX"])).content.decode()
+    assert "place</span>Plots" in body     # pluralised project noun in the rail
+    assert "Collection units" not in body  # generic jargon retired from the workspace
+
+
 def test_browsing_directory_clears_active_workspace(client, django_user_model, org):
     a = Project.objects.create(code="A", name="A", organization=org)
     b = Project.objects.create(code="B", name="B", organization=org)

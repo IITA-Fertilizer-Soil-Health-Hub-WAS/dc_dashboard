@@ -34,7 +34,7 @@ def test_setup_hub_renders_with_counts(client, proj):
     body = resp.content.decode()
     # Grouped sections and the live counts are present, no comment leaks.
     assert "Instrument" in body and "Quality rules" in body
-    assert "Forms" in body and "Plot election" in body
+    assert "Forms" in body and "Choose plots" in body
     assert "areas configured" in body
     for leak in ("{#", "{% comment", "{% widthratio"):
         assert leak not in body

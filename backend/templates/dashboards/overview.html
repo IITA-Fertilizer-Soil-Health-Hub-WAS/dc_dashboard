@@ -10,7 +10,7 @@
     <div class="card infobox"><div class="n" style="color:#3f9142;">{{ totals.approved }}</div><div class="l">Approved</div></div>
     <div class="card infobox"><div class="n" style="color:var(--muted);">{{ totals.in_review }}</div><div class="l">In review</div></div>
     <div class="card infobox"><div class="n" style="color:var(--red);">{{ totals.open_issues }}</div><div class="l">Open issues</div></div>
-    <div class="card infobox"><div class="n" style="color:var(--gold);">{{ totals.wb_pending }}</div><div class="l">Write-back pending</div></div>
+    <div class="card infobox"><div class="n" style="color:var(--gold);">{{ totals.wb_pending }}</div><div class="l">Sync pending</div></div>
   </div>
 
   <div class="card" style="padding:0;overflow:hidden;">
@@ -18,7 +18,7 @@
     <table>
       <thead>
         <tr><th scope="col">Project</th><th scope="col">Submissions</th><th scope="col">Approved</th><th scope="col">In review</th>
-          <th scope="col">Open issues</th><th scope="col">WB pending</th><th scope="col">WB failed</th></tr>
+          <th scope="col">Open issues</th><th scope="col">Sync pending</th><th scope="col">Sync failed</th></tr>
       </thead>
       <tbody>
         {% for r in rows %}

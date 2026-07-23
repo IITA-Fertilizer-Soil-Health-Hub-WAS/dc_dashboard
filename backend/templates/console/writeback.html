@@ -1,18 +1,18 @@
 {% extends "console/base.html" %}
-{% block title %}Write-back queue · Manage · {{ SITE_NAME }}{% endblock %}
-{% block crumbs %}{% include "console/_ws_crumbs.html" with label="Write-back" %}{% endblock %}
+{% block title %}Sync corrections · Manage · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}{% include "console/_ws_crumbs.html" with label="Sync corrections" %}{% endblock %}
 {% block console_main %}
   <div class="page-head">
-    <h2>Write-back queue</h2>
+    <h2>Sync corrections</h2>
     <span class="pill">{{ pending }} pending</span>
     {% if failed %}<span class="pill" style="background:#fdecea;color:#a33617;">{{ failed }} failed</span>{% endif %}
   </div>
   <p class="subtle" style="margin:.1rem 0 1rem;">
     Submissions whose reviewed edits still need to reach the source server.
     {% if enabled %}
-      Write-back is <strong style="color:#0a4630;">enabled</strong> — retrying will send edits to the source.
+      Syncing is <strong style="color:#0a4630;">enabled</strong> — retrying will send edits to the source.
     {% else %}
-      Write-back is <strong style="color:#a33617;">disabled</strong> (<code>WRITEBACK_ENABLED=false</code>) — items stay pending until enabled.
+      Syncing is <strong style="color:#a33617;">disabled</strong> (<code>WRITEBACK_ENABLED=false</code>) — items stay pending until enabled.
     {% endif %}
   </p>
 

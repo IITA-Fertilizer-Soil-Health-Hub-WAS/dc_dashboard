@@ -477,12 +477,12 @@
           </a>
           <a href="{% url 'console:list' 'collection-units' %}?project={{ active_uc.code }}"
              class="{% if request.resolver_match.kwargs.key == 'collection-units' %}active{% endif %}">
-            <span class="msym">place</span>Collection units
+            <span class="msym">place</span>{{ active_uc.unit_label_plural }}
           </a>
           {% if can_manage_access %}
             <a href="{% url 'console:list' 'jobs' %}?project={{ active_uc.code }}"
                class="{% if request.resolver_match.kwargs.key == 'jobs' or request.resolver_match.url_name == 'job_assignments' %}active{% endif %}">
-              <span class="msym">assignment</span>Jobs &amp; assignments
+              <span class="msym">assignment</span>Assignments
             </a>
             <a href="{% url 'dashboards:team' %}"
                class="{% if request.resolver_match.url_name == 'team' %}active{% endif %}">
@@ -495,25 +495,25 @@
           <div class="lbl step" data-tour="review">Review &amp; approve</div>
           <a href="{% url 'dashboards:project' active_uc.code %}?tab=data"
              class="{% if active_tab == 'data' %}active{% endif %}">
-            <span class="msym">table_rows</span>Data
+            <span class="msym">table_rows</span>Submissions
           </a>
           <a href="{% url 'dashboards:project' active_uc.code %}?tab=review"
              class="{% if active_tab == 'review' %}active{% endif %}">
-            <span class="msym">rate_review</span>Review
+            <span class="msym">rate_review</span>Review queue
           </a>
           <a href="{% url 'dashboards:project' active_uc.code %}?tab=issues"
              class="{% if active_tab == 'issues' %}active{% endif %}">
-            <span class="msym">flag</span>Issues
+            <span class="msym">flag</span>Flagged issues
           </a>
           {% if can_manage_access %}
             <a href="{% url 'console:writeback' %}"
                class="{% if request.resolver_match.url_name == 'writeback' %}active{% endif %}">
-              <span class="msym">sync</span>Write-back queue
+              <span class="msym">sync</span>Sync corrections
             </a>
           {% endif %}
           <a href="{% url 'dashboards:project' active_uc.code %}?tab=final"
              class="{% if active_tab == 'final' %}active{% endif %}">
-            <span class="msym">verified_user</span>Final data
+            <span class="msym">verified_user</span>Approved data
           </a>
           {% if can_validate_active %}
             <a href="{% url 'dashboards:qc_signoff' active_uc.code %}"
@@ -615,7 +615,7 @@
               </a>
               <a href="{% url 'console:data_products' %}" title="Read API + your access token"
                  class="{% if request.resolver_match.url_name == 'data_products' %}active{% endif %}">
-                <span class="msym">api</span>Data products
+                <span class="msym">api</span>Data access
               </a>
               <a href="/admin/" class="nav-sys" title="System settings: scheduled tasks, groups, sites, social apps">
                 <span class="msym">settings</span>Admin console
