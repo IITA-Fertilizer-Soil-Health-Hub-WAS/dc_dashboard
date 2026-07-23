@@ -79,6 +79,18 @@ def test_my_assignments_lists_for_enumerator(client, world):
     assert b"HH0" in resp.content
 
 
+def test_my_assignments_header_uses_project_unit_noun(client, world):
+    """Bold naming reaches the enumerator's own pages: the assignments table
+    heads the unit column with the project's own noun, not a generic 'Unit'."""
+    world["uc"].household_label = "Plot"
+    world["uc"].save()
+    UnitAssignment.objects.create(job=world["job"], unit=world["units"][0],
+                                  enumerator=world["en"])
+    client.force_login(world["en"])
+    body = client.get(reverse("dashboards:my_assignments")).content.decode()
+    assert '<th scope="col">Plot</th>' in body
+
+
 def test_my_assignments_only_mine(client, django_user_model, world):
     other = django_user_model.objects.create_user("o2@x.org", "pw", is_active=True)
     UnitAssignment.objects.create(job=world["job"], unit=world["units"][0], enumerator=other)
