@@ -41,13 +41,23 @@ def test_project_checklist_flips_as_you_configure(django_user_model):
     assert _item(getting_started(coord, p), "Add a validation rule")["done"]
 
 
-def test_enumerator_gets_no_checklist(django_user_model):
+def test_enumerator_gets_my_work_checklist(django_user_model):
     org = Organization.objects.create(code="o", name="O")
     p = Project.objects.create(code="P", name="P", organization=org)
     en = django_user_model.objects.create_user("e@x.org", "pw", is_active=True)
     Membership.objects.create(user=en, project=p, role=Role.ENUMERATOR)
-    # Enumerators don't manage setup — no checklist for them.
-    assert getting_started(en, p) is None
+    gs = getting_started(en, p)
+    assert gs["title"] == "Your work"
+    assert not _item(gs, "Complete your profile")["done"]      # fresh account
+    assert _item(gs, "Fix flagged issues")["done"]             # nothing flagged yet
+
+
+def test_plain_member_gets_no_checklist(django_user_model):
+    org = Organization.objects.create(code="o", name="O")
+    p = Project.objects.create(code="P", name="P", organization=org)
+    viewer = django_user_model.objects.create_user("v@x.org", "pw", is_active=True)
+    Membership.objects.create(user=viewer, project=p, role=Role.VIEWER)
+    assert getting_started(viewer, p) is None
 
 
 def test_home_page_shows_admin_checklist(client, django_user_model):

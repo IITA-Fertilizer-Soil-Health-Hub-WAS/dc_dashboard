@@ -68,6 +68,48 @@ def _admin_checklist() -> dict:
     return _pack("Set up the platform", items)
 
 
+def _enumerator_checklist(user) -> dict:
+    from django.db.models import Q
+
+    from apps.accounts.models import UserProfile
+    from apps.fieldwork.models import UnitAssignment
+    from apps.review.corrections import open_corrections
+    from apps.submissions.models import Submission
+
+    profile_done = UserProfile.objects.filter(user=user, completed_at__isnull=False).exists()
+    has_assign = UnitAssignment.objects.filter(enumerator=user).exists()
+    has_subs = Submission.objects.filter(
+        Q(collected_by=user) | Q(enumerator__user=user)).exists()
+    open_fix = open_corrections(user).count()
+    items = [
+        {"label": "Complete your profile", "done": profile_done,
+         "url": reverse("profile"),
+         "hint": "Register your details once — never re-enter them in the field."},
+        {"label": "Find your assignments", "done": has_assign,
+         "url": reverse("dashboards:my_assignments"),
+         "hint": "What you've been asked to collect."},
+        {"label": "See your submissions", "done": has_subs,
+         "url": reverse("dashboards:my_submissions"),
+         "hint": "They appear here after each sync."},
+        {"label": f"Fix flagged issues{f' ({open_fix})' if open_fix else ''}",
+         "done": open_fix == 0,
+         "url": reverse("dashboards:my_submissions"),
+         "hint": "Correct in ODK Collect and resend." if open_fix
+                 else "Nothing to fix right now."},
+    ]
+    return _pack("Your work", items)
+
+
+def _is_enumerator(user) -> bool:
+    from apps.fieldwork.models import UnitAssignment
+    from apps.rbac.models import Membership, Role
+
+    return bool(
+        Membership.objects.filter(user=user, role=Role.ENUMERATOR).exists()
+        or UnitAssignment.objects.filter(enumerator=user).exists()
+    )
+
+
 def getting_started(user, active_uc):
     """The checklist for this user in this context, or None if not applicable."""
     from apps.rbac.permissions import can_manage_access
@@ -76,4 +118,6 @@ def getting_started(user, active_uc):
         return _project_checklist(active_uc)
     if getattr(user, "is_staff", False) and active_uc is None:
         return _admin_checklist()
+    if _is_enumerator(user):
+        return _enumerator_checklist(user)
     return None
