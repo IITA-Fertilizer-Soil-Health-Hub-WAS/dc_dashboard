@@ -49,6 +49,34 @@ def test_review_screen_offers_reasons_and_captures(client, world):
     assert Review.objects.get(submission=sub).rejection_reason == reason
 
 
+def test_review_panel_is_state_aware(client, world):
+    """The action panel shows only the actions legal from the current state — even
+    though this coordinator holds BOTH gate roles — so Endorse and Validate never
+    appear together and Reopen only shows on terminal states."""
+    uc, form, coord = world["uc"], world["form"], world["coord"]
+    sub = Submission.objects.create(project=uc, form=form, ona_uuid="st", content_hash="h")
+    client.force_login(coord)
+    url = reverse("dashboards:submission_review", args=["PROJ-A", sub.id])
+
+    # Fresh (INGESTED): open review is the move; no Validate, no Reopen yet.
+    body = client.get(url).content.decode()
+    assert "Open review" in body
+    assert "Validate (Gate 2)" not in body and "Reopen" not in body
+
+    # QC_PENDING: Gate 2 is the move; Endorse (Gate 1) is not offered.
+    Review.objects.filter(submission=sub).update(state=ReviewState.QC_PENDING)
+    body = client.get(url).content.decode()
+    assert "Validate (Gate 2)" in body
+    assert "Endorse (Gate 1)" not in body and "Open review" not in body
+
+    # Terminal (APPROVED): only Reopen; no forward actions, no Decline.
+    Review.objects.filter(submission=sub).update(state=ReviewState.APPROVED)
+    body = client.get(url).content.decode()
+    assert "Reopen" in body
+    for gone in ("Endorse (Gate 1)", "Validate (Gate 2)", "Decline"):
+        assert gone not in body
+
+
 def test_job_progress_qc_and_closure(world, django_user_model):
     uc, form, coord = world["uc"], world["form"], world["coord"]
     job = Job.objects.create(project=uc, name="J1")

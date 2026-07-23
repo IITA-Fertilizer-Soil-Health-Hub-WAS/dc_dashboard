@@ -24,7 +24,11 @@ from apps.review.models import (
     ReviewActionLog,
     ReviewState,
 )
-from apps.review.state_machine import ReviewPermissionDenied, TransitionError
+from apps.review.state_machine import (
+    ReviewPermissionDenied,
+    TransitionError,
+    legal_actions_from,
+)
 from apps.submissions.models import Enumerator, Submission
 from apps.validation.models import ValidationFlag
 
@@ -629,6 +633,44 @@ def submission_action(request, code, submission_id):
     return render(request, "dashboards/_issues.html", ctx)
 
 
+# The one action a reviewer most likely wants next, per state — rendered as the
+# panel's primary button. The rest of the state-legal actions are secondary.
+PRIMARY_ACTION_BY_STATE = {
+    ReviewState.INGESTED: ReviewAction.OPEN_REVIEW,
+    ReviewState.FLAGGED: ReviewAction.OPEN_REVIEW,
+    ReviewState.EDIT_REQUESTED: ReviewAction.OPEN_REVIEW,
+    ReviewState.EDITED: ReviewAction.ENDORSE,
+    ReviewState.IN_REVIEW: ReviewAction.ENDORSE,
+    ReviewState.QC_PENDING: ReviewAction.QC_APPROVE,
+    ReviewState.APPROVED: ReviewAction.REOPEN,
+    ReviewState.DECLINED: ReviewAction.REOPEN,
+    ReviewState.SUPERSEDED: ReviewAction.REOPEN,
+}
+
+# Simple (single-click) review buttons: (action, permission, label, css class).
+# DECLINE is rendered separately because it carries a reason + note form.
+REVIEW_ACTION_BTNS = [
+    (ReviewAction.OPEN_REVIEW, "open_review", "Open review", "btn-open"),
+    (ReviewAction.REQUEST_EDIT, "request_edit", "Request edit", "btn-request"),
+    (ReviewAction.ENDORSE, "endorse", "Endorse (Gate 1)", "btn-edit"),
+    (ReviewAction.QC_APPROVE, "final_approve", "Validate (Gate 2)", "btn-approve"),
+    (ReviewAction.REOPEN, "open_review", "Reopen", "btn-request"),
+]
+
+# A one-line "what happens next" hint shown under the current-state chip.
+STATE_NEXT_HINT = {
+    ReviewState.INGESTED: "New submission — open it to start the review.",
+    ReviewState.FLAGGED: "Validation flagged this — open it, then endorse or request a fix.",
+    ReviewState.IN_REVIEW: "Under review — endorse it (Gate 1) or send it back for edits.",
+    ReviewState.EDIT_REQUESTED: "Sent back to the enumerator — waiting for their correction.",
+    ReviewState.EDITED: "Enumerator re-submitted — endorse it (Gate 1) or request more edits.",
+    ReviewState.QC_PENDING: "Endorsed — awaiting Gate 2 validation to be approved.",
+    ReviewState.APPROVED: "Approved and final. Reopen only if something needs changing.",
+    ReviewState.DECLINED: "Declined. Reopen if it should be reconsidered.",
+    ReviewState.SUPERSEDED: "Replaced by a newer server record. Reopen to review it.",
+}
+
+
 @login_required
 def submission_review(request, code, submission_id):
     """Full review screen: edit field values and run workflow actions."""
@@ -697,6 +739,22 @@ def submission_review(request, code, submission_id):
         "final_approve": user_can(request.user, "final_approve", uc),
         "open_review": user_can(request.user, "open_review", uc),
     }
+    # Show only the actions legal from the current state (permission is still
+    # required on top). The state machine already enforces this on POST; gating
+    # the buttons here keeps the panel to the 1–2 moves that actually apply.
+    state = review.state if review else ReviewState.INGESTED
+    available_actions = set(legal_actions_from(state))
+    primary_action = PRIMARY_ACTION_BY_STATE.get(state)
+    state_hint = STATE_NEXT_HINT.get(state, "")
+    can_assign = can["open_review"] and review is not None and review.assigned_to_id is None
+    # Only the buttons legal from this state AND permitted for this user, primary first.
+    review_actions = sorted(
+        ({"action": a, "label": lbl, "cls": cls, "primary": a == primary_action}
+         for a, perm, lbl, cls in REVIEW_ACTION_BTNS
+         if can[perm] and a in available_actions),
+        key=lambda b: not b["primary"],
+    )
+    show_decline = can["decline"] and ReviewAction.DECLINE in available_actions
     from apps.review.models import RejectionReason
 
     fields = _merged_fields(submission)
@@ -713,6 +771,8 @@ def submission_review(request, code, submission_id):
     return render(request, "dashboards/submission_review.html", {
         "uc": uc, "submission": submission, "flags": flags,
         "actions": actions, "review": review, "can": can, "ok": ok, "error": error,
+        "review_actions": review_actions, "show_decline": show_decline,
+        "state_hint": state_hint, "can_assign": can_assign,
         "fields": fields, "media": media,
         "distance_m": distance_m,
         "plot_map_html": submission_plot_map_html(submission),

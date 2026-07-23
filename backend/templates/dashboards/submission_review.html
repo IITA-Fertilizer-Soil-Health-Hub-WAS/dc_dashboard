@@ -139,25 +139,32 @@
       <!-- Workflow actions -->
       <div class="card">
         <h3>Review actions</h3>
-        <p class="subtle" style="font-size:.8rem;margin:.3rem 0 .6rem;">
-          {% if review.assigned_to %}Assigned to <strong>{{ review.assigned_to.email }}</strong>.{% else %}Unassigned.{% endif %}
+        <p class="subtle" style="font-size:.82rem;margin:.3rem 0 .3rem;">
+          <span class="pill">{% if review %}{{ review.get_state_display }}{% else %}New{% endif %}</span>
+          {% if review.assigned_to %} · Assigned to <strong>{{ review.assigned_to.email }}</strong>{% else %} · Unassigned{% endif %}
         </p>
-        {% if can.open_review %}
+        {% if state_hint %}<p class="subtle" style="font-size:.8rem;margin:0 0 .7rem;">{{ state_hint }}</p>{% endif %}
+        {% if can_assign %}
           <form method="post" style="margin:0 0 .6rem;">
             {% csrf_token %}<input type="hidden" name="action" value="assign_me">
             <button class="btn btn-request" type="submit" style="width:100%;">Assign to me</button>
           </form>
         {% endif %}
         <div style="display:flex;flex-direction:column;gap:.5rem;">
-          {% if can.open_review %}{% include "dashboards/_action_btn.html" with action="OPEN_REVIEW" label="Open review" cls="btn-open" %}{% endif %}
-          {% if can.request_edit %}{% include "dashboards/_action_btn.html" with action="REQUEST_EDIT" label="Request edit" cls="btn-request" %}{% endif %}
-          {% if can.decline %}
+          {% for b in review_actions %}
+            <form method="post" style="margin:0;">
+              {% csrf_token %}<input type="hidden" name="action" value="{{ b.action }}">
+              <button class="btn {{ b.cls }}" type="submit"
+                      style="width:100%;text-align:center;{% if b.primary %}padding:.7rem;font-size:1rem;font-weight:700;{% else %}opacity:.9;{% endif %}">{{ b.label }}</button>
+            </form>
+          {% endfor %}
+          {% if show_decline %}
             <form method="post" style="margin:0;display:flex;flex-direction:column;gap:.4rem;padding:.6rem;border:1px solid var(--line);border-radius:9px;">
               {% csrf_token %}
               <input type="hidden" name="action" value="DECLINE">
               {% if rejection_reasons %}
                 <select name="rejection_reason" class="input" style="font-size:.85rem;">
-                  <option value="">Rejection reason…</option>
+                  <option value="">Decline reason…</option>
                   {% for r in rejection_reasons %}<option value="{{ r.pk }}">{{ r.label }}</option>{% endfor %}
                 </select>
               {% endif %}
@@ -165,9 +172,9 @@
               <button class="btn btn-decline" type="submit" style="width:100%;text-align:center;">Decline</button>
             </form>
           {% endif %}
-          {% if can.endorse %}{% include "dashboards/_action_btn.html" with action="ENDORSE" label="Endorse (Gate 1)" cls="btn-edit" %}{% endif %}
-          {% if can.final_approve %}{% include "dashboards/_action_btn.html" with action="QC_APPROVE" label="Validate (Gate 2)" cls="btn-approve" %}{% endif %}
-          {% if can.open_review %}{% include "dashboards/_action_btn.html" with action="REOPEN" label="Reopen" cls="btn-request" %}{% endif %}
+          {% if not review_actions and not show_decline %}
+            <p class="subtle" style="font-size:.83rem;margin:.2rem 0;">No actions available to you at this stage.</p>
+          {% endif %}
         </div>
       </div>
 
