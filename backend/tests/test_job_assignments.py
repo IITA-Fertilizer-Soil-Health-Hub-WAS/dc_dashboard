@@ -79,6 +79,49 @@ def test_my_assignments_lists_for_enumerator(client, world):
     assert b"HH0" in resp.content
 
 
+def test_assignment_editor_lists_plots(client, world):
+    """The one-screen editor offers the project's plots as a multi-select."""
+    client.force_login(world["coord"])
+    resp = client.get(reverse("console:job_new") + f"?project={world['uc'].code}")
+    assert resp.status_code == 200
+    assert b'name="units" multiple' in resp.content
+    assert b"HH0" in resp.content and b"HH2" in resp.content
+
+
+def test_create_assignment_with_multiple_plots(client, world):
+    """Creating one assignment over several selected plots makes a Job with a
+    UnitAssignment per plot, all linked to the chosen enumerator."""
+    client.force_login(world["coord"])
+    resp = client.post(
+        reverse("console:job_new") + f"?project={world['uc'].code}",
+        {"project": world["uc"].code, "name": "Round 2", "form": str(world["job"].form_id or ""),
+         "enumerator": str(world["en"].pk),
+         "units": [str(world["units"][0].pk), str(world["units"][1].pk)]},
+    )
+    assert resp.status_code == 302
+    job = Job.objects.get(project=world["uc"], name="Round 2")
+    assert job.assignments.count() == 2                       # one per selected plot
+    assert set(job.assignments.values_list("enumerator_id", flat=True)) == {world["en"].pk}
+    assert world["en"] in job.assigned_to.all()
+    assert job.target_count == 2                              # auto = plots selected
+    # The third plot was not selected, so it stays out of the job.
+    assert not UnitAssignment.objects.filter(job=job, unit=world["units"][2]).exists()
+
+
+def test_edit_assignment_syncs_plot_set(client, world):
+    """Editing an assignment adds newly-ticked plots and drops unticked ones."""
+    from apps.fieldwork.models import Job as _Job
+    job = _Job.objects.create(project=world["uc"], name="Round 3")
+    UnitAssignment.objects.create(job=job, unit=world["units"][0], enumerator=world["en"])
+    client.force_login(world["coord"])
+    # Re-submit with a different plot selected (drop unit0, add unit2).
+    client.post(reverse("console:job_edit", args=[job.pk]),
+                {"project": world["uc"].code, "name": "Round 3",
+                 "units": [str(world["units"][2].pk)]})
+    codes = set(job.assignments.values_list("unit__code", flat=True))
+    assert codes == {"HH2"}
+
+
 def test_my_assignments_header_uses_project_unit_noun(client, world):
     """Bold naming reaches the enumerator's own pages: the assignments table
     heads the unit column with the project's own noun, not a generic 'Unit'."""

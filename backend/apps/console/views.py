@@ -1264,6 +1264,100 @@ class JobAssignmentsView(UserPassesTestMixin, View):
         return redirect("console:job_assignments", pk=job.pk)
 
 
+class JobEditorView(UserPassesTestMixin, View):
+    """Create or edit a data-collection assignment (Job) in ONE screen: name it,
+    pick the form and deadline, tick the plots/households it covers (searchable
+    multi-select), and choose one enumerator. Saving creates a UnitAssignment per
+    selected plot — so an assignment IS a set of plots done by an enumerator."""
+
+    def test_func(self) -> bool:
+        from .registry import console_can_edit
+
+        return console_can_edit(self.request.user, "jobs")
+
+    def _project(self, request):
+        code = request.GET.get("project") or request.POST.get("project")
+        return _editable_projects(request.user).filter(code=code).first()
+
+    def _ctx(self, request, project, job=None, **extra):
+        from apps.fieldwork.models import CollectionUnit
+        from apps.fieldwork.services import project_enumerators
+
+        selected = set()
+        current_enum = None
+        if job is not None:
+            selected = set(job.assignments.values_list("unit_id", flat=True))
+            current_enum = (job.assignments.exclude(enumerator=None)
+                            .values_list("enumerator_id", flat=True).first())
+        ctx = _console_page_ctx("jobs") | {
+            "project": project, "job": job,
+            "forms": project.forms.all().order_by("title", "server_form_id"),
+            "units": CollectionUnit.objects.filter(project=project).order_by("code"),
+            "selected_unit_ids": selected,
+            "current_enumerator_id": current_enum,
+            "enumerators": project_enumerators(project),
+        }
+        ctx.update(extra)
+        return ctx
+
+    def get(self, request, pk=None):
+        job = _scoped_get(request.user, _managed("jobs"), "jobs", pk) if pk else None
+        project = job.project if job else self._project(request)
+        if project is None:
+            return render(request, "console/job_editor.html",
+                          {"projects": _editable_projects(request.user)} | _console_page_ctx("jobs"))
+        return render(request, "console/job_editor.html", self._ctx(request, project, job))
+
+    def post(self, request, pk=None):
+        from apps.accounts.models import User
+        from apps.fieldwork.models import CollectionUnit, Job, UnitAssignment
+
+        job = _scoped_get(request.user, _managed("jobs"), "jobs", pk) if pk else None
+        project = job.project if job else self._project(request)
+        name = (request.POST.get("name") or "").strip()
+        if project is None or not name:
+            ctx = self._ctx(request, project, job, error="Give the assignment a name.") \
+                if project else {"projects": _editable_projects(request.user),
+                                 "error": "Pick a project."} | _console_page_ctx("jobs")
+            return render(request, "console/job_editor.html", ctx)
+
+        form = project.forms.filter(pk=request.POST.get("form")).first()
+        enum = User.objects.filter(pk=request.POST.get("enumerator")).first()
+        units = CollectionUnit.objects.filter(
+            project=project, pk__in=request.POST.getlist("units"))
+
+        if job is None:
+            job = Job(project=project, created_by=request.user)
+        job.name = name
+        job.form = form
+        job.start_date = request.POST.get("start_date") or None
+        job.deadline = request.POST.get("deadline") or None
+        job.target_count = units.count()
+        job.status = Job.Status.ACTIVE
+        job.save()
+
+        # Sync the assignment set to the selected plots (add new, drop removed,
+        # (re)point kept ones at the chosen enumerator).
+        existing = {a.unit_id: a for a in job.assignments.all()}
+        keep = set()
+        for u in units:
+            keep.add(u.id)
+            a = existing.get(u.id)
+            if a is None:
+                UnitAssignment.objects.create(job=job, unit=u, enumerator=enum)
+            elif enum is not None and a.enumerator_id != enum.id:
+                a.enumerator = enum
+                a.save(update_fields=["enumerator", "updated_at"])
+        for uid, a in existing.items():
+            if uid not in keep:
+                a.delete()
+        if enum is not None:
+            job.assigned_to.add(enum)
+
+        messages.success(request, f"Assignment “{job.name}” saved — {len(keep)} plot(s).")
+        return redirect("console:job_assignments", pk=job.pk)
+
+
 class PlotElectionQueueView(ManageMixin, View):
     """The coordinator's election backlog for a project: one row per trial, with its
     candidate plots and which (if any) is elected. Scoped to editable projects."""

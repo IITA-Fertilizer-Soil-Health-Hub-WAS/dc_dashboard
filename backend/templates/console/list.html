@@ -34,6 +34,8 @@ elsewhere.{% endcomment %}
     {% if can_edit %}
       {% if m.key == 'validation-rules' %}
         <a class="btn-new" href="{% url 'console:rule_new' %}?project={{ request.GET.project }}">+ New rule</a>
+      {% elif m.key == 'jobs' %}
+        <a class="btn-new" href="{% url 'console:job_new' %}{% if request.GET.project %}?project={{ request.GET.project }}{% endif %}">+ New assignment</a>
       {% else %}
         <a class="btn-new" href="{% url 'console:create' m.key %}">+ New</a>
       {% endif %}

@@ -1,0 +1,65 @@
+{% extends "console/base.html" %}
+{% block title %}{% if job %}Edit assignment{% else %}New assignment{% endif %} · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}{% include "console/_ws_root.html" %}<span class="sep">/</span><a href="{% url 'console:list' 'jobs' %}{% if project %}?project={{ project.code }}{% endif %}">Assignments</a><span class="sep">/</span><span class="cur">{% if job %}{{ job.name }}{% else %}New{% endif %}</span>{% endblock %}
+{% block console_main %}
+  <div class="page-head">
+    <h2>{% if job %}Edit assignment{% else %}New assignment{% endif %}{% if project %} <span class="subtle" style="font-weight:400;">· {{ project.name }}</span>{% endif %}</h2>
+  </div>
+  {% if error %}<div class="pill" style="background:#fdecea;color:#a33617;display:inline-block;margin-bottom:.8rem;">{{ error }}</div>{% endif %}
+
+  {% if not project %}
+    {# Need a project to scope the plots — pick one first. #}
+    <div class="card form-card" style="max-width:520px;">
+      <form method="get">
+        <div class="field"><label>Project</label>
+          <select name="project" onchange="this.form.submit()">
+            <option value="">Choose a project…</option>
+            {% for p in projects %}<option value="{{ p.code }}">{{ p.name|default:p.code }}</option>{% endfor %}
+          </select>
+        </div>
+      </form>
+    </div>
+  {% else %}
+    <p class="subtle" style="max-width:720px;font-size:.86rem;margin:.1rem 0 1rem;">An assignment is a set of {{ project.unit_label_plural|lower }} to collect on — pick the ones this covers and (optionally) the enumerator who does them. You can reassign individual {{ project.unit_label_plural|lower }} later.</p>
+    <form method="post" action="{% if job %}{% url 'console:job_edit' job.pk %}{% else %}{% url 'console:job_new' %}?project={{ project.code }}{% endif %}">
+      {% csrf_token %}
+      <input type="hidden" name="project" value="{{ project.code }}">
+      <div class="card form-card" style="max-width:720px;">
+        <div class="field">
+          <label>Name</label>
+          <input name="name" value="{{ job.name|default:'' }}" placeholder="e.g. Round 1 — Northern sites" required>
+        </div>
+        <div class="field">
+          <label>Form</label>
+          <select name="form">
+            <option value="">— none —</option>
+            {% for f in forms %}<option value="{{ f.pk }}" {% if job and job.form_id == f.pk %}selected{% endif %}>{{ f.title|default:f.server_form_id|default:f.pk }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field" style="display:flex;gap:1rem;">
+          <div style="flex:1;"><label>Start date</label><input type="date" name="start_date" value="{{ job.start_date|date:'Y-m-d' }}"></div>
+          <div style="flex:1;"><label>Deadline</label><input type="date" name="deadline" value="{{ job.deadline|date:'Y-m-d' }}"></div>
+        </div>
+        <div class="field">
+          <label>Enumerator</label>
+          <select name="enumerator">
+            <option value="">Unassigned</option>
+            {% for e in enumerators %}<option value="{{ e.pk }}" {% if e.pk == current_enumerator_id %}selected{% endif %}>{{ e.full_name|default:e.email }}</option>{% endfor %}
+          </select>
+          <p class="helptext">Assigned to every {{ project.unit_label_plural|lower }} you select below.</p>
+        </div>
+        <div class="field">
+          <label>{{ project.unit_label_plural }} to cover</label>
+          <select name="units" multiple size="12">
+            {% for u in units %}<option value="{{ u.pk }}" {% if u.pk in selected_unit_ids %}selected{% endif %}>{{ u.code }}{% if u.name %} · {{ u.name }}{% endif %}</option>{% endfor %}
+          </select>
+          <p class="helptext">Search and tick the {{ project.unit_label_plural|lower }} this assignment covers. {% if not units %}No {{ project.unit_label_plural|lower }} imported yet — add them under {{ project.unit_label_plural }}.{% endif %}</p>
+        </div>
+        <div class="form-actions">
+          <button class="btn-new" type="submit">{% if job %}Save assignment{% else %}Create assignment{% endif %}</button>
+          <a class="subtle" href="{% url 'console:list' 'jobs' %}?project={{ project.code }}">Cancel</a>
+        </div>
+      </div>
+    </form>
+  {% endif %}
+{% endblock %}
