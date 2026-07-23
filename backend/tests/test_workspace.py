@@ -60,6 +60,23 @@ def test_multi_project_user_sees_picker(client, django_user_model, org):
     assert resp.status_code == 200  # the picker, no redirect
 
 
+def test_sidebar_shows_four_numbered_lifecycle_phases(client, django_user_model, org):
+    """The workspace rail groups every link under the four life-cycle phases
+    (Set up → Collect → Review & approve → Monitor), each a numbered step, so
+    the nav itself teaches the sequence."""
+    uc = Project.objects.create(code="PROJ-A", name="A", organization=org)
+    admin = django_user_model.objects.create_superuser("a@x.org", "pw")
+    client.force_login(admin)
+    body = client.get(reverse("dashboards:project", args=["PROJ-A"])).content.decode()
+    # Exactly the four phase headers, all rendered as numbered steps.
+    for label in ("Set up", "Collect", "Review &amp; approve", "Monitor"):
+        assert f'class="lbl step"' in body and f">{label}</div>" in body
+    assert body.count('class="lbl step"') == 4
+    # The retired six-stage labels are gone.
+    for gone in ("Field register", "Assign &amp; access", ">Finalize<"):
+        assert gone not in body
+
+
 def test_browsing_directory_clears_active_workspace(client, django_user_model, org):
     a = Project.objects.create(code="A", name="A", organization=org)
     b = Project.objects.create(code="B", name="B", organization=org)

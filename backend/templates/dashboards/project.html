@@ -44,14 +44,12 @@ window.PAGE_TOUR = (function(){
      body:'Everything for this project is in the left rail, ordered by how the work actually flows. This is the overview.'},
     {el:'[data-tour="setup"]', title:'1 · Set up',
      body:'Define the study — forms, schedule, crops, plots, validation rules and reference data. New project? Start here.'},
-    {el:'[data-tour="field"]', title:'2 · Field register',
-     body:'Who collects and where: enumerators and the collection units (farmers / plots / households).'},
-    {el:'[data-tour="review"]', title:'3 · Review &amp; correct',
-     body:'The incoming data, the review queue, flagged issues, and write-back of your fixes to the server.'},
-    {el:'[data-tour="finalize"]', title:'4 · Finalize',
-     body:'Approve the clean dataset; QC roles sign it off here.'},
-    {el:'[data-tour="monitor"]', title:'5 · Monitor',
-     body:'Track progress and M&amp;E indicators. That is the full loop: set up → collect → review → finalize → monitor.'},
+    {el:'[data-tour="field"]', title:'2 · Collect',
+     body:'Everything about collection: the enumerators and collection units (farmers / plots / households), plus who is assigned and who can access the project.'},
+    {el:'[data-tour="review"]', title:'3 · Review &amp; approve',
+     body:'The incoming data, the review queue, flagged issues, write-back of your fixes, and final approval / QC sign-off of the clean dataset.'},
+    {el:'[data-tour="monitor"]', title:'4 · Monitor',
+     body:'Track progress and M&amp;E indicators. That is the full loop: set up → collect → review & approve → monitor.'},
   ]};
 })();
 </script>{% endblock %}
