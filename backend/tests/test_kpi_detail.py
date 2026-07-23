@@ -97,3 +97,19 @@ def test_quality_view_renders_heatmap(client, world):
     resp = client.get(reverse("kpi:quality", args=["PROJ-A"]))
     assert resp.status_code == 200
     assert b"id-format" in resp.content
+
+
+def test_me_folds_into_workspace_rail(client, world):
+    """M&E is now a set of workspace sidebar entries under Monitor, not a
+    separate area with its own in-page tab bar. Opening a KPI page makes the
+    project the active workspace and renders the four Monitor rail links; the
+    old .subnav tab bar is gone and the breadcrumb points back to the project."""
+    client.force_login(world["coord"])
+    body = client.get(reverse("kpi:project", args=["PROJ-A"])).content.decode()
+    # Opening a KPI page activates the project workspace (sidebar renders).
+    assert client.session["active_project"] == "PROJ-A"
+    # The four Monitor sections are now rail links, not an in-page tab bar.
+    for label in (">Overview", ">Quality", ">Team quality", ">Coverage"):
+        assert label in body
+    assert 'class="subnav"' not in body                 # retired tab bar
+    assert 'href="/project/PROJ-A/"' in body            # breadcrumb back to workspace

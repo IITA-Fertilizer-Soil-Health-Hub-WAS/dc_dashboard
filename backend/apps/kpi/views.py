@@ -24,6 +24,15 @@ def _days(request):
     return days if days in PERIODS else "30"
 
 
+def _scoped(request, code):
+    """Scope to a project AND make it the active workspace, so the Monitor pages
+    render inside the project rail (the KPI pages are now workspace sections, not
+    a separate area with their own tab bar)."""
+    uc = get_scoped_project(request, code)  # 404 if not visible to the user
+    request.session["active_project"] = uc.code
+    return uc
+
+
 @login_required
 def kpi_overview(request):
     ctx = overview_metrics(request.user, _days(request)) | {"periods": PERIODS}
@@ -32,7 +41,7 @@ def kpi_overview(request):
 
 @login_required
 def kpi_project(request, code):
-    uc = get_scoped_project(request, code)  # 404 if not visible to the user
+    uc = _scoped(request, code)
     from .exports import export_options
 
     ctx = project_metrics(uc, _days(request)) | {
@@ -43,7 +52,7 @@ def kpi_project(request, code):
 
 @login_required
 def kpi_quality(request, code):
-    uc = get_scoped_project(request, code)
+    uc = _scoped(request, code)
     ctx = quality_metrics(uc, _days(request)) | {
         "uc": uc, "periods": PERIODS, "qtrend": project_quality_trend(uc),
     }
@@ -52,7 +61,7 @@ def kpi_quality(request, code):
 
 @login_required
 def kpi_enumerators(request, code):
-    uc = get_scoped_project(request, code)
+    uc = _scoped(request, code)
     m = enumerator_metrics(uc, _days(request))
     ctx = m | {"uc": uc, "periods": PERIODS, "map_html": points_map_html(m["points"])}
     return render(request, "kpi/enumerators.html", ctx)
@@ -64,7 +73,7 @@ def kpi_enumerator_detail(request, code, enum_id):
     coordinator can spot degrading quality early (not just a period average)."""
     from django.http import Http404
 
-    uc = get_scoped_project(request, code)
+    uc = _scoped(request, code)
     m = enumerator_metrics(uc, _days(request))
     row = next((r for r in m["leaderboard"] if str(r["enumerator_id"]) == str(enum_id)), None)
     trend = enumerator_trend(uc, enum_id)
@@ -77,7 +86,7 @@ def kpi_enumerator_detail(request, code, enum_id):
 
 @login_required
 def kpi_coverage(request, code):
-    uc = get_scoped_project(request, code)
+    uc = _scoped(request, code)
     m = coverage_metrics(uc)
     ctx = m | {"uc": uc, "map_html": points_map_html(m["points"])}
     return render(request, "kpi/coverage.html", ctx)

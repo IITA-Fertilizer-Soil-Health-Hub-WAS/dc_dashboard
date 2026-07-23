@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Coverage · {{ uc.code }} · {{ SITE_NAME }}{% endblock %}
-{% block crumbs %}<span class="sep">/</span><a href="{% url 'kpi:overview' %}">M&amp;E</a><span class="sep">/</span><a href="{% url 'kpi:project' uc.code %}">{{ uc.code }}</a><span class="sep">/</span><span class="cur">Coverage</span>{% endblock %}
+{% block crumbs %}<span class="sep">/</span><a href="{% url 'dashboards:project' uc.code %}">Projects</a><span class="sep">/</span><a href="{% url 'dashboards:project' uc.code %}">{{ uc.name }}</a><span class="sep">/</span><span class="cur">Monitor · Coverage</span>{% endblock %}
 {% block extrahead %}<style>
   .jrow{display:flex;align-items:center;gap:.6rem;margin:.45rem 0;}
   .jrow .nm{flex:0 0 240px;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -20,7 +20,6 @@
     <h2>{{ uc.name }} — coverage</h2><span class="pill">{{ uc.code }}</span>
   </div>
   <p class="lede">Planned collection units vs. data received.</p>
-  {% include "kpi/_subnav.html" %}
 
   <div class="cards">
     <div class="card infobox"><div class="n">{{ total_units }}</div><div class="l">Planned units</div></div>

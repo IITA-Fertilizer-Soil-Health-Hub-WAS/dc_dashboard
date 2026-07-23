@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Team quality · {{ uc.code }} · {{ SITE_NAME }}{% endblock %}
-{% block crumbs %}<span class="sep">/</span><a href="{% url 'kpi:overview' %}">M&amp;E</a><span class="sep">/</span><a href="{% url 'kpi:project' uc.code %}">{{ uc.code }}</a><span class="sep">/</span><span class="cur">Team quality</span>{% endblock %}
+{% block crumbs %}<span class="sep">/</span><a href="{% url 'dashboards:project' uc.code %}">Projects</a><span class="sep">/</span><a href="{% url 'dashboards:project' uc.code %}">{{ uc.name }}</a><span class="sep">/</span><span class="cur">Monitor · Team quality</span>{% endblock %}
 {% block extrahead %}<style>
   .lead-bar{display:block;height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:.25rem;}
   .lead-bar > i{display:block;height:100%;background:linear-gradient(90deg,var(--brand),#3f9142);}
@@ -14,7 +14,6 @@
     </div>
   </div>
   <p class="lede">{{ active_count }} active enumerator{{ active_count|pluralize }} — {{ period_label|lower }}. Ranked by quality score (approval, on-time delivery, GPS accuracy, flag-free).</p>
-  {% include "kpi/_subnav.html" %}
 
   <div class="card" style="padding:0;overflow:hidden;">
     <div class="table-wrap">

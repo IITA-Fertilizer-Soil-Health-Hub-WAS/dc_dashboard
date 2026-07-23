@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Quality · {{ uc.code }} · {{ SITE_NAME }}{% endblock %}
-{% block crumbs %}<span class="sep">/</span><a href="{% url 'kpi:overview' %}">M&amp;E</a><span class="sep">/</span><a href="{% url 'kpi:project' uc.code %}">{{ uc.code }}</a><span class="sep">/</span><span class="cur">Quality</span>{% endblock %}
+{% block crumbs %}<span class="sep">/</span><a href="{% url 'dashboards:project' uc.code %}">Projects</a><span class="sep">/</span><a href="{% url 'dashboards:project' uc.code %}">{{ uc.name }}</a><span class="sep">/</span><span class="cur">Monitor · Quality</span>{% endblock %}
 {% block extrahead %}<style>
   .sevbar{display:flex;align-items:center;gap:.6rem;margin:.4rem 0;}
   .sevbar .nm{flex:0 0 110px;font-size:.86rem;font-weight:600;text-transform:capitalize;}
@@ -19,7 +19,6 @@
     </div>
   </div>
   <p class="lede">Validation flags raised by the auto-quality engine — {{ period_label|lower }}.</p>
-  {% include "kpi/_subnav.html" %}
 
   <div class="cards">
     <div class="card infobox"><div class="n">{{ open_flags }}</div><div class="l">Open flags</div></div>

@@ -522,11 +522,26 @@
             </a>
           {% endif %}
 
-          {% comment %}Phase 4 · Monitor — track progress and M&E.{% endcomment %}
+          {% comment %}Phase 4 · Monitor — track progress and M&E. The KPI pages
+          used to carry their own in-page tab bar (Summary/Quality/Team quality/
+          Coverage); those are now first-class rail entries, so there is one
+          navigation surface everywhere.{% endcomment %}
           <div class="lbl step" data-tour="monitor">Monitor</div>
           <a href="{% url 'kpi:project' active_uc.code %}"
-             class="{% if request.resolver_match.app_name == 'kpi' %}active{% endif %}">
-            <span class="msym">insights</span>M&amp;E
+             class="{% if request.resolver_match.url_name == 'project' and request.resolver_match.app_name == 'kpi' %}active{% endif %}">
+            <span class="msym">insights</span>Overview
+          </a>
+          <a href="{% url 'kpi:quality' active_uc.code %}"
+             class="{% if request.resolver_match.url_name == 'quality' %}active{% endif %}">
+            <span class="msym">verified</span>Quality
+          </a>
+          <a href="{% url 'kpi:enumerators' active_uc.code %}"
+             class="{% if request.resolver_match.url_name == 'enumerators' or request.resolver_match.url_name == 'enumerator_detail' %}active{% endif %}">
+            <span class="msym">workspace_premium</span>Team quality
+          </a>
+          <a href="{% url 'kpi:coverage' active_uc.code %}"
+             class="{% if request.resolver_match.url_name == 'coverage' %}active{% endif %}">
+            <span class="msym">map</span>Coverage
           </a>
 
         {% else %}

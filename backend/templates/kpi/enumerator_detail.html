@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Enumerator · {{ uc.code }} · {{ SITE_NAME }}{% endblock %}
-{% block crumbs %}<span class="sep">/</span><a href="{% url 'kpi:overview' %}">M&amp;E</a><span class="sep">/</span><a href="{% url 'kpi:project' uc.code %}">{{ uc.code }}</a><span class="sep">/</span><a href="{% url 'kpi:enumerators' uc.code %}">Team quality</a><span class="sep">/</span><span class="cur">{% if trend.enumerator %}{{ trend.enumerator.enid }}{% else %}detail{% endif %}</span>{% endblock %}
+{% block crumbs %}<span class="sep">/</span><a href="{% url 'dashboards:project' uc.code %}">Projects</a><span class="sep">/</span><a href="{% url 'dashboards:project' uc.code %}">{{ uc.name }}</a><span class="sep">/</span><a href="{% url 'kpi:enumerators' uc.code %}">Team quality</a><span class="sep">/</span><span class="cur">{% if trend.enumerator %}{{ trend.enumerator.enid }}{% else %}detail{% endif %}</span>{% endblock %}
 {% block extrahead %}<style>
   .trend{display:flex;align-items:flex-end;gap:4px;height:150px;margin:.6rem 0 .3rem;}
   .trend .col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;}
