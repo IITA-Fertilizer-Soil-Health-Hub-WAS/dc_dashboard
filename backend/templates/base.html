@@ -547,21 +547,26 @@
         {% else %}
           {# ===================== Projects ===================== #}
           {% if user.is_staff %}
-            {% comment %}Admin home mirrors the in-project flow: overview first, then set up -> accounts -> monitor. Institution tenancy (Institutions/Regions/Countries) + Manage projects form the "Set up" stage; M&E + Care are "Monitor".{% endcomment %}
-            <div class="lbl">Overview</div>
-            <a href="{% url 'dashboards:overview' %}" title="Cross-project review &amp; write-back status"
+            {% comment %}Admin home mirrors the in-project life-cycle: Operations
+            first, then the platform's own Structure -> People -> Monitor, and the
+            build/integrate tools last. Section labels match the workspace's task
+            language.{% endcomment %}
+            <div class="lbl">Operations</div>
+            <a href="{% url 'dashboards:overview' %}" title="Cross-project review &amp; sync status"
                class="{% if request.resolver_match.url_name == 'overview' %}active{% endif %}">
               <span class="msym">dashboard</span>Operations
             </a>
 
-            <div class="lbl">Set up</div>
+            <div class="lbl">Structure</div>
             <a href="{% url 'console:admin_setup' %}" title="Institutions, geography &amp; projects — one page"
                class="{% if request.resolver_match.url_name == 'admin_setup' or request.resolver_match.kwargs.key == 'organizations' or request.resolver_match.kwargs.key == 'regions' or request.resolver_match.kwargs.key == 'countries' or request.resolver_match.kwargs.key == 'projects' %}active{% endif %}">
               <span class="msym">tune</span>Structure &amp; projects
             </a>
 
+            {% comment %}People: the registry "Accounts & roles" group, shown under the
+            plainer "People" heading.{% endcomment %}
             {% for group, items in console_groups %}{% if group == "Accounts & roles" %}
-              <div class="lbl">{{ group }}</div>
+              <div class="lbl">People</div>
               {% for it in items %}
                 <a href="{% url 'console:list' it.key %}" title="{{ it.description }}"
                    class="{% if it.key == request.resolver_match.kwargs.key %}active{% endif %}">
@@ -616,7 +621,7 @@
 
           {% include "_my_work_nav.html" %}
           {% if can_publish_forms or user.is_staff %}
-            <div class="lbl">System</div>
+            <div class="lbl">Build &amp; integrate</div>
             {% if can_publish_forms %}
               <a href="{% url 'console:form_builder' %}" title="Design a form and publish it to the collection server"
                  class="{% if request.resolver_match.url_name == 'form_builder' or request.resolver_match.url_name == 'form_new' or request.resolver_match.url_name == 'form_edit' or request.resolver_match.url_name == 'publish_form' %}active{% endif %}">

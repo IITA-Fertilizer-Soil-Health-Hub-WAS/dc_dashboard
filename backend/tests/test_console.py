@@ -41,6 +41,21 @@ def test_non_staff_forbidden(client, plain, uc):
     assert client.get("/manage/projects/").status_code == 403
 
 
+def test_admin_home_uses_lifecycle_sections(client, staff, uc):
+    """The staff home rail is organised by the platform life-cycle with plain
+    section headers — Operations / Structure / People / Monitor / Build &
+    integrate — mirroring the in-project phases."""
+    client.force_login(staff)
+    body = client.get("/projects/").content.decode()  # directory = admin home, no active project
+    for header in (">Operations<", ">Structure<", ">People<", ">Monitor<",
+                   "Build &amp; integrate"):
+        assert header in body
+    # Renamed People items come from the registry (People-group labels).
+    assert "Project access" in body and "Collector accounts" in body
+    # Retired section headers are gone.
+    assert ">Set up<" not in body and ">Accounts &amp; roles<" not in body and ">System<" not in body
+
+
 def test_project_scoped_console_page_wears_workspace_frame(client, staff, uc):
     """A console section opened with ?project= is a section of that project's
     workspace, so it shows the 'Projects / <project> / <section>' breadcrumb —
