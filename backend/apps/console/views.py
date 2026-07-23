@@ -9,6 +9,7 @@ from django.db.models import Q
 from django.forms import modelform_factory
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views import View
 
 from .registry import REGISTRY, Managed, grouped
@@ -1670,6 +1671,68 @@ class ReferenceCoverageView(ManageMixin, View):
         })
 
 
+class DestinationsView(ManageMixin, View):
+    """Manage a project's outbound ETL destinations — where cleaned data is
+    pushed (a warehouse loader, an ETL tool's HTTP source, an iPaaS webhook)."""
+
+    def _project(self, request):
+        code = (request.GET.get("project") or request.POST.get("project")
+                or request.session.get("active_project"))
+        return _builder_projects(request).filter(code=code).first()
+
+    def get(self, request, error=None, posted=None, preview=None):
+        from apps.ingestion.models import Destination
+
+        project = self._project(request)
+        if project is None:
+            messages.error(request, "Pick a project first.")
+            return redirect("console:list", key="projects")
+        return render(request, "console/destinations.html", {
+            "console_key": "validation-rules", "groups": grouped(),
+            "project": project,
+            "destinations": Destination.objects.filter(project=project),
+            "error": error, "posted": posted or {}, "preview": preview,
+        })
+
+    def post(self, request):
+        from apps.ingestion.destinations import push_destination
+        from apps.ingestion.models import Destination
+
+        project = self._project(request)
+        if project is None:
+            messages.error(request, "Pick a project first.")
+            return redirect("console:list", key="projects")
+        action = request.POST.get("action", "create")
+
+        if action == "delete":
+            Destination.objects.filter(project=project, pk=request.POST.get("id")).delete()
+            messages.success(request, "Destination removed.")
+        elif action in ("send", "test"):
+            dest = Destination.objects.filter(project=project, pk=request.POST.get("id")).first()
+            if dest and action == "test":
+                return self.get(request, preview=push_destination(dest, dry_run=True))
+            if dest:
+                res = push_destination(dest)
+                (messages.success if res.get("status") == "OK" else messages.error)(
+                    request, f"Push {res.get('status')}: {res.get('sent', 0)} row(s) sent."
+                    + (f" {res.get('message', '')}" if res.get("status") == "ERROR" else ""))
+        else:  # create
+            from django.utils.text import slugify
+
+            name = (request.POST.get("name") or "").strip()[:120]
+            url = (request.POST.get("url") or "").strip()
+            if not (name and url.startswith("http")):
+                return self.get(request, error="Give it a name and a valid https URL.",
+                                posted=request.POST)
+            Destination.objects.create(
+                project=project, name=name, url=url,
+                secret=(request.POST.get("secret") or "").strip(),
+                only_approved=request.POST.get("only_approved") == "on",
+                kind="WEBHOOK")
+            messages.success(request, f"Destination “{slugify(name)}” added.")
+        return redirect(f"{reverse('console:destinations')}?project={project.code}")
+
+
 class SystemStatusView(StaffMixin, View):
     """Operational visibility: recent sync outcomes + which projects have gone
     quiet — so a failing sync or a project that stopped receiving data can't
@@ -1793,6 +1856,8 @@ SETUP_CARD_META: dict[str, tuple[str, str, str]] = {
                          "Reasons a reviewer can decline a submission for."),
     "reference-datasets": ("Reference data", "dataset",
                           "Sampling frames, lab results & lookups to reconcile field data against."),
+    "destinations": ("Data destinations", "cloud_upload",
+                    "Push cleaned data out to a warehouse / ETL tool / webhook."),
     "plot-election": ("Plot election", "where_to_vote",
                      "Review proposed plots and elect the trial plots."),
     "organizations": ("Institutions", "domain",
@@ -1949,6 +2014,12 @@ class SetupHubView(ManageMixin, View):
              [("reference-datasets", {
                  "count": uc.reference_datasets.count(),
                  "url": f"{reverse('console:reference_datasets')}?project={uc.code}",
+                 "external": True})]),
+            ("Share & integrate", "cloud_upload",
+             "Push cleaned data out to your warehouse / ETL tool / BI stack.",
+             [("destinations", {
+                 "count": uc.destinations.count(),
+                 "url": f"{reverse('console:destinations')}?project={uc.code}",
                  "external": True})]),
         ]
         return _setup_render(request, uc=uc, sections=_setup_sections(request, uc, layout),

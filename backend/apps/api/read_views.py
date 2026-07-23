@@ -61,7 +61,8 @@ class SubmissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Submission
         fields = ["ona_uuid", "form", "event_key", "event_date", "lat", "lon",
-                  "enumerator", "collection_unit", "review_state", "ingested_at", "values"]
+                  "enumerator", "collection_unit", "review_state", "ingested_at",
+                  "updated_at", "values"]
 
     def get_form(self, o):
         return o.form.title or o.form.server_ref if o.form_id else None
@@ -94,10 +95,15 @@ class SubmissionListAPI(ListAPIView):
 
     def get_queryset(self):
         p = _project_or_404(self.request, self.kwargs["code"])
-        qs = (Submission.objects.filter(project=p)
-              .select_related("form", "enumerator", "collection_unit", "review")
-              .order_by("-event_date", "-ingested_at"))
         q = self.request.query_params
+        qs = (Submission.objects.filter(project=p)
+              .select_related("form", "enumerator", "collection_unit", "review"))
+        # Incremental extraction for ETL tools: ?updated_since=<ISO> ordered by
+        # updated_at, so a consumer can checkpoint and pull only changed rows.
+        if q.get("updated_since"):
+            qs = qs.filter(updated_at__gt=q["updated_since"]).order_by("updated_at")
+        else:
+            qs = qs.order_by("-event_date", "-ingested_at")
         if q.get("form"):
             qs = qs.filter(form__server_form_id=q["form"])
         if q.get("event"):

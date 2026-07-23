@@ -28,6 +28,7 @@ urlpatterns = [
     path("rules/test/", views.RuleTestView.as_view(), name="rule_test"),
     path("rules/import-fields/", views.RuleSchemaSyncView.as_view(), name="rule_import_fields"),
     path("rules/<uuid:pk>/", views.RuleBuilderView.as_view(), name="rule_edit"),
+    path("destinations/", views.DestinationsView.as_view(), name="destinations"),
     path("reference/", views.ReferenceDatasetsView.as_view(), name="reference_datasets"),
     path("reference/<uuid:pk>/delete/", views.ReferenceDeleteView.as_view(),
          name="reference_delete"),

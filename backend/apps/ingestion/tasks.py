@@ -25,6 +25,8 @@ def sync_project_task(code: str, trigger: str = "manual") -> dict:
     run_for_project(uc)  # validate immediately after ingest
     hash_media_task.delay(code)  # hash new media off the ingest path
     _refresh_schemas(uc)  # keep form names + field lists current for the builder
+    if uc.destinations.filter(is_active=True).exists():
+        push_destinations_task.delay(code)  # forward cleaned data to ETL sinks
     return stats.as_dict()
 
 
@@ -85,6 +87,19 @@ def sync_all_projects() -> list[dict]:
             results.append(stats.as_dict())
         except Exception as exc:  # already recorded + alerted in record_sync
             results.append({"project": uc.code, "error": str(exc)[:200]})
+    return results
+
+
+@shared_task(name="ingestion.push_destinations")
+def push_destinations_task(code: str = "") -> list:
+    """Push cleaned data to a project's ETL destinations — one project, or all."""
+    from .destinations import push_project
+
+    qs = Project.objects.filter(code=code) if code else Project.objects.filter(is_active=True)
+    results = []
+    for uc in qs:
+        if uc.destinations.filter(is_active=True).exists():
+            results.append({"project": uc.code, "results": push_project(uc)})
     return results
 
 

@@ -44,7 +44,7 @@
         <thead><tr><th>Endpoint</th><th>Returns</th></tr></thead>
         <tbody>
           <tr><td class="ep">GET /api/v1/projects/</td><td>Projects you can access, with submission &amp; open-issue counts.</td></tr>
-          <tr><td class="ep">GET /api/v1/projects/&lt;code&gt;/submissions/</td><td>Reviewed submissions (paginated). Filters: <code>?form=</code> <code>?event=</code> <code>?since=YYYY-MM-DD</code> <code>?values=1</code>.</td></tr>
+          <tr><td class="ep">GET /api/v1/projects/&lt;code&gt;/submissions/</td><td>Reviewed submissions (paginated). Filters: <code>?form=</code> <code>?event=</code> <code>?since=YYYY-MM-DD</code> <code>?values=1</code>.<br><strong>Incremental pull for ETL:</strong> <code>?updated_since=&lt;ISO&gt;</code> returns only rows changed since that timestamp, ordered by <code>updated_at</code> — checkpoint on the last <code>updated_at</code> you saw and pass it back next run.</td></tr>
           <tr><td class="ep">GET /api/v1/projects/&lt;code&gt;/flags/</td><td>Validation flags (default open; <code>?status=ALL</code>).</td></tr>
           <tr><td class="ep">GET /api/v1/projects/&lt;code&gt;/kpis/</td><td>The project's M&amp;E summary.</td></tr>
         </tbody>

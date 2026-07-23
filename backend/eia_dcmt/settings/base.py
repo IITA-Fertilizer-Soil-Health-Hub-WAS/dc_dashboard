@@ -284,6 +284,12 @@ CELERY_BEAT_SCHEDULE = {
         "task": "ingestion.check_stale_projects",
         "schedule": crontab(hour=8, minute=0),
     },
+    # Outbound ETL: forward cleaned data to configured destinations (also runs
+    # right after each sync; this is the safety-net sweep).
+    "push-destinations-hourly": {
+        "task": "ingestion.push_destinations",
+        "schedule": crontab(minute=20),
+    },
     "review-digest-weekday-mornings": {
         "task": "review.send_review_digests",
         "schedule": crontab(hour=7, minute=0, day_of_week="mon-fri"),
