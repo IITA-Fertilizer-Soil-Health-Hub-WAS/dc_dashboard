@@ -1,0 +1,40 @@
+{% if getting_started and not getting_started.complete %}
+<style>
+  .gs-card{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--gold);
+    border-radius:12px;padding:1rem 1.2rem;margin:0 0 1.2rem;}
+  .gs-head{display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem;}
+  .gs-head strong{font-size:1rem;}
+  .gs-count{font-size:.78rem;font-weight:700;color:var(--brand);background:var(--brand-50);border-radius:999px;padding:.1rem .5rem;}
+  .gs-head .gs-dismiss{margin-left:auto;background:none;border:none;color:var(--muted);font-size:.8rem;cursor:pointer;}
+  .gs-bar{height:6px;border-radius:4px;background:var(--surface-2);overflow:hidden;margin:0 0 .7rem;}
+  .gs-bar span{display:block;height:100%;background:var(--gold);}
+  .gs-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.35rem;}
+  .gs-list li{display:flex;align-items:center;gap:.5rem;font-size:.9rem;}
+  .gs-list li .msym{font-size:18px;color:var(--faint);}
+  .gs-list li.done .msym{color:#3f9142;}
+  .gs-list li.done span{color:var(--muted);text-decoration:line-through;}
+  .gs-list a{font-weight:600;}
+  .gs-hint{color:var(--faint);font-size:.8rem;}
+</style>
+<div class="gs-card" id="gs-{{ getting_started.id }}">
+  <div class="gs-head">
+    <strong>{{ getting_started.title }}</strong>
+    <span class="gs-count">{{ getting_started.done }}/{{ getting_started.total }}</span>
+    <button type="button" class="gs-dismiss" onclick="gsDismiss('{{ getting_started.id }}')">Dismiss</button>
+  </div>
+  <div class="gs-bar"><span style="width:{% widthratio getting_started.done getting_started.total 100 %}%"></span></div>
+  <ul class="gs-list">
+    {% for it in getting_started.items %}
+      <li class="{% if it.done %}done{% endif %}">
+        <span class="msym">{% if it.done %}check_circle{% else %}radio_button_unchecked{% endif %}</span>
+        {% if it.done %}<span>{{ it.label }}</span>
+        {% else %}<a href="{{ it.url }}">{{ it.label }}</a> <span class="gs-hint">— {{ it.hint }}</span>{% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+</div>
+<script>
+  function gsDismiss(id){var e=document.getElementById('gs-'+id);if(e)e.remove();try{localStorage.setItem('gs_dismissed_'+id,'1');}catch(_){}}
+  (function(){try{if(localStorage.getItem('gs_dismissed_{{ getting_started.id }}')){var e=document.getElementById('gs-{{ getting_started.id }}');if(e)e.remove();}}catch(_){}})();
+</script>
+{% endif %}

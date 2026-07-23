@@ -110,4 +110,14 @@ def navigation(request):
         "can_publish_forms": can_publish_forms,
         "show_care": show_care,
         "show_my_caseload": show_my_caseload,
+        "getting_started": _getting_started_safe(user, active_uc),
     }
+
+
+def _getting_started_safe(user, active_uc):
+    from .getting_started import getting_started
+
+    try:
+        return getting_started(user, active_uc)
+    except Exception:  # never let onboarding UI break a page render
+        return None
