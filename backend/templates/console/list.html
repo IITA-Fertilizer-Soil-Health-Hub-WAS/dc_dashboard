@@ -90,10 +90,11 @@
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="{{ columns|length|add:1 }}"><div class="empty" style="border:none;">
-            {% if m.key == 'jobs' %}No jobs yet — click <strong>+ New</strong> to define what to collect (a set of plots or farmers), then open the job to assign enumerators.
-            {% elif m.key == 'collection-units' %}No collection units yet — add them individually with <strong>+ New</strong>, or use <strong>Import CSV</strong>.
-            {% else %}Nothing here yet.{% endif %}
+          <tr><td colspan="{{ columns|length|add:1 }}"><div class="empty" style="border:none;text-align:center;padding:1.8rem 1rem;">
+            {% if m.key == 'jobs' %}<p style="margin:0 0 .4rem;"><strong>No jobs yet.</strong> A job defines what to collect (a set of plots or farmers) and who collects it.</p><p class="subtle" style="margin:0;font-size:.85rem;">Click <strong>+ New</strong>, then open the job to assign enumerators.</p>
+            {% elif m.key == 'collection-units' %}<p style="margin:0 0 .4rem;"><strong>No collection units yet.</strong> These are the farmers / plots / households your data is collected on.</p><p class="subtle" style="margin:0;font-size:.85rem;">Add them with <strong>+ New</strong>, or bulk-load with <strong>Import CSV</strong>.</p>
+            {% elif m.key == 'validation-rules' %}<p style="margin:0 0 .4rem;"><strong>No validation rules yet.</strong> Rules catch bad data automatically — out-of-range values, duplicates, missing samples, lab mismatches.</p>{% if can_edit %}<p style="margin:0;"><a class="btn-new" style="display:inline-flex;" href="{% url 'console:rule_new' %}?project={{ request.GET.project }}">+ Build your first rule</a></p>{% endif %}
+            {% else %}<p style="margin:0 0 .4rem;"><strong>No {{ m.label|lower }} yet.</strong>{% if m.description %} {{ m.description }}{% endif %}</p>{% if can_edit %}<p class="subtle" style="margin:0;font-size:.85rem;">Click <strong>+ New</strong> to add the first one.</p>{% endif %}{% endif %}
           </div></td></tr>
         {% endfor %}
       </tbody>

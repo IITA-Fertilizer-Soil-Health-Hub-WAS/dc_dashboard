@@ -14,6 +14,16 @@
 
   {% include "_getting_started.html" %}
 
+  {% if user.is_staff %}
+    <form method="post" action="{% url 'console:demo_project' %}" style="margin:0 0 1.1rem;"
+          onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Creating…';">
+      {% csrf_token %}
+      <button class="btn btn-request" type="submit" title="Create a sample project with data, rules and flagged issues to explore">
+        <span class="msym" style="vertical-align:-3px;">science</span> Try a demo project
+      </button>
+    </form>
+  {% endif %}
+
   {% if home %}
     <div class="cards" style="margin-bottom:1.4rem;">
       {% if home.assignments %}

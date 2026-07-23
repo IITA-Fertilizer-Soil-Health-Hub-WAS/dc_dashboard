@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Help · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<span class="sep">/</span><span class="cur">Help</span>{% endblock %}
+{% block extrahead %}{{ block.super }}
+<style>
+  .hp{max-width:820px;}
+  .hp .search{width:100%;padding:.6rem .8rem;border:1px solid var(--line);border-radius:10px;font-size:.95rem;margin:.3rem 0 1.2rem;background:var(--surface);}
+  .hp .search:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-50);}
+  .hp details{background:var(--surface);border:1px solid var(--line);border-radius:11px;margin-bottom:.6rem;padding:.2rem .3rem;}
+  .hp summary{cursor:pointer;list-style:none;padding:.75rem .9rem;font-weight:650;font-size:.95rem;display:flex;align-items:center;gap:.5rem;}
+  .hp summary::-webkit-details-marker{display:none;}
+  .hp summary .msym{color:var(--brand);}
+  .hp details[open] summary{border-bottom:1px solid var(--line);}
+  .hp .body{padding:.7rem .9rem .9rem;font-size:.9rem;color:var(--ink);line-height:1.6;}
+  .hp .body ol{margin:.2rem 0;padding-left:1.2rem;} .hp .body li{margin:.2rem 0;}
+  .hp .tag{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);
+    background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:.05rem .35rem;margin-left:auto;}
+  .hp .nomatch{color:var(--muted);font-size:.9rem;padding:1rem;}
+</style>
+{% endblock %}
+{% block content %}
+  <div class="page-head"><h2>Help</h2></div>
+  <p class="hp subtle" style="max-width:820px;">Short, task-based recipes. Search for what you're trying to do.</p>
+
+  <div class="hp">
+    <input class="search" id="hp-search" type="search" placeholder="Search — e.g. “validation rule”, “lab results”, “fix data”…" oninput="hpFilter()">
+    <a href="{% url 'console:enumerator_guide' %}" style="display:flex;align-items:center;gap:.5rem;background:var(--brand-50);border:1px solid var(--line);border-radius:11px;padding:.7rem .9rem;margin-bottom:1rem;text-decoration:none;color:var(--brand-900);font-weight:600;font-size:.9rem;">
+      <span class="msym" style="color:var(--brand);">description</span>Enumerator field guide — printable one-pager (Save as PDF for the field) →
+    </a>
+    <div id="hp-list">
+
+      <details data-t="onboard project connect ona odk kobo server new">
+        <summary><span class="msym">rocket_launch</span>Onboard a new project<span class="tag">Admin · Coordinator</span></summary>
+        <div class="body"><ol>
+          <li>Sidebar → <strong>Manage projects → Onboard project</strong> (or Set up → Structure).</li>
+          <li>Pick the collection server (ODK Central / ONA / Kobo), then <strong>Find projects</strong>.</li>
+          <li>Choose the server project — already-onboarded ones are flagged to avoid duplicates.</li>
+          <li>Name it, set the owner, confirm its forms, and finish. Field names import automatically.</li>
+        </ol></div>
+      </details>
+
+      <details data-t="import fields form schema names builder">
+        <summary><span class="msym">sync</span>Get a form's fields into the platform<span class="tag">Coordinator</span></summary>
+        <div class="body">Fields import automatically at onboarding and on every sync. To refresh after a form change: <strong>Set up → Project setup → Validation rules → New rule → Import fields &amp; names</strong>, or just run <strong>Sync now</strong> on the project.</div>
+      </details>
+
+      <details data-t="validation rule sum 100 outlier duplicate range reference lab check quality builder">
+        <summary><span class="msym">rule</span>Build a validation rule<span class="tag">Coordinator</span></summary>
+        <div class="body"><ol>
+          <li><strong>Set up → Project setup → Validation rules → New rule</strong>.</li>
+          <li>Pick the <strong>form</strong>, then a <strong>rule type</strong>: range, statistical outlier, cross-column sum (e.g. shares = 100), duplicate id, conditionally-required, or reference/lab match.</li>
+          <li>Fill the plain-English settings (no JSON), watch the live summary, hit <strong>Test rule</strong> to see how many current records it would flag, then Save.</li>
+        </ol></div>
+      </details>
+
+      <details data-t="reference data lab results sampling frame lookup coverage missing sample id csv import">
+        <summary><span class="msym">dataset</span>Import reference data &amp; check coverage<span class="tag">Coordinator</span></summary>
+        <div class="body"><ol>
+          <li><strong>Set up → Reference data → Import a CSV</strong> — a sampling frame, lab results, or a lookup — and name its key column (e.g. sample_id).</li>
+          <li>Open <strong>Coverage</strong>, pick the submission field holding the same id, and see matched / missing (never submitted) / unknown ids.</li>
+          <li>Add a <strong>reference-match</strong> rule to flag unknown ids, or a <strong>reference-compare</strong> rule to cross-check field vs lab values.</li>
+        </ol></div>
+      </details>
+
+      <details data-t="review approve validate endorse decline submission workflow">
+        <summary><span class="msym">rate_review</span>Review &amp; approve submissions<span class="tag">Coordinator · QC</span></summary>
+        <div class="body">Open a project → <strong>Review</strong>. Open a submission to inspect it, then Validate / Endorse / Request-edit / Decline from the row. Every action is logged in the <strong>Review log</strong>. Flagged issues appear on the <strong>Issues</strong> tab.</div>
+      </details>
+
+      <details data-t="fix flagged data corrections enumerator my submissions issues field">
+        <summary><span class="msym">build</span>Fix flagged data (as an enumerator)<span class="tag">Enumerator</span></summary>
+        <div class="body">Open <strong>My submissions</strong> — records with issues list exactly what's wrong. You'll also get a weekly email of corrections needed. Recollect / correct in ODK Collect; the fix flows in on the next sync.</div>
+      </details>
+
+      <details data-t="api read data products token export bi gis download integrate">
+        <summary><span class="msym">api</span>Pull data into another tool (API)<span class="tag">Coordinator · Admin</span></summary>
+        <div class="body">Sidebar → <strong>Data products</strong>. Generate an API token, then call <code>/api/v1/projects/&lt;code&gt;/submissions/</code> (paginated, filterable, <code>?values=1</code> for field values). Everything is scoped to what you can access.</div>
+      </details>
+
+      <details data-t="monitor m&e dashboard kpi indicators quality target export">
+        <summary><span class="msym">insights</span>Monitor progress (M&amp;E)<span class="tag">All</span></summary>
+        <div class="body">Open a project → <strong>M&amp;E</strong>. Switch views (Summary / Quality / Team quality), pick a time window, and read submissions-vs-target, approvals, open issues and the quality score. Export CSV / GeoJSON from the top of the page.</div>
+      </details>
+
+    </div>
+    <div id="hp-none" class="nomatch" style="display:none;">No recipe matches that. Try a different word.</div>
+  </div>
+<script>
+  function hpFilter(){
+    var q=document.getElementById('hp-search').value.toLowerCase().trim();
+    var any=false;
+    document.querySelectorAll('#hp-list details').forEach(function(d){
+      var hit = !q || (d.getAttribute('data-t')+' '+d.textContent).toLowerCase().indexOf(q)!==-1;
+      d.style.display = hit?'':'none'; if(hit) any=true;
+      if(q && hit) d.open=true; if(!q) d.open=false;
+    });
+    document.getElementById('hp-none').style.display = any?'none':'';
+  }
+</script>
+{% endblock %}

@@ -1703,6 +1703,44 @@ class SystemStatusView(StaffMixin, View):
         })
 
 
+class DemoProjectView(StaffMixin, View):
+    """Create a disposable demo project pre-loaded with data + rules + flags, so a
+    new user can explore the review/validation/dashboard flow safely."""
+
+    def post(self, request):
+        from .demo import create_demo_project
+
+        uc = create_demo_project(owner=request.user)
+        request.session["active_project"] = uc.code
+        messages.success(
+            request,
+            f"Demo project “{uc.code}” created with sample data, rules and flagged "
+            f"issues. Explore it, then delete it from Manage projects when done.")
+        return redirect("dashboards:project", code=uc.code)
+
+
+class HelpView(UserPassesTestMixin, View):
+    """A searchable set of short, task-oriented how-to recipes."""
+
+    def test_func(self) -> bool:
+        u = self.request.user
+        return bool(u.is_authenticated and u.is_active)
+
+    def get(self, request):
+        return render(request, "console/help.html", {"console_key": "help"})
+
+
+class EnumeratorGuideView(UserPassesTestMixin, View):
+    """A one-page, print-optimised field reference for enumerators (Save as PDF)."""
+
+    def test_func(self) -> bool:
+        u = self.request.user
+        return bool(u.is_authenticated and u.is_active)
+
+    def get(self, request):
+        return render(request, "console/enumerator_guide.html", {})
+
+
 class DataProductsView(UserPassesTestMixin, View):
     """Discovery catalogue for the read API — the endpoints, the caller's API
     token, and the projects they can pull. Makes Fieldbase a data backbone

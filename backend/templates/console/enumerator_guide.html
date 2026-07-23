@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Enumerator guide · {{ SITE_NAME }}{% endblock %}
+{% block crumbs %}<span class="sep">/</span><a href="{% url 'console:help' %}">Help</a><span class="sep">/</span><span class="cur">Enumerator guide</span>{% endblock %}
+{% block extrahead %}{{ block.super }}
+<style>
+  .eg{max-width:760px;}
+  .eg .toolbar{display:flex;gap:.6rem;margin-bottom:1rem;}
+  .eg .btn{background:var(--brand);color:#fff;border:none;border-radius:9px;padding:.55rem 1rem;font-weight:650;font-size:.88rem;cursor:pointer;}
+  .eg .sheet{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:1.6rem 1.8rem;}
+  .eg h1{font-size:1.5rem;margin:0 0 .2rem;}
+  .eg .sub{color:var(--muted);margin:0 0 1.1rem;font-size:.9rem;}
+  .eg h3{font-size:1rem;margin:1.1rem 0 .35rem;display:flex;align-items:center;gap:.45rem;}
+  .eg h3 .msym{color:var(--brand);font-size:19px;}
+  .eg ol,.eg ul{margin:.2rem 0;padding-left:1.25rem;font-size:.92rem;line-height:1.6;}
+  .eg li{margin:.2rem 0;}
+  .eg .flags{border:1px solid var(--line);border-radius:9px;padding:.6rem .8rem;background:var(--surface-2);font-size:.88rem;}
+  .eg .foot{margin-top:1.2rem;font-size:.85rem;color:var(--muted);}
+  @media print {
+    .sidebar,.topbar,.userbox,.eg .toolbar,.navburger{display:none !important;}
+    .layout,.content{display:block !important;margin:0 !important;padding:0 !important;}
+    .eg .sheet{border:none;padding:0;}
+    body{background:#fff;}
+  }
+</style>
+{% endblock %}
+{% block content %}
+  <div class="eg">
+    <div class="toolbar">
+      <button class="btn" type="button" onclick="window.print()"><span class="msym" style="vertical-align:-3px;">print</span> Print / Save as PDF</button>
+      <a class="btn" style="background:var(--surface);color:var(--brand);border:1px solid var(--brand);text-decoration:none;" href="{% url 'console:help' %}">← Back to Help</a>
+    </div>
+    <div class="sheet">
+      <h1>Enumerator quick guide</h1>
+      <p class="sub">{{ SITE_NAME }} — one page to keep with you in the field.</p>
+
+      <h3><span class="msym">smartphone</span>What you do</h3>
+      <p style="font-size:.92rem;margin:.1rem 0;">You collect data on your phone in <strong>ODK Collect</strong>. It syncs to {{ SITE_NAME }}, where your coordinator reviews it. You don't need the website in the field — only to check your work and corrections.</p>
+
+      <h3><span class="msym">download</span>Before you go out</h3>
+      <ol>
+        <li>Install <strong>ODK Collect</strong> from the Play Store.</li>
+        <li>Get the server QR code or URL from your coordinator (Manage → Forms → Overview shows it).</li>
+        <li>In ODK Collect: <strong>Configure via QR code</strong>, sign in, then <strong>Get Blank Form</strong>.</li>
+        <li>Download the forms you'll use so you can work offline.</li>
+      </ol>
+
+      <h3><span class="msym">edit_note</span>Collecting — every record</h3>
+      <ul>
+        <li>One submission per plot / farmer / household.</li>
+        <li>Enter your <strong>enumerator ID (ENID)</strong> exactly — it links the data to you.</li>
+        <li><strong>Scan the barcode / sample ID</strong> — don't type it (typos cause duplicates & mismatches).</li>
+        <li>Take the <strong>required photo(s)</strong>; keep <strong>GPS/location on</strong> at the plot.</li>
+        <li>Finalize, then <strong>Send</strong> when you have signal (you can send later in batches).</li>
+      </ul>
+
+      <h3><span class="msym">fact_check</span>Check your work</h3>
+      <p style="font-size:.92rem;margin:.1rem 0;">On {{ SITE_NAME }} open <strong>My submissions</strong> after a sync. You'll see each record and any issues to fix.</p>
+
+      <h3><span class="msym">build</span>If something is flagged</h3>
+      <div class="flags">
+        You'll get an email listing what to fix, and it shows on <strong>My submissions</strong>. Correct it in ODK Collect and re-send. Common flags:
+        <ul style="margin:.4rem 0 0;">
+          <li><strong>Duplicate sample ID</strong> — two records share one barcode.</li>
+          <li><strong>Missing photo</strong> — an expected attachment wasn't uploaded.</li>
+          <li><strong>Value out of range</strong> — a number looks wrong (typo / unit).</li>
+          <li><strong>GPS far from the plot</strong> — wrong plot, or location was off.</li>
+          <li><strong>Unknown ID</strong> — the sample isn't in the planned list.</li>
+        </ul>
+      </div>
+
+      <p class="foot">Stuck? Contact your project coordinator. Keep this sheet in your bag.</p>
+    </div>
+  </div>
+{% endblock %}
