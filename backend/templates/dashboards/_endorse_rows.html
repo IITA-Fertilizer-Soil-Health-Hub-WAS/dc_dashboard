@@ -1,0 +1,16 @@
+{% comment %}Gate-1 queue rows: Review (open the full screen) + the one forward
+action (Endorse) + Decline. Used by the 'Needs review' and 'In progress' pools.
+Expects `rows` and `uc` in context.{% endcomment %}
+{% for s in rows %}
+  <tr>
+    <td>{{ s.enumerator.enid|default:"—" }}</td>
+    <td>{{ s.collection_unit.code|default:"—" }}</td>
+    <td>{{ s.event_key|default:"—" }}</td>
+    <td><span class="pill {% if s.review.state == 'FLAGGED' %}warn{% else %}neutral{% endif %}">{{ s.review.get_state_display }}</span></td>
+    <td style="text-align:right; white-space:nowrap;">
+      <a class="btn btn-edit" style="text-decoration:none; margin-right:.3rem;" href="{% url 'dashboards:submission_review' uc.code s.id %}">Review</a>
+      {% include "dashboards/_review_btn.html" with sub=s action="ENDORSE" label="Endorse" cls="btn-open" %}
+      {% include "dashboards/_review_btn.html" with sub=s action="DECLINE" label="Decline" cls="btn-decline" confirm="Decline this submission?" %}
+    </td>
+  </tr>
+{% endfor %}

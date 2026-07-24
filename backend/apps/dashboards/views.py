@@ -290,34 +290,36 @@ def _health_counts(uc) -> dict:
     }
 
 
-GATE1_STATES = [
-    ReviewState.INGESTED, ReviewState.FLAGGED, ReviewState.IN_REVIEW,
-    ReviewState.EDIT_REQUESTED, ReviewState.EDITED,
-]
+# Gate-1 work, split by where the submission is in the pipeline so an item
+# leaves the "to do" pool the moment it's acted on (not one big pull).
+NEEDS_REVIEW_STATES = [ReviewState.INGESTED, ReviewState.FLAGGED]  # untouched
+IN_PROGRESS_STATES = [ReviewState.IN_REVIEW, ReviewState.EDITED]   # opened / returned
+WAITING_STATES = [ReviewState.EDIT_REQUESTED]                      # ball with the enumerator
 
 
 @login_required
 def tab_review(request, code):
-    """This project's review queue, split by gate, with inline actions."""
+    """This project's review queue, split by pipeline stage, with inline actions."""
     uc = get_scoped_project(request, code)
     can_endorse = user_can(request.user, "endorse", uc)
     can_validate = user_can(request.user, "final_approve", uc)
     sel = ("enumerator", "collection_unit", "review", "review__endorsed_by", "review__assigned_to")
 
-    to_validate = list(
-        Submission.objects.filter(project=uc, review__state=ReviewState.QC_PENDING)
-        .select_related(*sel).order_by("-updated_at")[:300]
-    ) if can_validate else []
-    to_endorse = list(
-        Submission.objects.filter(project=uc, review__state__in=GATE1_STATES)
-        .select_related(*sel).order_by("review__state", "-ingested_at")[:300]
-    ) if can_endorse else []
+    def _pool(states, order):
+        return list(Submission.objects.filter(project=uc, review__state__in=states)
+                    .select_related(*sel).order_by(*order)[:300])
+
+    to_validate = _pool([ReviewState.QC_PENDING], ["-updated_at"]) if can_validate else []
+    needs_review = _pool(NEEDS_REVIEW_STATES, ["-ingested_at"]) if can_endorse else []
+    in_progress = _pool(IN_PROGRESS_STATES, ["-updated_at"]) if can_endorse else []
+    waiting = _pool(WAITING_STATES, ["-updated_at"]) if can_endorse else []
     approved = Submission.objects.filter(project=uc, review__state=ReviewState.APPROVED).count()
 
     from apps.console.registry import console_can_edit
 
     return render(request, "dashboards/_review.html", {
-        "uc": uc, "to_validate": to_validate, "to_endorse": to_endorse,
+        "uc": uc, "to_validate": to_validate, "needs_review": needs_review,
+        "in_progress": in_progress, "waiting": waiting,
         "can_endorse": can_endorse, "can_validate": can_validate,
         "approved_count": approved,
         "can_edit_reasons": console_can_edit(request.user, "rejection-reasons"),

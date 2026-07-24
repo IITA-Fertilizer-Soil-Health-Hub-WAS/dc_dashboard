@@ -40,13 +40,32 @@ def world(django_user_model):
 
 
 def test_review_tab_shows_endorse_for_gate1(client, world):
-    _sub(world["uc"], 1, ReviewState.IN_REVIEW)
+    _sub(world["uc"], 1, ReviewState.IN_REVIEW)   # opened → the 'In progress' pool
     client.force_login(world["tc"])
     resp = client.get(reverse("dashboards:tab_review", args=[world["uc"].code]))
     assert resp.status_code == 200
-    assert b"Awaiting your endorsement" in resp.content
+    assert b"In progress" in resp.content
     assert b"Endorse" in resp.content
     assert b"Awaiting your validation" not in resp.content  # tc is not a validator
+
+
+def test_review_queue_splits_by_pipeline_stage(client, world):
+    """Each submission sits in exactly one pool by state, so an item leaves the
+    'to do' pull the moment it's acted on. Edit-requested is view-only (the ball
+    is with the enumerator) — no Endorse/Decline offered there."""
+    _sub(world["uc"], 1, ReviewState.INGESTED)        # Needs review
+    _sub(world["uc"], 2, ReviewState.IN_REVIEW)       # In progress
+    _sub(world["uc"], 3, ReviewState.EDIT_REQUESTED)  # Waiting on enumerator
+    client.force_login(world["tc"])
+    resp = client.get(reverse("dashboards:tab_review", args=[world["uc"].code]))
+    body = resp.content.decode()
+    for pool in ("Needs review", "In progress", "Waiting on enumerator"):
+        assert pool in body
+    # The waiting pool (its section is marked by the hourglass icon, last on the
+    # page) is view-only: the row offers Review but no inline action buttons.
+    row = body.split("hourglass_empty", 1)[1]
+    assert "Review" in row
+    assert "ENDORSE" not in row and "DECLINE" not in row
 
 
 def test_review_tab_shows_validate_for_gate2(client, world):
@@ -54,7 +73,7 @@ def test_review_tab_shows_validate_for_gate2(client, world):
     client.force_login(world["regional"])
     resp = client.get(reverse("dashboards:tab_review", args=[world["uc"].code]))
     assert b"Awaiting your validation" in resp.content
-    assert b"Validate" in resp.content
+    assert b"Approve" in resp.content   # Gate-2 forward action, renamed from 'Validate'
 
 
 def test_contextual_config_links(client, world):

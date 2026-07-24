@@ -12,13 +12,20 @@
     {% endif %}
   </div>
 
+  {# Counts reflect the pipeline: an item is in exactly one pool. #}
   <div class="cards" style="margin-top:1rem;" data-tour="rv-cards">
-    <div class="card infobox"><div class="n">{{ to_validate|length }}</div><div class="l">Awaiting validation</div></div>
-    <div class="card infobox"><div class="n">{{ to_endorse|length }}</div><div class="l">Awaiting endorsement</div></div>
+    {% if can_endorse %}
+      <div class="card infobox"><div class="n">{{ needs_review|length }}</div><div class="l">Needs review</div></div>
+      <div class="card infobox"><div class="n">{{ in_progress|length }}</div><div class="l">In progress</div></div>
+      <div class="card infobox"><div class="n">{{ waiting|length }}</div><div class="l">Waiting on enumerator</div></div>
+    {% endif %}
+    {% if can_validate %}
+      <div class="card infobox"><div class="n">{{ to_validate|length }}</div><div class="l">Awaiting validation</div></div>
+    {% endif %}
     <div class="card infobox"><div class="n">{{ approved_count }}</div><div class="l">Approved</div></div>
   </div>
 
-  {% if can_validate %}
+  {% if can_validate and to_validate %}
     <div class="section" data-tour="rv-queue">
       <div class="st">
         <h3><span class="msym">verified</span>Awaiting your validation <span class="pill gold">{{ to_validate|length }}</span></h3>
@@ -37,13 +44,11 @@
               <td>{{ s.event_key|default:"—" }}</td>
               <td class="subtle">{{ s.review.endorsed_by.email|default:"—" }}</td>
               <td style="text-align:right; white-space:nowrap;">
-                <a class="subtle" style="margin-right:.5rem;" href="{% url 'dashboards:submission_review' uc.code s.id %}">Open</a>
-                {% include "dashboards/_review_btn.html" with sub=s action="QC_APPROVE" label="Validate" cls="btn-approve" %}
+                <a class="btn btn-edit" style="text-decoration:none; margin-right:.3rem;" href="{% url 'dashboards:submission_review' uc.code s.id %}">Review</a>
+                {% include "dashboards/_review_btn.html" with sub=s action="QC_APPROVE" label="Approve" cls="btn-approve" %}
                 {% include "dashboards/_review_btn.html" with sub=s action="DECLINE" label="Decline" cls="btn-decline" confirm="Decline this submission?" %}
               </td>
             </tr>
-          {% empty %}
-            <tr><td colspan="5"><div class="empty" style="border:none; padding:1.4rem;">Nothing awaiting validation.</div></td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -51,11 +56,45 @@
     </div>
   {% endif %}
 
-  {% if can_endorse %}
+  {% if can_endorse and needs_review %}
     <div class="section">
       <div class="st">
-        <h3><span class="msym">rate_review</span>Awaiting your endorsement <span class="pill gold">{{ to_endorse|length }}</span></h3>
-        <div class="desc">First-level review (Gate 1): open to edit, then endorse for final validation.</div>
+        <h3><span class="msym">inbox</span>Needs review <span class="pill gold">{{ needs_review|length }}</span></h3>
+        <div class="desc">Fresh submissions no one has opened yet. Review to edit, then endorse (Gate 1).</div>
+      </div>
+    </div>
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col">Enumerator</th><th scope="col">{{ uc.household_label }}</th><th scope="col">Event</th><th scope="col">State</th><th scope="col"></th></tr></thead>
+        <tbody>{% include "dashboards/_endorse_rows.html" with rows=needs_review %}</tbody>
+      </table>
+      </div>
+    </div>
+  {% endif %}
+
+  {% if can_endorse and in_progress %}
+    <div class="section">
+      <div class="st">
+        <h3><span class="msym">rate_review</span>In progress <span class="pill gold">{{ in_progress|length }}</span></h3>
+        <div class="desc">Opened for review, or returned by the enumerator — endorse (Gate 1) or send back.</div>
+      </div>
+    </div>
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col">Enumerator</th><th scope="col">{{ uc.household_label }}</th><th scope="col">Event</th><th scope="col">State</th><th scope="col"></th></tr></thead>
+        <tbody>{% include "dashboards/_endorse_rows.html" with rows=in_progress %}</tbody>
+      </table>
+      </div>
+    </div>
+  {% endif %}
+
+  {% if can_endorse and waiting %}
+    <div class="section">
+      <div class="st">
+        <h3><span class="msym">hourglass_empty</span>Waiting on enumerator <span class="pill neutral">{{ waiting|length }}</span></h3>
+        <div class="desc">Sent back for a correction — the ball is with the field. They'll return once resubmitted.</div>
       </div>
     </div>
     <div class="card" style="padding:0; overflow:hidden;">
@@ -63,24 +102,26 @@
       <table>
         <thead><tr><th scope="col">Enumerator</th><th scope="col">{{ uc.household_label }}</th><th scope="col">Event</th><th scope="col">State</th><th scope="col"></th></tr></thead>
         <tbody>
-          {% for s in to_endorse %}
-            <tr>
+          {% for s in waiting %}
+            <tr class="subtle">
               <td>{{ s.enumerator.enid|default:"—" }}</td>
               <td>{{ s.collection_unit.code|default:"—" }}</td>
               <td>{{ s.event_key|default:"—" }}</td>
-              <td><span class="pill {% if s.review.state == 'FLAGGED' %}warn{% else %}neutral{% endif %}">{{ s.review.get_state_display }}</span></td>
+              <td><span class="pill neutral">{{ s.review.get_state_display }}</span></td>
               <td style="text-align:right; white-space:nowrap;">
-                <a class="btn btn-edit" style="text-decoration:none; margin-right:.3rem;" href="{% url 'dashboards:submission_review' uc.code s.id %}">Review &amp; edit</a>
-                {% include "dashboards/_review_btn.html" with sub=s action="ENDORSE" label="Endorse" cls="btn-open" %}
-                {% include "dashboards/_review_btn.html" with sub=s action="DECLINE" label="Decline" cls="btn-decline" confirm="Decline this submission?" %}
+                <a class="btn btn-edit" style="text-decoration:none;" href="{% url 'dashboards:submission_review' uc.code s.id %}">Review</a>
               </td>
             </tr>
-          {% empty %}
-            <tr><td colspan="5"><div class="empty" style="border:none; padding:1.4rem;">Nothing awaiting endorsement.</div></td></tr>
           {% endfor %}
         </tbody>
       </table>
       </div>
     </div>
+  {% endif %}
+
+  {% if can_endorse and not needs_review and not in_progress and not waiting and not to_validate %}
+    <div class="empty" style="margin-top:1.4rem;">The review queue is clear.<br><span class="subtle">Nothing needs your attention right now.</span></div>
+  {% elif can_validate and not can_endorse and not to_validate %}
+    <div class="empty" style="margin-top:1.4rem;">Nothing awaiting validation.<br><span class="subtle">Endorsed submissions will appear here for sign-off.</span></div>
   {% endif %}
 {% endif %}
