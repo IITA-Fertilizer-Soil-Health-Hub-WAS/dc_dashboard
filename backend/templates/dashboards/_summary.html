@@ -22,8 +22,11 @@
 <div class="card" style="margin-top:1rem;">
   <h3 style="margin-bottom:.7rem;">Review &amp; write-back health</h3>
   <div style="display:flex;gap:1.4rem;flex-wrap:wrap;">
+    <div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:var(--ink);">{{ health.needs_review }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Needs review</div></div>
+    <div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:var(--muted);">{{ health.in_progress }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">In progress</div></div>
+    <div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:var(--gold);">{{ health.waiting }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Waiting on enumerator</div></div>
+    <div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:var(--muted);">{{ health.awaiting_validation }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Awaiting validation</div></div>
     <div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:#3f9142;">{{ health.approved }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Approved</div></div>
-    <div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:var(--muted);">{{ health.in_review }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">In review</div></div>
     <div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:var(--red);">{{ health.declined }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Declined</div></div>
     <div style="border-left:1px solid var(--line);padding-left:1.4rem;"><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:#0a4630;">{{ health.wb_sent }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Synced to source</div></div>
     <div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:var(--gold);">{{ health.wb_pending }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Sync pending</div></div>

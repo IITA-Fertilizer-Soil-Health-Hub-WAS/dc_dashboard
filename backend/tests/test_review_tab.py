@@ -68,6 +68,26 @@ def test_review_queue_splits_by_pipeline_stage(client, world):
     assert "ENDORSE" not in row and "DECLINE" not in row
 
 
+def test_summary_and_me_mirror_the_review_pipeline(client, world):
+    """The Summary health panel and M&E report the same pipeline buckets as the
+    Review queue (one submission, one stage), so the numbers always agree."""
+    from apps.kpi.metrics import project_metrics
+
+    _sub(world["uc"], 1, ReviewState.INGESTED)        # needs_review
+    _sub(world["uc"], 2, ReviewState.IN_REVIEW)       # in_progress
+    _sub(world["uc"], 3, ReviewState.EDIT_REQUESTED)  # waiting
+    _sub(world["uc"], 4, ReviewState.QC_PENDING)      # awaiting_validation
+    client.force_login(world["tc"])
+
+    body = client.get(reverse("dashboards:tab_summary", args=[world["uc"].code])).content.decode()
+    for label in ("Needs review", "In progress", "Waiting on enumerator", "Awaiting validation"):
+        assert label in body
+
+    m = project_metrics(world["uc"], "30")
+    assert m["needs_review"] == 1 and m["in_progress"] == 1
+    assert m["waiting"] == 1 and m["awaiting_validation"] == 1
+
+
 def test_review_tab_shows_validate_for_gate2(client, world):
     _sub(world["uc"], 1, ReviewState.QC_PENDING)
     client.force_login(world["regional"])

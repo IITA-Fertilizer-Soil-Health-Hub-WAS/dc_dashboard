@@ -113,4 +113,5 @@ def test_health_counts(qc, regional, uc, form):
     services.qc_approve(regional, a)  # Gate 2
     health = _health_counts(uc)
     assert health["approved"] == 1
-    assert health["in_review"] == 2  # the other two are not closed
+    # The other two are fresh (untouched) — now counted in the 'needs review' pool.
+    assert health["needs_review"] == 2

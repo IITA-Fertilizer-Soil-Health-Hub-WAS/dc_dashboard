@@ -93,6 +93,17 @@ def project_metrics(project, days: str = "30") -> dict:
 
     subs = Submission.objects.filter(project=project)
     approved = subs.filter(review__state=ReviewState.APPROVED).count()
+    # Review-pipeline buckets (same groups as the Review queue) so M&E agrees.
+    from apps.review.models import (
+        IN_PROGRESS_STATES,
+        NEEDS_REVIEW_STATES,
+        WAITING_STATES,
+    )
+
+    needs_review = subs.filter(review__state__in=NEEDS_REVIEW_STATES).count()
+    in_progress = subs.filter(review__state__in=IN_PROGRESS_STATES).count()
+    waiting = subs.filter(review__state__in=WAITING_STATES).count()
+    awaiting_validation = subs.filter(review__state=ReviewState.QC_PENDING).count()
     open_issues = ValidationFlag.objects.filter(
         rule__project=project, status=ValidationFlag.Status.OPEN
     ).count()
@@ -125,6 +136,10 @@ def project_metrics(project, days: str = "30") -> dict:
         "target": target,
         "pct_of_target": round(total / target * 100) if target else 0,
         "approved": approved,
+        "needs_review": needs_review,
+        "in_progress": in_progress,
+        "waiting": waiting,
+        "awaiting_validation": awaiting_validation,
         "open_issues": open_issues,
         "quality_score": max(0, 100 - round(open_issues / max(subs.count(), 1) * 100)),
         "trend": trend,

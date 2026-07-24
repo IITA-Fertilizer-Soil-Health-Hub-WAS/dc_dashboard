@@ -53,6 +53,12 @@ class ReviewState(models.TextChoices):
 # the dashboards, projects landing and digests so the "in review" filter agrees.
 REVIEW_CLOSED_STATES = [ReviewState.APPROVED, ReviewState.DECLINED]
 
+# Review-queue pipeline stages — a submission is in exactly one. Canonical here so
+# the Review tab, the Summary health panel and M&E always report the same buckets.
+NEEDS_REVIEW_STATES = [ReviewState.INGESTED, ReviewState.FLAGGED]   # untouched
+IN_PROGRESS_STATES = [ReviewState.IN_REVIEW, ReviewState.EDITED]    # opened / returned
+WAITING_STATES = [ReviewState.EDIT_REQUESTED]                       # ball with the enumerator
+
 
 class ReviewAction(models.TextChoices):
     OPEN_REVIEW = "OPEN_REVIEW", "Open review"

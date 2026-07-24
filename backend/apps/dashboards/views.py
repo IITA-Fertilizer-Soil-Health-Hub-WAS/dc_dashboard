@@ -19,7 +19,10 @@ from django.views.decorators.http import require_POST
 from apps.rbac.permissions import user_can, visible_projects
 from apps.review import services
 from apps.review.models import (
+    IN_PROGRESS_STATES,
+    NEEDS_REVIEW_STATES,
     REVIEW_CLOSED_STATES,
+    WAITING_STATES,
     ReviewAction,
     ReviewActionLog,
     ReviewState,
@@ -275,26 +278,27 @@ def _attribution_stats(uc) -> dict:
 
 
 def _health_counts(uc) -> dict:
-    """Per-project review + write-back health for the Summary tab."""
+    """Per-project review + write-back health for the Summary tab. The review
+    side mirrors the Review-queue pools exactly (one submission, one stage), so
+    the headline numbers match what a coordinator sees in the queue."""
     from apps.review.models import ReviewState
 
     subs = Submission.objects.filter(project=uc)
-    closed = REVIEW_CLOSED_STATES
+
+    def _c(states):
+        return subs.filter(review__state__in=states).count()
+
     return {
+        "needs_review": _c(NEEDS_REVIEW_STATES),
+        "in_progress": _c(IN_PROGRESS_STATES),
+        "waiting": _c(WAITING_STATES),
+        "awaiting_validation": subs.filter(review__state=ReviewState.QC_PENDING).count(),
         "approved": subs.filter(review__state=ReviewState.APPROVED).count(),
         "declined": subs.filter(review__state=ReviewState.DECLINED).count(),
-        "in_review": subs.exclude(review__state__in=closed).count(),
         "wb_sent": subs.filter(writeback_status=Submission.WriteBackStatus.SENT).count(),
         "wb_pending": subs.filter(writeback_status=Submission.WriteBackStatus.PENDING).count(),
         "wb_failed": subs.filter(writeback_status=Submission.WriteBackStatus.FAILED).count(),
     }
-
-
-# Gate-1 work, split by where the submission is in the pipeline so an item
-# leaves the "to do" pool the moment it's acted on (not one big pull).
-NEEDS_REVIEW_STATES = [ReviewState.INGESTED, ReviewState.FLAGGED]  # untouched
-IN_PROGRESS_STATES = [ReviewState.IN_REVIEW, ReviewState.EDITED]   # opened / returned
-WAITING_STATES = [ReviewState.EDIT_REQUESTED]                      # ball with the enumerator
 
 
 @login_required
