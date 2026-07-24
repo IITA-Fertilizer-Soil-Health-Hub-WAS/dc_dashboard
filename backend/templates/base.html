@@ -462,87 +462,103 @@
 
           {% comment %}Phase 1 · Set up — one page gathering all project configuration (forms, schedule, crops, plot election, quality rules). Coordinators / admins only.{% endcomment %}
           {% if can_manage_access %}
-            <div class="lbl step" data-tour="setup">Set up</div>
-            <a href="{% url 'console:setup' %}?project={{ active_uc.code }}"
-               class="{% if request.resolver_match.url_name == 'setup' or request.resolver_match.url_name == 'plot_election' or request.resolver_match.url_name == 'plot_elect' or request.resolver_match.kwargs.key == 'forms' or request.resolver_match.kwargs.key == 'field-mappings' or request.resolver_match.kwargs.key == 'event-schedule' or request.resolver_match.kwargs.key == 'crops' or request.resolver_match.kwargs.key == 'trials' or request.resolver_match.kwargs.key == 'validation-rules' or request.resolver_match.kwargs.key == 'rejection-reasons' %}active{% endif %}">
-              <span class="msym">tune</span>Project setup
-            </a>
+            <details class="nav-group" data-phase="setup" open>
+              <summary class="lbl step" data-tour="setup">Set up<span class="msym chev">chevron_right</span></summary>
+              <div class="nav-sub">
+                <a href="{% url 'console:setup' %}?project={{ active_uc.code }}"
+                   class="{% if request.resolver_match.url_name == 'setup' or request.resolver_match.url_name == 'plot_election' or request.resolver_match.url_name == 'plot_elect' or request.resolver_match.kwargs.key == 'forms' or request.resolver_match.kwargs.key == 'field-mappings' or request.resolver_match.kwargs.key == 'event-schedule' or request.resolver_match.kwargs.key == 'crops' or request.resolver_match.kwargs.key == 'trials' or request.resolver_match.kwargs.key == 'validation-rules' or request.resolver_match.kwargs.key == 'rejection-reasons' %}active{% endif %}">
+                  <span class="msym">tune</span>Project setup
+                </a>
+              </div>
+            </details>
           {% endif %}
 
           {% comment %}Phase 2 · Collect — who collects, where, and who's assigned. Merges the old Field register + Assign & access; the collect/access items are guarded individually so members still see Enumerators + Collection units.{% endcomment %}
-          <div class="lbl step" data-tour="field">Collect</div>
-          <a href="{% url 'dashboards:project' active_uc.code %}?tab=enumerators"
-             class="{% if active_tab == 'enumerators' %}active{% endif %}">
-            <span class="msym">badge</span>Enumerators
-          </a>
-          <a href="{% url 'console:list' 'collection-units' %}?project={{ active_uc.code }}"
-             class="{% if request.resolver_match.kwargs.key == 'collection-units' %}active{% endif %}">
-            <span class="msym">place</span>{{ active_uc.unit_label_plural }}
-          </a>
-          {% if can_manage_access %}
-            <a href="{% url 'console:list' 'jobs' %}?project={{ active_uc.code }}"
-               class="{% if request.resolver_match.kwargs.key == 'jobs' or request.resolver_match.url_name == 'job_assignments' %}active{% endif %}">
-              <span class="msym">assignment</span>Assignments
-            </a>
-            <a href="{% url 'dashboards:team' %}"
-               class="{% if request.resolver_match.url_name == 'team' %}active{% endif %}">
-              <span class="msym">groups</span>Team &amp; access
-              {% if pending_approvals_count %}<span class="pill" style="margin-left:auto;font-size:.66rem;">{{ pending_approvals_count }}</span>{% endif %}
-            </a>
-          {% endif %}
+          <details class="nav-group" data-phase="collect" open>
+            <summary class="lbl step" data-tour="field">Collect<span class="msym chev">chevron_right</span></summary>
+            <div class="nav-sub">
+              <a href="{% url 'dashboards:project' active_uc.code %}?tab=enumerators"
+                 class="{% if active_tab == 'enumerators' %}active{% endif %}">
+                <span class="msym">badge</span>Enumerators
+              </a>
+              <a href="{% url 'console:list' 'collection-units' %}?project={{ active_uc.code }}"
+                 class="{% if request.resolver_match.kwargs.key == 'collection-units' %}active{% endif %}">
+                <span class="msym">place</span>{{ active_uc.unit_label_plural }}
+              </a>
+              {% if can_manage_access %}
+                <a href="{% url 'console:list' 'jobs' %}?project={{ active_uc.code }}"
+                   class="{% if request.resolver_match.kwargs.key == 'jobs' or request.resolver_match.url_name == 'job_assignments' %}active{% endif %}">
+                  <span class="msym">assignment</span>Assignments
+                </a>
+                <a href="{% url 'dashboards:team' %}"
+                   class="{% if request.resolver_match.url_name == 'team' %}active{% endif %}">
+                  <span class="msym">groups</span>Team &amp; access
+                  {% if pending_approvals_count %}<span class="pill" style="margin-left:auto;font-size:.66rem;">{{ pending_approvals_count }}</span>{% endif %}
+                </a>
+              {% endif %}
+            </div>
+          </details>
 
           {% comment %}Phase 3 · Review & approve — check incoming data, fix problems, and sign off the clean dataset. Merges the old Review & correct + Finalize.{% endcomment %}
-          <div class="lbl step" data-tour="review">Review &amp; approve</div>
-          <a href="{% url 'dashboards:project' active_uc.code %}?tab=data"
-             class="{% if active_tab == 'data' %}active{% endif %}">
-            <span class="msym">table_rows</span>Submissions
-          </a>
-          <a href="{% url 'dashboards:project' active_uc.code %}?tab=review"
-             class="{% if active_tab == 'review' %}active{% endif %}">
-            <span class="msym">rate_review</span>Review queue
-          </a>
-          <a href="{% url 'dashboards:project' active_uc.code %}?tab=issues"
-             class="{% if active_tab == 'issues' %}active{% endif %}">
-            <span class="msym">flag</span>Flagged issues
-          </a>
-          {% if can_manage_access %}
-            <a href="{% url 'console:writeback' %}"
-               class="{% if request.resolver_match.url_name == 'writeback' %}active{% endif %}">
-              <span class="msym">sync</span>Sync corrections
-            </a>
-          {% endif %}
-          <a href="{% url 'dashboards:project' active_uc.code %}?tab=final"
-             class="{% if active_tab == 'final' %}active{% endif %}">
-            <span class="msym">verified_user</span>Approved data
-          </a>
-          {% if can_validate_active %}
-            <a href="{% url 'dashboards:qc_signoff' active_uc.code %}"
-               class="{% if request.resolver_match.url_name == 'qc_signoff' %}active{% endif %}">
-              <span class="msym">verified</span>QC sign-off
-            </a>
-          {% endif %}
+          <details class="nav-group" data-phase="review" open>
+            <summary class="lbl step" data-tour="review">Review &amp; approve<span class="msym chev">chevron_right</span></summary>
+            <div class="nav-sub">
+              <a href="{% url 'dashboards:project' active_uc.code %}?tab=data"
+                 class="{% if active_tab == 'data' %}active{% endif %}">
+                <span class="msym">table_rows</span>Submissions
+              </a>
+              <a href="{% url 'dashboards:project' active_uc.code %}?tab=review"
+                 class="{% if active_tab == 'review' %}active{% endif %}">
+                <span class="msym">rate_review</span>Review queue
+              </a>
+              <a href="{% url 'dashboards:project' active_uc.code %}?tab=issues"
+                 class="{% if active_tab == 'issues' %}active{% endif %}">
+                <span class="msym">flag</span>Flagged issues
+              </a>
+              {% if can_manage_access %}
+                <a href="{% url 'console:writeback' %}"
+                   class="{% if request.resolver_match.url_name == 'writeback' %}active{% endif %}">
+                  <span class="msym">sync</span>Sync corrections
+                </a>
+              {% endif %}
+              <a href="{% url 'dashboards:project' active_uc.code %}?tab=final"
+                 class="{% if active_tab == 'final' %}active{% endif %}">
+                <span class="msym">verified_user</span>Approved data
+              </a>
+              {% if can_validate_active %}
+                <a href="{% url 'dashboards:qc_signoff' active_uc.code %}"
+                   class="{% if request.resolver_match.url_name == 'qc_signoff' %}active{% endif %}">
+                  <span class="msym">verified</span>QC sign-off
+                </a>
+              {% endif %}
+            </div>
+          </details>
 
           {% comment %}Phase 4 · Monitor — track progress and M&E. The KPI pages
           used to carry their own in-page tab bar (Summary/Quality/Team quality/
           Coverage); those are now first-class rail entries, so there is one
           navigation surface everywhere.{% endcomment %}
-          <div class="lbl step" data-tour="monitor">Monitor</div>
-          <a href="{% url 'kpi:project' active_uc.code %}"
-             class="{% if request.resolver_match.url_name == 'project' and request.resolver_match.app_name == 'kpi' %}active{% endif %}">
-            <span class="msym">insights</span>Overview
-          </a>
-          <a href="{% url 'kpi:quality' active_uc.code %}"
-             class="{% if request.resolver_match.url_name == 'quality' %}active{% endif %}">
-            <span class="msym">verified</span>Quality
-          </a>
-          <a href="{% url 'kpi:enumerators' active_uc.code %}"
-             class="{% if request.resolver_match.url_name == 'enumerators' or request.resolver_match.url_name == 'enumerator_detail' %}active{% endif %}">
-            <span class="msym">workspace_premium</span>Team quality
-          </a>
-          <a href="{% url 'kpi:coverage' active_uc.code %}"
-             class="{% if request.resolver_match.url_name == 'coverage' %}active{% endif %}">
-            <span class="msym">map</span>Coverage
-          </a>
+          <details class="nav-group" data-phase="monitor" open>
+            <summary class="lbl step" data-tour="monitor">Monitor<span class="msym chev">chevron_right</span></summary>
+            <div class="nav-sub">
+              <a href="{% url 'kpi:project' active_uc.code %}"
+                 class="{% if request.resolver_match.url_name == 'project' and request.resolver_match.app_name == 'kpi' %}active{% endif %}">
+                <span class="msym">insights</span>Overview
+              </a>
+              <a href="{% url 'kpi:quality' active_uc.code %}"
+                 class="{% if request.resolver_match.url_name == 'quality' %}active{% endif %}">
+                <span class="msym">verified</span>Quality
+              </a>
+              <a href="{% url 'kpi:enumerators' active_uc.code %}"
+                 class="{% if request.resolver_match.url_name == 'enumerators' or request.resolver_match.url_name == 'enumerator_detail' %}active{% endif %}">
+                <span class="msym">workspace_premium</span>Team quality
+              </a>
+              <a href="{% url 'kpi:coverage' active_uc.code %}"
+                 class="{% if request.resolver_match.url_name == 'coverage' %}active{% endif %}">
+                <span class="msym">map</span>Coverage
+              </a>
+            </div>
+          </details>
 
         {% else %}
           {# ===================== Projects ===================== #}
@@ -644,6 +660,23 @@
           {% endif %}
         {% endif %}
       </nav>
+      {% comment %}Remember which life-cycle phases a user collapses, per browser;
+      never hide the phase that holds the current page. Runs inline so a collapsed
+      phase doesn't flash open on each navigation.{% endcomment %}
+      <script>
+        (function () {
+          try {
+            document.querySelectorAll('details.nav-group[data-phase]').forEach(function (d) {
+              var key = 'navphase:' + d.dataset.phase;
+              if (localStorage.getItem(key) === 'closed') d.open = false;
+              if (d.querySelector('a.active')) d.open = true;  // keep the current page visible
+              d.addEventListener('toggle', function () {
+                localStorage.setItem(key, d.open ? 'open' : 'closed');
+              });
+            });
+          } catch (e) { /* private mode / no storage — leave phases expanded */ }
+        })();
+      </script>
       <div class="userbox">
         <div class="avatar">{{ user.full_name|default:user.email|slice:":1"|upper }}</div>
         <div class="who">
