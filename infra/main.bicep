@@ -1,20 +1,17 @@
 // Azure Container Apps stack for the Fieldbase Django backend (eia_dcmt).
-// One idempotent template: registry, Container Apps environment, Postgres,
-// an internal Redis app, and the three long-running processes (web / worker /
-// beat). Apply with:
-//   az deployment group create -g <rg> -f infra/main.bicep -p imageTag=<sha> ...
-// Wiring (DATABASE_URL, broker URL, allowed hosts, CSRF origins) is computed
-// here so the operator never hand-crafts a connection string.
+// Uses an EXISTING Azure Container Registry and an EXISTING Postgres Flexible
+// Server; creates the Container Apps environment, an internal Redis app, Azure
+// Files-backed media, a migration Job, and the three processes (web/worker/beat).
+// Apply:
+//   az deployment group create -g <appRG> -f infra/main.bicep -p imageTag=<sha> ...
+// Wiring (DATABASE_URL, broker URL, allowed hosts, CSRF origins) is computed here.
 
 // ---------- Parameters ----------
-@description('Azure region for all resources.')
+@description('Azure region for the resources this template creates.')
 param location string = resourceGroup().location
 
 @description('Short prefix for resource names (letters/numbers).')
 param namePrefix string = 'fieldbase'
-
-@description('Globally-unique ACR name (alphanumeric, 5-50 chars).')
-param acrName string
 
 @description('Container image tag to deploy (usually the git SHA).')
 param imageTag string
@@ -22,11 +19,23 @@ param imageTag string
 @description('Image repository name inside the ACR.')
 param imageName string = 'dc-dashboard'
 
-// Postgres
-param postgresAdminUser string = 'fieldbase'
-@description('Postgres admin password. Use URL-safe characters (alphanumeric) — it is embedded in DATABASE_URL.')
+// Existing Azure Container Registry
+@description('Name of the EXISTING Azure Container Registry.')
+param acrName string
+@description('Resource group of the existing ACR (defaults to this deployment RG).')
+param acrResourceGroup string = resourceGroup().name
+
+// Existing Postgres Flexible Server
+@description('Name of the EXISTING Postgres Flexible Server.')
+param pgServerName string
+@description('Resource group of the existing Postgres server (defaults to this RG).')
+param pgResourceGroup string = resourceGroup().name
+@description('Postgres admin (or app) user for the connection string.')
+param pgAdminUser string
+@description('Postgres password. URL-safe chars — it is embedded in DATABASE_URL.')
 @secure()
-param postgresAdminPassword string
+param pgAdminPassword string
+@description('Database name on the existing server (must already exist).')
 param dbName string = 'eia_dcmt'
 
 // App config (non-secret)
@@ -35,6 +44,8 @@ param auth0ClientId string = ''
 param onaBaseUrl string = ''
 param siteName string = 'Fieldbase'
 param adminEmail string = ''
+@description('Max web replicas. Web can scale now that migrations run in a Job.')
+param webMaxReplicas int = 3
 
 // App config (secret)
 @secure()
@@ -52,8 +63,21 @@ var webAppName = '${namePrefix}-web'
 var workerAppName = '${namePrefix}-worker'
 var beatAppName = '${namePrefix}-beat'
 var redisAppName = '${namePrefix}-redis'
-var pgServerName = '${namePrefix}-pg-${uniqueString(resourceGroup().id)}'
+var migrateJobName = '${namePrefix}-migrate'
 var uamiName = '${namePrefix}-pull-id'
+var storageAccountName = toLower(take('${namePrefix}st${uniqueString(resourceGroup().id)}', 24))
+
+// ---------- Existing resources ----------
+resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
+  name: acrName
+  scope: resourceGroup(acrResourceGroup)
+}
+
+resource pg 'Microsoft.DBforPostgreSQL/flexibleServers@2023-06-01-preview' existing = {
+  name: pgServerName
+  scope: resourceGroup(pgResourceGroup)
+}
+
 var acrImage = '${acr.properties.loginServer}/${imageName}:${imageTag}'
 
 // ---------- Observability ----------
@@ -66,57 +90,46 @@ resource logs 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   }
 }
 
-// ---------- Registry + pull identity ----------
-resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
-  name: acrName
-  location: location
-  sku: { name: 'Basic' }
-  properties: { adminUserEnabled: false }
-}
-
+// ---------- Pull identity ----------
 resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: uamiName
   location: location
 }
 
-// AcrPull for the user-assigned identity (created before the apps, so the very
-// first image pull already has permission — avoids the MI/pull chicken-and-egg).
-resource acrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(acr.id, uami.id, 'AcrPull')
-  scope: acr
-  properties: {
+// AcrPull on the existing registry (module runs in the ACR's resource group).
+module acrPull 'modules/acr-pull.bicep' = {
+  name: 'acrPull'
+  scope: resourceGroup(acrResourceGroup)
+  params: {
+    acrName: acrName
     principalId: uami.properties.principalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
   }
 }
 
-// ---------- Postgres ----------
-resource pg 'Microsoft.DBforPostgreSQL/flexibleServers@2023-06-01-preview' = {
-  name: pgServerName
+// ---------- Media storage (Azure Files) ----------
+resource storage 'Microsoft.Storage/storageAccounts@2023-01-01' = {
+  name: storageAccountName
   location: location
-  sku: { name: 'Standard_B1ms', tier: 'Burstable' }
+  sku: { name: 'Standard_LRS' }
+  kind: 'StorageV2'
   properties: {
-    version: '16'
-    administratorLogin: postgresAdminUser
-    administratorLoginPassword: postgresAdminPassword
-    storage: { storageSizeGB: 32 }
-    backup: { backupRetentionDays: 7, geoRedundantBackup: 'Disabled' }
-    highAvailability: { mode: 'Disabled' }
+    minimumTlsVersion: 'TLS1_2'
+    allowBlobPublicAccess: false
   }
 }
 
-resource pgDb 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023-06-01-preview' = {
-  parent: pg
-  name: dbName
-  properties: { charset: 'UTF8', collation: 'en_US.utf8' }
+resource fileService 'Microsoft.Storage/storageAccounts/fileServices@2023-01-01' = {
+  parent: storage
+  name: 'default'
 }
 
-// Allow other Azure services (the Container Apps) to reach the server.
-resource pgAllowAzure 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2023-06-01-preview' = {
-  parent: pg
-  name: 'AllowAzureServices'
-  properties: { startIpAddress: '0.0.0.0', endIpAddress: '0.0.0.0' }
+resource mediaShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2023-01-01' = {
+  parent: fileService
+  name: 'media'
+  properties: {
+    shareQuota: 100
+    enabledProtocols: 'SMB'
+  }
 }
 
 // ---------- Container Apps environment ----------
@@ -134,11 +147,25 @@ resource env 'Microsoft.App/managedEnvironments@2024-03-01' = {
   }
 }
 
+// Register the file share with the environment so apps can mount it.
+resource envStorage 'Microsoft.App/managedEnvironments/storages@2024-03-01' = {
+  parent: env
+  name: 'media'
+  properties: {
+    azureFile: {
+      accountName: storage.name
+      accountKey: storage.listKeys().keys[0].value
+      shareName: mediaShare.name
+      accessMode: 'ReadWrite'
+    }
+  }
+}
+
 // ---------- Computed wiring ----------
 var envDomain = env.properties.defaultDomain
 var webFqdn = '${webAppName}.${envDomain}'
 var redisFqdn = '${redisAppName}.internal.${envDomain}'
-var databaseUrl = 'postgres://${postgresAdminUser}:${postgresAdminPassword}@${pg.properties.fullyQualifiedDomainName}:5432/${dbName}?sslmode=require'
+var databaseUrl = 'postgres://${pgAdminUser}:${pgAdminPassword}@${pg.properties.fullyQualifiedDomainName}:5432/${dbName}?sslmode=require'
 
 var sharedSecrets = [
   { name: 'database-url', value: databaseUrl }
@@ -174,6 +201,43 @@ var appIdentity = {
 var appRegistries = [
   { server: acr.properties.loginServer, identity: uami.id }
 ]
+// Mount the Azure Files share at Django's MEDIA_ROOT (/app/media).
+var mediaVolumes = [
+  { name: 'media', storageType: 'AzureFile', storageName: envStorage.name }
+]
+var mediaMounts = [
+  { volumeName: 'media', mountPath: '/app/media' }
+]
+
+// ---------- Migration Job (runs migrate + bootstrap_admin, decoupled from web) ----------
+resource migrateJob 'Microsoft.App/jobs@2024-03-01' = {
+  name: migrateJobName
+  location: location
+  identity: appIdentity
+  dependsOn: [ acrPull ]
+  properties: {
+    environmentId: env.id
+    configuration: {
+      triggerType: 'Manual'
+      replicaTimeout: 1800
+      replicaRetryLimit: 1
+      manualTriggerConfig: { parallelism: 1, replicaCompletionCount: 1 }
+      secrets: sharedSecrets
+      registries: appRegistries
+    }
+    template: {
+      containers: [
+        {
+          name: 'migrate'
+          image: acrImage
+          resources: { cpu: json('0.5'), memory: '1Gi' }
+          command: [ '/bin/sh', '-c', 'python manage.py migrate --noinput && python manage.py bootstrap_admin' ]
+          env: sharedEnv
+        }
+      ]
+    }
+  }
+}
 
 // ---------- Redis (internal broker) ----------
 resource redisApp 'Microsoft.App/containerApps@2024-03-01' = {
@@ -183,69 +247,49 @@ resource redisApp 'Microsoft.App/containerApps@2024-03-01' = {
     managedEnvironmentId: env.id
     configuration: {
       activeRevisionsMode: 'Single'
-      ingress: {
-        external: false
-        transport: 'tcp'
-        targetPort: 6379
-        exposedPort: 6379
-      }
+      ingress: { external: false, transport: 'tcp', targetPort: 6379, exposedPort: 6379 }
     }
     template: {
       containers: [
-        {
-          name: 'redis'
-          image: 'redis:7'
-          resources: { cpu: json('0.25'), memory: '0.5Gi' }
-        }
+        { name: 'redis', image: 'redis:7', resources: { cpu: json('0.25'), memory: '0.5Gi' } }
       ]
       scale: { minReplicas: 1, maxReplicas: 1 }
     }
   }
 }
 
-// ---------- Web (gunicorn) ----------
+// ---------- Web (gunicorn; migrations now run in the Job, so it can scale) ----------
 resource webApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: webAppName
   location: location
   identity: appIdentity
-  dependsOn: [ acrPull, pgDb, pgAllowAzure, redisApp ]
+  dependsOn: [ acrPull, redisApp ]
   properties: {
     managedEnvironmentId: env.id
     configuration: {
       activeRevisionsMode: 'Single'
       secrets: sharedSecrets
       registries: appRegistries
-      ingress: {
-        external: true
-        transport: 'auto'
-        targetPort: 8000
-        allowInsecure: false
-      }
+      ingress: { external: true, transport: 'auto', targetPort: 8000, allowInsecure: false }
     }
     template: {
+      volumes: mediaVolumes
       containers: [
         {
           name: 'web'
           image: acrImage
           resources: { cpu: json('0.5'), memory: '1Gi' }
-          command: [
-            '/bin/sh'
-            '-c'
-            'python manage.py migrate --noinput && python manage.py bootstrap_admin && gunicorn eia_dcmt.wsgi:application --bind 0.0.0.0:8000 --worker-class gthread --workers 2 --threads 4 --timeout 120 --worker-tmp-dir /dev/shm'
-          ]
+          // No command override — the image CMD is gunicorn. Migrations run in the Job.
           env: sharedEnv
+          volumeMounts: mediaMounts
           probes: [
-            // Generous startup budget so migrations on a fresh revision finish
-            // before gunicorn binds (5 min: 30 x 10s).
-            { type: 'Startup', httpGet: { path: '/healthz/', port: 8000 }, periodSeconds: 10, failureThreshold: 30, timeoutSeconds: 5 }
+            { type: 'Startup', httpGet: { path: '/healthz/', port: 8000 }, periodSeconds: 5, failureThreshold: 20, timeoutSeconds: 5 }
             { type: 'Readiness', httpGet: { path: '/healthz/', port: 8000 }, periodSeconds: 15, failureThreshold: 3, timeoutSeconds: 5 }
             { type: 'Liveness', httpGet: { path: '/healthz/', port: 8000 }, periodSeconds: 30, failureThreshold: 5, timeoutSeconds: 5 }
           ]
         }
       ]
-      // Single replica: migrate runs in the container command, so keep one
-      // writer. Move migrate to a Container Apps Job to scale web past 1.
-      scale: { minReplicas: 1, maxReplicas: 1 }
+      scale: { minReplicas: 1, maxReplicas: webMaxReplicas }
     }
   }
 }
@@ -255,7 +299,7 @@ resource workerApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: workerAppName
   location: location
   identity: appIdentity
-  dependsOn: [ acrPull, pgDb, redisApp ]
+  dependsOn: [ acrPull, redisApp ]
   properties: {
     managedEnvironmentId: env.id
     configuration: {
@@ -264,6 +308,7 @@ resource workerApp 'Microsoft.App/containerApps@2024-03-01' = {
       registries: appRegistries
     }
     template: {
+      volumes: mediaVolumes
       containers: [
         {
           name: 'worker'
@@ -271,6 +316,7 @@ resource workerApp 'Microsoft.App/containerApps@2024-03-01' = {
           resources: { cpu: json('0.5'), memory: '1Gi' }
           command: [ 'celery', '-A', 'eia_dcmt', 'worker', '-l', 'info' ]
           env: sharedEnv
+          volumeMounts: mediaMounts
         }
       ]
       scale: { minReplicas: 1, maxReplicas: 2 }
@@ -283,7 +329,7 @@ resource beatApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: beatAppName
   location: location
   identity: appIdentity
-  dependsOn: [ acrPull, pgDb, redisApp ]
+  dependsOn: [ acrPull, redisApp ]
   properties: {
     managedEnvironmentId: env.id
     configuration: {
@@ -309,5 +355,5 @@ resource beatApp 'Microsoft.App/containerApps@2024-03-01' = {
 
 // ---------- Outputs ----------
 output webUrl string = 'https://${webApp.properties.configuration.ingress.fqdn}'
+output migrateJobName string = migrateJob.name
 output acrLoginServer string = acr.properties.loginServer
-output postgresFqdn string = pg.properties.fullyQualifiedDomainName

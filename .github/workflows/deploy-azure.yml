@@ -1,7 +1,7 @@
 name: deploy-azure
 
-# Build the backend image, push it to ACR, and apply the Container Apps stack.
-# Auth is OIDC (no stored cloud secret). One-time setup: docs/DEPLOY_AZURE.md.
+# Build the backend image, push it to the existing ACR, apply the Container Apps
+# stack, then run the migration Job. Auth is OIDC. Setup: backend/docs/DEPLOY_AZURE.md.
 
 on:
   push:
@@ -39,10 +39,8 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      # Ensure the registry exists before the build (first run bootstraps it;
-      # Bicep reconciles it afterwards). Idempotent.
-      - name: Ensure ACR
-        run: az acr create --name "$ACR" --resource-group "$RG" --sku Basic --only-show-errors -o none
+      - name: Ensure containerapp CLI extension
+        run: az extension add -n containerapp --upgrade -y -o none
 
       - name: Build & push image (ACR Tasks, context = backend/)
         run: az acr build --registry "$ACR" --image "$IMAGE:${{ github.sha }}" ./backend
@@ -55,9 +53,14 @@ jobs:
             --template-file infra/main.bicep \
             --parameters \
               location="$LOCATION" \
-              acrName="$ACR" \
               imageTag="${{ github.sha }}" \
-              postgresAdminPassword="${{ secrets.POSTGRES_ADMIN_PASSWORD }}" \
+              acrName="$ACR" \
+              acrResourceGroup="${{ vars.ACR_RG }}" \
+              pgServerName="${{ vars.PG_SERVER_NAME }}" \
+              pgResourceGroup="${{ vars.PG_RG }}" \
+              pgAdminUser="${{ vars.PG_ADMIN_USER }}" \
+              dbName="${{ vars.DB_NAME }}" \
+              pgAdminPassword="${{ secrets.POSTGRES_ADMIN_PASSWORD }}" \
               djangoSecretKey="${{ secrets.DJANGO_SECRET_KEY }}" \
               auth0ClientSecret="${{ secrets.AUTH0_CLIENT_SECRET }}" \
               onaToken="${{ secrets.ONA_TOKEN }}" \
@@ -68,18 +71,33 @@ jobs:
               siteName="${{ vars.SITE_NAME }}" \
               adminEmail="${{ vars.ADMIN_EMAIL }}"
 
+      - name: Run migration Job (migrate + bootstrap_admin)
+        run: |
+          JOB=$(az deployment group show -g "$RG" -n "$DEPLOY_NAME" \
+            --query properties.outputs.migrateJobName.value -o tsv)
+          EXEC=$(az containerapp job start -n "$JOB" -g "$RG" --query name -o tsv)
+          echo "Started $JOB execution $EXEC"
+          for i in $(seq 1 60); do
+            STATUS=$(az containerapp job execution show -n "$JOB" -g "$RG" \
+              --job-execution-name "$EXEC" --query properties.status -o tsv 2>/dev/null || echo Unknown)
+            echo "migrate status ($i/60): $STATUS"
+            case "$STATUS" in
+              Succeeded) echo "Migrations applied."; break;;
+              Failed|Degraded) echo "Migration job failed."; exit 1;;
+            esac
+            [ "$i" = "60" ] && { echo "Migration job timed out."; exit 1; }
+            sleep 10
+          done
+
       - name: Smoke test /healthz/
         run: |
           WEB_URL=$(az deployment group show -g "$RG" -n "$DEPLOY_NAME" \
             --query properties.outputs.webUrl.value -o tsv)
           echo "Web URL: $WEB_URL"
           echo "web_url=$WEB_URL" >> "$GITHUB_STEP_SUMMARY"
-          # New revision may still be migrating — retry for a few minutes.
           for i in $(seq 1 30); do
-            if curl -fsS "$WEB_URL/healthz/" >/dev/null; then
-              echo "Health check passed."; exit 0
-            fi
-            echo "waiting for app to come up ($i/30)…"; sleep 10
+            if curl -fsS "$WEB_URL/healthz/" >/dev/null; then echo "Health check passed."; exit 0; fi
+            echo "waiting for app ($i/30)…"; sleep 10
           done
           echo "Health check did not pass in time." >&2
           exit 1
