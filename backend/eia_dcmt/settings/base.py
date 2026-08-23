@@ -27,6 +27,10 @@ if env_file.exists():
 SECRET_KEY = env("DJANGO_SECRET_KEY", default="insecure-dev-key-change-me")
 DEBUG = env("DJANGO_DEBUG")
 ALLOWED_HOSTS = env("DJANGO_ALLOWED_HOSTS")
+# Required for POST behind an HTTPS reverse proxy (e.g. Azure Container Apps
+# ingress). Comma-separated absolute origins, e.g.
+# "https://app.example.org,https://dc-dashboard.<region>.azurecontainerapps.io".
+CSRF_TRUSTED_ORIGINS = env.list("DJANGO_CSRF_TRUSTED_ORIGINS", default=[])
 
 # --- Applications -----------------------------------------------------------
 DJANGO_APPS = [

@@ -1,0 +1,36 @@
+# Keep the build context lean and the local dev DB / secrets out of the image.
+.git
+.gitignore
+.dockerignore
+Dockerfile
+docker-compose*.yml
+
+# Python / virtualenv / caches
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.ruff_cache
+.mypy_cache
+*.egg-info
+
+# Local dev database and env
+*.sqlite3
+dev.sqlite3
+.env
+*.env
+!.env.example
+
+# Runtime-generated / non-source
+media
+staticfiles
+
+# Editor / OS cruft
+.idea
+.vscode
+.DS_Store
+
+# Node (if any tooling is added later)
+node_modules

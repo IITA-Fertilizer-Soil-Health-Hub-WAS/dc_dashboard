@@ -1,0 +1,85 @@
+name: deploy-azure
+
+# Build the backend image, push it to ACR, and apply the Container Apps stack.
+# Auth is OIDC (no stored cloud secret). One-time setup: docs/DEPLOY_AZURE.md.
+
+on:
+  push:
+    branches: [redesign/python]
+    paths:
+      - backend/**
+      - infra/**
+      - .github/workflows/deploy-azure.yml
+  workflow_dispatch:
+
+permissions:
+  id-token: write   # OIDC token for azure/login
+  contents: read
+
+concurrency:
+  group: deploy-azure-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      RG: ${{ vars.AZURE_RG }}
+      ACR: ${{ vars.ACR_NAME }}
+      LOCATION: ${{ vars.AZURE_LOCATION }}
+      IMAGE: dc-dashboard
+      DEPLOY_NAME: fieldbase-${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # Ensure the registry exists before the build (first run bootstraps it;
+      # Bicep reconciles it afterwards). Idempotent.
+      - name: Ensure ACR
+        run: az acr create --name "$ACR" --resource-group "$RG" --sku Basic --only-show-errors -o none
+
+      - name: Build & push image (ACR Tasks, context = backend/)
+        run: az acr build --registry "$ACR" --image "$IMAGE:${{ github.sha }}" ./backend
+
+      - name: Deploy Container Apps stack (Bicep)
+        run: |
+          az deployment group create \
+            --resource-group "$RG" \
+            --name "$DEPLOY_NAME" \
+            --template-file infra/main.bicep \
+            --parameters \
+              location="$LOCATION" \
+              acrName="$ACR" \
+              imageTag="${{ github.sha }}" \
+              postgresAdminPassword="${{ secrets.POSTGRES_ADMIN_PASSWORD }}" \
+              djangoSecretKey="${{ secrets.DJANGO_SECRET_KEY }}" \
+              auth0ClientSecret="${{ secrets.AUTH0_CLIENT_SECRET }}" \
+              onaToken="${{ secrets.ONA_TOKEN }}" \
+              adminPassword="${{ secrets.ADMIN_PASSWORD }}" \
+              auth0Domain="${{ vars.AUTH0_DOMAIN }}" \
+              auth0ClientId="${{ vars.AUTH0_CLIENT_ID }}" \
+              onaBaseUrl="${{ vars.ONA_BASE_URL }}" \
+              siteName="${{ vars.SITE_NAME }}" \
+              adminEmail="${{ vars.ADMIN_EMAIL }}"
+
+      - name: Smoke test /healthz/
+        run: |
+          WEB_URL=$(az deployment group show -g "$RG" -n "$DEPLOY_NAME" \
+            --query properties.outputs.webUrl.value -o tsv)
+          echo "Web URL: $WEB_URL"
+          echo "web_url=$WEB_URL" >> "$GITHUB_STEP_SUMMARY"
+          # New revision may still be migrating — retry for a few minutes.
+          for i in $(seq 1 30); do
+            if curl -fsS "$WEB_URL/healthz/" >/dev/null; then
+              echo "Health check passed."; exit 0
+            fi
+            echo "waiting for app to come up ($i/30)…"; sleep 10
+          done
+          echo "Health check did not pass in time." >&2
+          exit 1
