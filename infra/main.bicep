@@ -205,6 +205,13 @@ var mediaVolumes = [
 var mediaMounts = [
   { volumeName: 'media', mountPath: '/app/media' }
 ]
+// Probes hit the pod IP over HTTP, so spoof the ingress Host (for ALLOWED_HOSTS)
+// and mark the request secure (prod forces SECURE_SSL_REDIRECT) — else /healthz
+// returns 400/301 and the replica is killed as unhealthy.
+var probeHeaders = [
+  { name: 'Host', value: webFqdn }
+  { name: 'X-Forwarded-Proto', value: 'https' }
+]
 
 // ---------- Migration Job (runs migrate + bootstrap_admin, decoupled from web) ----------
 resource migrateJob 'Microsoft.App/jobs@2024-03-01' = {
@@ -279,9 +286,9 @@ resource webApp 'Microsoft.App/containerApps@2024-03-01' = {
           env: sharedEnv
           volumeMounts: mediaMounts
           probes: [
-            { type: 'Startup', httpGet: { path: '/healthz/', port: 8000 }, periodSeconds: 5, failureThreshold: 20, timeoutSeconds: 5 }
-            { type: 'Readiness', httpGet: { path: '/healthz/', port: 8000 }, periodSeconds: 15, failureThreshold: 3, timeoutSeconds: 5 }
-            { type: 'Liveness', httpGet: { path: '/healthz/', port: 8000 }, periodSeconds: 30, failureThreshold: 5, timeoutSeconds: 5 }
+            { type: 'Startup', httpGet: { path: '/healthz/', port: 8000, httpHeaders: probeHeaders }, periodSeconds: 5, failureThreshold: 20, timeoutSeconds: 5 }
+            { type: 'Readiness', httpGet: { path: '/healthz/', port: 8000, httpHeaders: probeHeaders }, periodSeconds: 15, failureThreshold: 3, timeoutSeconds: 5 }
+            { type: 'Liveness', httpGet: { path: '/healthz/', port: 8000, httpHeaders: probeHeaders }, periodSeconds: 30, failureThreshold: 5, timeoutSeconds: 5 }
           ]
         }
       ]
