@@ -45,7 +45,7 @@ param onaBaseUrl string = ''
 param siteName string = 'Fieldbase'
 param adminEmail string = ''
 @description('Max web replicas. Web can scale now that migrations run in a Job.')
-param webMaxReplicas int = 3
+param webMaxReplicas int = 2
 
 // App config (secret)
 @secure()
@@ -281,7 +281,7 @@ resource webApp 'Microsoft.App/containerApps@2024-03-01' = {
         {
           name: 'web'
           image: acrImage
-          resources: { cpu: json('0.5'), memory: '1Gi' }
+          resources: { cpu: json('0.25'), memory: '0.5Gi' }
           // No command override — the image CMD is gunicorn. Migrations run in the Job.
           env: sharedEnv
           volumeMounts: mediaMounts
@@ -316,13 +316,13 @@ resource workerApp 'Microsoft.App/containerApps@2024-03-01' = {
         {
           name: 'worker'
           image: acrImage
-          resources: { cpu: json('0.5'), memory: '1Gi' }
-          command: [ 'celery', '-A', 'eia_dcmt', 'worker', '-l', 'info' ]
+          resources: { cpu: json('0.25'), memory: '0.5Gi' }
+          command: [ 'celery', '-A', 'eia_dcmt', 'worker', '-l', 'info', '--concurrency', '2' ]
           env: sharedEnv
           volumeMounts: mediaMounts
         }
       ]
-      scale: { minReplicas: 1, maxReplicas: 2 }
+      scale: { minReplicas: 1, maxReplicas: 1 }
     }
   }
 }
