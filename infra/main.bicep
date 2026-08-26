@@ -158,32 +158,38 @@ var webFqdn = '${webAppName}.${envDomain}'
 var redisFqdn = '${redisAppName}.internal.${envDomain}'
 var databaseUrl = 'postgres://${pgAdminUser}:${pgAdminPassword}@${pg.properties.fullyQualifiedDomainName}:5432/${dbName}?sslmode=require'
 
-var sharedSecrets = [
-  { name: 'database-url', value: databaseUrl }
-  { name: 'django-secret-key', value: djangoSecretKey }
-  { name: 'auth0-client-secret', value: auth0ClientSecret }
-  { name: 'ona-token', value: onaToken }
-  { name: 'admin-password', value: adminPassword }
-]
+// ACA rejects a secret whose value is empty, so optional secrets are only
+// created when a value is supplied; otherwise the env var is passed empty.
+var sharedSecrets = concat(
+  [
+    { name: 'database-url', value: databaseUrl }
+    { name: 'django-secret-key', value: djangoSecretKey }
+  ],
+  empty(auth0ClientSecret) ? [] : [ { name: 'auth0-client-secret', value: auth0ClientSecret } ],
+  empty(onaToken) ? [] : [ { name: 'ona-token', value: onaToken } ],
+  empty(adminPassword) ? [] : [ { name: 'admin-password', value: adminPassword } ]
+)
 
-var sharedEnv = [
-  { name: 'DJANGO_SETTINGS_MODULE', value: 'eia_dcmt.settings.prod' }
-  { name: 'DJANGO_DEBUG', value: 'false' }
-  { name: 'DJANGO_ALLOWED_HOSTS', value: '${webFqdn},localhost,127.0.0.1' }
-  { name: 'DJANGO_CSRF_TRUSTED_ORIGINS', value: 'https://${webFqdn}' }
-  { name: 'CELERY_BROKER_URL', value: 'redis://${redisFqdn}:6379/0' }
-  { name: 'CELERY_RESULT_BACKEND', value: 'redis://${redisFqdn}:6379/1' }
-  { name: 'AUTH0_DOMAIN', value: auth0Domain }
-  { name: 'AUTH0_CLIENT_ID', value: auth0ClientId }
-  { name: 'ONA_BASE_URL', value: onaBaseUrl }
-  { name: 'SITE_NAME', value: siteName }
-  { name: 'ADMIN_EMAIL', value: adminEmail }
-  { name: 'DATABASE_URL', secretRef: 'database-url' }
-  { name: 'DJANGO_SECRET_KEY', secretRef: 'django-secret-key' }
-  { name: 'AUTH0_CLIENT_SECRET', secretRef: 'auth0-client-secret' }
-  { name: 'ONA_TOKEN', secretRef: 'ona-token' }
-  { name: 'ADMIN_PASSWORD', secretRef: 'admin-password' }
-]
+var sharedEnv = concat(
+  [
+    { name: 'DJANGO_SETTINGS_MODULE', value: 'eia_dcmt.settings.prod' }
+    { name: 'DJANGO_DEBUG', value: 'false' }
+    { name: 'DJANGO_ALLOWED_HOSTS', value: '${webFqdn},localhost,127.0.0.1' }
+    { name: 'DJANGO_CSRF_TRUSTED_ORIGINS', value: 'https://${webFqdn}' }
+    { name: 'CELERY_BROKER_URL', value: 'redis://${redisFqdn}:6379/0' }
+    { name: 'CELERY_RESULT_BACKEND', value: 'redis://${redisFqdn}:6379/1' }
+    { name: 'AUTH0_DOMAIN', value: auth0Domain }
+    { name: 'AUTH0_CLIENT_ID', value: auth0ClientId }
+    { name: 'ONA_BASE_URL', value: onaBaseUrl }
+    { name: 'SITE_NAME', value: siteName }
+    { name: 'ADMIN_EMAIL', value: adminEmail }
+    { name: 'DATABASE_URL', secretRef: 'database-url' }
+    { name: 'DJANGO_SECRET_KEY', secretRef: 'django-secret-key' }
+  ],
+  [ empty(auth0ClientSecret) ? { name: 'AUTH0_CLIENT_SECRET', value: '' } : { name: 'AUTH0_CLIENT_SECRET', secretRef: 'auth0-client-secret' } ],
+  [ empty(onaToken) ? { name: 'ONA_TOKEN', value: '' } : { name: 'ONA_TOKEN', secretRef: 'ona-token' } ],
+  [ empty(adminPassword) ? { name: 'ADMIN_PASSWORD', value: '' } : { name: 'ADMIN_PASSWORD', secretRef: 'admin-password' } ]
+)
 
 var appIdentity = {
   type: 'UserAssigned'
