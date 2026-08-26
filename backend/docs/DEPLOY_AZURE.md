@@ -35,46 +35,52 @@ Uploaded media persists on the Azure Files share (mounted at `/app/media`).
 
 ---
 
-## One-time bootstrap (run once; needs an Azure admin)
+## One-time bootstrap (run once)
+
+Uses **user-assigned managed identities** federated to GitHub OIDC — no Entra app
+registration needed (so it works without directory-admin rights). Two identities:
+a **CI identity** GitHub logs in as, and a **pull identity** the apps use to pull
+from the existing ACR (pre-granted AcrPull, so the template never writes to the
+shared ACR's resource group).
 
 ```bash
 # ---- names you choose / already have ----
-RG=fieldbase-rg                 # NEW resource group for the ACA env + apps
+RG=fieldbase-we                 # NEW resource group for the ACA env + apps
 LOCATION=westeurope
 REPO=IITA-Fertilizer-Soil-Health-Hub-WAS/dc_dashboard
 BRANCH=redesign/python
+ACR_NAME=<existing-acr>
 ACR_RG=<rg-of-existing-acr>
+PG_NAME=<existing-postgres-server>
 PG_RG=<rg-of-existing-postgres>
+SUB=$(az account show --query id -o tsv)
+ACR_SCOPE="/subscriptions/$SUB/resourceGroups/$ACR_RG/providers/Microsoft.ContainerRegistry/registries/$ACR_NAME"
+PG_SCOPE="/subscriptions/$SUB/resourceGroups/$PG_RG/providers/Microsoft.DBforPostgreSQL/flexibleServers/$PG_NAME"
 
 az group create -n "$RG" -l "$LOCATION"
 
-# GitHub OIDC identity (no stored cloud secret)
-APP_ID=$(az ad app create --display-name fieldbase-gha --query appId -o tsv)
-az ad sp create --id "$APP_ID"
-az ad app federated-credential create --id "$APP_ID" --parameters "{
-  \"name\":\"redesign-python\",
-  \"issuer\":\"https://token.actions.githubusercontent.com\",
-  \"subject\":\"repo:${REPO}:ref:refs/heads/${BRANCH}\",
-  \"audiences\":[\"api://AzureADTokenExchange\"]
-}"
+# CI identity + GitHub OIDC federation
+az identity create -g "$RG" -n fieldbase-gha-id -l "$LOCATION"
+CI_PID=$(az identity show -g "$RG" -n fieldbase-gha-id --query principalId -o tsv)
+az identity federated-credential create --name gha-redesign-python \
+  --identity-name fieldbase-gha-id -g "$RG" \
+  --issuer https://token.actions.githubusercontent.com \
+  --subject "repo:${REPO}:ref:refs/heads/${BRANCH}" \
+  --audiences api://AzureADTokenExchange
+# CI grants: Owner on the app RG + Owner on just the ACR + Reader on just the PG server
+az role assignment create --assignee-object-id "$CI_PID" --assignee-principal-type ServicePrincipal --role Owner  --scope "/subscriptions/$SUB/resourceGroups/$RG"
+az role assignment create --assignee-object-id "$CI_PID" --assignee-principal-type ServicePrincipal --role Owner  --scope "$ACR_SCOPE"
+az role assignment create --assignee-object-id "$CI_PID" --assignee-principal-type ServicePrincipal --role Reader --scope "$PG_SCOPE"
 
-SUB_ID=$(az account show --query id -o tsv)
-# Owner on the app RG (creates env/apps/storage/job).
-az role assignment create --assignee "$APP_ID" --role Owner \
-  --scope "/subscriptions/${SUB_ID}/resourceGroups/${RG}"
-# Owner on the ACR's RG (Bicep creates an AcrPull role assignment there).
-az role assignment create --assignee "$APP_ID" --role Owner \
-  --scope "/subscriptions/${SUB_ID}/resourceGroups/${ACR_RG}"
-# Reader on the Postgres RG (Bicep only reads the server FQDN).
-az role assignment create --assignee "$APP_ID" --role Reader \
-  --scope "/subscriptions/${SUB_ID}/resourceGroups/${PG_RG}"
+# Pull identity the apps use (name must be <namePrefix>-pull-id, default fieldbase-pull-id)
+az identity create -g "$RG" -n fieldbase-pull-id -l "$LOCATION"
+PULL_PID=$(az identity show -g "$RG" -n fieldbase-pull-id --query principalId -o tsv)
+az role assignment create --assignee-object-id "$PULL_PID" --assignee-principal-type ServicePrincipal --role AcrPull --scope "$ACR_SCOPE"
 
-echo "AZURE_CLIENT_ID=$APP_ID"
+echo "AZURE_CLIENT_ID=$(az identity show -g "$RG" -n fieldbase-gha-id --query clientId -o tsv)"
 echo "AZURE_TENANT_ID=$(az account show --query tenantId -o tsv)"
-echo "AZURE_SUBSCRIPTION_ID=$SUB_ID"
+echo "AZURE_SUBSCRIPTION_ID=$SUB"
 ```
-(If the ACR and Postgres are in the same RG as the app, the extra grants collapse
-into the single Owner-on-`$RG` line.)
 
 ### GitHub configuration (repo → Settings → Secrets and variables → Actions)
 

@@ -91,19 +91,10 @@ resource logs 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
 }
 
 // ---------- Pull identity ----------
-resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+// Created out-of-band (with AcrPull on the existing registry already granted) so
+// this template needs no write access to the shared ACR resource group.
+resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
   name: uamiName
-  location: location
-}
-
-// AcrPull on the existing registry (module runs in the ACR's resource group).
-module acrPull 'modules/acr-pull.bicep' = {
-  name: 'acrPull'
-  scope: resourceGroup(acrResourceGroup)
-  params: {
-    acrName: acrName
-    principalId: uami.properties.principalId
-  }
 }
 
 // ---------- Media storage (Azure Files) ----------
@@ -214,7 +205,6 @@ resource migrateJob 'Microsoft.App/jobs@2024-03-01' = {
   name: migrateJobName
   location: location
   identity: appIdentity
-  dependsOn: [ acrPull ]
   properties: {
     environmentId: env.id
     configuration: {
@@ -263,7 +253,7 @@ resource webApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: webAppName
   location: location
   identity: appIdentity
-  dependsOn: [ acrPull, redisApp ]
+  dependsOn: [ redisApp ]
   properties: {
     managedEnvironmentId: env.id
     configuration: {
@@ -299,7 +289,7 @@ resource workerApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: workerAppName
   location: location
   identity: appIdentity
-  dependsOn: [ acrPull, redisApp ]
+  dependsOn: [ redisApp ]
   properties: {
     managedEnvironmentId: env.id
     configuration: {
@@ -329,7 +319,7 @@ resource beatApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: beatAppName
   location: location
   identity: appIdentity
-  dependsOn: [ acrPull, redisApp ]
+  dependsOn: [ redisApp ]
   properties: {
     managedEnvironmentId: env.id
     configuration: {
