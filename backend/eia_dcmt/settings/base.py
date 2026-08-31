@@ -374,6 +374,8 @@ USE_TZ = True
 # --- Static -----------------------------------------------------------------
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+# Project-level static assets (brand images, etc.), collected at image build.
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 # Uploaded files (e.g. published XLSForms).
 MEDIA_URL = "media/"
