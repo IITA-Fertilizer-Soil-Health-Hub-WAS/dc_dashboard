@@ -115,7 +115,12 @@ MIDDLEWARE = [
     # Binds the request's tenant database when TENANT_DB_ROUTING is on (no-op
     # otherwise). After AuthenticationMiddleware — it needs request.user.
     "apps.projects.db_routing.TenantDBMiddleware",
+    # Blocks the platform until a user completes their identity profile.
+    "apps.accounts.middleware.ProfileCompletionMiddleware",
 ]
+
+# Force profile completion before any use of the platform (off in tests).
+REQUIRE_COMPLETE_PROFILE = env.bool("REQUIRE_COMPLETE_PROFILE", default=True)
 
 # Database-per-tenant routing (off by default: everything in the shared DB).
 TENANT_DB_ROUTING = env.bool("TENANT_DB_ROUTING", default=False)

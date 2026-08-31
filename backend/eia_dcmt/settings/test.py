@@ -5,6 +5,10 @@ from .base import *  # noqa: F401,F403
 
 DEBUG = False
 
+# The profile-completion hard gate is off by default in tests (most fixtures use
+# profile-less users); the gate's own test opts back in via override_settings.
+REQUIRE_COMPLETE_PROFILE = False
+
 # Use SQLite for fast, dependency-free unit tests. Postgres-specific behaviour
 # (jsonb/GIN/ArrayField) is exercised in integration tests against Postgres.
 DATABASES = {
