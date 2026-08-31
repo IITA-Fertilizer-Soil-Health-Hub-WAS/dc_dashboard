@@ -41,6 +41,8 @@ param dbName string = 'eia_dcmt'
 // App config (non-secret)
 @description('Custom domain bound to the web app (added to ALLOWED_HOSTS + CSRF).')
 param customDomain string = ''
+@description('Name of the env managed certificate for the custom domain (SNI bind).')
+param managedCertName string = ''
 param auth0Domain string = ''
 param auth0ClientId string = ''
 param onaBaseUrl string = ''
@@ -161,6 +163,21 @@ var redisFqdn = '${redisAppName}.internal.${envDomain}'
 // The custom domain, when set, is added to allowed hosts + CSRF trusted origins.
 var allowedHosts = empty(customDomain) ? '${webFqdn},localhost,127.0.0.1' : '${customDomain},${webFqdn},localhost,127.0.0.1'
 var csrfOrigins = empty(customDomain) ? 'https://${webFqdn}' : 'https://${customDomain},https://${webFqdn}'
+// Bind the custom domain in the app's ingress (referencing the env managed cert)
+// so redeploys keep the SNI binding instead of wiping a manually-added one.
+var bindCustomDomain = !empty(customDomain) && !empty(managedCertName)
+var webIngress = union(
+  { external: true, transport: 'auto', targetPort: 8000, allowInsecure: false },
+  bindCustomDomain ? {
+    customDomains: [
+      {
+        name: customDomain
+        bindingType: 'SniEnabled'
+        certificateId: resourceId('Microsoft.App/managedEnvironments/managedCertificates', envName, managedCertName)
+      }
+    ]
+  } : {}
+)
 var databaseUrl = 'postgres://${pgAdminUser}:${pgAdminPassword}@${pg.properties.fullyQualifiedDomainName}:5432/${dbName}?sslmode=require'
 
 // ACA rejects a secret whose value is empty, so optional secrets are only
@@ -278,7 +295,7 @@ resource webApp 'Microsoft.App/containerApps@2024-03-01' = {
       activeRevisionsMode: 'Single'
       secrets: sharedSecrets
       registries: appRegistries
-      ingress: { external: true, transport: 'auto', targetPort: 8000, allowInsecure: false }
+      ingress: webIngress
     }
     template: {
       volumes: mediaVolumes
