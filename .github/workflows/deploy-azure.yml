@@ -93,8 +93,13 @@ jobs:
 
       - name: Smoke test /healthz/
         run: |
-          WEB_URL=$(az deployment group show -g "$RG" -n "$DEPLOY_NAME" \
-            --query properties.outputs.webUrl.value -o tsv)
+          # Prefer the custom domain (the real user URL) when set; else the ACA FQDN.
+          if [ -n "${{ vars.CUSTOM_DOMAIN }}" ]; then
+            WEB_URL="https://${{ vars.CUSTOM_DOMAIN }}"
+          else
+            WEB_URL=$(az deployment group show -g "$RG" -n "$DEPLOY_NAME" \
+              --query properties.outputs.webUrl.value -o tsv)
+          fi
           echo "Web URL: $WEB_URL"
           echo "web_url=$WEB_URL" >> "$GITHUB_STEP_SUMMARY"
           for i in $(seq 1 30); do
