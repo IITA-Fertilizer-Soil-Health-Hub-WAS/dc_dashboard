@@ -264,6 +264,35 @@ resource migrateJob 'Microsoft.App/jobs@2024-03-01' = {
   }
 }
 
+// ---------- On-demand ONA sync Job (start with: az containerapp job start) ----------
+resource syncJob 'Microsoft.App/jobs@2024-03-01' = {
+  name: '${namePrefix}-sync'
+  location: location
+  identity: appIdentity
+  properties: {
+    environmentId: env.id
+    configuration: {
+      triggerType: 'Manual'
+      replicaTimeout: 3600
+      replicaRetryLimit: 0
+      manualTriggerConfig: { parallelism: 1, replicaCompletionCount: 1 }
+      secrets: sharedSecrets
+      registries: appRegistries
+    }
+    template: {
+      containers: [
+        {
+          name: 'sync'
+          image: acrImage
+          resources: { cpu: json('0.5'), memory: '1Gi' }
+          command: [ '/bin/sh', '-c', 'python manage.py sync_project --all' ]
+          env: sharedEnv
+        }
+      ]
+    }
+  }
+}
+
 // ---------- Redis (internal broker) ----------
 resource redisApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: redisAppName
@@ -381,4 +410,5 @@ resource beatApp 'Microsoft.App/containerApps@2024-03-01' = {
 // ---------- Outputs ----------
 output webUrl string = 'https://${webApp.properties.configuration.ingress.fqdn}'
 output migrateJobName string = migrateJob.name
+output syncJobName string = syncJob.name
 output acrLoginServer string = acr.properties.loginServer
