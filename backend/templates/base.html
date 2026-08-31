@@ -152,7 +152,8 @@
       box-shadow:var(--shadow-sm); padding:1.15rem 1.25rem;}
     .card h3{margin-bottom:.85rem; display:flex; align-items:center; gap:.5rem;}
     .infobox{flex:1; min-width:170px; position:relative; overflow:hidden;}
-    .infobox .n{font-family:var(--serif); font-size:2.1rem; font-weight:600; line-height:1; font-variant-numeric:tabular-nums; color:var(--brand);}
+    .infobox::before{content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--clay);}
+    .infobox .n{font-family:var(--serif); font-size:2.1rem; font-weight:700; line-height:1; font-variant-numeric:tabular-nums; color:var(--brand);}
     .infobox .l{color:var(--muted); font-size:.72rem; text-transform:uppercase; letter-spacing:.1em; margin-top:.45rem; font-weight:600;}
 
     /* ---------- Tabs (segmented) ---------- */
@@ -171,7 +172,8 @@
       padding:.6rem .7rem; border-bottom:1px solid var(--line);}
     tbody td{padding:.6rem .7rem; border-bottom:1px solid var(--line-soft); vertical-align:middle;}
     tbody tr:last-child td{border-bottom:none;}
-    tbody tr:hover td{background:var(--surface-2);}
+    tbody tr:nth-child(even) td{background:#faf8f2;}
+    tbody tr:hover td{background:#f3ece0;}
     td .mono, td:first-child{font-variant-numeric:tabular-nums;}
 
     /* ---------- Pills / badges ---------- */
@@ -236,7 +238,7 @@
 
     /* ---------- Section headers ---------- */
     .section{margin:1.8rem 0 .8rem; display:flex; align-items:flex-end; gap:.7rem; flex-wrap:wrap;}
-    .section .st{flex:1; min-width:200px;}
+    .section .st{flex:1; min-width:200px; border-left:3px solid var(--clay); padding-left:.75rem;}
     .section h3{display:flex; align-items:center; gap:.5rem;}
     .section h3 .msym{color:var(--brand); font-size:20px; opacity:1;}
     .section .desc{color:var(--muted); font-size:.83rem; margin-top:.15rem; max-width:64ch;}
@@ -338,7 +340,7 @@
 
     /* ---------- Meter bar (coverage) ---------- */
     .meter{height:11px; border-radius:7px; background:var(--line); overflow:hidden;}
-    .meter > i{display:block; height:100%; background:linear-gradient(90deg,var(--brand),#3f9142); border-radius:7px;}
+    .meter > i{display:block; height:100%; background:linear-gradient(90deg,var(--clay-700),var(--clay)); border-radius:7px;}
 
     /* ---------- M&E chart kit (shared by all kpi/* pages) ---------- */
     .kbars{display:flex; align-items:flex-end; gap:3px; height:120px;}
