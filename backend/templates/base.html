@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ SITE_NAME }}{% endblock %}</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230a4630'/><path d='M10 15a6 6 0 0 1 12 0' stroke='%23eaf3ee' stroke-width='2' fill='none'/><path d='M10 16.5h12M11.5 20h9' stroke='%23eaf3ee' stroke-width='2' stroke-linecap='round'/><path d='M13 23.5h6' stroke='%23c8a23a' stroke-width='2' stroke-linecap='round'/><path d='M14.2 25.6 16 28l1.8-2.4Z' fill='%23eaf3ee'/></svg>">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230e2e16'/><path d='M10 15a6 6 0 0 1 12 0' stroke='%23eaf3ee' stroke-width='2' fill='none'/><path d='M10 16.5h12M11.5 20h9' stroke='%23eaf3ee' stroke-width='2' stroke-linecap='round'/><path d='M13 23.5h6' stroke='%23bf6b3a' stroke-width='2' stroke-linecap='round'/><path d='M14.2 25.6 16 28l1.8-2.4Z' fill='%23eaf3ee'/></svg>">
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,17 +12,21 @@
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0&display=block" rel="stylesheet">
   <style>
     :root{
-      /* palette — warm paper canvas, deep-forest rail, gold accent */
-      --bg:#f3f1ea; --surface:#ffffff; --surface-2:#faf9f4;
-      --ink:#19271f; --muted:#6a7a6f; --faint:#94a299;
-      --line:#e3e3d8; --line-soft:#eeede4;
-      --brand:#0d5c3f; --brand-700:#0a4630; --brand-900:#073322; --brand-50:#e7f0ea;
-      --gold:#c8a23a; --gold-soft:#f0e6c8;
+      /* Regional Hub palette — warm paper canvas, deep-forest rail, terracotta accent */
+      --bg:#f5f2ea; --surface:#ffffff; --surface-2:#faf7ef;
+      --ink:#1a2b20; --muted:#6b7a6f; --faint:#98a59b;
+      --line:#e7e2d5; --line-soft:#f0ece1;
+      --brand:#1c5b2e; --brand-700:#164522; --brand-900:#0e2e16; --brand-50:#e8f0ea;
+      /* terracotta / clay accent (from the emblem's soil strata) */
+      --clay:#bf6b3a; --clay-700:#a3572c; --clay-soft:#f2e5d9; --clay-ink:#8a4a24;
+      /* legacy alias: existing var(--gold) usages adopt the new accent */
+      --gold:#bf6b3a; --gold-soft:#f2e5d9;
+      --danger:#b23b2e; /* destructive UI (kept distinct from the warm accent) */
       /* data-status colors (must match backend dynamic_colorcode output) */
       --green:#55b047; --amber:#fdb415; --red:#c3531f; --purple:#BE93D4;
-      --r:14px; --r-sm:9px;
-      --shadow:0 1px 2px rgba(25,39,31,.04), 0 6px 22px -12px rgba(25,39,31,.18);
-      --shadow-sm:0 1px 2px rgba(25,39,31,.05);
+      --r:12px; --r-sm:8px;
+      --shadow:0 1px 2px rgba(26,43,32,.045), 0 10px 28px -16px rgba(26,43,32,.22);
+      --shadow-sm:0 1px 2px rgba(26,43,32,.06);
       --sans:'Manrope',ui-sans-serif,system-ui,sans-serif;
       --serif:'Manrope',ui-sans-serif,system-ui,sans-serif;
       --mono:'JetBrains Mono',ui-monospace,monospace;
@@ -59,7 +63,7 @@
     .nav .lbl.step{display:flex; align-items:center; gap:.5rem;}
     .nav .lbl.step::before{counter-increment:step; content:counter(step);
       display:inline-flex; align-items:center; justify-content:center;
-      width:17px; height:17px; border-radius:50%; background:rgba(200,162,58,.2);
+      width:17px; height:17px; border-radius:50%; background:rgba(191,107,58,.2);
       color:var(--gold); font-size:.64rem; font-weight:800; letter-spacing:0; flex-shrink:0;}
     .nav a{
       display:flex; align-items:center; gap:.55rem; padding:.5rem .65rem; border-radius:9px;
@@ -109,14 +113,14 @@
       white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
     .nav .ws-head .nav-back{margin-top:.5rem; font-size:.8rem;}
     .nav a.nav-add{color:var(--gold); font-weight:600; margin-top:.2rem;}
-    .nav a.nav-add:hover{background:rgba(200,162,58,.14); color:#f0e6c8;}
-    .nav a.nav-add.active{background:rgba(200,162,58,.18); color:#fff; border-left-color:var(--gold);}
+    .nav a.nav-add:hover{background:rgba(191,107,58,.14); color:#ecd9c8;}
+    .nav a.nav-add.active{background:rgba(191,107,58,.18); color:#fff; border-left-color:var(--gold);}
     .userbox{padding:.85rem 1rem; border-top:1px solid rgba(255,255,255,.12); display:flex; align-items:center; gap:.6rem;}
     .userbox .avatar{width:32px;height:32px;border-radius:50%;background:var(--gold);color:var(--brand-900);
       display:grid;place-items:center;font-weight:700;font-size:.85rem;flex-shrink:0;font-family:var(--sans);}
     .userbox .who{flex:1;min-width:0;}
     .userbox .who b{display:block;color:#fff;font-size:.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-    .userbox .who .org{display:flex;align-items:center;gap:.3rem;color:#c8a23a;font-size:.72rem;font-weight:600;
+    .userbox .who .org{display:flex;align-items:center;gap:.3rem;color:#dc9068;font-size:.72rem;font-weight:600;
       white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:1px 0 2px;}
     .userbox .who .org .msym{font-size:13px;opacity:.9;}
     .userbox .who a{color:#9fc2b0;font-size:.74rem;}
@@ -139,7 +143,7 @@
     .auth-wrap{min-height:100vh; display:grid; place-items:center; padding:2rem;
       background:
         radial-gradient(900px 500px at 15% -10%, rgba(13,92,63,.10), transparent 60%),
-        radial-gradient(700px 500px at 110% 110%, rgba(200,162,58,.10), transparent 55%),
+        radial-gradient(700px 500px at 110% 110%, rgba(191,107,58,.10), transparent 55%),
         var(--bg);}
 
     /* ---------- Cards & stats ---------- */
@@ -176,12 +180,13 @@
       border:1px solid rgba(13,92,63,.12); letter-spacing:.01em;}
 
     /* ---------- Buttons ---------- */
-    .btn{border:none; border-radius:8px; padding:.4rem .75rem; cursor:pointer; font-family:var(--sans);
-      font-size:.8rem; font-weight:600; color:#fff; transition:filter .12s,transform .04s; white-space:nowrap;}
-    .btn:hover{filter:brightness(1.06);} .btn:active{transform:translateY(1px);}
-    .btn-open{background:var(--brand);} .btn-request{background:#5a6b76;}
-    .btn-decline{background:var(--red);} .btn-approve{background:#3f9142;}
-    .btn-edit{background:var(--gold); color:var(--brand-900);}
+    .btn{border:none; border-radius:var(--r-sm); padding:.44rem .82rem; cursor:pointer; font-family:var(--sans);
+      font-size:.8rem; font-weight:650; letter-spacing:-.003em; color:#fff;
+      box-shadow:0 1px 2px rgba(26,43,32,.09); transition:filter .12s,transform .04s,box-shadow .12s; white-space:nowrap;}
+    .btn:hover{filter:brightness(1.05);} .btn:active{transform:translateY(1px);}
+    .btn-open{background:var(--brand);} .btn-request{background:#6b6f64;}
+    .btn-decline{background:var(--danger);} .btn-approve{background:#3f9142;}
+    .btn-edit{background:var(--gold); color:#fff;}
     .btn-ghost{background:var(--surface); color:var(--brand); border:1px solid var(--line);}
     .btn-ghost:hover{border-color:var(--brand); filter:none;}
     /* Inert (greyed) buttons — e.g. a project closed to access requests. */
@@ -213,7 +218,7 @@
     .lede{color:var(--muted); font-size:.92rem; margin:.15rem 0 1.3rem; max-width:66ch;}
 
     /* ---------- Pills (semantic variants) ---------- */
-    .pill.gold{background:var(--gold-soft); color:#7a5c12; border-color:rgba(200,162,58,.34);}
+    .pill.gold{background:var(--gold-soft); color:#8a4a24; border-color:rgba(191,107,58,.34);}
     .pill.warn{background:#fff4dd; color:#8a5a00; border-color:rgba(200,140,20,.28);}
     .pill.danger{background:#fdecea; color:#a33617; border-color:rgba(195,83,31,.22);}
     .pill.neutral{background:var(--surface-2); color:var(--muted); border-color:var(--line);}
@@ -227,7 +232,7 @@
     .chip .msym{font-size:15px; opacity:.75;}
     .chip.scope{color:var(--brand-700); background:var(--brand-50); border-color:rgba(13,92,63,.16);}
     .chip.role{color:#5a4a8a; background:#f1ecfb; border-color:rgba(120,90,180,.22);}
-    .chip.ext{color:#7a5c12; background:var(--gold-soft); border-color:rgba(200,162,58,.32);}
+    .chip.ext{color:#8a4a24; background:var(--gold-soft); border-color:rgba(191,107,58,.32);}
 
     /* ---------- Section headers ---------- */
     .section{margin:1.8rem 0 .8rem; display:flex; align-items:flex-end; gap:.7rem; flex-wrap:wrap;}
@@ -424,7 +429,7 @@
           <path d="M20 14.7c1.7-.1 3.1-1.2 3.3-2.9-1.8-.1-3.1.9-3.3 2.9Z" fill="#7fc99a"/>
           <path d="M9 21h22" stroke="#eaf3ee" stroke-width="2.2" stroke-linecap="round"/>
           <path d="M11 25h18" stroke="#eaf3ee" stroke-width="2.2" stroke-linecap="round"/>
-          <path d="M13 29h14" stroke="#c8a23a" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M13 29h14" stroke="#bf6b3a" stroke-width="2.5" stroke-linecap="round"/>
           <path d="M15 33h10" stroke="#eaf3ee" stroke-width="2.2" stroke-linecap="round"/>
           <path d="M16.8 35.6 20 39.4l3.2-3.8Z" fill="#eaf3ee"/>
         </svg>
