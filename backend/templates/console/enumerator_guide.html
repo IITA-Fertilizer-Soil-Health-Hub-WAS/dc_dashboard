@@ -30,6 +30,13 @@
       <a class="btn" style="background:var(--surface);color:var(--brand);border:1px solid var(--brand);text-decoration:none;" href="{% url 'console:help' %}">← Back to Help</a>
     </div>
     <div class="sheet">
+      <div style="display:flex;align-items:center;gap:.9rem;border-bottom:1px solid var(--line);padding-bottom:.9rem;margin-bottom:1.1rem;">
+        {% include "_hub_logo.html" with size=52 %}
+        <div style="line-height:1.25;">
+          <div style="font-family:var(--serif);font-weight:700;font-size:1.05rem;color:var(--ink);">Fieldbase</div>
+          <div style="font-size:.76rem;color:var(--muted);">Fertilizer &amp; Soil Health Hub · West Africa &amp; the Sahel</div>
+        </div>
+      </div>
       <h1>Enumerator quick guide</h1>
       <p class="sub">{{ SITE_NAME }} — one page to keep with you in the field.</p>
 

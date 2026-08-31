@@ -1,0 +1,7 @@
+{% comment %}Official Regional Hub emblem (organisation brand). Pass `size` (px height,
+default 60). The Fieldbase pin stays the app's own mark; this marks Hub-owned /
+org-facing surfaces (login, setup, printed guides).{% endcomment %}
+{% load static %}
+<img src="{% static 'img/regional-hub-logo.png' %}"
+     alt="Fertilizer and Soil Health Hub for West Africa and the Sahel"
+     style="height:{{ size|default:60 }}px;width:auto;">
