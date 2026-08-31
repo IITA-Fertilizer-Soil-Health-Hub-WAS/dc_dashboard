@@ -39,6 +39,8 @@ param pgAdminPassword string
 param dbName string = 'eia_dcmt'
 
 // App config (non-secret)
+@description('Custom domain bound to the web app (added to ALLOWED_HOSTS + CSRF).')
+param customDomain string = ''
 param auth0Domain string = ''
 param auth0ClientId string = ''
 param onaBaseUrl string = ''
@@ -156,6 +158,9 @@ resource envStorage 'Microsoft.App/managedEnvironments/storages@2024-03-01' = {
 var envDomain = env.properties.defaultDomain
 var webFqdn = '${webAppName}.${envDomain}'
 var redisFqdn = '${redisAppName}.internal.${envDomain}'
+// The custom domain, when set, is added to allowed hosts + CSRF trusted origins.
+var allowedHosts = empty(customDomain) ? '${webFqdn},localhost,127.0.0.1' : '${customDomain},${webFqdn},localhost,127.0.0.1'
+var csrfOrigins = empty(customDomain) ? 'https://${webFqdn}' : 'https://${customDomain},https://${webFqdn}'
 var databaseUrl = 'postgres://${pgAdminUser}:${pgAdminPassword}@${pg.properties.fullyQualifiedDomainName}:5432/${dbName}?sslmode=require'
 
 // ACA rejects a secret whose value is empty, so optional secrets are only
@@ -174,8 +179,8 @@ var sharedEnv = concat(
   [
     { name: 'DJANGO_SETTINGS_MODULE', value: 'eia_dcmt.settings.prod' }
     { name: 'DJANGO_DEBUG', value: 'false' }
-    { name: 'DJANGO_ALLOWED_HOSTS', value: '${webFqdn},localhost,127.0.0.1' }
-    { name: 'DJANGO_CSRF_TRUSTED_ORIGINS', value: 'https://${webFqdn}' }
+    { name: 'DJANGO_ALLOWED_HOSTS', value: allowedHosts }
+    { name: 'DJANGO_CSRF_TRUSTED_ORIGINS', value: csrfOrigins }
     { name: 'CELERY_BROKER_URL', value: 'redis://${redisFqdn}:6379/0' }
     { name: 'CELERY_RESULT_BACKEND', value: 'redis://${redisFqdn}:6379/1' }
     { name: 'AUTH0_DOMAIN', value: auth0Domain }

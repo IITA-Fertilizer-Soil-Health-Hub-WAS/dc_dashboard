@@ -60,6 +60,7 @@ jobs:
               pgResourceGroup="${{ vars.PG_RG }}" \
               pgAdminUser="${{ vars.PG_ADMIN_USER }}" \
               dbName="${{ vars.DB_NAME }}" \
+              customDomain="${{ vars.CUSTOM_DOMAIN }}" \
               pgAdminPassword="${{ secrets.POSTGRES_ADMIN_PASSWORD }}" \
               djangoSecretKey="${{ secrets.DJANGO_SECRET_KEY }}" \
               auth0ClientSecret="${{ secrets.AUTH0_CLIENT_SECRET }}" \
