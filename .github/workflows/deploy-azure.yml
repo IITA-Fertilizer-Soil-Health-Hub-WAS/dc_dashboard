@@ -62,6 +62,12 @@ jobs:
               dbName="${{ vars.DB_NAME }}" \
               customDomain="${{ vars.CUSTOM_DOMAIN }}" \
               managedCertName="${{ vars.MANAGED_CERT_NAME }}" \
+              formAiProvider="${{ vars.FORM_AI_PROVIDER }}" \
+              formAiEnabled="${{ vars.FORM_AI_ENABLED }}" \
+              azureOpenaiEndpoint="${{ vars.AZURE_OPENAI_ENDPOINT }}" \
+              azureOpenaiDeployment="${{ vars.AZURE_OPENAI_DEPLOYMENT }}" \
+              azureOpenaiApiVersion="${{ vars.AZURE_OPENAI_API_VERSION }}" \
+              azureOpenaiApiKey="${{ secrets.AZURE_OPENAI_API_KEY }}" \
               pgAdminPassword="${{ secrets.POSTGRES_ADMIN_PASSWORD }}" \
               djangoSecretKey="${{ secrets.DJANGO_SECRET_KEY }}" \
               auth0ClientSecret="${{ secrets.AUTH0_CLIENT_SECRET }}" \

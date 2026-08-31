@@ -344,9 +344,18 @@ AUTO_PROVISION_COLLECTORS = env.bool("AUTO_PROVISION_COLLECTORS", default=False)
 TERMINAG_REPO_URL = env("TERMINAG_REPO_URL", default="https://github.com/controvoc/terminag.git")
 # Optional AI drafting of a form from an uploaded protocol (Tier 3). OFF unless a
 # real key is set — the placeholder default keeps the pipeline reachable but inert.
+FORM_AI_PROVIDER = env("FORM_AI_PROVIDER", default="anthropic")  # anthropic | azure_openai
 FORM_AI_API_KEY = env("FORM_AI_API_KEY", default="")
 FORM_AI_MODEL = env("FORM_AI_MODEL", default="claude-opus-4-8")
-FORM_AI_ENABLED = env.bool("FORM_AI_ENABLED", default=bool(FORM_AI_API_KEY))
+# Azure OpenAI (used when FORM_AI_PROVIDER=azure_openai): chat-completions endpoint.
+AZURE_OPENAI_ENDPOINT = env("AZURE_OPENAI_ENDPOINT", default="")
+AZURE_OPENAI_API_KEY = env("AZURE_OPENAI_API_KEY", default="")
+AZURE_OPENAI_DEPLOYMENT = env("AZURE_OPENAI_DEPLOYMENT", default="")
+AZURE_OPENAI_API_VERSION = env("AZURE_OPENAI_API_VERSION", default="2024-10-21")
+_AZURE_AI_READY = bool(AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_API_KEY and AZURE_OPENAI_DEPLOYMENT)
+FORM_AI_ENABLED = env.bool("FORM_AI_ENABLED", default=bool(
+    FORM_AI_API_KEY or (FORM_AI_PROVIDER == "azure_openai" and _AZURE_AI_READY)
+))
 IPINFO_BASE_URL = env("IPINFO_BASE_URL", default="https://ipinfo.io")
 # Shared secret guarding the collection-server webhook (ODK Central / ONA →
 # instant re-sync). Empty = webhooks disabled (endpoint returns 503). The server

@@ -51,6 +51,15 @@ param adminEmail string = ''
 @description('Max web replicas. Web can scale now that migrations run in a Job.')
 param webMaxReplicas int = 2
 
+// Form-AI (ODK form drafting from a protocol)
+param formAiProvider string = ''
+param formAiEnabled string = ''
+param azureOpenaiEndpoint string = ''
+param azureOpenaiDeployment string = ''
+param azureOpenaiApiVersion string = '2024-10-21'
+@secure()
+param azureOpenaiApiKey string = ''
+
 // App config (secret)
 @secure()
 param djangoSecretKey string
@@ -189,7 +198,18 @@ var sharedSecrets = concat(
   ],
   empty(auth0ClientSecret) ? [] : [ { name: 'auth0-client-secret', value: auth0ClientSecret } ],
   empty(onaToken) ? [] : [ { name: 'ona-token', value: onaToken } ],
-  empty(adminPassword) ? [] : [ { name: 'admin-password', value: adminPassword } ]
+  empty(adminPassword) ? [] : [ { name: 'admin-password', value: adminPassword } ],
+  empty(azureOpenaiApiKey) ? [] : [ { name: 'azure-openai-key', value: azureOpenaiApiKey } ]
+)
+
+// Form-AI env, added only for keys that are set (avoids empty env values).
+var aiEnv = concat(
+  empty(formAiProvider) ? [] : [ { name: 'FORM_AI_PROVIDER', value: formAiProvider } ],
+  empty(formAiEnabled) ? [] : [ { name: 'FORM_AI_ENABLED', value: formAiEnabled } ],
+  empty(azureOpenaiEndpoint) ? [] : [ { name: 'AZURE_OPENAI_ENDPOINT', value: azureOpenaiEndpoint } ],
+  empty(azureOpenaiDeployment) ? [] : [ { name: 'AZURE_OPENAI_DEPLOYMENT', value: azureOpenaiDeployment } ],
+  [ { name: 'AZURE_OPENAI_API_VERSION', value: azureOpenaiApiVersion } ],
+  empty(azureOpenaiApiKey) ? [] : [ { name: 'AZURE_OPENAI_API_KEY', secretRef: 'azure-openai-key' } ]
 )
 
 var sharedEnv = concat(
@@ -210,7 +230,8 @@ var sharedEnv = concat(
   ],
   [ empty(auth0ClientSecret) ? { name: 'AUTH0_CLIENT_SECRET', value: '' } : { name: 'AUTH0_CLIENT_SECRET', secretRef: 'auth0-client-secret' } ],
   [ empty(onaToken) ? { name: 'ONA_TOKEN', value: '' } : { name: 'ONA_TOKEN', secretRef: 'ona-token' } ],
-  [ empty(adminPassword) ? { name: 'ADMIN_PASSWORD', value: '' } : { name: 'ADMIN_PASSWORD', secretRef: 'admin-password' } ]
+  [ empty(adminPassword) ? { name: 'ADMIN_PASSWORD', value: '' } : { name: 'ADMIN_PASSWORD', secretRef: 'admin-password' } ],
+  aiEnv
 )
 
 var appIdentity = {
