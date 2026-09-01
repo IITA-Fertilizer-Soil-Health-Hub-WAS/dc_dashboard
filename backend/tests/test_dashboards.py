@@ -103,3 +103,23 @@ def test_inline_action_denied_for_viewer(client, setup):
     assert b"cannot DECLINE" in resp.content
     s.refresh_from_db()
     assert s.review.state != "DECLINED"
+
+
+def test_review_action_illegal_transition_surfaces_message(client, setup):
+    """Endorsing an already-approved item no longer silently no-ops — the queue
+    re-renders with a clear 'moved on' notice, and the state is untouched."""
+    from apps.review.services import get_or_create_review
+
+    uc, _, coord, _, s = setup
+    review = get_or_create_review(s)
+    review.state = "APPROVED"
+    review.save()
+    client.force_login(coord)
+    resp = client.post(
+        reverse("dashboards:tab_review_action", args=[uc.code]),
+        data={"submission": str(s.id), "action": "ENDORSE"},
+    )
+    assert resp.status_code == 200
+    assert b"already moved on" in resp.content
+    s.refresh_from_db()
+    assert s.review.state == "APPROVED"  # unchanged

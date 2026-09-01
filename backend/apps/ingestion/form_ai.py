@@ -22,6 +22,7 @@ from apps.vocabulary.models import VocabularyVariable
 
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 _MAX_VOCAB_HINT = 250  # cap the vocabulary list we send to bound token use
+_KNOWN_PROVIDERS = ("anthropic", "azure_openai")
 
 
 class FormAIError(RuntimeError):
@@ -35,11 +36,16 @@ def _provider() -> str:
 def is_enabled() -> bool:
     if not getattr(settings, "FORM_AI_ENABLED", False):
         return False
-    if _provider() == "azure_openai":
+    provider = _provider()
+    if provider == "azure_openai":
         return bool(getattr(settings, "AZURE_OPENAI_ENDPOINT", "")
                     and getattr(settings, "AZURE_OPENAI_API_KEY", "")
                     and getattr(settings, "AZURE_OPENAI_DEPLOYMENT", ""))
-    return bool(getattr(settings, "FORM_AI_API_KEY", ""))
+    if provider == "anthropic":
+        return bool(getattr(settings, "FORM_AI_API_KEY", ""))
+    # Unknown provider — treat as not configured rather than silently pretending
+    # it's an Anthropic setup (which would fail confusingly at call time).
+    return False
 
 
 def _model_label() -> str:
@@ -52,6 +58,11 @@ def _call(system: str, user: str, *, max_tokens: int, json_mode: bool) -> str:
     """One system+user turn to the configured provider; returns the text output.
     Raises FormAIError on any transport/HTTP problem."""
     provider = _provider()
+    if provider not in _KNOWN_PROVIDERS:
+        raise FormAIError(
+            f"Unknown FORM_AI_PROVIDER '{provider}' — set it to one of: "
+            f"{', '.join(_KNOWN_PROVIDERS)}."
+        )
     try:
         if provider == "azure_openai":
             base = settings.AZURE_OPENAI_ENDPOINT.rstrip("/")
@@ -101,10 +112,15 @@ def _call(system: str, user: str, *, max_tokens: int, json_mode: bool) -> str:
 
 
 def _vocab_hint() -> str:
-    names = list(
-        VocabularyVariable.objects.order_by("category", "name")
-        .values_list("name", flat=True)[:_MAX_VOCAB_HINT]
-    )
+    # Best-effort: the vocabulary hint only improves mapping. A DB hiccup here
+    # must not 500 the whole draft — fall back to no hint.
+    try:
+        names = list(
+            VocabularyVariable.objects.order_by("category", "name")
+            .values_list("name", flat=True)[:_MAX_VOCAB_HINT]
+        )
+    except Exception:  # noqa: BLE001 — hint is optional, never fatal
+        return ""
     return ", ".join(names)
 
 
@@ -133,7 +149,7 @@ def draft_spec(protocol_text: str) -> dict:
     text = (protocol_text or "").strip()
     if not text:
         raise FormAIError("The protocol is empty — nothing to draft from.")
-    system = SYSTEM.replace("{vocab}", _vocab_hint())
+    system = SYSTEM.replace("{vocab}", _vocab_hint() or "(none available)")
     return _parse_spec(_call(system, text[:60000], max_tokens=8000, json_mode=True))
 
 

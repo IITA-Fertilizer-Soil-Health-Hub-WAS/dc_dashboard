@@ -104,6 +104,9 @@ def project_metrics(project, days: str = "30") -> dict:
     in_progress = subs.filter(review__state__in=IN_PROGRESS_STATES).count()
     waiting = subs.filter(review__state__in=WAITING_STATES).count()
     awaiting_validation = subs.filter(review__state=ReviewState.QC_PENDING).count()
+    # Terminal-but-not-approved buckets — counted so the pools reconcile to total.
+    declined = subs.filter(review__state=ReviewState.DECLINED).count()
+    superseded = subs.filter(review__state=ReviewState.SUPERSEDED).count()
     open_issues = ValidationFlag.objects.filter(
         rule__project=project, status=ValidationFlag.Status.OPEN
     ).count()
@@ -140,6 +143,8 @@ def project_metrics(project, days: str = "30") -> dict:
         "in_progress": in_progress,
         "waiting": waiting,
         "awaiting_validation": awaiting_validation,
+        "declined": declined,
+        "superseded": superseded,
         "open_issues": open_issues,
         "quality_score": max(0, 100 - round(open_issues / max(subs.count(), 1) * 100)),
         "trend": trend,

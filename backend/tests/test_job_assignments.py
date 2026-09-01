@@ -153,3 +153,31 @@ def test_my_assignments_only_mine(client, django_user_model, world):
     client.force_login(world["en"])  # has no assignments
     resp = client.get(reverse("dashboards:my_assignments"))
     assert b"HH0" not in resp.content  # not assigned to me
+
+
+def test_job_editor_rejects_malformed_date(client, world):
+    """A hand-crafted POST with a bad date re-renders the form with an error
+    instead of 500-ing on save() — and creates no Job."""
+    client.force_login(world["coord"])
+    before = Job.objects.count()
+    resp = client.post(
+        reverse("console:job_new") + f"?project={world['uc'].code}",
+        {"project": world["uc"].code, "name": "Bad dates",
+         "start_date": "not-a-date", "units": [str(world["units"][0].pk)]},
+    )
+    assert resp.status_code == 200          # re-rendered, not a crash
+    assert b"YYYY-MM-DD" in resp.content    # the validation message
+    assert Job.objects.count() == before    # nothing persisted
+
+
+def test_job_editor_accepts_valid_date(client, world):
+    client.force_login(world["coord"])
+    resp = client.post(
+        reverse("console:job_new") + f"?project={world['uc'].code}",
+        {"project": world["uc"].code, "name": "Good dates",
+         "start_date": "2026-03-01", "deadline": "2026-04-01",
+         "units": [str(world["units"][0].pk)]},
+    )
+    assert resp.status_code == 302
+    job = Job.objects.get(name="Good dates")
+    assert str(job.start_date) == "2026-03-01" and str(job.deadline) == "2026-04-01"

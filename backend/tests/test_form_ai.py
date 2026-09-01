@@ -57,6 +57,32 @@ def test_check_disabled(settings):
     assert result["ok"] is False and "Disabled" in result["message"]
 
 
+def test_unknown_provider_is_not_enabled(settings):
+    # A misspelled provider must read as "not configured", not silently fall
+    # through to the Anthropic path.
+    settings.FORM_AI_ENABLED = True
+    settings.FORM_AI_API_KEY = "test-key"
+    settings.FORM_AI_PROVIDER = "gpt5"
+    assert form_ai.is_enabled() is False
+
+
+def test_unknown_provider_draft_raises_clear_error(settings):
+    settings.FORM_AI_ENABLED = True
+    settings.FORM_AI_API_KEY = "test-key"
+    settings.FORM_AI_PROVIDER = "gpt5"
+    with pytest.raises(form_ai.FormAIError):
+        form_ai.draft_spec("some protocol")
+
+
+def test_vocab_hint_survives_db_error(monkeypatch):
+    # The hint is best-effort — a DB failure must degrade to "" not raise.
+    def boom(*a, **k):
+        raise RuntimeError("db down")
+
+    monkeypatch.setattr(form_ai.VocabularyVariable.objects, "order_by", boom)
+    assert form_ai._vocab_hint() == ""
+
+
 def test_check_ok(monkeypatch, settings):
     settings.FORM_AI_ENABLED = True
     settings.FORM_AI_API_KEY = "test-key"

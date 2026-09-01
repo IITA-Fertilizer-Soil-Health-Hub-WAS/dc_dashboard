@@ -295,6 +295,9 @@ def _health_counts(uc) -> dict:
         "awaiting_validation": subs.filter(review__state=ReviewState.QC_PENDING).count(),
         "approved": subs.filter(review__state=ReviewState.APPROVED).count(),
         "declined": subs.filter(review__state=ReviewState.DECLINED).count(),
+        # Superseded = replaced by a newer server record. Rare, but count it so the
+        # pipeline pools sum to the total and nothing silently vanishes.
+        "superseded": subs.filter(review__state=ReviewState.SUPERSEDED).count(),
         "wb_sent": subs.filter(writeback_status=Submission.WriteBackStatus.SENT).count(),
         "wb_pending": subs.filter(writeback_status=Submission.WriteBackStatus.PENDING).count(),
         "wb_failed": subs.filter(writeback_status=Submission.WriteBackStatus.FAILED).count(),
@@ -302,7 +305,7 @@ def _health_counts(uc) -> dict:
 
 
 @login_required
-def tab_review(request, code):
+def tab_review(request, code, action_error: str = ""):
     """This project's review queue, split by pipeline stage, with inline actions."""
     uc = get_scoped_project(request, code)
     can_endorse = user_can(request.user, "endorse", uc)
@@ -327,6 +330,7 @@ def tab_review(request, code):
         "can_endorse": can_endorse, "can_validate": can_validate,
         "approved_count": approved,
         "can_edit_reasons": console_can_edit(request.user, "rejection-reasons"),
+        "action_error": action_error,
     })
 
 
@@ -341,12 +345,17 @@ def tab_review_action(request, code):
         ReviewAction.QC_APPROVE: services.qc_approve,
         ReviewAction.DECLINE: services.decline,
     }.get(request.POST.get("action"))
-    if submission is not None and fn is not None:
+    error = ""
+    if submission is None or fn is None:
+        error = "That action is no longer available — the queue has moved on."
+    else:
         try:
             fn(request.user, submission, note=(request.POST.get("note") or "").strip())
-        except (ReviewPermissionDenied, TransitionError):
-            pass
-    return tab_review(request, code)
+        except ReviewPermissionDenied:
+            error = "You don't have permission to do that here."
+        except TransitionError:
+            error = "That item already moved on — this action no longer applies. The queue has been refreshed."
+    return tab_review(request, code, action_error=error)
 
 
 @login_required

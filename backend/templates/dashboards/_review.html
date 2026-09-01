@@ -3,6 +3,12 @@
     <span class="subtle">Review actions are for coordinators.</span></div>
 {% else %}
 
+  {% if action_error %}
+    <div class="banner" style="margin-top:1rem;background:#fbe7df;border:1px solid var(--red);color:var(--red);border-radius:10px;padding:.7rem .9rem;font-size:.85rem;" role="status">
+      <span class="msym" style="font-size:16px;vertical-align:-3px;">info</span> {{ action_error }}
+    </div>
+  {% endif %}
+
   <div style="display:flex;justify-content:flex-end;gap:.5rem;margin-top:1rem;" data-tour="rv-log">
     <a class="btn btn-ghost" style="text-decoration:none;" href="{% url 'dashboards:review_log' uc.code %}"
        title="The append-only audit trail of every review action on this project"><span class="msym" style="font-size:15px;vertical-align:-2px;">history</span> Review log</a>

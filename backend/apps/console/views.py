@@ -60,6 +60,21 @@ def _managed(key: str) -> Managed:
     return m
 
 
+def _clean_post_date(raw):
+    """Parse a posted date. Returns ``(date_or_None, bad_raw_or_None)`` — a blank
+    value is a clean None; a non-blank value that won't parse comes back as the
+    error string so the caller can re-render the form instead of 500-ing."""
+    from django.utils.dateparse import parse_date
+
+    raw = (raw or "").strip()
+    if not raw:
+        return None, None
+    parsed = parse_date(raw)
+    if parsed is None:
+        return None, raw
+    return parsed, None
+
+
 def _column_label(model, fname: str) -> str:
     try:
         return model._meta.get_field(fname).verbose_name.title()
@@ -1332,6 +1347,16 @@ class JobEditorView(UserPassesTestMixin, View):
             return render(request, "console/job_editor.html", ctx)
 
         from apps.fieldwork.services import project_enumerators
+
+        # Validate dates before touching the DB: a malformed value posted by hand
+        # would otherwise blow up on save() with a 500 instead of a form error.
+        start_date, bad_start = _clean_post_date(request.POST.get("start_date"))
+        deadline, bad_deadline = _clean_post_date(request.POST.get("deadline"))
+        if bad_start or bad_deadline:
+            ctx = self._ctx(request, project, job,
+                            error="Enter dates as YYYY-MM-DD.")
+            return render(request, "console/job_editor.html", ctx)
+
         form = project.forms.filter(pk=request.POST.get("form")).first()
         # Only the project's own enumerators are assignable (not any platform user).
         enum = project_enumerators(project).filter(pk=request.POST.get("enumerator")).first()
@@ -1342,8 +1367,8 @@ class JobEditorView(UserPassesTestMixin, View):
             job = Job(project=project, created_by=request.user)
         job.name = name
         job.form = form
-        job.start_date = request.POST.get("start_date") or None
-        job.deadline = request.POST.get("deadline") or None
+        job.start_date = start_date
+        job.deadline = deadline
         job.target_count = units.count()
         job.status = Job.Status.ACTIVE
         job.save()
