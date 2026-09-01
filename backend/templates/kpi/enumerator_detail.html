@@ -37,7 +37,7 @@
   <div class="card" style="margin-top:1rem;">
     <div style="display:flex;align-items:center;gap:.6rem;">
       <h3 style="margin:0;">Flag rate over time</h3>
-      {% if trend.direction == 'worsening' %}<span class="pill" style="background:#fbe7df;color:#c3531f;">▲ worsening</span>
+      {% if trend.direction == 'worsening' %}<span class="pill" style="background:#fbe7df;color:#b23b2e;">▲ worsening</span>
       {% elif trend.direction == 'improving' %}<span class="pill" style="background:#eaf6ea;color:#2f7d32;">▼ improving</span>
       {% else %}<span class="pill">stable</span>{% endif %}
       {% if trend.early_pct is not None %}<span class="subtle" style="font-size:.82rem;">{{ trend.early_pct }}% → {{ trend.recent_pct }}% (earlier vs recent half)</span>{% endif %}
@@ -47,7 +47,7 @@
       <div class="trend">
         {% for s in trend.series %}
           <div class="col" title="Week {{ s.week }}: {{ s.n }} submissions{% if s.flag_pct is not None %}, {{ s.flag_pct }}% flagged{% endif %}">
-            <div class="bar" style="height:{% if s.flag_pct %}{% widthratio s.flag_pct trend.max_pct 100 %}{% else %}0{% endif %}%;background:{% if s.flag_pct >= 50 %}#c3531f{% elif s.flag_pct >= 20 %}#fdb415{% else %}#55b047{% endif %};{% if s.n == 0 %}opacity:.2;{% endif %}"></div>
+            <div class="bar" style="height:{% if s.flag_pct %}{% widthratio s.flag_pct trend.max_pct 100 %}{% else %}0{% endif %}%;background:{% if s.flag_pct >= 50 %}#b23b2e{% elif s.flag_pct >= 20 %}#fdb415{% else %}#55b047{% endif %};{% if s.n == 0 %}opacity:.2;{% endif %}"></div>
             <span class="wk">{{ s.week }}</span>
           </div>
         {% endfor %}

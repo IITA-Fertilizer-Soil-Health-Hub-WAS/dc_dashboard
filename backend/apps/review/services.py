@@ -123,7 +123,15 @@ def _enqueue_writeback(submission) -> None:
 
 
 def reopen(user, submission, note: str = "") -> Review:
-    return _transition(user=user, submission=submission, action=ReviewAction.REOPEN, note=note)
+    review = _transition(user=user, submission=submission, action=ReviewAction.REOPEN, note=note)
+    # Back under review — clear the prior gate sign-offs / decline reason so the UI
+    # no longer shows "endorsed by / validated by / declined for" on a live item.
+    review.endorsed_by = review.endorsed_at = None
+    review.qc_signed_by = review.qc_signed_at = None
+    review.rejection_reason = None
+    review.save(update_fields=["endorsed_by", "endorsed_at", "qc_signed_by",
+                               "qc_signed_at", "rejection_reason", "updated_at"])
+    return review
 
 
 def comment(user, submission, note: str) -> Review:

@@ -13,7 +13,7 @@
     <div class="card infobox"><div class="n">{{ cov.coverage }}%</div><div class="l">Visit coverage</div></div>
     <div class="card infobox"><div class="n">{{ cov.total_done }}<span class="subtle" style="font-size:1rem;">/{{ cov.total_expected }}</span></div><div class="l">Visits done</div></div>
     <div class="card infobox"><div class="n">{{ cov.clients }}</div><div class="l">{{ program.client_label_plural }}</div></div>
-    <div class="card infobox"><div class="n" style="color:{% if cov.defaulters %}#c3531f{% endif %};">{{ cov.defaulters|length }}</div><div class="l">With overdue visits</div></div>
+    <div class="card infobox"><div class="n" style="color:{% if cov.defaulters %}#b23b2e{% endif %};">{{ cov.defaulters|length }}</div><div class="l">With overdue visits</div></div>
   </div>
 
   {% if workers %}

@@ -30,13 +30,13 @@
               <a href="{% url 'kpi:enumerator_detail' uc.code e.enumerator_id %}"><strong>{{ e.enumerator__enid }}</strong></a>{% if e.enumerator__first_name %} · {{ e.enumerator__first_name }} {{ e.enumerator__surname }}{% endif %}
               <span class="lead-bar"><i style="width:{% widthratio e.n leaderboard_max 100 %}%;"></i></span>
             </td>
-            <td><span class="pill" style="{% if e.quality_score >= 80 %}background:#eaf6ea;color:#2f7d32;{% elif e.quality_score >= 60 %}background:#fef6e0;color:#8a6d00;{% else %}background:#fbe7df;color:#c3531f;{% endif %}font-variant-numeric:tabular-nums;">{{ e.quality_score }}</span></td>
+            <td><span class="pill" style="{% if e.quality_score >= 80 %}background:#eaf6ea;color:#2f7d32;{% elif e.quality_score >= 60 %}background:#fef6e0;color:#8a6d00;{% else %}background:#fbe7df;color:#b23b2e;{% endif %}font-variant-numeric:tabular-nums;">{{ e.quality_score }}</span></td>
             <td style="font-variant-numeric:tabular-nums;">{{ e.n }}</td>
             <td><span title="{{ e.approved }} approved">{{ e.approval_pct }}%</span></td>
-            <td>{% if e.reject_pct %}<span style="color:#c3531f;">{{ e.reject_pct }}%</span>{% else %}<span class="subtle">0%</span>{% endif %}</td>
+            <td>{% if e.reject_pct %}<span style="color:#b23b2e;">{{ e.reject_pct }}%</span>{% else %}<span class="subtle">0%</span>{% endif %}</td>
             <td>{% if e.on_time_pct is None %}<span class="subtle">—</span>{% else %}{{ e.on_time_pct }}%{% endif %}</td>
             <td class="subtle" style="font-variant-numeric:tabular-nums;">{% if e.gps_err_m is None %}—{% else %}{{ e.gps_err_m }} m{% endif %}</td>
-            <td>{% if e.open_flags %}<span class="pill" style="background:#fbe7df;color:#c3531f;">{{ e.open_flags }}</span>{% else %}<span class="subtle">0</span>{% endif %}</td>
+            <td>{% if e.open_flags %}<span class="pill" style="background:#fbe7df;color:#b23b2e;">{{ e.open_flags }}</span>{% else %}<span class="subtle">0</span>{% endif %}</td>
             <td class="subtle">{{ e.last_active|default:"—" }}</td>
           </tr>
         {% empty %}<tr><td colspan="9"><div class="empty" style="border:none;">No enumerator activity in this period.</div></td></tr>{% endfor %}

@@ -10,7 +10,7 @@ import folium
 
 AMBER = "#fdb415"
 GREEN = "#55b047"
-RED = "#c3531f"
+RED = "#b23b2e"
 
 
 def candidate_plots_map_html(candidates, elected_id=None) -> str:

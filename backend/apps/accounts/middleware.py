@@ -13,20 +13,29 @@ from __future__ import annotations
 
 from django.conf import settings
 from django.contrib import messages
+from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.urls import reverse
 
 
 class ProfileCompletionMiddleware:
-    EXEMPT_PREFIXES = ("/accounts/", "/static/", "/media/", "/healthz", "/admin/")
+    # /api/ is exempt: token clients aren't humans filling a profile form.
+    EXEMPT_PREFIXES = ("/accounts/", "/api/", "/static/", "/media/", "/healthz", "/admin/")
 
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
         if self._should_gate(request):
+            target = reverse("profile")
+            # HTMX: tell it to do a real full-page redirect, not swap the profile
+            # document into a small partial slot.
+            if request.headers.get("HX-Request"):
+                resp = HttpResponse(status=204)
+                resp["HX-Redirect"] = target
+                return resp
             messages.info(request, "Complete your profile to start using the platform.")
-            return redirect("profile")
+            return redirect(target)
         return self.get_response(request)
 
     def _should_gate(self, request) -> bool:

@@ -30,7 +30,7 @@
   <div class="card" style="margin-top:1.1rem;">
     <div style="display:flex;align-items:center;gap:.6rem;">
       <h3 style="margin:0;">Quality trend</h3>
-      {% if qtrend.direction == 'worsening' %}<span class="pill" style="background:#fbe7df;color:#c3531f;">▲ worsening</span>
+      {% if qtrend.direction == 'worsening' %}<span class="pill" style="background:#fbe7df;color:#b23b2e;">▲ worsening</span>
       {% elif qtrend.direction == 'improving' %}<span class="pill" style="background:#eaf6ea;color:#2f7d32;">▼ improving</span>
       {% else %}<span class="pill">stable</span>{% endif %}
       {% if qtrend.early_pct is not None %}<span class="subtle" style="font-size:.82rem;">{{ qtrend.early_pct }}% → {{ qtrend.recent_pct }}% flagged (earlier vs recent half)</span>{% endif %}
@@ -40,19 +40,19 @@
       <div style="display:flex;align-items:flex-end;gap:4px;height:120px;margin:.6rem 0 .2rem;">
         {% for s in qtrend.series %}
           <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;" title="Week {{ s.week }}: {{ s.n }} submissions{% if s.flag_pct is not None %}, {{ s.flag_pct }}% flagged{% endif %}">
-            <div style="width:72%;border-radius:3px 3px 0 0;min-height:2px;height:{% if s.flag_pct %}{% widthratio s.flag_pct qtrend.max_pct 100 %}{% else %}0{% endif %}%;background:{% if s.flag_pct >= 50 %}#c3531f{% elif s.flag_pct >= 20 %}#fdb415{% else %}#55b047{% endif %};{% if s.n == 0 %}opacity:.2;{% endif %}"></div>
+            <div style="width:72%;border-radius:3px 3px 0 0;min-height:2px;height:{% if s.flag_pct %}{% widthratio s.flag_pct qtrend.max_pct 100 %}{% else %}0{% endif %}%;background:{% if s.flag_pct >= 50 %}#b23b2e{% elif s.flag_pct >= 20 %}#fdb415{% else %}#55b047{% endif %};{% if s.n == 0 %}opacity:.2;{% endif %}"></div>
           </div>
         {% endfor %}
       </div>
     {% else %}<div class="empty" style="border:none;">No submissions in the trend window.</div>{% endif %}
   </div>
 
-  <div class="card" style="margin-top:1.1rem;{% if integrity_total %}border-left:3px solid #c3531f;{% endif %}">
+  <div class="card" style="margin-top:1.1rem;{% if integrity_total %}border-left:3px solid #b23b2e;{% endif %}">
     <h3 style="margin-bottom:.3rem;">Data integrity <span class="subtle" style="font-weight:400;font-size:.82rem;">· curbstoning & outlier signals</span></h3>
     <p class="subtle" style="margin:0 0 .7rem;font-size:.82rem;">Open flags from the integrity checks (shared GPS across households, implausible submission pace, statistical outliers). These appear in the Issues queue too.</p>
     <div style="display:flex;gap:1.6rem;flex-wrap:wrap;">
       {% for i in integrity %}
-        <div><div style="font-size:1.3rem;font-weight:500;{% if i.n %}color:#c3531f;{% endif %}">{{ i.n }}</div><div class="subtle" style="font-size:.74rem;">{{ i.label }}</div></div>
+        <div><div style="font-size:1.3rem;font-weight:500;{% if i.n %}color:#b23b2e;{% endif %}">{{ i.n }}</div><div class="subtle" style="font-size:.74rem;">{{ i.label }}</div></div>
       {% endfor %}
     </div>
     {% if not integrity_total %}<p class="subtle" style="margin:.6rem 0 0;font-size:.8rem;">No integrity flags open — enable the checks per project to run them.</p>{% endif %}
@@ -73,7 +73,7 @@
       {% for r in rejections_by_reason %}
         <div class="sevbar">
           <span class="nm" title="{{ r.rejection_reason__label }}">{{ r.rejection_reason__label }}</span>
-          <div class="track"><i style="width:{% widthratio r.n rej_max 100 %}%;background:#c3531f;"></i></div>
+          <div class="track"><i style="width:{% widthratio r.n rej_max 100 %}%;background:#b23b2e;"></i></div>
           <span class="v">{{ r.n }}</span>
         </div>
       {% empty %}<div class="subtle" style="font-size:.82rem;">No categorised rejections yet.</div>{% endfor %}

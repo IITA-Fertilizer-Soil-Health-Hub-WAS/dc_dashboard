@@ -11,7 +11,7 @@
     {% if is_corrected %}<span class="pill gold" title="A reviewer edited fields during QC">Corrected</span>{% endif %}
     {% if review.rejection_reason %}<span class="pill danger">Reason: {{ review.rejection_reason.label }}</span>{% endif %}
     {% if submission.writeback_status != 'NONE' %}
-      <span class="pill" style="{% if submission.writeback_status == 'SENT' %}background:#e7f0ea;color:#0a4630;{% elif submission.writeback_status == 'FAILED' %}background:#fdecea;color:#a33617;{% endif %}">
+      <span class="pill" style="{% if submission.writeback_status == 'SENT' %}background:#e7f0ea;color:#0e2e16;{% elif submission.writeback_status == 'FAILED' %}background:#fdecea;color:#a33617;{% endif %}">
         write-back: {{ submission.get_writeback_status_display }}</span>
     {% endif %}
   </div>
@@ -21,7 +21,7 @@
     · {{ submission.event_date|default:"—" }}
   </p>
 
-  {% if ok %}<div class="pill" style="margin-bottom:.8rem;background:#e7f0ea;color:#0a4630;">{{ ok }}</div>{% endif %}
+  {% if ok %}<div class="pill" style="margin-bottom:.8rem;background:#e7f0ea;color:#0e2e16;">{{ ok }}</div>{% endif %}
   {% if error %}<div class="err">{{ error }}</div>{% endif %}
 
   <div class="grid-split">
@@ -81,7 +81,7 @@
             <h3 style="margin:0;">Location</h3>
             {% if distance_m is not None %}
               {% if distance_m > 100 %}
-                <span class="pill" style="background:#fdecea;color:#c3531f;" title="Collected far from the assigned plot">{{ distance_m|floatformat:0 }} m from plot</span>
+                <span class="pill" style="background:#fdecea;color:#b23b2e;" title="Collected far from the assigned plot">{{ distance_m|floatformat:0 }} m from plot</span>
               {% else %}
                 <span class="pill" style="background:#eaf6ea;color:#2f7d32;" title="Collected near the assigned plot">{{ distance_m|floatformat:0 }} m from plot</span>
               {% endif %}

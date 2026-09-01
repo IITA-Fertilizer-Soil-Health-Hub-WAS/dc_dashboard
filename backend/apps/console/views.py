@@ -1227,12 +1227,13 @@ class JobAssignmentsView(UserPassesTestMixin, View):
         return render(request, "console/job_assignments.html", self._ctx(self._job(request, pk)))
 
     def post(self, request, pk):
-        from apps.accounts.models import User
         from apps.fieldwork.models import CollectionUnit, UnitAssignment
+        from apps.fieldwork.services import project_enumerators
 
         job = self._job(request, pk)
         action = request.POST.get("action")
-        enum = User.objects.filter(pk=request.POST.get("enumerator")).first()
+        # Only a project's own enumerators can be assigned (not any platform user).
+        enum = project_enumerators(job.project).filter(pk=request.POST.get("enumerator")).first()
 
         if action == "close_job":
             job.close(request.user, note=(request.POST.get("closure_note") or "").strip())
@@ -1330,8 +1331,10 @@ class JobEditorView(UserPassesTestMixin, View):
                                  "error": "Pick a project."} | _console_page_ctx("jobs")
             return render(request, "console/job_editor.html", ctx)
 
+        from apps.fieldwork.services import project_enumerators
         form = project.forms.filter(pk=request.POST.get("form")).first()
-        enum = User.objects.filter(pk=request.POST.get("enumerator")).first()
+        # Only the project's own enumerators are assignable (not any platform user).
+        enum = project_enumerators(project).filter(pk=request.POST.get("enumerator")).first()
         units = CollectionUnit.objects.filter(
             project=project, pk__in=request.POST.getlist("units"))
 

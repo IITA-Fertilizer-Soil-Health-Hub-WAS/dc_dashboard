@@ -34,7 +34,7 @@
     {% for a in areas %}
       <div class="arow">
         <span class="nm" title="{{ a.area }}">{{ a.area }}</span>
-        <div class="track"><i style="width:{{ a.pct }}%;background:{% if a.pct >= 80 %}#55b047{% elif a.pct >= 50 %}#fdb415{% else %}#c3531f{% endif %};"></i></div>
+        <div class="track"><i style="width:{{ a.pct }}%;background:{% if a.pct >= 80 %}#55b047{% elif a.pct >= 50 %}#fdb415{% else %}#b23b2e{% endif %};"></i></div>
         <span class="v">{{ a.collected }}/{{ a.total }} · {{ a.pct }}%</span>
       </div>
     {% empty %}<div class="empty" style="border:none;">No units to break down yet.</div>{% endfor %}

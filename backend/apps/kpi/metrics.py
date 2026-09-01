@@ -152,7 +152,7 @@ def project_metrics(project, days: str = "30") -> dict:
 
 # Severity → bar/heatmap colour (matches the R app's status palette).
 SEVERITY_COLORS = {
-    ValidationRule.Severity.ERROR: "#c3531f",
+    ValidationRule.Severity.ERROR: "#b23b2e",
     ValidationRule.Severity.WARNING: "#fdb415",
     ValidationRule.Severity.INFO: "#55b047",
 }

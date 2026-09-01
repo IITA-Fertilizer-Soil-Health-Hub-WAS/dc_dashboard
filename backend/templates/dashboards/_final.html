@@ -25,7 +25,7 @@
           <td>{{ s.event_date|default:"—" }}</td>
           <td>{% if row.edited %}<span class="pill">{{ row.edited }} edited</span>{% else %}<span class="subtle">—</span>{% endif %}</td>
           <td>
-            {% if s.writeback_status == 'SENT' %}<span class="pill" style="background:#e7f0ea;color:#0a4630;">synced</span>
+            {% if s.writeback_status == 'SENT' %}<span class="pill" style="background:#e7f0ea;color:#0e2e16;">synced</span>
             {% elif s.writeback_status == 'FAILED' %}<span class="pill" style="background:#fdecea;color:#a33617;">failed</span>
             {% elif s.writeback_status == 'PENDING' %}<span class="pill">pending</span>
             {% else %}<span class="subtle">—</span>{% endif %}

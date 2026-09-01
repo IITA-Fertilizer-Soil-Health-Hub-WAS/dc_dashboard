@@ -27,7 +27,7 @@
 
   {% if plan %}
     <h3 style="margin:1.2rem 0 .5rem;font-size:1.05rem;">Visit plan
-      <span class="subtle" style="font-weight:400;font-size:.85rem;">· {{ plan_summary.done }}/{{ plan_summary.total }} done{% if plan_summary.overdue %} · <span style="color:#c3531f;font-weight:600;">{{ plan_summary.overdue }} overdue</span>{% endif %}</span></h3>
+      <span class="subtle" style="font-weight:400;font-size:.85rem;">· {{ plan_summary.done }}/{{ plan_summary.total }} done{% if plan_summary.overdue %} · <span style="color:#b23b2e;font-weight:600;">{{ plan_summary.overdue }} overdue</span>{% endif %}</span></h3>
     <div class="card" style="padding:.8rem .95rem;">
       <div style="display:flex;flex-wrap:wrap;gap:.55rem;">
         {% for v in plan %}

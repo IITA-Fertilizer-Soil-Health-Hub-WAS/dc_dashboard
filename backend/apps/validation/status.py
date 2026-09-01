@@ -5,7 +5,7 @@ events) and the dashboard event-completion grid (to colour cells).
 Colours match the R app exactly:
   complete  #55b047 (green)   submitted
   due       #fdb415 (amber)   not yet submitted, still within window
-  overdue   #c3531f (red)     not submitted, past target date
+  overdue   #b23b2e (red)     not submitted, past target date
   future    #BE93D4 (purple)  anchor not reached yet (e.g. before site selection)
 """
 from __future__ import annotations
@@ -15,7 +15,7 @@ from datetime import date, timedelta
 COLORS = {
     "complete": "#55b047",
     "due": "#fdb415",
-    "overdue": "#c3531f",
+    "overdue": "#b23b2e",
     "future": "#BE93D4",
     "na": "#ffffff",
 }
