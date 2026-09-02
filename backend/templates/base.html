@@ -468,7 +468,7 @@
 
           {% comment %}Phase 1 · Set up — one page gathering all project configuration (forms, schedule, crops, plot election, quality rules). Coordinators / admins only.{% endcomment %}
           {% if can_manage_access %}
-            <details class="nav-group" data-phase="setup" open>
+            <details class="nav-group" data-phase="setup">
               <summary class="lbl step" data-tour="setup">Set up<span class="msym chev">chevron_right</span></summary>
               <div class="nav-sub">
                 <a href="{% url 'console:setup' %}?project={{ active_uc.code }}"
@@ -480,7 +480,7 @@
           {% endif %}
 
           {% comment %}Phase 2 · Collect — who collects, where, and who's assigned. Merges the old Field register + Assign & access; the collect/access items are guarded individually so members still see Enumerators + Collection units.{% endcomment %}
-          <details class="nav-group" data-phase="collect" open>
+          <details class="nav-group" data-phase="collect">
             <summary class="lbl step" data-tour="field">Collect<span class="msym chev">chevron_right</span></summary>
             <div class="nav-sub">
               <a href="{% url 'dashboards:project' active_uc.code %}?tab=enumerators"
@@ -506,7 +506,7 @@
           </details>
 
           {% comment %}Phase 3 · Review & approve — check incoming data, fix problems, and sign off the clean dataset. Merges the old Review & correct + Finalize.{% endcomment %}
-          <details class="nav-group" data-phase="review" open>
+          <details class="nav-group" data-phase="review">
             <summary class="lbl step" data-tour="review">Review &amp; approve<span class="msym chev">chevron_right</span></summary>
             <div class="nav-sub">
               <a href="{% url 'dashboards:project' active_uc.code %}?tab=data"
@@ -544,7 +544,7 @@
           used to carry their own in-page tab bar (Summary/Quality/Team quality/
           Coverage); those are now first-class rail entries, so there is one
           navigation surface everywhere.{% endcomment %}
-          <details class="nav-group" data-phase="monitor" open>
+          <details class="nav-group" data-phase="monitor">
             <summary class="lbl step" data-tour="monitor">Monitor<span class="msym chev">chevron_right</span></summary>
             <div class="nav-sub">
               <a href="{% url 'kpi:project' active_uc.code %}"
@@ -662,21 +662,21 @@
           {% endif %}
         {% endif %}
       </nav>
-      {% comment %}Remember which life-cycle phases a user collapses, per browser;
-      never hide the phase that holds the current page. Runs inline so a collapsed
-      phase doesn't flash open on each navigation.{% endcomment %}
+      {% comment %}Phases are collapsed by default; we only re-open the ones a user
+      explicitly expanded (remembered per browser) plus the phase holding the current
+      page. Runs inline so a saved-open phase doesn't flash closed on navigation.{% endcomment %}
       <script>
         (function () {
           try {
             document.querySelectorAll('details.nav-group[data-phase]').forEach(function (d) {
               var key = 'navphase:' + d.dataset.phase;
-              if (localStorage.getItem(key) === 'closed') d.open = false;
-              if (d.querySelector('a.active')) d.open = true;  // keep the current page visible
+              if (localStorage.getItem(key) === 'open') d.open = true;  // restore user's choice
+              if (d.querySelector('a.active')) d.open = true;           // keep the current page visible
               d.addEventListener('toggle', function () {
                 localStorage.setItem(key, d.open ? 'open' : 'closed');
               });
             });
-          } catch (e) { /* private mode / no storage — leave phases expanded */ }
+          } catch (e) { /* private mode / no storage — leave phases collapsed */ }
         })();
       </script>
       <div class="userbox">
