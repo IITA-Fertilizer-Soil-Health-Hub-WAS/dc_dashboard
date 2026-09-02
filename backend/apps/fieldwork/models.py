@@ -137,7 +137,12 @@ class CandidatePlot(BaseModel):
     project = models.ForeignKey(
         Project, on_delete=models.CASCADE, related_name="candidate_plots"
     )
-    # The trial / area this candidate belongs to — the key the GIS export must carry.
+    # The trial *site* / area this candidate belongs to — a spatial identifier the
+    # GIS export carries (e.g. "RSHHRW_A17"). NOTE: this is NOT projects.Trial (the
+    # experiment-TYPE dimension on submissions, e.g. "Fertilizer Recommendation").
+    # They share the word "trial" but are different concepts: one elected plot per
+    # trial_key. It is also a live contract — the GIS import, the anchor XLSForm
+    # field, and the election URL all key on this exact string, so don't rename it.
     trial_key = models.CharField(max_length=64)
     candidate_ref = models.CharField(max_length=32)  # e.g. "A" / "B" / "C" / plot code
     role = models.CharField(max_length=8, choices=Role.choices, default=Role.PRIMARY)

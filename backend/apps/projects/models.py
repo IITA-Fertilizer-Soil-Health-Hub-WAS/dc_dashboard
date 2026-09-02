@@ -254,7 +254,11 @@ class Crop(BaseModel):
 
 
 class Trial(BaseModel):
-    """Fertilizer Recommendation, Variety Selection, Planting Date, Intercropping, NOT."""
+    """The experiment TYPE a submission belongs to — Fertilizer Recommendation,
+    Variety Selection, Planting Date, Intercropping, NOT — auto-created from data at
+    ingest and referenced by Submission.trial. NOTE: distinct from the plot-selection
+    ``CandidatePlot.trial_key`` (a GIS site/area identifier); they share the word
+    "trial" but are unrelated concepts — do not fold one into the other."""
 
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="trials")
     name = models.CharField(max_length=128)
