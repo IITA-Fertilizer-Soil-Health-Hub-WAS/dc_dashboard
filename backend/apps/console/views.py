@@ -325,10 +325,24 @@ class ConsoleFormView(UserPassesTestMixin, View):
             return m.form_class
         return modelform_factory(m.model, fields=m.form_fields or "__all__")
 
+    def _guard_create(self, request, m, pk):
+        """Non-creatable sections have no bare 'new row' path. Send a form-create
+        attempt to the builder (the real authoring flow); block others."""
+        if pk is None and not m.creatable:
+            if m.key == "forms":
+                messages.info(request, "Author a form in the builder — from scratch, "
+                              "a protocol, or an XLSForm upload.")
+                return redirect("console:form_builder")
+            raise Http404("This section has no create page.")
+        return None
+
     def get(self, request, key, pk=None):
         m = _managed(key)
         if m.readonly:
             raise PermissionDenied("This section is read-only.")
+        blocked = self._guard_create(request, m, pk)
+        if blocked is not None:
+            return blocked
         instance = _scoped_get(request.user, m, key, pk) if pk else None
         form = self._form_class(m)(instance=instance)
         _restrict_form_to_scope(form, request.user)
@@ -340,6 +354,9 @@ class ConsoleFormView(UserPassesTestMixin, View):
         m = _managed(key)
         if m.readonly:
             raise PermissionDenied("This section is read-only.")
+        blocked = self._guard_create(request, m, pk)
+        if blocked is not None:
+            return blocked
         instance = _scoped_get(request.user, m, key, pk) if pk else None
         form = self._form_class(m)(request.POST, instance=instance)
         _restrict_form_to_scope(form, request.user)

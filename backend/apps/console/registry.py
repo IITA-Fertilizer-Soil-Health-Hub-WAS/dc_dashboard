@@ -43,6 +43,11 @@ class Managed:
     search_fields: list[str] = field(default_factory=list)
     ordering: list[str] | None = None
     readonly: bool = False
+    # When False, the generic "+ New" create is hidden and the create route is
+    # closed — the section is still listable/editable, but new rows are made
+    # through a purpose-built flow (e.g. forms are authored in the builder, not
+    # registered as a bare metadata row).
+    creatable: bool = True
     icon: str = "table_rows"
     description: str = ""  # shown as a tooltip in the sidebar
     actions: tuple[Action, ...] = ()
@@ -91,6 +96,9 @@ _ENTRIES: list[Managed] = [
             form_fields=["project", "title", "ona_form_id", "server_form_id", "role", "crop",
                          "season", "system_vars_drop"],
             search_fields=["server_form_id", "title"], icon="description",
+            # A form is authored in the builder / from a protocol / by XLSForm upload —
+            # never as a bare metadata row. Editing an existing form's settings stays open.
+            creatable=False,
             description="Forms feeding each project (onboarded or published)."),
     # Field mappings are edited inline per form (Forms → Mappings), so the flat
     # console section is routable but not a separate Configuration nav item.

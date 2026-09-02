@@ -75,8 +75,11 @@ def test_coordinator_field_data_scoped(client, world):
 def test_coordinator_has_edit_buttons(client, world):
     client.force_login(world["coord"])
     resp = client.get(reverse("console:list", args=["forms"]))
-    assert b"+ New" in resp.content
-    assert reverse("console:create", args=["forms"]).encode() in resp.content
+    # Forms are authored in the builder, not registered as a bare metadata row:
+    # the list offers "+ New form" pointing at the builder, not the generic create.
+    assert b"+ New form" in resp.content
+    assert reverse("console:form_builder").encode() in resp.content
+    assert reverse("console:create", args=["forms"]).encode() not in resp.content
 
 
 def test_coordinator_cannot_open_staff_only_section(client, world):
@@ -85,9 +88,19 @@ def test_coordinator_cannot_open_staff_only_section(client, world):
     assert client.get(reverse("console:list", args=["users"])).status_code == 403
 
 
-def test_coordinator_create_form_only_offers_own_project(client, world):
+def test_forms_generic_create_redirects_to_builder(client, world):
+    """The generic 'new forms row' page is closed — it sends the coordinator to
+    the builder (the real authoring flow) rather than registering a bare row."""
     client.force_login(world["coord"])
     resp = client.get(reverse("console:create", args=["forms"]))
+    assert resp.status_code == 302
+    assert resp.url == reverse("console:form_builder")
+
+
+def test_coordinator_create_only_offers_own_project(client, world):
+    client.force_login(world["coord"])
+    # collection-units is a still-creatable, project-scoped section.
+    resp = client.get(reverse("console:create", args=["collection-units"]))
     assert resp.status_code == 200
     # The project choices are scoped to their project, not OTHER.
     assert b"MINE" in resp.content
