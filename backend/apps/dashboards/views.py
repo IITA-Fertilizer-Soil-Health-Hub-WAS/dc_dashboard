@@ -110,8 +110,16 @@ def my_submissions(request):
 
 @login_required
 def overview(request):
-    """Cross-project overview: key metrics for every project I can see."""
+    """The single cross-project home: the analytical M&E summary (totals, trend,
+    top projects, quality — over a chosen period) on top of the operational
+    per-project table (review + sync status, with drill-in links). Merges what
+    were two near-duplicate pages (Operations + M&E) into one."""
+    from apps.kpi.metrics import PERIODS, overview_metrics
     from apps.validation.models import ValidationFlag
+
+    days = request.GET.get("days", "30")
+    if days not in PERIODS:
+        days = "30"
 
     closed = REVIEW_CLOSED_STATES
     rows = []
@@ -134,7 +142,11 @@ def overview(request):
         rows.append(row)
         for k in totals:
             totals[k] += row[k]
-    return render(request, "dashboards/overview.html", {"rows": rows, "totals": totals})
+
+    ctx = overview_metrics(request.user, days) | {
+        "rows": rows, "totals": totals, "periods": PERIODS,
+    }
+    return render(request, "dashboards/overview.html", ctx)
 
 
 

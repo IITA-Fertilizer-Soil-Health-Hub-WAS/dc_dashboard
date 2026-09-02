@@ -61,9 +61,10 @@ def test_project_metrics(world):
 
 def test_overview_view_renders(client, world):
     client.force_login(world["coord"])
-    resp = client.get(reverse("kpi:overview"))
+    # kpi:overview now redirects to the single merged Overview page.
+    resp = client.get(reverse("kpi:overview"), follow=True)
     assert resp.status_code == 200
-    assert b"M&amp;E dashboard" in resp.content
+    assert b"Overview" in resp.content
     assert b"PROJ-A" in resp.content
     assert b"PROJ-B" not in resp.content           # scoped
 
@@ -76,6 +77,6 @@ def test_project_view_member_ok_nonmember_404(client, world):
 
 def test_period_filter(client, world):
     client.force_login(world["admin"])
-    resp = client.get(reverse("kpi:overview") + "?days=7")
+    resp = client.get(reverse("kpi:overview") + "?days=7", follow=True)
     assert resp.status_code == 200
     assert b"Last 7 days" in resp.content

@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 from django.urls import path
+from django.views.generic import RedirectView
 
 from . import views
 
 app_name = "kpi"
 
 urlpatterns = [
-    path("", views.kpi_overview, name="overview"),
+    # The cross-project M&E landing merged into the single Overview page; kept as
+    # a redirect so existing links/breadcrumbs to kpi:overview still resolve.
+    path("", RedirectView.as_view(pattern_name="dashboards:overview",
+                                  query_string=True), name="overview"),
     path("alerts/", views.kpi_alerts, name="alerts"),
     # Dashboards must precede the generic "<slug:code>/" project pattern.
     path("dashboards/", views.dashboards, name="dashboards"),

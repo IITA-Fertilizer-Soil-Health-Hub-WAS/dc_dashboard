@@ -12,7 +12,6 @@ from .metrics import (
     coverage_metrics,
     enumerator_metrics,
     enumerator_trend,
-    overview_metrics,
     project_metrics,
     project_quality_trend,
     quality_metrics,
@@ -31,12 +30,6 @@ def _scoped(request, code):
     uc = get_scoped_project(request, code)  # 404 if not visible to the user
     request.session["active_project"] = uc.code
     return uc
-
-
-@login_required
-def kpi_overview(request):
-    ctx = overview_metrics(request.user, _days(request)) | {"periods": PERIODS}
-    return render(request, "kpi/overview.html", ctx)
 
 
 @login_required

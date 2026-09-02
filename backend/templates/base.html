@@ -573,10 +573,10 @@
             first, then the platform's own Structure -> People -> Monitor, and the
             build/integrate tools last. Section labels match the workspace's task
             language.{% endcomment %}
-            <div class="lbl">Operations</div>
-            <a href="{% url 'dashboards:overview' %}" title="Cross-project review &amp; sync status"
-               class="{% if request.resolver_match.url_name == 'overview' %}active{% endif %}">
-              <span class="msym">dashboard</span>Operations
+            <div class="lbl">Overview</div>
+            <a href="{% url 'dashboards:overview' %}" title="Cross-project M&amp;E, review &amp; sync status — one page"
+               class="{% if request.resolver_match.url_name == 'overview' or request.resolver_match.app_name == 'kpi' %}active{% endif %}">
+              <span class="msym">dashboard</span>Overview
             </a>
 
             <div class="lbl">Structure</div>
@@ -597,12 +597,8 @@
               {% endfor %}
             {% endif %}{% endfor %}
 
-            <div class="lbl">Monitor</div>
-            <a href="{% url 'kpi:overview' %}" title="Cross-project M&amp;E"
-               class="{% if request.resolver_match.app_name == 'kpi' %}active{% endif %}">
-              <span class="msym">insights</span>M&amp;E
-            </a>
             {% if show_care %}
+            <div class="lbl">Monitor</div>
             <a href="{% url 'care:programs' %}" title="Health service delivery — clients &amp; longitudinal records"
                class="{% if request.resolver_match.app_name == 'care' %}active{% endif %}">
               <span class="msym">vaccines</span>Care

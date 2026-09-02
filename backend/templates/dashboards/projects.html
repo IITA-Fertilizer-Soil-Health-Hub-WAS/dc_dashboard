@@ -44,7 +44,7 @@
         </a>
       {% endif %}
       {% if home.open_issues %}
-        <a class="card infobox" href="{% url 'kpi:overview' %}" style="text-decoration:none;flex:1;min-width:210px;">
+        <a class="card infobox" href="{% url 'dashboards:overview' %}" style="text-decoration:none;flex:1;min-width:210px;">
           <div class="n">{{ home.open_issues }}</div><div class="l">Open quality issues</div>
         </a>
       {% endif %}
