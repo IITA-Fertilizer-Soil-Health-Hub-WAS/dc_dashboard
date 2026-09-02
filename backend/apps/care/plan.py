@@ -72,27 +72,47 @@ def plan_summary(plan):
     return {"total": len(plan), "done": done, "overdue": overdue, "due": due}
 
 
+def _subs_by_unit(qs):
+    """{unit_id: [submissions]} from one query, keeping only the fields a visit
+    plan needs (encounter date + crop for the per-crop offset)."""
+    subs = list(qs.select_related("crop").only(
+        "collection_unit_id", "event_key", "event_date", "crop"))
+    by_unit: dict = {}
+    for s in subs:
+        by_unit.setdefault(s.collection_unit_id, []).append(s)
+    return by_unit
+
+
+def _plan_rows(project, units, today=None):
+    """Build ``(unit, plan, summary, last_visit)`` for each unit in one pass —
+    the project's encounters and schedule are loaded once, not per client. Order
+    follows ``units``. Returns ``(rows, schedule_len)``. The single scaffold behind
+    every programme-level rollup below."""
+    today = today or timezone.localdate()
+    schedule = list(project.schedule.all())
+    from apps.submissions.models import Submission
+
+    by_unit = _subs_by_unit(Submission.objects.filter(project=project))
+    rows = []
+    for u in units:
+        encs = by_unit.get(u.id, [])
+        plan = client_visit_plan(u, schedule, encs, today)
+        last = max((e.event_date for e in encs if e.event_date), default=None)
+        rows.append((u, plan, plan_summary(plan), last))
+    return rows, len(schedule)
+
+
 def program_coverage(program, today=None):
     """Programme-level rollup across every enrolled client: overall visit
     coverage and the defaulters (clients with an overdue visit)."""
     from apps.fieldwork.models import CollectionUnit
-    from apps.submissions.models import Submission
 
-    today = today or timezone.localdate()
-    schedule = list(program.project.schedule.all())
     units = list(CollectionUnit.objects.filter(project=program.project))
-    subs = list(Submission.objects.filter(project=program.project)
-                .select_related("crop").only("collection_unit_id", "event_key",
-                                              "event_date", "crop"))
-    by_unit: dict = {}
-    for s in subs:
-        by_unit.setdefault(s.collection_unit_id, []).append(s)
+    rows, schedule_len = _plan_rows(program.project, units, today)
 
     total_expected = total_done = 0
     defaulters = []
-    for u in units:
-        plan = client_visit_plan(u, schedule, by_unit.get(u.id, []), today)
-        s = plan_summary(plan)
+    for u, _plan, s, _last in rows:
         total_expected += s["total"]
         total_done += s["done"]
         if s["overdue"]:
@@ -103,34 +123,25 @@ def program_coverage(program, today=None):
     return {
         "clients": len(units), "total_expected": total_expected, "total_done": total_done,
         "coverage": coverage, "defaulters": defaulters,
-        "schedule_len": len(schedule),
+        "schedule_len": schedule_len,
     }
 
 
 def worker_breakdown(program, today=None):
     """Per-worker accountability: caseload size, visits done / expected, overdue,
     and coverage %, for the workers with active assignments in this programme."""
-    from apps.submissions.models import Submission
-
     from .models import CareAssignment
 
-    today = today or timezone.localdate()
-    schedule = list(program.project.schedule.all())
     assignments = list(
         CareAssignment.objects.filter(program=program, is_active=True)
         .select_related("worker", "unit")
     )
-    subs = list(Submission.objects.filter(project=program.project)
-                .select_related("crop").only("collection_unit_id", "event_key",
-                                              "event_date", "crop"))
-    by_unit: dict = {}
-    for s in subs:
-        by_unit.setdefault(s.collection_unit_id, []).append(s)
+    rows, _ = _plan_rows(program.project, [a.unit for a in assignments], today)
+    summ_by_unit = {u.id: s for (u, _p, s, _last) in rows}
 
     workers: dict = {}
     for a in assignments:
-        plan = client_visit_plan(a.unit, schedule, by_unit.get(a.unit_id, []), today)
-        s = plan_summary(plan)
+        s = summ_by_unit.get(a.unit_id) or {"total": 0, "done": 0, "overdue": 0}
         w = workers.setdefault(a.worker_id, {
             "worker": a.worker, "caseload": 0, "expected": 0, "done": 0, "overdue": 0,
         })
@@ -149,32 +160,46 @@ def program_status_rows(program, today=None):
     """Flat per-client status for the CSV export: code, name, worker, visits
     done/expected, overdue, last visit."""
     from apps.fieldwork.models import CollectionUnit
-    from apps.submissions.models import Submission
 
     from .models import CareAssignment
 
-    today = today or timezone.localdate()
-    schedule = list(program.project.schedule.all())
     worker_by_unit = {
         a.unit_id: a.worker for a in
         CareAssignment.objects.filter(program=program, is_active=True).select_related("worker")
     }
-    subs = list(Submission.objects.filter(project=program.project).select_related("crop"))
-    by_unit: dict = {}
-    for s in subs:
-        by_unit.setdefault(s.collection_unit_id, []).append(s)
+    units = list(CollectionUnit.objects.filter(project=program.project).order_by("code"))
+    rows, _ = _plan_rows(program.project, units, today)
 
     out = []
-    for u in CollectionUnit.objects.filter(project=program.project).order_by("code"):
-        encs = by_unit.get(u.id, [])
-        plan = client_visit_plan(u, schedule, encs, today)
-        s = plan_summary(plan)
+    for u, _plan, s, last in rows:
         w = worker_by_unit.get(u.id)
-        last = max((e.event_date for e in encs if e.event_date), default=None)
         out.append({
             "code": u.code, "name": u.name,
             "worker": (w.full_name or w.email) if w else "",
             "done": s["done"], "expected": s["total"], "overdue": s["overdue"],
             "last_visit": last.isoformat() if last else "",
         })
+    return out
+
+
+def caseload_plans(assignments, today=None):
+    """``(assignment, plan, summary)`` for a worker's caseload, which may span
+    several projects — loaded with ONE encounter query total and one schedule read
+    per project (was one query per client). Order follows ``assignments``."""
+    from apps.submissions.models import Submission
+
+    today = today or timezone.localdate()
+    assignments = list(assignments)
+    by_unit = _subs_by_unit(
+        Submission.objects.filter(collection_unit_id__in=[a.unit_id for a in assignments])
+    )
+    schedule_by_project: dict = {}
+    out = []
+    for a in assignments:
+        pid = a.program.project_id
+        if pid not in schedule_by_project:
+            schedule_by_project[pid] = list(a.program.project.schedule.all())
+        plan = client_visit_plan(a.unit, schedule_by_project[pid],
+                                 by_unit.get(a.unit_id, []), today)
+        out.append((a, plan, plan_summary(plan)))
     return out

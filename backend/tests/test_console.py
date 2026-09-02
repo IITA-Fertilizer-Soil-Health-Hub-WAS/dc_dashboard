@@ -137,3 +137,14 @@ def test_membership_stamps_granted_by(client, staff, uc, django_user_model):
     from apps.rbac.models import Membership
     m = Membership.objects.get(user=target, project=uc)
     assert m.granted_by == staff  # auto-stamped
+
+
+def test_every_managed_group_is_declared():
+    """Guard the nav taxonomy: each console entry's group must be a rendered nav
+    group (GROUPS/WORKSPACE_GROUPS) or an acknowledged off-nav category
+    (OFF_NAV_GROUPS). A group outside ALL_GROUPS would silently never render —
+    this catches that mistake at test time instead of in the UI."""
+    from apps.console.registry import ALL_GROUPS, _ENTRIES
+
+    unknown = sorted({m.group for m in _ENTRIES} - ALL_GROUPS)
+    assert not unknown, f"Managed entries use undeclared group(s): {unknown}"

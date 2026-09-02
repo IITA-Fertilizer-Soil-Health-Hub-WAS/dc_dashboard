@@ -83,17 +83,15 @@ def assign(request, code):
 
 @login_required
 def my_caseload(request):
-    from .plan import client_visit_plan, plan_summary
+    from .plan import caseload_plans
     from .services import worker_caseload
 
     rows = []
-    for a in worker_caseload(request.user):
-        encounters = list(Submission.objects.filter(collection_unit=a.unit).select_related("crop"))
-        plan = client_visit_plan(a.unit, list(a.program.project.schedule.all()), encounters)
-        summary = plan_summary(plan)
-        next_due = next((v for v in plan if v["is_open"]), None)
-        rows.append({"a": a, "summary": summary, "next_due": next_due,
-                     "open": [v for v in plan if v["is_open"]]})
+    for a, plan, summary in caseload_plans(worker_caseload(request.user)):
+        open_visits = [v for v in plan if v["is_open"]]
+        rows.append({"a": a, "summary": summary,
+                     "next_due": open_visits[0] if open_visits else None,
+                     "open": open_visits})
     # Overdue caseload first.
     rows.sort(key=lambda r: (-r["summary"]["overdue"], -r["summary"]["due"], r["a"].unit.code))
     return render(request, "care/my_caseload.html", {"rows": rows})
@@ -107,7 +105,7 @@ def my_caseload_csv(request):
 
     from django.http import HttpResponse
 
-    from .plan import client_visit_plan
+    from .plan import caseload_plans
     from .services import worker_caseload
 
     response = HttpResponse(content_type="text/csv")
@@ -115,10 +113,8 @@ def my_caseload_csv(request):
     writer = csv.writer(response)
     writer.writerow(["Client ID", "Name", "Location", "Programme", "Open visit",
                      "Status", "Due date"])
-    for a in worker_caseload(request.user):
+    for a, plan, _summary in caseload_plans(worker_caseload(request.user)):
         unit = a.unit
-        encounters = list(Submission.objects.filter(collection_unit=unit).select_related("crop"))
-        plan = client_visit_plan(unit, list(a.program.project.schedule.all()), encounters)
         open_visits = [v for v in plan if v["is_open"]]
         loc = unit.district or unit.region or ""
         prog = a.program.name or a.program.project.code

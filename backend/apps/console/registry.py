@@ -345,6 +345,18 @@ GROUPS: list[str] = ["Institution tenancy", "Accounts & roles"]
 # ?project=), never in the global admin list.
 WORKSPACE_GROUPS: list[str] = ["Configuration"]
 
+# Category labels for entries that ARE routable/editable but are reached through a
+# bespoke screen or a direct workspace link, not repeated as a console nav group
+# (e.g. Jobs live under "Jobs & assignments", collection-units are a top-level
+# workspace link). Naming them here — instead of leaving free-form strings on each
+# entry — documents that this is intentional and lets the guard below catch an
+# entry mis-tagged with a group that would otherwise silently never render.
+OFF_NAV_GROUPS: list[str] = ["Setup", "Operations", "Monitoring"]
+
+# Every group a Managed entry may declare. A value outside this set is a bug: it
+# is neither rendered as nav nor an acknowledged off-nav category.
+ALL_GROUPS: frozenset[str] = frozenset(GROUPS + WORKSPACE_GROUPS + OFF_NAV_GROUPS)
+
 
 def _grouped(group_names) -> list[tuple[str, list[Managed]]]:
     return [(g, [m for m in _ENTRIES if m.group == g]) for g in group_names]

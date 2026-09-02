@@ -129,3 +129,26 @@ def test_caseload_csv_only_my_clients(client, world):
     client.force_login(world["w2"])  # w2 has no clients
     body = client.get(reverse("care:my_caseload_csv")).content.decode()
     assert "FRM001" not in body
+
+
+def test_caseload_queries_do_not_scale_with_clients(world, django_assert_max_num_queries):
+    """The caseload builds every client's visit plan from one batched encounter
+    query + one schedule load — not one query per client (the old N+1)."""
+    from apps.care.plan import caseload_plans
+    from apps.care.services import worker_caseload
+
+    prog, proj, coord, w1 = world["prog"], world["proj"], world["coord"], world["w1"]
+    anchor = date.today() - timedelta(days=60)
+    form = FormDefinition.objects.filter(project=proj).first()
+    assign_client(prog, world["unit"], w1, by=coord)
+    for i in range(2, 8):  # +6 clients on the same worker
+        u = CollectionUnit.objects.create(project=proj, code=f"FRM{i:03d}",
+                                           site_selection_date=anchor)
+        Submission.objects.create(project=proj, form=form, collection_unit=u,
+                                  event_key="Event1", event_date=anchor + timedelta(days=14),
+                                  ona_uuid=f"e{i}", content_hash="h")
+        assign_client(prog, u, w1, by=coord)
+    # 7 clients, one project: a small constant number of queries, not ~7.
+    with django_assert_max_num_queries(6):
+        rows = caseload_plans(worker_caseload(w1))
+    assert len(rows) == 7
