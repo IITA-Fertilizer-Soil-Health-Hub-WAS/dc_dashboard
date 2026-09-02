@@ -6,17 +6,27 @@
     <h2>My assignments</h2>
     {% if count %}<span class="pill">{{ count }}</span>{% endif %}
   </div>
-  <p class="lede">The plots / farmers you're assigned to collect on. Collect in ODK Collect / Enketo — including offline — then submissions sync automatically.</p>
+  <p class="lede">The plots / farmers you're assigned to collect on. Collect in ODK Collect — including offline — then your submissions sync here automatically.</p>
+
+  {% if pending_total %}
+    <div class="banner" style="margin-bottom:1rem;{% if overdue_total %}background:#fbe7df;border:1px solid var(--red);color:var(--red);{% else %}background:var(--clay-soft);border:1px solid var(--gold);color:var(--clay-ink);{% endif %}border-radius:10px;padding:.6rem .9rem;font-size:.9rem;">
+      <strong>{{ pending_total }}</strong> plot{{ pending_total|pluralize }} still to collect{% if overdue_total %} · <strong>{{ overdue_total }}</strong> overdue{% endif %}.
+    </div>
+  {% endif %}
 
   {% include "_getting_started.html" %}
 
   {% for g in job_groups %}
     <div class="section">
       <div class="st">
-        <h3><span class="msym">assignment</span>{{ g.job.name }} <span class="pill neutral">{{ g.job.project.code }}</span></h3>
+        <h3><span class="msym">assignment</span>{{ g.job.name }} <span class="pill neutral">{{ g.job.project.code }}</span>
+          {% if g.status == 'overdue' %}<span class="pill" style="background:#fbe7df;color:var(--red);">overdue</span>
+          {% elif g.status == 'soon' %}<span class="pill gold">due soon</span>{% endif %}
+        </h3>
         <div class="desc">
           {% if g.job.form %}Form: {{ g.job.form.title|default:g.job.form.server_ref }} · {% endif %}
           {% if g.job.deadline %}Due {{ g.job.deadline }}{% else %}No deadline{% endif %}
+          {% if g.pending %} · <strong>{{ g.pending }}</strong> of {{ g.total }} left{% else %} · all collected{% endif %}
         </div>
       </div>
     </div>
@@ -31,8 +41,8 @@
               <td>{{ a.unit.name|default:"—" }}</td>
               <td class="subtle">{{ a.unit.district|default:a.unit.region|default:a.unit.country|default:"—" }}</td>
               <td>
-                {% if a.unit.submissions.exists %}<span class="pill ok">collected</span>
-                {% else %}<span class="pill warn">pending</span>{% endif %}
+                {% if a.collected %}<span class="pill ok">collected</span>
+                {% else %}<span class="pill warn">to collect</span>{% endif %}
               </td>
             </tr>
           {% endfor %}
@@ -41,6 +51,6 @@
       </div>
     </div>
   {% empty %}
-    <div class="empty">No assignments yet.<br><span class="subtle">A coordinator will assign you units to collect on.</span></div>
+    <div class="empty">No assignments yet.<br><span class="subtle">A coordinator will assign you plots to collect on. In the meantime, <a href="{% url 'dashboards:projects' %}">browse your projects</a>.</span></div>
   {% endfor %}
 {% endblock %}

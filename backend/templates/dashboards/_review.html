@@ -28,7 +28,7 @@
     {% if can_validate %}
       <div class="card infobox"><div class="n">{{ to_validate|length }}</div><div class="l">Awaiting validation</div></div>
     {% endif %}
-    <div class="card infobox"><div class="n">{{ approved_count }}</div><div class="l">Approved</div></div>
+    <a class="card infobox" href="{% url 'dashboards:project' uc.code %}?tab=final" style="text-decoration:none;" title="See the approved dataset"><div class="n">{{ approved_count }}</div><div class="l">Approved</div></a>
   </div>
 
   {% if can_validate and to_validate %}
@@ -41,7 +41,7 @@
     <div class="card" style="padding:0; overflow:hidden;">
       <div class="table-wrap">
       <table>
-        <thead><tr><th scope="col">Enumerator</th><th scope="col">{{ uc.unit_label }}</th><th scope="col">Event</th><th scope="col">Endorsed by</th><th scope="col"></th></tr></thead>
+        <thead><tr><th scope="col">Enumerator</th><th scope="col">{{ uc.unit_label }}</th><th scope="col">Event</th><th scope="col">Endorsed by</th><th scope="col">Issues</th><th scope="col"></th></tr></thead>
         <tbody>
           {% for s in to_validate %}
             <tr>
@@ -49,9 +49,10 @@
               <td>{{ s.collection_unit.code|default:"—" }}</td>
               <td>{{ s.event_key|default:"—" }}</td>
               <td class="subtle">{{ s.review.endorsed_by.email|default:"—" }}</td>
+              <td>{% include "dashboards/_flag_cell.html" %}</td>
               <td style="text-align:right; white-space:nowrap;">
                 <a class="btn btn-edit" style="text-decoration:none; margin-right:.3rem;" href="{% url 'dashboards:submission_review' uc.code s.id %}">Review</a>
-                {% include "dashboards/_review_btn.html" with sub=s action="QC_APPROVE" label="Approve" cls="btn-approve" %}
+                {% include "dashboards/_review_btn.html" with sub=s action="QC_APPROVE" label="Validate (Gate 2)" cls="btn-approve" %}
                 {% include "dashboards/_review_btn.html" with sub=s action="DECLINE" label="Decline" cls="btn-decline" confirm="Decline this submission?" %}
               </td>
             </tr>
@@ -72,7 +73,7 @@
     <div class="card" style="padding:0; overflow:hidden;">
       <div class="table-wrap">
       <table>
-        <thead><tr><th scope="col">Enumerator</th><th scope="col">{{ uc.unit_label }}</th><th scope="col">Event</th><th scope="col">State</th><th scope="col"></th></tr></thead>
+        <thead><tr><th scope="col">Enumerator</th><th scope="col">{{ uc.unit_label }}</th><th scope="col">Event</th><th scope="col">State</th><th scope="col">Issues</th><th scope="col"></th></tr></thead>
         <tbody>{% include "dashboards/_endorse_rows.html" with rows=needs_review %}</tbody>
       </table>
       </div>
@@ -89,7 +90,7 @@
     <div class="card" style="padding:0; overflow:hidden;">
       <div class="table-wrap">
       <table>
-        <thead><tr><th scope="col">Enumerator</th><th scope="col">{{ uc.unit_label }}</th><th scope="col">Event</th><th scope="col">State</th><th scope="col"></th></tr></thead>
+        <thead><tr><th scope="col">Enumerator</th><th scope="col">{{ uc.unit_label }}</th><th scope="col">Event</th><th scope="col">State</th><th scope="col">Issues</th><th scope="col"></th></tr></thead>
         <tbody>{% include "dashboards/_endorse_rows.html" with rows=in_progress %}</tbody>
       </table>
       </div>
@@ -106,7 +107,7 @@
     <div class="card" style="padding:0; overflow:hidden;">
       <div class="table-wrap">
       <table>
-        <thead><tr><th scope="col">Enumerator</th><th scope="col">{{ uc.unit_label }}</th><th scope="col">Event</th><th scope="col">State</th><th scope="col"></th></tr></thead>
+        <thead><tr><th scope="col">Enumerator</th><th scope="col">{{ uc.unit_label }}</th><th scope="col">Event</th><th scope="col">State</th><th scope="col">Issues</th><th scope="col"></th></tr></thead>
         <tbody>
           {% for s in waiting %}
             <tr class="subtle">
@@ -114,6 +115,7 @@
               <td>{{ s.collection_unit.code|default:"—" }}</td>
               <td>{{ s.event_key|default:"—" }}</td>
               <td><span class="pill neutral">{{ s.review.get_state_display }}</span></td>
+              <td>{% include "dashboards/_flag_cell.html" %}</td>
               <td style="text-align:right; white-space:nowrap;">
                 <a class="btn btn-edit" style="text-decoration:none;" href="{% url 'dashboards:submission_review' uc.code s.id %}">Review</a>
               </td>

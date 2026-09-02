@@ -6,6 +6,7 @@
   .gs-head strong{font-size:1rem;}
   .gs-count{font-size:.78rem;font-weight:700;color:var(--brand);background:var(--brand-50);border-radius:999px;padding:.1rem .5rem;}
   .gs-head .gs-dismiss{margin-left:auto;background:none;border:none;color:var(--muted);font-size:.8rem;cursor:pointer;}
+  .gs-collapsed .gs-body{display:none;}
   .gs-bar{height:6px;border-radius:4px;background:var(--surface-2);overflow:hidden;margin:0 0 .7rem;}
   .gs-bar span{display:block;height:100%;background:var(--gold);}
   .gs-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.35rem;}
@@ -20,21 +21,29 @@
   <div class="gs-head">
     <strong>{{ getting_started.title }}</strong>
     <span class="gs-count">{{ getting_started.done }}/{{ getting_started.total }}</span>
-    <button type="button" class="gs-dismiss" onclick="gsDismiss('{{ getting_started.id }}')">Dismiss</button>
+    <button type="button" class="gs-dismiss" data-gs-toggle onclick="gsToggle('{{ getting_started.id }}')">Hide</button>
   </div>
-  <div class="gs-bar"><span style="width:{% widthratio getting_started.done getting_started.total 100 %}%"></span></div>
-  <ul class="gs-list">
-    {% for it in getting_started.items %}
-      <li class="{% if it.done %}done{% endif %}">
-        <span class="msym">{% if it.done %}check_circle{% else %}radio_button_unchecked{% endif %}</span>
-        {% if it.done %}<span>{{ it.label }}</span>
-        {% else %}<a href="{{ it.url }}">{{ it.label }}</a> <span class="gs-hint">— {{ it.hint }}</span>{% endif %}
-      </li>
-    {% endfor %}
-  </ul>
+  <div class="gs-body">
+    <div class="gs-bar"><span style="width:{% widthratio getting_started.done getting_started.total 100 %}%"></span></div>
+    <ul class="gs-list">
+      {% for it in getting_started.items %}
+        <li class="{% if it.done %}done{% endif %}">
+          <span class="msym">{% if it.done %}check_circle{% else %}radio_button_unchecked{% endif %}</span>
+          {% if it.done %}<span>{{ it.label }}</span>
+          {% else %}<a href="{{ it.url }}">{{ it.label }}</a> <span class="gs-hint">— {{ it.hint }}</span>{% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
 </div>
 <script>
-  function gsDismiss(id){var e=document.getElementById('gs-'+id);if(e)e.remove();try{localStorage.setItem('gs_dismissed_'+id,'1');}catch(_){}}
-  (function(){try{if(localStorage.getItem('gs_dismissed_{{ getting_started.id }}')){var e=document.getElementById('gs-{{ getting_started.id }}');if(e)e.remove();}}catch(_){}})();
+  // Collapse (not destroy): the checklist can always be reopened via "Show".
+  function gsToggle(id){var c=document.getElementById('gs-'+id);if(!c)return;
+    var collapsed=c.classList.toggle('gs-collapsed');
+    var b=c.querySelector('[data-gs-toggle]');if(b)b.textContent=collapsed?'Show':'Hide';
+    try{localStorage.setItem('gs_collapsed_'+id,collapsed?'1':'0');}catch(_){}}
+  (function(){try{if(localStorage.getItem('gs_collapsed_{{ getting_started.id }}')==='1'){
+    var c=document.getElementById('gs-{{ getting_started.id }}');
+    if(c){c.classList.add('gs-collapsed');var b=c.querySelector('[data-gs-toggle]');if(b)b.textContent='Show';}}}catch(_){}})();
 </script>
 {% endif %}

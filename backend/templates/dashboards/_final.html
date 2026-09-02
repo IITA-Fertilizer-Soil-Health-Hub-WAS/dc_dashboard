@@ -33,7 +33,7 @@
         </tr>
         {% endwith %}
       {% empty %}
-        <tr><td colspan="7"><div class="empty" style="border:none;">No approved submissions yet. Approve submissions in the Issues tab to build the final dataset.</div></td></tr>
+        <tr><td colspan="7"><div class="empty" style="border:none;">No approved submissions yet. Work items through the <a href="{% url 'dashboards:project' uc.code %}?tab=review">Review queue</a> — endorse (Gate&nbsp;1), then validate (Gate&nbsp;2) — and they land here.</div></td></tr>
       {% endfor %}
     </tbody>
   </table>

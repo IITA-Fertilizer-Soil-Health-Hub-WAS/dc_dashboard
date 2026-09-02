@@ -126,7 +126,7 @@ def test_my_performance_shows_own_score_and_rank(client, world, django_user_mode
     assert resp.status_code == 200
     body = resp.content.decode()
     assert "PROJ-A" in body
-    assert "of 2" in body           # ranked among the 2 enumerators on the project
+    assert "2 collectors" in body   # peer count shown (de-emphasized, not a rank headline)
 
 
 def test_my_performance_empty_without_identity(client, world, django_user_model):

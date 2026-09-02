@@ -2135,7 +2135,7 @@ class SetupHubView(ManageMixin, View):
         uc = projects.filter(code=code).first() or projects.first()
         if uc is None:
             return _setup_render(request, uc=None, sections=[],
-                                 title="Set up", subtitle="")
+                                 title="Project setup", subtitle="")
         plot_url = f"{reverse('console:plot_election')}?project={uc.code}"
         layout = [
             ("Instrument", "description",
@@ -2162,7 +2162,7 @@ class SetupHubView(ManageMixin, View):
                  "external": True})]),
         ]
         return _setup_render(request, uc=uc, sections=_setup_sections(request, uc, layout),
-                             title="Set up", subtitle=uc.name)
+                             title="Project setup", subtitle=uc.name)
 
 
 class AdminSetupHubView(StaffMixin, View):
@@ -2179,7 +2179,7 @@ class AdminSetupHubView(StaffMixin, View):
         ]
         return _setup_render(request, uc=None,
                              sections=_setup_sections(request, None, layout),
-                             title="Set up", subtitle="Institutions & structure")
+                             title="Structure & projects", subtitle="Institutions & geography")
 
 
 def _apply_setup_defaults(key, obj, uc):

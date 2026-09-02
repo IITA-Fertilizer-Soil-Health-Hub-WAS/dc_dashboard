@@ -14,6 +14,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from apps.rbac.permissions import user_can, visible_projects
@@ -63,21 +64,51 @@ def style_preview(request):
 
 @login_required
 def my_assignments(request):
-    """An enumerator's field work: the collection units assigned to them,
-    grouped by job, with the form to collect and the deadline."""
+    """An enumerator's field work: the collection units assigned to them, grouped
+    by job, with the form, the deadline, and which plots are still to collect —
+    urgent (overdue / due-soon) jobs surfaced first."""
+    from datetime import timedelta
+
+    from django.utils import timezone
+
     from apps.fieldwork.models import UnitAssignment
 
-    assignments = (
+    assignments = list(
         UnitAssignment.objects.filter(enumerator=request.user)
         .select_related("job", "job__project", "job__form", "unit")
         .order_by("job__deadline", "job__name", "unit__code")
     )
+    # One query for "which of my units already have data" (was a per-row lookup).
+    collected_ids = set(
+        Submission.objects.filter(
+            collection_unit_id__in=[a.unit_id for a in assignments]
+        ).values_list("collection_unit_id", flat=True)
+    )
+    today = timezone.localdate()
+    soon = today + timedelta(days=7)
     groups: dict = {}
     for a in assignments:
+        a.collected = a.unit_id in collected_ids
         groups.setdefault(a.job, []).append(a)
-    job_groups = [{"job": job, "units": units} for job, units in groups.items()]
-    return render(request, "dashboards/my_assignments.html",
-                  {"job_groups": job_groups, "count": assignments.count()})
+
+    job_groups = []
+    pending_total = overdue_total = 0
+    for job, units in groups.items():
+        pending = sum(1 for a in units if not a.collected)
+        pending_total += pending
+        status = ""
+        if job.deadline and pending:
+            if job.deadline < today:
+                status = "overdue"
+                overdue_total += pending
+            elif job.deadline <= soon:
+                status = "soon"
+        job_groups.append({"job": job, "units": units, "pending": pending,
+                           "total": len(units), "status": status})
+    return render(request, "dashboards/my_assignments.html", {
+        "job_groups": job_groups, "count": len(assignments),
+        "pending_total": pending_total, "overdue_total": overdue_total,
+    })
 
 
 @login_required
@@ -303,6 +334,31 @@ def _health_counts(uc) -> dict:
     }
 
 
+def _annotate_flag_badges(subs):
+    """Attach ``open_flags`` (count) and ``worst_sev`` to each submission from one
+    query over its OPEN validation flags, so the queue can show what's blocking a
+    row before it's opened."""
+    if not subs:
+        return
+    from apps.validation.models import ValidationFlag, ValidationRule
+
+    rank = {ValidationRule.Severity.ERROR: 3, ValidationRule.Severity.WARNING: 2,
+            ValidationRule.Severity.INFO: 1}
+    agg: dict = {}
+    for r in (ValidationFlag.objects
+              .filter(submission__in=subs, status=ValidationFlag.Status.OPEN)
+              .values("submission_id", "rule__severity")):
+        cur = agg.setdefault(r["submission_id"], {"count": 0, "worst": None, "rank": 0})
+        cur["count"] += 1
+        if rank.get(r["rule__severity"], 0) > cur["rank"]:
+            cur["rank"] = rank.get(r["rule__severity"], 0)
+            cur["worst"] = r["rule__severity"]
+    for s in subs:
+        b = agg.get(s.id)
+        s.open_flags = b["count"] if b else 0
+        s.worst_sev = b["worst"] if b else None
+
+
 @login_required
 def tab_review(request, code, action_error: str = ""):
     """This project's review queue, split by pipeline stage, with inline actions."""
@@ -319,6 +375,9 @@ def tab_review(request, code, action_error: str = ""):
     needs_review = _pool(NEEDS_REVIEW_STATES, ["-ingested_at"]) if can_endorse else []
     in_progress = _pool(IN_PROGRESS_STATES, ["-updated_at"]) if can_endorse else []
     waiting = _pool(WAITING_STATES, ["-updated_at"]) if can_endorse else []
+    # Surface each row's open-issue count + worst severity so coordinators can
+    # triage the queue without opening every item to see what's blocking it.
+    _annotate_flag_badges(to_validate + needs_review + in_progress + waiting)
     approved = Submission.objects.filter(project=uc, review__state=ReviewState.APPROVED).count()
 
     from apps.console.registry import console_can_edit
@@ -685,6 +744,31 @@ STATE_NEXT_HINT = {
 }
 
 
+# Actions that hand the item onward (out of the reviewer's current attention), so
+# the screen should advance to the next queue item rather than re-showing this one.
+_ADVANCE_ACTIONS = {
+    ReviewAction.ENDORSE, ReviewAction.QC_APPROVE,
+    ReviewAction.DECLINE, ReviewAction.REQUEST_EDIT,
+}
+
+
+def _next_actionable_pk(request, uc, exclude_id):
+    """The next submission this reviewer can act on, so 'Endorse/Validate/Decline'
+    moves through the queue instead of dead-ending on the item just handled."""
+    can_endorse = user_can(request.user, "endorse", uc)
+    can_validate = user_can(request.user, "final_approve", uc)
+    states = []
+    if can_validate:
+        states.append(ReviewState.QC_PENDING)
+    if can_endorse:
+        states += list(NEEDS_REVIEW_STATES) + list(IN_PROGRESS_STATES)
+    if not states:
+        return None
+    return (Submission.objects.filter(project=uc, review__state__in=states)
+            .exclude(pk=exclude_id).order_by("-ingested_at")
+            .values_list("pk", flat=True).first())
+
+
 @login_required
 def submission_review(request, code, submission_id):
     """Full review screen: edit field values and run workflow actions."""
@@ -740,6 +824,16 @@ def submission_review(request, code, submission_id):
             error = str(exc)
         except TransitionError as exc:
             error = str(exc)
+        # Forward action succeeded — advance to the next item in the queue instead
+        # of re-rendering the one just handled (the review loop's dead-end).
+        if not error and action in _ADVANCE_ACTIONS:
+            nxt = _next_actionable_pk(request, uc, submission.pk)
+            if nxt:
+                messages.success(request, f"{ok} Showing the next item.")
+                return redirect("dashboards:submission_review",
+                                code=uc.code, submission_id=nxt)
+            messages.success(request, f"{ok} That clears the queue.")
+            return redirect(f"{reverse('dashboards:project', args=[uc.code])}?tab=review")
         submission.refresh_from_db()
 
     flags = submission.flags.filter(status=ValidationFlag.Status.OPEN).select_related("rule")

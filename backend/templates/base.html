@@ -88,6 +88,12 @@
     details.nav-group>summary .chev{margin-left:auto; transition:transform .15s; opacity:.6; font-size:18px;}
     details.nav-group[open]>summary .chev{transform:rotate(90deg);}
     details.nav-group .nav-sub a{padding-left:.95rem;}
+    /* A phase that is a single destination is a direct link styled like the group
+       headers (numbered, uppercase) — no disclosure to expand. */
+    .nav a.lbl.step{color:#bcd6c7; font-weight:600; font-size:.74rem; text-transform:uppercase;
+      letter-spacing:.08em; border-left:2.5px solid transparent;}
+    .nav a.lbl.step:hover{background:rgba(255,255,255,.06); color:#fff;}
+    .nav a.lbl.step.active{background:rgba(255,255,255,.11); color:#fff; border-left-color:var(--gold);}
     details.nav-group .nav-sub a.active{background:rgba(255,255,255,.11); color:#fff; border-left-color:var(--gold);}
     .nav a.nav-back{color:#9fc2b0; font-weight:600; margin-bottom:.3rem;}
     .nav a.nav-back:hover{color:#fff;}
@@ -468,15 +474,12 @@
 
           {% comment %}Phase 1 · Set up — one page gathering all project configuration (forms, schedule, crops, plot election, quality rules). Coordinators / admins only.{% endcomment %}
           {% if can_manage_access %}
-            <details class="nav-group" data-phase="setup">
-              <summary class="lbl step" data-tour="setup">Set up<span class="msym chev">chevron_right</span></summary>
-              <div class="nav-sub">
-                <a href="{% url 'console:setup' %}?project={{ active_uc.code }}"
-                   class="{% if request.resolver_match.url_name == 'setup' or request.resolver_match.url_name == 'plot_election' or request.resolver_match.url_name == 'plot_elect' or request.resolver_match.kwargs.key == 'forms' or request.resolver_match.kwargs.key == 'field-mappings' or request.resolver_match.kwargs.key == 'event-schedule' or request.resolver_match.kwargs.key == 'crops' or request.resolver_match.kwargs.key == 'trials' or request.resolver_match.kwargs.key == 'validation-rules' or request.resolver_match.kwargs.key == 'rejection-reasons' %}active{% endif %}">
-                  <span class="msym">tune</span>Project setup
-                </a>
-              </div>
-            </details>
+            {% comment %}Set up is a single destination — a direct numbered link,
+            not a collapsible group (no expand-to-reach-one-link).{% endcomment %}
+            <a href="{% url 'console:setup' %}?project={{ active_uc.code }}" data-tour="setup"
+               class="lbl step {% if request.resolver_match.url_name == 'setup' or request.resolver_match.url_name == 'plot_election' or request.resolver_match.url_name == 'plot_elect' or request.resolver_match.kwargs.key == 'forms' or request.resolver_match.kwargs.key == 'field-mappings' or request.resolver_match.kwargs.key == 'event-schedule' or request.resolver_match.kwargs.key == 'crops' or request.resolver_match.kwargs.key == 'trials' or request.resolver_match.kwargs.key == 'validation-rules' or request.resolver_match.kwargs.key == 'rejection-reasons' %}active{% endif %}">
+              Set up
+            </a>
           {% endif %}
 
           {% comment %}Phase 2 · Collect — who collects, where, and who's assigned. Merges the old Field register + Assign & access; the collect/access items are guarded individually so members still see Enumerators + Collection units.{% endcomment %}
@@ -580,6 +583,10 @@
             </a>
 
             <div class="lbl">Structure</div>
+            <a href="{% url 'console:onboard' %}" title="Onboard a new project — guided setup"
+               class="nav-add {% if request.resolver_match.url_name == 'onboard' %}active{% endif %}">
+              <span class="msym">add</span>New project
+            </a>
             <a href="{% url 'console:admin_setup' %}" title="Institutions, geography &amp; projects — one page"
                class="{% if request.resolver_match.url_name == 'admin_setup' or request.resolver_match.kwargs.key == 'organizations' or request.resolver_match.kwargs.key == 'regions' or request.resolver_match.kwargs.key == 'countries' or request.resolver_match.kwargs.key == 'projects' %}active{% endif %}">
               <span class="msym">tune</span>Structure &amp; projects

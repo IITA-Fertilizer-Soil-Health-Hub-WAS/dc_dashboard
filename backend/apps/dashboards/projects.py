@@ -75,12 +75,24 @@ def projects(request):
     user = request.user
     is_index = bool(request.resolver_match and request.resolver_match.url_name == "index")
     if is_index and not request.GET.get("scope") and not request.GET.get("q"):
+        # A field worker's home is their own assignments, not the monitoring
+        # workspace or the discovery catalogue. Route them there first.
+        from apps.fieldwork.models import UnitAssignment
+
+        if not can_manage_access(user) and \
+                UnitAssignment.objects.filter(enumerator=user).exists():
+            return redirect("dashboards:my_assignments")
         mine = visible_projects(user)
         if mine.count() == 1:
             return redirect("dashboards:project", code=mine.first().code)
     request.session.pop("active_project", None)  # browsing the directory = leave the workspace
 
-    scope = "mine" if request.GET.get("scope") == "mine" else "all"
+    # The bare landing shows YOUR projects + the attention strip, not the global
+    # catalogue (which is one click away via the "All projects" tab).
+    requested_scope = request.GET.get("scope")
+    if requested_scope is None and is_index:
+        requested_scope = "mine"
+    scope = "mine" if requested_scope == "mine" else "all"
     q = (request.GET.get("q") or "").strip()
     country = (request.GET.get("country") or "").strip()
     org = (request.GET.get("org") or "").strip()

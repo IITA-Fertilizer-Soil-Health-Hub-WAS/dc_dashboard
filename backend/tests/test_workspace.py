@@ -68,11 +68,13 @@ def test_sidebar_shows_four_numbered_lifecycle_phases(client, django_user_model,
     admin = django_user_model.objects.create_superuser("a@x.org", "pw")
     client.force_login(admin)
     body = client.get(reverse("dashboards:project", args=["PROJ-A"])).content.decode()
-    # Exactly four phases, each a numbered, collapsible group (summary + chevron).
-    for label in ("Set up", "Collect", "Review &amp; approve", "Monitor"):
+    # Four numbered lifecycle phases: three collapsible groups + "Set up" as a
+    # single direct link (no expand-to-reach-one-link).
+    for label in ("Collect", "Review &amp; approve", "Monitor"):
         assert f">{label}<span class=\"msym chev\">" in body
-    assert body.count('class="lbl step"') == 4
-    assert body.count('<details class="nav-group" data-phase=') == 4  # all four toggle
+    assert body.count('lbl step') == 4                                # all four numbered
+    assert body.count('<details class="nav-group" data-phase=') == 3  # three toggle
+    assert 'data-tour="setup"' in body                               # Set up is a direct link
     # The retired six-stage labels are gone.
     for gone in ("Field register", "Assign &amp; access", ">Finalize<"):
         assert gone not in body

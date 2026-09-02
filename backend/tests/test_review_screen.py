@@ -73,7 +73,8 @@ def test_save_edits_updates_authoritative_value(client, coordinator, submission)
 
 def test_workflow_action_from_screen(client, coordinator, submission):
     client.force_login(coordinator)
-    resp = client.post(_url(submission), {"action": "DECLINE", "note": "bad data"})
+    # A terminal action now advances the reviewer to the next queue item (redirect).
+    resp = client.post(_url(submission), {"action": "DECLINE", "note": "bad data"}, follow=True)
     assert resp.status_code == 200
     submission.refresh_from_db()
     assert submission.review.state == ReviewState.DECLINED

@@ -1,0 +1,3 @@
+{% comment %}One review-queue cell: open-issue count + worst severity, so a
+coordinator sees what's blocking a row without opening it. Expects `s`.{% endcomment %}
+{% if s.open_flags %}<span class="pill {% if s.worst_sev == 'ERROR' %}warn{% else %}neutral{% endif %}" title="{{ s.open_flags }} open issue{{ s.open_flags|pluralize }}{% if s.worst_sev == 'ERROR' %} — has an error{% endif %}">{% if s.worst_sev == 'ERROR' %}⚠ {% endif %}{{ s.open_flags }}</span>{% else %}<span class="subtle">—</span>{% endif %}

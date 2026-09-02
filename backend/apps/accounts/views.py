@@ -154,6 +154,7 @@ def profile(request):
     in the field on every ODK form."""
     prof, _ = UserProfile.objects.get_or_create(user=request.user)
     if request.method == "POST":
+        was_complete = prof.is_complete
         form = ProfileForm(request.POST, instance=prof, user=request.user)
         if form.is_valid():
             obj = form.save(commit=False)
@@ -162,6 +163,11 @@ def profile(request):
             request.user.save(update_fields=["phone", "full_name", "updated_at"])
             obj.save()
             obj.mark_complete()
+            # First completion clears the hard gate — deliver them to their work
+            # instead of re-showing the settings form (the first-run dead-end).
+            if not was_complete:
+                messages.success(request, "Your profile is complete — welcome. Here's your work.")
+                return redirect("dashboards:index")
             messages.success(request, "Your profile has been saved. You won't need to re-enter this.")
             return redirect("profile")
     else:

@@ -63,8 +63,10 @@ _ENTRIES: list[Managed] = [
     # ---- Institution tenancy: the institutions and the region → country
     # hierarchy their projects hang off ----
     Managed("organizations", Organization, "Institutions", "Institution tenancy",
-            list_display=["code", "name", "is_active", "database_alias"],
-            form_fields=["code", "name", "is_active", "database_alias", "database_url"],
+            list_display=["code", "name", "is_active"],
+            # DB-routing (database_alias/url) is advanced tenancy plumbing set once
+            # via Django admin — kept out of the everyday Institution form.
+            form_fields=["code", "name", "is_active"],
             search_fields=["code", "name"], icon="domain",
             description="Institutions (tenants) — each owns its own data, in the "
                         "shared DB or its own (alias / URL)."),
@@ -94,7 +96,7 @@ _ENTRIES: list[Managed] = [
             list_display=["project", "title", "role", "server_form_id", "publish_status",
                           "version"],
             form_fields=["project", "title", "ona_form_id", "server_form_id", "role", "crop",
-                         "season", "system_vars_drop"],
+                         "season"],
             search_fields=["server_form_id", "title"], icon="description",
             # A form is authored in the builder / from a protocol / by XLSForm upload —
             # never as a bare metadata row. Editing an existing form's settings stays open.

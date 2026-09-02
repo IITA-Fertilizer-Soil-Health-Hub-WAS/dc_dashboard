@@ -24,7 +24,7 @@
         <span class="qbadge" style="{% if c.row.quality_score >= 80 %}background:#eaf6ea;color:#2f7d32;{% elif c.row.quality_score >= 60 %}background:#fef6e0;color:#8a6d00;{% else %}background:#fbe7df;color:#b23b2e;{% endif %}">{{ c.row.quality_score }}</span>
         <div>
           <div style="font-weight:600;">{{ c.uc.name }} <span class="pill">{{ c.uc.code }}</span></div>
-          <div class="subtle" style="font-size:.85rem;">Quality score · ranked <strong>{{ c.rank }}</strong> of {{ c.of }} on this project</div>
+          <div class="subtle" style="font-size:.85rem;">Your data-quality score on this project</div>
         </div>
         <span style="flex:1"></span>
         <a class="seg" href="{% url 'kpi:enumerator_detail' c.uc.code c.row.enumerator_id %}">My trend</a>
@@ -32,11 +32,17 @@
       <div class="scg">
         <div class="m"><div class="v">{{ c.row.n }}</div><div class="l">Collected</div></div>
         <div class="m"><div class="v">{{ c.row.approval_pct }}%</div><div class="l">Approved</div></div>
-        <div class="m"><div class="v">{{ c.row.reject_pct }}%</div><div class="l">Rejected</div></div>
         <div class="m"><div class="v">{% if c.row.on_time_pct is None %}—{% else %}{{ c.row.on_time_pct }}%{% endif %}</div><div class="l">On-time</div></div>
-        <div class="m"><div class="v">{% if c.row.gps_err_m is None %}—{% else %}{{ c.row.gps_err_m }} m{% endif %}</div><div class="l">GPS error</div></div>
-        <div class="m"><div class="v">{{ c.row.open_flags }}</div><div class="l">Open issues</div></div>
+        <div class="m"><div class="v">{% if c.row.gps_err_m is None %}—{% else %}{{ c.row.gps_err_m }} m{% endif %}</div><div class="l">Location accuracy</div></div>
+        <div class="m"><div class="v">{{ c.row.open_flags }}</div><div class="l">To fix</div></div>
       </div>
+      {% if c.row.open_flags or c.row.reject_pct %}
+        <div class="gs-hint" style="margin-top:.7rem;font-size:.85rem;">
+          <span class="msym" style="font-size:15px;vertical-align:-2px;color:var(--clay);">tips_and_updates</span>
+          To raise your score, open <a href="{% url 'dashboards:my_submissions' %}"><strong>My submissions</strong></a> and fix the flagged records, then re-submit in ODK Collect.
+        </div>
+      {% endif %}
+      <div class="subtle" style="margin-top:.5rem;font-size:.75rem;color:var(--faint);">Among {{ c.of }} collectors on this project.</div>
     </div>
   {% empty %}
     <div class="empty">
