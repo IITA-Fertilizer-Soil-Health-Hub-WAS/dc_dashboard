@@ -7,11 +7,14 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
 from django.db import transaction
 from django.shortcuts import redirect, render
-from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from .models import UserProfile
-from .services import claim_admin_available, platform_admin_exists
+from .services import (
+    claim_admin_available,
+    platform_admin_exists,
+    promote_to_platform_admin,
+)
 
 
 class LoginLandingView(LoginView):
@@ -73,11 +76,7 @@ def create_admin(request):
                     return redirect("login")
                 user = User.objects.filter(email__iexact=email).first()
                 if user is not None:
-                    user.is_superuser = user.is_staff = user.is_active = True
-                    user.email_verified = True
-                    user.approved_at = user.approved_at or timezone.now()
-                    user.set_password(password)
-                    user.save()
+                    promote_to_platform_admin(user, password=password)
                 else:
                     user = User.objects.create_superuser(email=email, password=password)
             login(request, user, backend="django.contrib.auth.backends.ModelBackend")
@@ -107,14 +106,7 @@ def claim_admin(request):
             if platform_admin_exists():
                 messages.info(request, "A Platform Admin already exists.")
                 return redirect("dashboards:index")
-            user = request.user
-            user.is_superuser = True
-            user.is_staff = True
-            user.is_active = True
-            user.approved_at = user.approved_at or timezone.now()
-            user.save(update_fields=[
-                "is_superuser", "is_staff", "is_active", "approved_at", "updated_at",
-            ])
+            promote_to_platform_admin(request.user)
         messages.success(
             request, "You are now the Platform Admin. You can approve users and "
             "manage everything from here."

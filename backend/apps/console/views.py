@@ -1266,8 +1266,6 @@ class JobAssignmentsView(UserPassesTestMixin, View):
                 assignments__job=job)
             UnitAssignment.objects.bulk_create(
                 [UnitAssignment(job=job, unit=u, enumerator=enum) for u in units])
-            if enum:
-                job.assigned_to.add(enum)
             messages.success(request, f"Assigned {len(units)} unit(s).")
         elif action == "assign_selected":
             units = CollectionUnit.objects.filter(
@@ -1275,8 +1273,6 @@ class JobAssignmentsView(UserPassesTestMixin, View):
             ).exclude(assignments__job=job)
             UnitAssignment.objects.bulk_create(
                 [UnitAssignment(job=job, unit=u, enumerator=enum) for u in units])
-            if enum:
-                job.assigned_to.add(enum)
             messages.success(request, f"Assigned {len(units)} unit(s).")
         else:  # add one
             unit = CollectionUnit.objects.filter(
@@ -1284,8 +1280,6 @@ class JobAssignmentsView(UserPassesTestMixin, View):
             if unit:
                 UnitAssignment.objects.get_or_create(
                     job=job, unit=unit, defaults={"enumerator": enum})
-                if enum:
-                    job.assigned_to.add(enum)
         return redirect("console:job_assignments", pk=job.pk)
 
 
@@ -1334,7 +1328,6 @@ class JobEditorView(UserPassesTestMixin, View):
         return render(request, "console/job_editor.html", self._ctx(request, project, job))
 
     def post(self, request, pk=None):
-        from apps.accounts.models import User
         from apps.fieldwork.models import CollectionUnit, Job, UnitAssignment
 
         job = _scoped_get(request.user, _managed("jobs"), "jobs", pk) if pk else None
@@ -1388,8 +1381,6 @@ class JobEditorView(UserPassesTestMixin, View):
         for uid, a in existing.items():
             if uid not in keep:
                 a.delete()
-        if enum is not None:
-            job.assigned_to.add(enum)
 
         messages.success(request, f"Assignment “{job.name}” saved — {len(keep)} plot(s).")
         return redirect("console:job_assignments", pk=job.pk)

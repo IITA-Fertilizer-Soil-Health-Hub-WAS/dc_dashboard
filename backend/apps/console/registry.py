@@ -167,7 +167,7 @@ _ENTRIES: list[Managed] = [
     Managed("jobs", Job, "Assignments", "Operations",
             list_display=["project", "name", "form", "status", "target_count", "deadline"],
             form_fields=["project", "name", "form", "target_count", "start_date", "deadline",
-                         "status", "assigned_to"],
+                         "status"],
             search_fields=["name"], icon="assignment",
             description="Data-collection assignments — form, target, deadline, enumerators."),
     # Collection units are a top-level project workspace link (same level as

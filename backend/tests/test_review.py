@@ -185,3 +185,24 @@ def test_cross_project_isolation(synced, django_user_model):
     # Coordinator of KALRO cannot act on an SNS-RWANDA submission.
     with pytest.raises(ReviewPermissionDenied):
         services.decline(intruder, submission)
+
+
+def test_pipeline_counts_partitions_every_submission(synced):
+    """The shared census assigns each submission to exactly one bucket, so the
+    seven buckets always sum to the project's total — the invariant that lets the
+    Review queue, Summary health and M&E rollup share one source of truth."""
+    uc = synced[0]
+    counts = services.pipeline_counts(uc)
+    total = Submission.objects.filter(project=uc).count()
+    assert total > 0
+    assert sum(counts.values()) == total
+
+
+def test_pipeline_counts_follows_transitions(synced):
+    """A submission moves buckets as its review state advances."""
+    uc, submission, coord, *_ = synced
+    before = services.pipeline_counts(uc)
+    services.open_review(coord, submission)          # -> IN_REVIEW (in_progress)
+    after = services.pipeline_counts(uc)
+    assert after["in_progress"] == before["in_progress"] + 1
+    assert sum(after.values()) == sum(before.values())  # still partitioned

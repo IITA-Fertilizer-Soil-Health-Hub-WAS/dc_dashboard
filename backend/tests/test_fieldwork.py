@@ -34,12 +34,12 @@ def test_job_with_assignments(django_user_model):
     unit = CollectionUnit.objects.create(project=uc, code="HH1")
     en = django_user_model.objects.create_user("en@x.org", "pw", is_active=True)
     job = Job.objects.create(project=uc, name="Round 1", form=form, target_count=10)
-    job.assigned_to.add(en)
     UnitAssignment.objects.create(job=job, unit=unit, enumerator=en)
 
     assert job.assignments.count() == 1
     assert list(job.units.all()) == [unit]
-    assert en in job.assigned_to.all()
+    # assignees is derived from the UnitAssignment through-table (no denormalized M2M)
+    assert en in job.assignees
 
 
 def _form_with_mappings(uc):

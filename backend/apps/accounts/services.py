@@ -12,6 +12,28 @@ def platform_admin_exists() -> bool:
     return User.objects.filter(is_superuser=True).exists()
 
 
+def promote_to_platform_admin(user, *, password: str | None = None):
+    """Grant Platform Admin (Django superuser) to an existing account, idempotently.
+
+    Sets the full superuser/staff/active/verified flag combination and stamps
+    approved_at once. Pass ``password`` only on the email/password bootstraps
+    (first-run web form, ``bootstrap_admin`` command); the post-SSO claim leaves
+    the Auth0 password untouched. Callers own the ``platform_admin_exists()`` gate
+    and race guard — this only mutates the user.
+    """
+    from django.utils import timezone
+
+    user.is_superuser = True
+    user.is_staff = True
+    user.is_active = True
+    user.email_verified = True
+    user.approved_at = user.approved_at or timezone.now()
+    if password:
+        user.set_password(password)
+    user.save()
+    return user
+
+
 def claim_admin_available(user) -> bool:
     """Whether `user` may claim Platform Admin via the in-app bootstrap.
 

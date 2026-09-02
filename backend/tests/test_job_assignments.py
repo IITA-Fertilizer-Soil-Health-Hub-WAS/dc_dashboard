@@ -41,7 +41,7 @@ def test_assign_unit_to_enumerator(client, world):
     assert resp.status_code == 302
     a = UnitAssignment.objects.get(job=world["job"], unit=world["units"][0])
     assert a.enumerator == world["en"]
-    assert world["en"] in world["job"].assigned_to.all()  # added to the job pool
+    assert world["en"] in world["job"].assignees  # derived from the assignment
 
 
 def test_assign_all_remaining(client, world):
@@ -115,7 +115,7 @@ def test_create_assignment_with_multiple_plots(client, world):
     job = Job.objects.get(project=world["uc"], name="Round 2")
     assert job.assignments.count() == 2                       # one per selected plot
     assert set(job.assignments.values_list("enumerator_id", flat=True)) == {world["en"].pk}
-    assert world["en"] in job.assigned_to.all()
+    assert world["en"] in job.assignees
     assert job.target_count == 2                              # auto = plots selected
     # The third plot was not selected, so it stays out of the job.
     assert not UnitAssignment.objects.filter(job=job, unit=world["units"][2]).exists()

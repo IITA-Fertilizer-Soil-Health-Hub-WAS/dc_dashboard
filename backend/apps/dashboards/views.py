@@ -279,25 +279,12 @@ def _attribution_stats(uc) -> dict:
 
 def _health_counts(uc) -> dict:
     """Per-project review + write-back health for the Summary tab. The review
-    side mirrors the Review-queue pools exactly (one submission, one stage), so
-    the headline numbers match what a coordinator sees in the queue."""
-    from apps.review.models import ReviewState
+    side comes from the shared pipeline census (one submission, one stage), so the
+    headline numbers match the Review queue and the M&E rollup exactly."""
+    from apps.review.services import pipeline_counts
 
     subs = Submission.objects.filter(project=uc)
-
-    def _c(states):
-        return subs.filter(review__state__in=states).count()
-
-    return {
-        "needs_review": _c(NEEDS_REVIEW_STATES),
-        "in_progress": _c(IN_PROGRESS_STATES),
-        "waiting": _c(WAITING_STATES),
-        "awaiting_validation": subs.filter(review__state=ReviewState.QC_PENDING).count(),
-        "approved": subs.filter(review__state=ReviewState.APPROVED).count(),
-        "declined": subs.filter(review__state=ReviewState.DECLINED).count(),
-        # Superseded = replaced by a newer server record. Rare, but count it so the
-        # pipeline pools sum to the total and nothing silently vanishes.
-        "superseded": subs.filter(review__state=ReviewState.SUPERSEDED).count(),
+    return pipeline_counts(uc) | {
         "wb_sent": subs.filter(writeback_status=Submission.WriteBackStatus.SENT).count(),
         "wb_pending": subs.filter(writeback_status=Submission.WriteBackStatus.PENDING).count(),
         "wb_failed": subs.filter(writeback_status=Submission.WriteBackStatus.FAILED).count(),

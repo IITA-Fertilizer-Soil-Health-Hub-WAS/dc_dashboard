@@ -19,7 +19,7 @@ import os
 
 from django.core.management.base import BaseCommand
 
-from apps.accounts.services import platform_admin_exists
+from apps.accounts.services import platform_admin_exists, promote_to_platform_admin
 
 
 class Command(BaseCommand):
@@ -48,12 +48,7 @@ class Command(BaseCommand):
 
         existing = User.objects.filter(email__iexact=email).first()
         if existing is not None:
-            existing.is_staff = True
-            existing.is_superuser = True
-            existing.is_active = True
-            existing.email_verified = True
-            existing.set_password(password)
-            existing.save()
+            promote_to_platform_admin(existing, password=password)
             self.stdout.write(self.style.SUCCESS(f"Promoted {email} to Platform Admin."))
             return
 

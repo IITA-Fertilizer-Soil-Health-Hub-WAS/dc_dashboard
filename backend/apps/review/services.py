@@ -8,18 +8,54 @@ these; they never poke Review.state directly.
 from __future__ import annotations
 
 from django.db import transaction
+from django.db.models import Count
 from django.utils import timezone
 
 from apps.rbac.permissions import user_can
 from apps.submissions.models import Submission, SubmissionValue
 
-from .models import Review, ReviewAction, ReviewActionLog, ReviewState
+from .models import (
+    IN_PROGRESS_STATES,
+    NEEDS_REVIEW_STATES,
+    WAITING_STATES,
+    Review,
+    ReviewAction,
+    ReviewActionLog,
+    ReviewState,
+)
 from .state_machine import ReviewPermissionDenied, resolve
 
 
 def get_or_create_review(submission: Submission) -> Review:
     review, _ = Review.objects.get_or_create(submission=submission)
     return review
+
+
+def pipeline_counts(project) -> dict:
+    """The review pipeline as a one-submission-per-stage census for a project.
+
+    The single source of truth for the Review queue, the Summary health panel and
+    the M&E project rollup, so all three always agree. One grouped query; every
+    state lands in exactly one bucket (and the buckets sum to the project's total).
+    """
+    rows = dict(
+        Submission.objects.filter(project=project)
+        .values_list("review__state")
+        .annotate(n=Count("id"))
+    )
+
+    def _sum(states):
+        return sum(rows.get(s, 0) for s in states)
+
+    return {
+        "needs_review": _sum(NEEDS_REVIEW_STATES),
+        "in_progress": _sum(IN_PROGRESS_STATES),
+        "waiting": _sum(WAITING_STATES),
+        "awaiting_validation": rows.get(ReviewState.QC_PENDING, 0),
+        "approved": rows.get(ReviewState.APPROVED, 0),
+        "declined": rows.get(ReviewState.DECLINED, 0),
+        "superseded": rows.get(ReviewState.SUPERSEDED, 0),
+    }
 
 
 @transaction.atomic

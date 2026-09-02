@@ -92,21 +92,11 @@ def project_metrics(project, days: str = "30") -> dict:
     total = proj.aggregate(n=Sum("submissions"))["n"] or 0
 
     subs = Submission.objects.filter(project=project)
-    approved = subs.filter(review__state=ReviewState.APPROVED).count()
-    # Review-pipeline buckets (same groups as the Review queue) so M&E agrees.
-    from apps.review.models import (
-        IN_PROGRESS_STATES,
-        NEEDS_REVIEW_STATES,
-        WAITING_STATES,
-    )
+    # Review-pipeline buckets from the shared census, so the Review queue, the
+    # Summary health panel and this M&E rollup always report the same numbers.
+    from apps.review.services import pipeline_counts
 
-    needs_review = subs.filter(review__state__in=NEEDS_REVIEW_STATES).count()
-    in_progress = subs.filter(review__state__in=IN_PROGRESS_STATES).count()
-    waiting = subs.filter(review__state__in=WAITING_STATES).count()
-    awaiting_validation = subs.filter(review__state=ReviewState.QC_PENDING).count()
-    # Terminal-but-not-approved buckets — counted so the pools reconcile to total.
-    declined = subs.filter(review__state=ReviewState.DECLINED).count()
-    superseded = subs.filter(review__state=ReviewState.SUPERSEDED).count()
+    pipe = pipeline_counts(project)
     open_issues = ValidationFlag.objects.filter(
         rule__project=project, status=ValidationFlag.Status.OPEN
     ).count()
@@ -138,13 +128,13 @@ def project_metrics(project, days: str = "30") -> dict:
         "total_submissions": total,
         "target": target,
         "pct_of_target": round(total / target * 100) if target else 0,
-        "approved": approved,
-        "needs_review": needs_review,
-        "in_progress": in_progress,
-        "waiting": waiting,
-        "awaiting_validation": awaiting_validation,
-        "declined": declined,
-        "superseded": superseded,
+        "approved": pipe["approved"],
+        "needs_review": pipe["needs_review"],
+        "in_progress": pipe["in_progress"],
+        "waiting": pipe["waiting"],
+        "awaiting_validation": pipe["awaiting_validation"],
+        "declined": pipe["declined"],
+        "superseded": pipe["superseded"],
         "open_issues": open_issues,
         "quality_score": max(0, 100 - round(open_issues / max(subs.count(), 1) * 100)),
         "trend": trend,

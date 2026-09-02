@@ -76,9 +76,6 @@ class Job(BaseModel):
     start_date = models.DateField(null=True, blank=True)
     deadline = models.DateField(null=True, blank=True)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.DRAFT)
-    assigned_to = models.ManyToManyField(
-        settings.AUTH_USER_MODEL, blank=True, related_name="jobs"
-    )
     units = models.ManyToManyField(
         CollectionUnit, through="UnitAssignment", blank=True, related_name="jobs"
     )
@@ -99,6 +96,17 @@ class Job(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.project.code}:{self.name}"
+
+    @property
+    def assignees(self):
+        """The enumerators responsible for any unit in this job, derived from the
+        UnitAssignment through-table (replaces the old denormalized assigned_to
+        M2M — there's now one place assignment lives)."""
+        from django.contrib.auth import get_user_model
+
+        return get_user_model().objects.filter(
+            unit_assignments__job=self
+        ).distinct()
 
     def close(self, user, note: str = "") -> None:
         from django.utils import timezone
