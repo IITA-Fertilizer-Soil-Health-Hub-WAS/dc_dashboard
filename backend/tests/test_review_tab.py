@@ -92,8 +92,11 @@ def test_review_tab_shows_validate_for_gate2(client, world):
     _sub(world["uc"], 1, ReviewState.QC_PENDING)
     client.force_login(world["regional"])
     resp = client.get(reverse("dashboards:tab_review", args=[world["uc"].code]))
-    assert b"Awaiting your validation" in resp.content
-    assert b"Approve" in resp.content   # Gate-2 forward action, renamed from 'Validate'
+    # Gate 2 now lives on its own QC sign-off page; the queue points there rather
+    # than duplicating the validate action inline.
+    assert b"awaiting Gate" in resp.content
+    assert b"QC sign-off" in resp.content
+    assert reverse("dashboards:qc_signoff", args=[world["uc"].code]).encode() in resp.content
 
 
 def test_contextual_config_links(client, world):

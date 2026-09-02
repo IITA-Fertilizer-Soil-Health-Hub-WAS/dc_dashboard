@@ -51,11 +51,11 @@
       {% if can.endorse %}
         <button class="btn btn-edit" type="button" hx-post="{% url 'dashboards:bulk_action' uc.code %}"
           hx-include="#bulk-form" hx-target="#issues-panel" hx-swap="outerHTML"
-          hx-confirm="Endorse all selected submissions (Gate 1)?" hx-vals='{"action":"ENDORSE"}'>Endorse</button>{% endif %}
+          hx-confirm="Endorse all selected submissions (Gate 1)?" hx-vals='{"action":"ENDORSE"}'>Endorse (Gate 1)</button>{% endif %}
+      {% comment %}Gate 2 (validate) is done only on the dedicated QC sign-off page,
+      so it isn't duplicated here — this tab is for triaging flagged data.{% endcomment %}
       {% if can.final_approve %}
-        <button class="btn btn-approve" type="button" hx-post="{% url 'dashboards:bulk_action' uc.code %}"
-          hx-include="#bulk-form" hx-target="#issues-panel" hx-swap="outerHTML"
-          hx-confirm="Validate all selected endorsed submissions (Gate 2)?" hx-vals='{"action":"QC_APPROVE"}'>Validate</button>{% endif %}
+        <a class="subtle" style="font-size:.82rem;" href="{% url 'dashboards:qc_signoff' uc.code %}">Validate endorsed items on QC sign-off →</a>{% endif %}
     </div>
     <div class="table-wrap">
     <table>
