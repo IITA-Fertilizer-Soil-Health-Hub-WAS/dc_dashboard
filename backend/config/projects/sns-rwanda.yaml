@@ -7,10 +7,10 @@ project:
   is_active: true
   countries: [Rwanda]
   enid_patterns: ["^RSENRW"]      # was patternissues
-  hhid_patterns: ["^RSHHRW"]      # was patternissuesE
+  id_patterns: ["^RSHHRW"]        # collection-unit id (HHID) pattern; was hhid_patterns
   plugin: null
   timezone: Africa/Kigali
-  household_label: Household
+  unit_label: Household
   test_ids: ["RSENRW000001"]    # enumerator registered only for testing/monitoring
 
 crops:

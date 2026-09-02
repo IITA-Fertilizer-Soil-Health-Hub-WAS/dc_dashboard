@@ -43,11 +43,12 @@ def test_non_staff_forbidden(client, plain, uc):
 
 def test_admin_home_uses_lifecycle_sections(client, staff, uc):
     """The staff home rail is organised by the platform life-cycle with plain
-    section headers — Operations / Structure / People / Monitor / Build &
-    integrate — mirroring the in-project phases."""
+    section headers — Overview / Structure / People / Build & integrate —
+    mirroring the in-project phases. (Monitor appears only when a Care programme
+    is active, so it isn't asserted here.)"""
     client.force_login(staff)
     body = client.get("/projects/").content.decode()  # directory = admin home, no active project
-    for header in (">Operations<", ">Structure<", ">People<", ">Monitor<",
+    for header in (">Overview<", ">Structure<", ">People<",
                    "Build &amp; integrate"):
         assert header in body
     # Renamed People items come from the registry (People-group labels).

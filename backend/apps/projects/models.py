@@ -126,7 +126,8 @@ class Project(BaseModel):
 
     # ID validation patterns (was patternissues / patternissuesE in app.R).
     enid_patterns = models.JSONField(default=list, blank=True)
-    hhid_patterns = models.JSONField(default=list, blank=True)
+    # Patterns the collection-unit id (the form's HHID / plot-id column) must match.
+    id_patterns = models.JSONField(default=list, blank=True)
 
     # Optional per-project Python plugin, e.g. "plugins.biossa:BioSSAPlugin".
     plugin_path = models.CharField(max_length=255, blank=True)
@@ -135,8 +136,9 @@ class Project(BaseModel):
     config_version = models.PositiveIntegerField(default=1)
     timezone = models.CharField(max_length=64, default="UTC")
 
-    # Label shown for the household/plot id column (BioSSA uses "Plot Number").
-    household_label = models.CharField(max_length=64, default="Household")
+    # Per-project noun for a collection unit (Household / Plot / Farmer …), shown
+    # as the unit column header. Generic default; BioSSA uses "Plot Number".
+    unit_label = models.CharField(max_length=64, default="Collection unit")
 
     # Enumerator IDs registered only for testing/monitoring; excluded from data
     # (R: filter(ENID != "RSENRW000001")).
@@ -154,9 +156,9 @@ class Project(BaseModel):
     @property
     def unit_label_plural(self) -> str:
         """Plural of the per-project collection-unit noun (Households / Plots /
-        Farmers), driven off household_label so the nav speaks the project's own
+        Farmers), driven off unit_label so the nav speaks the project's own
         language. Mirrors CareProgram.client_label_plural."""
-        label = (self.household_label or "Household").strip()
+        label = (self.unit_label or "Collection unit").strip()
         return label + ("es" if label.lower().endswith("s") else "s")
 
     def bump_version(self) -> None:

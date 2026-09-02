@@ -86,7 +86,7 @@ def _picked(post, key: str) -> list[str]:
 def build_config(post) -> dict[str, Any]:
     """Assemble a project config dict from wizard POST data."""
     enid_patterns = _csv(post.get("enid_patterns"))
-    hhid_patterns = _csv(post.get("hhid_patterns"))
+    id_patterns = _csv(post.get("id_patterns"))
     countries = _picked(post, "countries")
 
     data: dict[str, Any] = {
@@ -103,7 +103,7 @@ def build_config(post) -> dict[str, Any]:
             # (drives the coordinator cascade) — see config_admin.loader.
             "country": countries[0] if countries else "",
             "enid_patterns": enid_patterns,
-            "hhid_patterns": hhid_patterns,
+            "id_patterns": id_patterns,
         },
         "data_source": {
             "backend": post.get("backend") or "ONA",
@@ -163,10 +163,12 @@ def build_config(post) -> dict[str, Any]:
         data["validation_rules"].append(
             {"code": "enid_pattern", "type": "REGEX_ID", "severity": "ERROR",
              "params": {"field": "ENID", "patterns": enid_patterns, "message": "Check ENID"}})
-    if hhid_patterns:
+    if id_patterns:
+        # The rule still checks the form's "HHID" id column (the ONA data contract);
+        # only the config key was renamed away from the household-specific name.
         data["validation_rules"].append(
             {"code": "hhid_pattern", "type": "REGEX_ID", "severity": "ERROR",
-             "params": {"field": "HHID", "patterns": hhid_patterns, "message": "Check HHID"}})
+             "params": {"field": "HHID", "patterns": id_patterns, "message": "Check HHID"}})
     data["validation_rules"].append(
         {"code": "event_sequence", "type": "EVENT_SEQUENCE", "severity": "WARNING",
          "params": {"message": "Check submission events"}})

@@ -17,7 +17,7 @@
   </div>
   <p class="subtle" style="margin:.1rem 0 1rem;">
     <span class="mono">{{ submission.ona_uuid }}</span> · {{ submission.event_key|default:"—" }}
-    · enum {{ submission.enumerator.enid|default:"—" }} · {{ uc.household_label|lower }} {{ submission.collection_unit.code|default:"—" }}
+    · enum {{ submission.enumerator.enid|default:"—" }} · {{ uc.unit_label|lower }} {{ submission.collection_unit.code|default:"—" }}
     · {{ submission.event_date|default:"—" }}
   </p>
 

@@ -167,10 +167,11 @@ def import_config(data: dict[str, Any]) -> Project:
     uc.is_active = meta.get("is_active", True)
     uc.countries = meta.get("countries", [])
     uc.enid_patterns = meta.get("enid_patterns", [])
-    uc.hhid_patterns = meta.get("hhid_patterns", [])
+    # Backward-compatible: honour the old "hhid_patterns" key from existing configs.
+    uc.id_patterns = meta.get("id_patterns", meta.get("hhid_patterns", []))
     uc.plugin_path = meta.get("plugin") or ""
     uc.timezone = meta.get("timezone", "UTC")
-    uc.household_label = meta.get("household_label", "Household")
+    uc.unit_label = meta.get("unit_label", meta.get("household_label", "Collection unit"))
     uc.test_ids = meta.get("test_ids", []) or []
     if not created:
         uc.config_version += 1
@@ -261,10 +262,10 @@ def export_config(uc: Project) -> dict[str, Any]:
             "is_active": uc.is_active,
             "countries": uc.countries,
             "enid_patterns": uc.enid_patterns,
-            "hhid_patterns": uc.hhid_patterns,
+            "id_patterns": uc.id_patterns,
             "plugin": uc.plugin_path or None,
             "timezone": uc.timezone,
-            "household_label": uc.household_label,
+            "unit_label": uc.unit_label,
             "test_ids": uc.test_ids,
         },
         "crops": [{"name": c.name, "aliases": c.aliases} for c in uc.crops.all()],

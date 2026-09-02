@@ -25,7 +25,7 @@ class Command(BaseCommand):
         rwanda, _ = Project.objects.get_or_create(
             code="SNS-RWANDA",
             defaults={"name": "SNS Rwanda", "countries": ["Rwanda"],
-                      "enid_patterns": ["^RSENRW"], "hhid_patterns": ["^RSHHRW"]},
+                      "enid_patterns": ["^RSENRW"], "id_patterns": ["^RSHHRW"]},
         )
         kalro, _ = Project.objects.get_or_create(
             code="KALRO", defaults={"name": "KALRO", "countries": ["Kenya"]}

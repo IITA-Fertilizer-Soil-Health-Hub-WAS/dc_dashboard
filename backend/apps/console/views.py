@@ -742,7 +742,7 @@ class OnboardProjectView(StaffMixin, View):
         "  is_active: true\n"
         "  countries: [Country]\n"
         "  enid_patterns: ['^EN']\n"
-        "  hhid_patterns: ['^HH']\n"
+        "  id_patterns: ['^HH']\n"
         "crops:\n  - {name: maize}\n"
         "stages: [Validation]\n"
         "trials:\n  - {name: Fertilizer Recommendation, code: FR}\n"

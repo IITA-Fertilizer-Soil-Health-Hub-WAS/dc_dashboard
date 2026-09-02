@@ -42,7 +42,7 @@ def test_overview_aggregates(client, uc, form, coordinator):
     resp = client.get("/overview/")
     assert resp.status_code == 200
     body = resp.content.decode()
-    assert "UC Name" in body and "Operations" in body
+    assert "UC Name" in body and "Overview" in body
     assert "2" in body  # 2 submissions counted
 
 

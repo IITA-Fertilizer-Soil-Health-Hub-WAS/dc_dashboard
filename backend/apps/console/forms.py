@@ -52,8 +52,8 @@ class ProjectAdminForm(forms.ModelForm):
         fields = [
             "code", "name", "description", "organization", "owner", "country",
             "unit_type", "is_active", "allow_access_requests", "countries",
-            "enid_patterns", "hhid_patterns", "plugin_path", "timezone",
-            "household_label",
+            "enid_patterns", "id_patterns", "plugin_path", "timezone",
+            "unit_label",
         ]
 
     def __init__(self, *args, **kwargs):

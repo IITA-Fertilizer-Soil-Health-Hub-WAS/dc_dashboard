@@ -185,11 +185,11 @@
           </div>
         </div>
 
-        <details class="adv"{% if posted.enid_patterns or posted.hhid_patterns %} open{% endif %}>
+        <details class="adv"{% if posted.enid_patterns or posted.id_patterns %} open{% endif %}>
           <summary>Advanced — ID validation patterns</summary>
           <div class="grid2" style="margin-top:.6rem;">
             <div class="fld"><label>Enumerator ID pattern(s)</label><input name="enid_patterns" value="{{ posted.enid_patterns }}" placeholder="^RSENRW"></div>
-            <div class="fld"><label>Household ID pattern(s)</label><input name="hhid_patterns" value="{{ posted.hhid_patterns }}" placeholder="^RSHHRW"></div>
+            <div class="fld"><label>Unit ID pattern(s)</label><input name="id_patterns" value="{{ posted.id_patterns }}" placeholder="^RSHHRW"></div>
           </div>
         </details>
       </div>

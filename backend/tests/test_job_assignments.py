@@ -138,7 +138,7 @@ def test_edit_assignment_syncs_plot_set(client, world):
 def test_my_assignments_header_uses_project_unit_noun(client, world):
     """Bold naming reaches the enumerator's own pages: the assignments table
     heads the unit column with the project's own noun, not a generic 'Unit'."""
-    world["uc"].household_label = "Plot"
+    world["uc"].unit_label = "Plot"
     world["uc"].save()
     UnitAssignment.objects.create(job=world["job"], unit=world["units"][0],
                                   enumerator=world["en"])

@@ -80,10 +80,10 @@ def test_sidebar_shows_four_numbered_lifecycle_phases(client, django_user_model,
 
 def test_sidebar_uses_per_project_unit_noun(client, django_user_model, org):
     """Bold naming: the Collect phase names the unit by the project's own noun
-    (household_label pluralised), so a plot trial shows 'Plots', not the generic
+    (unit_label pluralised), so a plot trial shows 'Plots', not the generic
     'Collection units'."""
     uc = Project.objects.create(code="PLOTX", name="Plot trial", organization=org,
-                                household_label="Plot")
+                                unit_label="Plot")
     admin = django_user_model.objects.create_superuser("plotadmin@x.org", "pw")
     client.force_login(admin)
     body = client.get(reverse("dashboards:project", args=["PLOTX"])).content.decode()
