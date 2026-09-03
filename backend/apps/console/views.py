@@ -1078,8 +1078,16 @@ class ConsoleActionView(StaffMixin, View):
         if action is None:
             raise Http404(f"Unknown action: {slug}")
         obj = get_object_or_404(m.model, pk=pk)
-        result = action.fn(request, obj)
         from django.http import HttpResponse
+
+        # Never let a row action (sync, export, approve…) 500 a user out of the
+        # console — surface the failure as a message and keep them on the list.
+        try:
+            result = action.fn(request, obj)
+        except Exception as exc:  # noqa: BLE001
+            label = getattr(action, "label", None) or slug
+            messages.error(request, f"Couldn't complete “{label}”: {exc}")
+            return redirect("console:list", key=key)
 
         if isinstance(result, HttpResponse):
             return result

@@ -34,12 +34,14 @@ def uc_validate(request, uc):
 
 
 def uc_sync(request, uc):
-    from apps.ingestion.sync import sync_project
-    from apps.validation.engine import run_for_project
+    # Enqueue the full sync task (record_sync → alerts on failure + audit trail,
+    # validation, media hashing, schema refresh) rather than running a partial
+    # sync in the request thread: no gateway timeout, and failures surface on the
+    # System-status page instead of a raw 500.
+    from apps.ingestion.tasks import sync_project_task
 
-    stats = sync_project(uc)
-    vstats = run_for_project(uc)
-    return f"{uc.code}: synced (+{stats.created} new), {vstats.opened} flags opened."
+    sync_project_task.delay(uc.code)
+    return f"Sync started for {uc.code} — its result appears on System status shortly."
 
 
 def uc_export(request, uc):

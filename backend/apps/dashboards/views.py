@@ -152,23 +152,45 @@ def overview(request):
     if days not in PERIODS:
         days = "30"
 
-    closed = REVIEW_CLOSED_STATES
+    # Two grouped queries for the whole per-project table (was 1 + 6×N aggregate
+    # queries over the largest table — it lagged badly for admins who see every
+    # project). REVIEW_CLOSED_STATES = [APPROVED, DECLINED], so in_review is
+    # everything not yet closed, including submissions with no review row.
+    projects = list(visible_projects(request.user))
+    proj_ids = [p.id for p in projects]
+    sub_agg = {
+        r["project"]: r for r in
+        Submission.objects.filter(project_id__in=proj_ids).values("project").annotate(
+            total=Count("id"),
+            approved=Count("id", filter=Q(review__state=ReviewState.APPROVED)),
+            declined=Count("id", filter=Q(review__state=ReviewState.DECLINED)),
+            wb_pending=Count("id", filter=Q(
+                writeback_status=Submission.WriteBackStatus.PENDING)),
+            wb_failed=Count("id", filter=Q(
+                writeback_status=Submission.WriteBackStatus.FAILED)),
+        )
+    }
+    issues_agg = {
+        r["rule__project"]: r["n"] for r in
+        ValidationFlag.objects.filter(
+            rule__project_id__in=proj_ids, status=ValidationFlag.Status.OPEN
+        ).values("rule__project").annotate(n=Count("id"))
+    }
     rows = []
     totals = {"total": 0, "approved": 0, "in_review": 0, "open_issues": 0,
               "wb_pending": 0, "wb_failed": 0}
-    for uc in visible_projects(request.user):
-        subs = Submission.objects.filter(project=uc)
+    for uc in projects:
+        a = sub_agg.get(uc.id, {})
+        total = a.get("total", 0)
+        approved = a.get("approved", 0)
         row = {
             "uc": uc,
-            "total": subs.count(),
-            "approved": subs.filter(review__state=ReviewState.APPROVED).count(),
-            "in_review": subs.exclude(review__state__in=closed).count(),
-            "open_issues": ValidationFlag.objects.filter(
-                rule__project=uc, status=ValidationFlag.Status.OPEN).count(),
-            "wb_pending": subs.filter(
-                writeback_status=Submission.WriteBackStatus.PENDING).count(),
-            "wb_failed": subs.filter(
-                writeback_status=Submission.WriteBackStatus.FAILED).count(),
+            "total": total,
+            "approved": approved,
+            "in_review": total - approved - a.get("declined", 0),
+            "open_issues": issues_agg.get(uc.id, 0),
+            "wb_pending": a.get("wb_pending", 0),
+            "wb_failed": a.get("wb_failed", 0),
         }
         rows.append(row)
         for k in totals:
