@@ -27,7 +27,7 @@
   <div class="grid-split">
     <div>
       <!-- Field values — every submitted field, all editable -->
-      <div class="card" style="padding:0;overflow:hidden;">
+      <div class="card" data-tour="sr-fields" style="padding:0;overflow:hidden;">
         <div style="padding:.8rem 1.1rem;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
           <h3 style="margin:0;">Field values</h3>
           <span class="pill neutral" style="margin-left:auto;">{{ fields|length }} fields</span>
@@ -138,7 +138,7 @@
 
     <div>
       <!-- Workflow actions -->
-      <div class="card">
+      <div class="card" data-tour="sr-actions">
         <h3>Review actions</h3>
         <p class="subtle" style="font-size:.82rem;margin:.3rem 0 .3rem;">
           <span class="pill">{% if review %}{{ review.get_state_display }}{% else %}New{% endif %}</span>
@@ -212,3 +212,11 @@
     })();
   </script>
 {% endblock %}
+{% block tour %}<script>
+window.PAGE_TOUR = {id:'submission-review', steps:[
+  {el:'[data-tour="sr-fields"]', title:'The submitted answers',
+   body:'Each field shows the raw value from the field and the current (authoritative) value. Edit any field to correct it — the raw source is kept, and your change queues a write-back to the collection server.'},
+  {el:'[data-tour="sr-actions"]', title:'Move it through the two gates',
+   body:'Endorse a good submission at Gate 1, or send it back / decline. An endorsed record then needs a second person to validate it at Gate 2 before it is approved — so no one signs off their own review. After a forward action you jump straight to the next item.'},
+]};
+</script>{% endblock %}

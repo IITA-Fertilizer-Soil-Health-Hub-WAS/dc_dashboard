@@ -18,6 +18,11 @@
     {% endif %}
   </div>
 
+  <p class="subtle" style="font-size:.82rem;margin:.7rem 0 0;display:flex;gap:.45rem;align-items:flex-start;">
+    <span class="msym" aria-hidden="true" style="font-size:16px;">route</span>
+    <span>How review works: <strong>endorse</strong> (Gate&nbsp;1, a coordinator) → <strong>validate</strong> (Gate&nbsp;2, a second person on QC sign-off) → <strong>approved</strong>. Two people sign off, so no one approves their own review.</span>
+  </p>
+
   {# Counts reflect the pipeline: an item is in exactly one pool. #}
   <div class="cards" style="margin-top:1rem;" data-tour="rv-cards">
     {% if can_endorse %}

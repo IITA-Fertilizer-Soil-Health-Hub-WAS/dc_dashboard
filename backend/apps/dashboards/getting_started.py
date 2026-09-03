@@ -18,9 +18,11 @@ def _pack(title: str, items: list[dict]) -> dict:
 
 
 def _project_checklist(uc) -> dict:
+    from apps.review.models import ReviewState
     from apps.submissions.models import Enumerator, Submission
 
     scope = f"?project={uc.code}"
+    subs = Submission.objects.filter(project=uc)
     items = [
         {"label": "Import form fields from the server",
          "done": uc.forms.exclude(field_schema=[]).exists(),
@@ -35,9 +37,18 @@ def _project_checklist(uc) -> dict:
          "url": reverse("console:list", args=["enumerators"]) + scope,
          "hint": "Who collects the data."},
         {"label": "Sync your first submissions",
-         "done": Submission.objects.filter(project=uc).exists(),
+         "done": subs.exists(),
          "url": reverse("dashboards:project", args=[uc.code]) + "?tab=data",
          "hint": "Pull data from the collection server."},
+        {"label": "Review & endorse a submission (Gate 1)",
+         "done": subs.filter(review__state__in=[ReviewState.QC_PENDING,
+                                                ReviewState.APPROVED]).exists(),
+         "url": reverse("dashboards:project", args=[uc.code]) + "?tab=review",
+         "hint": "Check it, fix any issues, then endorse."},
+        {"label": "Validate a record (Gate 2)",
+         "done": subs.filter(review__state=ReviewState.APPROVED).exists(),
+         "url": reverse("dashboards:qc_signoff", args=[uc.code]),
+         "hint": "Final sign-off — it joins the clean dataset."},
     ]
     return _pack("Getting started", items)
 

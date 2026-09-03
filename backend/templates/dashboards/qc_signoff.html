@@ -12,8 +12,9 @@
   <div class="page-head">
     <h2>{{ uc.name }} — QC sign-off</h2><span class="pill">{{ uc.code }}</span>
   </div>
-  <p class="lede">Gate 2 · agronomic validation. Submissions endorsed by a coordinator wait here for
-     your final sign-off before they are approved. <strong>{{ pending_count }}</strong> awaiting ·
+  <p class="lede">Gate 2 · agronomic validation (QC = quality control). A submission a coordinator already
+     endorsed (Gate 1) waits here for a <strong>different</strong> person's final sign-off before it's
+     approved — so no one validates their own review. <strong>{{ pending_count }}</strong> awaiting ·
      {{ approved_count }} already approved.</p>
 
   {% if messages %}{% for msg in messages %}<div class="pill" style="margin-bottom:.7rem;">{{ msg }}</div>{% endfor %}{% endif %}

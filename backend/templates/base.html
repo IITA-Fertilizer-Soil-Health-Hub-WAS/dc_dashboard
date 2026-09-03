@@ -995,9 +995,22 @@
         removeEventListener('resize',draw,true); removeEventListener('scroll',draw,true); }
       function start(){ if(!steps.length) return; ensure(); i=0; pop.style.display='block';
         addEventListener('resize',draw,true); addEventListener('scroll',draw,true); go(); }
+      function autoStart(){
+        // Wait for the first anchored element before firing — review/issues tab
+        // bodies load in via HTMX, so a fixed delay could highlight nothing.
+        var firstSel=null;
+        for(var k=0;k<steps.length;k++){ if(steps[k].el){ firstSel=steps[k].el; break; } }
+        if(!firstSel){ setTimeout(start,800); return; }
+        var tries=0;
+        (function waitFor(){
+          if(document.querySelector(firstSel)) return setTimeout(start,300);
+          if(tries++>40) return;  // ~6s cap, then give up quietly
+          setTimeout(waitFor,150);
+        })();
+      }
       function register(t){ steps=(t&&t.steps)||[]; id=(t&&t.id)||'tour';
         var btn=document.getElementById('tourBtn'); if(btn&&steps.length) btn.hidden=false;
-        try{ if(steps.length&&!localStorage.getItem('tour_done_'+id)) setTimeout(start,800); }catch(e){} }
+        try{ if(steps.length&&!localStorage.getItem('tour_done_'+id)) autoStart(); }catch(e){} }
       return { start:start, register:register };
     })();
     if(window.PAGE_TOUR) FieldbaseTour.register(window.PAGE_TOUR);
