@@ -7,6 +7,8 @@
     <a class="seg" style="text-decoration:none;" href="{% url 'care:coverage' program.project.code %}"><span class="msym" style="font-size:15px;vertical-align:-2px;">insights</span> Coverage</a>
   </div>
 
+  {% if messages %}{% for msg in messages %}<div class="banner info" style="margin-bottom:.8rem;"><span class="msym" aria-hidden="true">info</span><div class="bx">{{ msg }}</div></div>{% endfor %}{% endif %}
+
   <div class="toolbar">
     <form method="get">
       <input class="search" type="search" name="q" value="{{ q }}" placeholder="Search {{ program.client_label_plural|lower }}…">
@@ -30,12 +32,16 @@
               <td class="subtle" style="white-space:nowrap;">{{ u.last_visit|date:"Y-m-d"|default:"—" }}</td>
               <td>
                 {% if can_assign %}
-                  <form method="post" action="{% url 'care:assign' program.project.code %}?q={{ q }}" style="display:flex;gap:.3rem;">
+                  <form method="post" action="{% url 'care:assign' program.project.code %}?q={{ q }}" style="display:flex;gap:.3rem;flex-wrap:wrap;align-items:center;">
                     {% csrf_token %}<input type="hidden" name="unit" value="{{ u.pk }}">
-                    <select name="worker" onchange="this.form.submit()" style="font-size:.8rem;padding:.25rem .4rem;max-width:180px;">
-                      <option value="">{% if u.worker %}{{ u.worker.full_name|default:u.worker.email }}{% else %}— assign —{% endif %}</option>
+                    <label class="sr-only" for="w-{{ u.pk }}">Worker for {{ u.code }}</label>
+                    <select id="w-{{ u.pk }}" name="worker" style="font-size:.8rem;padding:.35rem .4rem;max-width:180px;">
+                      <option value="">{% if u.worker %}Keep {{ u.worker.full_name|default:u.worker.email }}{% else %}— choose worker —{% endif %}</option>
                       {% for w in workers %}<option value="{{ w.pk }}">{{ w.full_name|default:w.email }}</option>{% endfor %}
                     </select>
+                    <input type="text" name="note" maxlength="255" placeholder="{% if u.worker %}referral reason{% else %}note (optional){% endif %}"
+                           aria-label="Referral reason for {{ u.code }}" style="font-size:.8rem;padding:.35rem .4rem;max-width:150px;">
+                    <button type="submit" class="btn btn-open" style="padding:.35rem .7rem;font-size:.8rem;">{% if u.worker %}Refer{% else %}Assign{% endif %}</button>
                   </form>
                 {% else %}{{ u.worker.full_name|default:u.worker.email|default:"—" }}{% endif %}
               </td>

@@ -74,10 +74,20 @@ def assign(request, code):
 
     from .services import assign_client
 
+    from django.contrib import messages
+
+    from .models import CareAssignment
+
     worker = User.objects.filter(pk=request.POST.get("worker")).first()
-    if worker is not None:
+    if worker is None:
+        messages.error(request, "Pick a worker to assign.")
+    else:
+        had_worker = CareAssignment.objects.filter(unit=unit, is_active=True).exists()
         assign_client(program, unit, worker, by=request.user,
                       note=(request.POST.get("note") or "").strip())
+        who = worker.full_name or worker.email
+        verb = "referred" if had_worker else "assigned"
+        messages.success(request, f"{unit.code} {verb} to {who}.")
     return redirect(f"{reverse('care:clients', args=[code])}?q={request.GET.get('q', '')}")
 
 
@@ -139,9 +149,24 @@ def client_timeline(request, code, unit_id):
     )
     schedule = list(program.project.schedule.all())
     plan = client_visit_plan(unit, schedule, encounters)
+
+    # Let a coordinator assign/refer this person right here, at the point of
+    # decision, instead of navigating back to the register to find the row.
+    from apps.accounts.models import User
+
+    from .models import CareAssignment
+
+    can_assign = request.user.is_staff or can_manage_access(request.user)
+    current = (CareAssignment.objects.filter(unit=unit, is_active=True)
+               .select_related("worker").first())
+    workers = (User.objects.filter(organization=program.project.organization_id, is_active=True)
+               .order_by("full_name", "email")
+               if program.project.organization_id else User.objects.none())
     return render(request, "care/client_timeline.html", {
         "program": program, "unit": unit, "encounters": encounters,
         "plan": plan, "plan_summary": plan_summary(plan),
+        "can_assign": can_assign, "current_worker": getattr(current, "worker", None),
+        "workers": workers,
     })
 
 

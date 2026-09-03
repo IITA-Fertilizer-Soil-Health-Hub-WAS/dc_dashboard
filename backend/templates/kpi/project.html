@@ -3,13 +3,13 @@
 {% block crumbs %}<span class="sep">/</span><a href="{% url 'dashboards:project' uc.code %}">Projects</a><span class="sep">/</span><a href="{% url 'dashboards:project' uc.code %}">{{ uc.name }}</a><span class="sep">/</span><span class="cur">Monitor · Overview</span>{% endblock %}
 {% block content %}
   <div class="page-head">
-    <h2>{{ uc.name }}</h2><span class="pill">{{ uc.code }}</span>
+    <h2>{{ uc.name }} — overview</h2><span class="pill">{{ uc.code }}</span>
     <span style="flex:1"></span>
     <div class="tabs">
       {% for k, label in periods.items %}<a class="seg {% if days == k %}on{% endif %}" href="?days={{ k }}">{{ label }}</a>{% endfor %}
     </div>
   </div>
-  <p class="lede">M&amp;E for this project — {{ period_label|lower }}.</p>
+  <p class="lede">Monitoring this project — {{ period_label|lower }}.</p>
 
   <div class="card" data-tour="me-export" style="margin:0 0 1.1rem;padding:.9rem 1.1rem;">
     <div style="display:flex;flex-wrap:wrap;gap:.5rem 1.4rem;align-items:center;">

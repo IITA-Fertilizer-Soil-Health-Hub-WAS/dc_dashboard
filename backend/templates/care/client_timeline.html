@@ -25,6 +25,26 @@
   <p class="lede">{{ program.client_label }} record in {{ program.name|default:program.project.name }} —
     {% if unit.district or unit.region %}{{ unit.district|default:unit.region }} · {% endif %}every visit this {{ program.client_label|lower }} has had.</p>
 
+  {% if messages %}{% for msg in messages %}<div class="banner info" style="margin-bottom:.8rem;"><span class="msym" aria-hidden="true">info</span><div class="bx">{{ msg }}</div></div>{% endfor %}{% endif %}
+
+  {% if can_assign %}
+    <div class="card" style="padding:.7rem .95rem;margin-bottom:1rem;display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
+      <span class="subtle" style="font-size:.85rem;">{% if current_worker %}Assigned to <strong>{{ current_worker.full_name|default:current_worker.email }}</strong>.{% else %}Not yet assigned to a worker.{% endif %}</span>
+      <span style="flex:1;min-width:1rem;"></span>
+      <form method="post" action="{% url 'care:assign' program.project.code %}" style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;">
+        {% csrf_token %}<input type="hidden" name="unit" value="{{ unit.pk }}">
+        <label class="sr-only" for="tl-worker">Worker for {{ unit.code }}</label>
+        <select id="tl-worker" name="worker" style="font-size:.85rem;padding:.35rem .5rem;max-width:200px;">
+          <option value="">{% if current_worker %}Reassign to…{% else %}— choose worker —{% endif %}</option>
+          {% for w in workers %}<option value="{{ w.pk }}">{{ w.full_name|default:w.email }}</option>{% endfor %}
+        </select>
+        <input type="text" name="note" maxlength="255" placeholder="{% if current_worker %}referral reason{% else %}note (optional){% endif %}"
+               aria-label="Referral reason" style="font-size:.85rem;padding:.35rem .5rem;max-width:170px;">
+        <button type="submit" class="btn btn-open" style="padding:.35rem .8rem;font-size:.85rem;">{% if current_worker %}Refer{% else %}Assign{% endif %}</button>
+      </form>
+    </div>
+  {% endif %}
+
   {% if plan %}
     <h3 style="margin:1.2rem 0 .5rem;font-size:1.05rem;">Visit plan
       <span class="subtle" style="font-weight:400;font-size:.85rem;">· {{ plan_summary.done }}/{{ plan_summary.total }} done{% if plan_summary.overdue %} · <span style="color:#b23b2e;font-weight:600;">{{ plan_summary.overdue }} overdue</span>{% endif %}</span></h3>
@@ -53,7 +73,7 @@
         <div class="tl-card">
           <div class="ev">{{ e.event_key|default:"Visit" }}{% if e.form %} · <span class="subtle" style="font-weight:400;">{{ e.form.title|default:e.form.role }}</span>{% endif %}</div>
           <div class="tl-meta">
-            <span>Enumerator: {{ e.enumerator.enid|default:"—" }}</span>
+            <span>Recorded by: {{ e.enumerator.enid|default:"—" }}</span>
             <span>State: <span class="pill {% if e.review.state == 'APPROVED' %}good{% elif e.review.state == 'DECLINED' %}warn{% else %}neutral{% endif %}">{{ e.review.get_state_display|default:"—" }}</span></span>
           </div>
         </div>

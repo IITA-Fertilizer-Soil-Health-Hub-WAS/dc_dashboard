@@ -152,10 +152,12 @@
         {% endif %}
         <div style="display:flex;flex-direction:column;gap:.5rem;">
           {% for b in review_actions %}
-            <form method="post" style="margin:0;">
+            <form method="post" style="margin:0;"
+                  {% if b.action == 'QC_APPROVE' %}onsubmit="return confirm('Validate this submission (Gate 2)? It becomes approved and is written back.')"
+                  {% elif b.action == 'ENDORSE' %}onsubmit="return confirm('Endorse this submission (Gate 1)? It moves on for final validation.')"{% endif %}>
               {% csrf_token %}<input type="hidden" name="action" value="{{ b.action }}">
               <button class="btn {{ b.cls }}" type="submit"
-                      style="width:100%;text-align:center;{% if b.primary %}padding:.7rem;font-size:1rem;font-weight:700;{% else %}opacity:.9;{% endif %}">{{ b.label }}</button>
+                      style="width:100%;text-align:center;min-height:44px;{% if b.primary %}padding:.7rem;font-size:1rem;font-weight:700;{% else %}opacity:.9;{% endif %}">{{ b.label }}</button>
             </form>
           {% endfor %}
           {% if show_decline %}

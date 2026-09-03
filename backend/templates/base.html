@@ -14,7 +14,7 @@
     :root{
       /* Regional Hub palette — warm paper canvas, deep-forest rail, terracotta accent */
       --bg:#f5f2ea; --surface:#ffffff; --surface-2:#faf7ef;
-      --ink:#1a2b20; --muted:#6b7a6f; --faint:#98a59b;
+      --ink:#1a2b20; --muted:#5b6a5f; --faint:#6f7d73;  /* darkened to meet WCAG AA on the paper surface */
       --line:#e7e2d5; --line-soft:#f0ece1;
       --brand:#1c5b2e; --brand-700:#164522; --brand-900:#0e2e16; --brand-50:#e8f0ea;
       /* terracotta / clay accent (from the emblem's soil strata) */
@@ -369,6 +369,9 @@
       padding:.55rem 1rem; border-radius:0 0 9px 9px; font-weight:600; font-size:.85rem;
       transition:top .15s ease;}
     .skip:focus{top:0;}
+    /* Visually-hidden but available to screen readers (labels for compact controls). */
+    .sr-only{position:absolute!important; width:1px; height:1px; padding:0; margin:-1px;
+      overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;}
     :focus-visible{outline:2.5px solid var(--gold); outline-offset:2px; border-radius:5px;}
     .content:focus{outline:none;}
 
@@ -572,7 +575,7 @@
         {% else %}
           {# ===================== Projects ===================== #}
           {% if user.is_staff %}
-            {% comment %}Admin home mirrors the in-project life-cycle: Operations
+            {% comment %}Admin home mirrors the in-project life-cycle: Overview
             first, then the platform's own Structure -> People -> Monitor, and the
             build/integrate tools last. Section labels match the workspace's task
             language.{% endcomment %}
@@ -672,6 +675,22 @@
       {% comment %}Phases are collapsed by default; we only re-open the ones a user
       explicitly expanded (remembered per browser) plus the phase holding the current
       page. Runs inline so a saved-open phase doesn't flash closed on navigation.{% endcomment %}
+      <script>
+        // Decorative icon glyphs (Material Symbols ligatures) are always paired with
+        // a visible text label — hide them from screen readers so they aren't read
+        // aloud as "table rows", "rate review", etc. Icon-only controls carry their
+        // own aria-label and are skipped. Re-runs after HTMX swaps in new content.
+        (function () {
+          function hideIcons(root) {
+            try {
+              (root || document).querySelectorAll('.msym:not([aria-hidden]):not([aria-label])')
+                .forEach(function (el) { el.setAttribute('aria-hidden', 'true'); });
+            } catch (e) { /* no-op */ }
+          }
+          document.addEventListener('DOMContentLoaded', function () { hideIcons(document); });
+          document.body.addEventListener('htmx:afterSettle', function (e) { hideIcons(e.target); });
+        })();
+      </script>
       <script>
         (function () {
           try {

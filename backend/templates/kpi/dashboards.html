@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}My dashboards · {{ SITE_NAME }}{% endblock %}
-{% block crumbs %}<span class="sep">/</span><a href="{% url 'kpi:overview' %}">M&amp;E</a><span class="sep">/</span><span class="cur">Dashboards</span>{% endblock %}
+{% block crumbs %}<span class="sep">/</span><a href="{% url 'kpi:overview' %}">Overview</a><span class="sep">/</span><span class="cur">Dashboards</span>{% endblock %}
 {% block content %}
   <div class="page-head"><h2>Dashboards</h2><span style="flex:1"></span>
     <a class="btn btn-open" style="text-decoration:none;" href="{% url 'kpi:dashboard_new' %}">+ New dashboard</a>

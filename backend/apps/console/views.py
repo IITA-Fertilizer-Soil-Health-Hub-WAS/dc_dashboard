@@ -896,6 +896,23 @@ class WizardView(StaffMixin, View):
             getlist = getattr(posted, "getlist", lambda k: [])
             ctx["posted_countries"] = getlist("countries")
             ctx["posted_crops"] = getlist("crops")
+            # Rehydrate step-2 form selections server-side so a validation error
+            # doesn't wipe the discovered/ticked forms (they were added client-side).
+            posted_forms = []
+            try:
+                n = int(posted.get("form_count") or 0)
+            except (TypeError, ValueError):
+                n = 0
+            for i in range(n):
+                if not posted.get(f"form-{i}-present"):
+                    continue
+                posted_forms.append({
+                    "idx": len(posted_forms),
+                    "id": posted.get(f"form-{i}-id") or "",
+                    "role": posted.get(f"form-{i}-role") or "VALIDATION",
+                    "include": posted.get(f"form-{i}-include") == "1",
+                })
+            ctx["posted_forms"] = posted_forms
         return ctx
 
     def get(self, request):
@@ -1563,8 +1580,22 @@ class RuleBuilderView(ManageMixin, View):
         return _builder_projects(request).filter(code=code).first()
 
     def _ctx(self, request, project, rule=None, error=None, posted=None):
+        import json
+
         from apps.projects.models import ReferenceDataset
         from apps.validation.models import ValidationRule
+
+        # Survive a failed save: seed the builder from the POSTed config (the JS
+        # rehydrates every control + the message from this), so a one-word error
+        # like a duplicate name doesn't wipe the whole rule the user just built.
+        rule_params = rule.params if rule else {}
+        if posted is not None and posted.get("params"):
+            try:
+                parsed = json.loads(posted.get("params") or "{}")
+                if isinstance(parsed, dict):
+                    rule_params = parsed
+            except (ValueError, json.JSONDecodeError):
+                pass
 
         forms = list(project.forms.all().order_by("title", "server_form_id"))
         fields_by_form = {str(f.id): _form_field_choices(f) for f in forms}
@@ -1580,7 +1611,7 @@ class RuleBuilderView(ManageMixin, View):
             "fields_by_form": fields_by_form, "datasets": datasets,
             "rule_types": types,
             "severities": ValidationRule.Severity.choices,
-            "rule_params": rule.params if rule else {},
+            "rule_params": rule_params,
             "error": error, "posted": posted or {},
         }
 

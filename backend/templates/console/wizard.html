@@ -113,7 +113,7 @@
               {% for val,lbl in backends %}<option value="{{ val }}" {% if posted.backend == val %}selected{% endif %}>{{ lbl }}</option>{% endfor %}
             </select>
           </div>
-          <div class="fld"><label>Server URL <span class="hint subtle">(blank = default)</span></label><input name="base_url" id="f_baseurl" value="{{ posted.base_url }}" placeholder="https://api.ona.io"></div>
+          <div class="fld"><label for="f_baseurl">Server URL <span class="hint subtle">(blank = default)</span></label><input name="base_url" id="f_baseurl" value="{{ posted.base_url }}" placeholder="https://api.ona.io"></div>
           {{ backend_defaults|json_script:"backend-defaults" }}
           <script>
             // Reflect each backend's configured default as the Server URL placeholder,
@@ -127,7 +127,7 @@
             syncServerHint();
           </script>
           <button type="button" class="btn btn-request mini" onclick="loadProjects()" style="height:38px;">Find projects</button>
-          <div class="fld" style="grid-column:1 / -1;"><label>API token <span class="hint subtle">(blank = use configured)</span></label>
+          <div class="fld" style="grid-column:1 / -1;"><label for="f_token">API token <span class="hint subtle">(blank = use configured)</span></label>
             <input name="token" id="f_token" value="{{ posted.token }}" placeholder="paste a token to use a different account/server"></div>
         </div>
         <!-- Projects load asynchronously so the wizard opens instantly. -->
@@ -139,8 +139,8 @@
         <div id="dup-warn" class="dup-warn" style="display:none;"></div>
 
         <div class="grid2" style="margin-top:1rem;">
-          <div class="fld"><label>Project code *</label><input name="code" id="f_code" value="{{ posted.code }}" placeholder="SNS-RWANDA"></div>
-          <div class="fld"><label>Name *</label><input name="name" id="f_name" value="{{ posted.name }}" placeholder="SNS Rwanda"></div>
+          <div class="fld"><label for="f_code">Project code *</label><input name="code" id="f_code" value="{{ posted.code }}" placeholder="SNS-RWANDA"></div>
+          <div class="fld"><label for="f_name">Name *</label><input name="name" id="f_name" value="{{ posted.name }}" placeholder="SNS Rwanda"></div>
           {% if organizations|length > 1 %}
           <div class="fld"><label>Owning institution</label>
             <select name="organization">
@@ -148,7 +148,7 @@
             </select>
           </div>
           {% endif %}
-          <div class="fld"><label>Owner * <span class="hint subtle">— an existing user</span></label>
+          <div class="fld"><label for="f_owner">Owner * <span class="hint subtle">— an existing user</span></label>
             <select name="owner" id="f_owner" data-searchable="1"{% if organizations|length > 1 %} data-depends="organization"{% endif %} data-placeholder="Search a user by name or email…">
               <option value="">—</option>
               {% for u in owner_candidates %}<option value="{{ u.user_id }}" data-org="{{ u.organization.code }}" {% if posted.owner == u.user_id %}selected{% endif %}>{{ u.full_name|default:u.email }}{% if u.full_name %} · {{ u.email }}{% endif %}</option>{% endfor %}
@@ -198,8 +198,18 @@
       <div class="wz-panel" data-step="2" hidden>
         <h3>Forms to monitor</h3>
         <p class="lead">Tick the forms to monitor. Pick a project in step 1 to populate these — refine roles &amp; field mappings later under <em>Manage → Forms</em>.</p>
-        <div id="forms"><p class="subtle" style="font-size:.82rem;">No project selected yet — go back to step 1 and choose one.</p></div>
-        <input type="hidden" name="form_count" id="form_count" value="0">
+        <div id="forms">{% if posted_forms %}{% for f in posted_forms %}
+          <div class="formblock" data-idx="{{ f.idx }}">
+            <input type="hidden" name="form-{{ f.idx }}-present" value="1">
+            <input type="hidden" name="form-{{ f.idx }}-id" class="fid" value="{{ f.id }}">
+            <input type="hidden" name="form-{{ f.idx }}-role" value="{{ f.role }}">
+            <input type="checkbox" name="form-{{ f.idx }}-include" value="1" {% if f.include %}checked{% endif %} title="Include this form">
+            <span class="fname">Form {{ f.id }}</span>
+            <button type="button" class="btn btn-request mini" hx-post="{% url 'console:discover_fields' %}"
+              hx-target="next .mapwrap" hx-vals='js:{index: this.closest(".formblock").dataset.idx, form_id: this.closest(".formblock").querySelector(".fid").value, backend: document.getElementById("f_backend").value, base_url: document.getElementById("f_baseurl").value, token: document.getElementById("f_token").value}'>Auto-map fields</button>
+            <div class="mapwrap"></div>
+          </div>{% endfor %}{% else %}<p class="subtle" style="font-size:.82rem;">No project selected yet — go back to step 1 and choose one.</p>{% endif %}</div>
+        <input type="hidden" name="form_count" id="form_count" value="{{ posted_forms|length|default:0 }}">
       </div>
 
       <!-- STEP 3 -->
@@ -291,7 +301,7 @@
         (cc.join(', ') || 'none') + '  ·  ' + (cr.join(', ') || 'none');
     }
 
-    let formIdx = 0;
+    let formIdx = {{ posted_forms|length|default:0 }};  // continue past server-rehydrated rows
     function addFormRow(id, title){
       const html = document.getElementById('formTpl').innerHTML.replaceAll('IDX', formIdx);
       const wrap = document.createElement('div');

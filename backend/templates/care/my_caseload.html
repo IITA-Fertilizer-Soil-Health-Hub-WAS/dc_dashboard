@@ -2,16 +2,16 @@
 {% block title %}My caseload · {{ SITE_NAME }}{% endblock %}
 {% block crumbs %}<span class="sep">/</span><span class="cur">My caseload</span>{% endblock %}
 {% block content %}
-  <div class="page-head"><h2>My caseload</h2><span class="subtle" style="margin-left:.5rem;">{{ rows|length }} client{{ rows|length|pluralize }}</span>
+  <div class="page-head"><h2>My caseload</h2><span class="subtle" style="margin-left:.5rem;">{{ rows|length }} assigned</span>
     <span style="flex:1"></span>
     {% if rows %}<a class="seg" style="text-decoration:none;" href="{% url 'care:my_caseload_csv' %}" title="Download to reference offline in the field"><span class="msym" style="font-size:15px;vertical-align:-2px;">download</span> Take offline (CSV)</a>{% endif %}
   </div>
-  <p class="lede">Clients assigned to you — those with overdue or due visits are at the top. Download to carry in the field.</p>
+  <p class="lede">People assigned to you — those with overdue or due visits are at the top. Download to carry in the field.</p>
 
   <div class="card" style="padding:0;overflow:hidden;">
     <div class="table-wrap">
       <table>
-        <thead><tr><th scope="col">Client</th><th scope="col">Programme</th><th scope="col">Progress</th>
+        <thead><tr><th scope="col">Person</th><th scope="col">Programme</th><th scope="col">Progress</th>
           <th scope="col">Next / overdue</th><th scope="col" style="text-align:right;">Record</th></tr></thead>
         <tbody>
           {% for r in rows %}
@@ -24,11 +24,11 @@
                 {% if r.next_due %}<span class="subtle" style="font-size:.82rem;">{{ r.next_due.event_key }} {{ r.next_due.label|lower }}{% if r.next_due.target %} · {{ r.next_due.target|date:"M j" }}{% endif %}</span>
                 {% elif not r.summary.overdue %}<span class="subtle" style="font-size:.82rem;">up to date</span>{% endif %}
               </td>
-              <td style="text-align:right;"><a href="{% url 'care:client_timeline' r.a.program.project.code r.a.unit.pk %}">Open →</a></td>
+              <td style="text-align:right;"><a href="{% url 'care:client_timeline' r.a.program.project.code r.a.unit.pk %}">Timeline →</a></td>
             </tr>
           {% empty %}
             <tr><td colspan="5"><div class="empty" style="border:none;padding:1.6rem;">
-              No clients assigned to you yet. A coordinator assigns clients from the {{ SITE_NAME }} care register.</div></td></tr>
+              Nobody assigned to you yet. A coordinator assigns people from the {{ SITE_NAME }} care register.</div></td></tr>
           {% endfor %}
         </tbody>
       </table>

@@ -1,5 +1,5 @@
 <button class="btn {{ cls }}" type="button"
-        style="padding:.3rem .65rem; font-size:.78rem; margin-left:.25rem;"
+        style="padding:.5rem .8rem; font-size:.82rem; min-height:38px; margin:.15rem 0 .15rem .4rem;"
         hx-post="{% url 'dashboards:tab_review_action' uc.code %}"
         hx-target="#tabbody" hx-swap="innerHTML"
         hx-vals='{"submission": "{{ sub.id }}", "action": "{{ action }}"}'

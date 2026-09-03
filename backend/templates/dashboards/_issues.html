@@ -12,16 +12,17 @@
   <form id="bulk-form">
     <div class="toolbar" data-tour="iss-filters" style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;margin:.2rem 0 .7rem;">
       <input class="search" type="search" name="q" value="{{ filters.q }}" placeholder="Search id / issue…"
+             aria-label="Search flagged submissions"
              style="padding:.4rem .6rem;border:1px solid var(--line);border-radius:7px;font-size:.85rem;min-width:160px;">
-      <select name="event" style="padding:.4rem .5rem;border:1px solid var(--line);border-radius:7px;font-size:.85rem;">
+      <select name="event" aria-label="Filter by event" style="padding:.4rem .5rem;border:1px solid var(--line);border-radius:7px;font-size:.85rem;">
         <option value="">All events</option>
         {% for e in event_options %}<option value="{{ e }}" {% if filters.event == e %}selected{% endif %}>{{ e }}</option>{% endfor %}
       </select>
-      <select name="state" style="padding:.4rem .5rem;border:1px solid var(--line);border-radius:7px;font-size:.85rem;">
+      <select name="state" aria-label="Filter by review state" style="padding:.4rem .5rem;border:1px solid var(--line);border-radius:7px;font-size:.85rem;">
         <option value="">Any state</option>
         {% for v,l in state_options %}<option value="{{ v }}" {% if filters.state == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
       </select>
-      <select name="severity" style="padding:.4rem .5rem;border:1px solid var(--line);border-radius:7px;font-size:.85rem;">
+      <select name="severity" aria-label="Filter by severity" style="padding:.4rem .5rem;border:1px solid var(--line);border-radius:7px;font-size:.85rem;">
         <option value="">Any severity</option>
         {% for v,l in severity_options %}<option value="{{ v }}" {% if filters.severity == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
       </select>
