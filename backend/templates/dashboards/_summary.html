@@ -60,11 +60,11 @@
 {% endif %}
 
 <div class="cards" style="margin-top:1rem; align-items:flex-start;">
-  <div class="card" style="flex:1; min-width:340px;">
+  <div class="card" style="flex:1; min-width:min(340px,100%);">
     <h3>Submissions by location{% if mapped_points %} <span class="pill neutral" style="font-weight:600;">{{ mapped_points }} mapped</span>{% endif %}</h3>
     {{ map_html|safe }}
   </div>
-  <div class="card" style="flex:1; min-width:340px;">
+  <div class="card" style="flex:1; min-width:min(340px,100%);">
     <h3>Trend of submissions</h3>
     {% if trend %}
       <div class="kbars" role="img" aria-label="Monthly submissions — {{ total_submissions }} total across {{ trend|length }} month(s).">

@@ -378,6 +378,19 @@
   seed(); render();
 })();
 </script>
+<script>
+  // Warn before leaving a half-built rule with unsaved changes.
+  (function () {
+    var f = document.getElementById('rb-mainform'); if (!f) return;
+    var dirty = false;
+    f.addEventListener('input', function () { dirty = true; });
+    f.addEventListener('change', function () { dirty = true; });
+    f.addEventListener('submit', function () { dirty = false; });
+    window.addEventListener('beforeunload', function (e) {
+      if (dirty) { e.preventDefault(); e.returnValue = ''; }
+    });
+  })();
+</script>
 {% endblock %}
 {% block tour %}<script>
 window.PAGE_TOUR = {id:'rule-builder', steps:[

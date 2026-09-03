@@ -10,16 +10,20 @@ elsewhere.{% endcomment %}
 
   <div class="toolbar">
     {% if m.search_fields %}
-      <form method="get">
+      <form method="get" style="display:flex;gap:.3rem;align-items:center;">
+        {% if request.GET.project %}<input type="hidden" name="project" value="{{ request.GET.project }}">{% endif %}
+        {% if org_filter %}<input type="hidden" name="org" value="{{ org_filter }}">{% endif %}
         <input class="search" type="search" name="q" value="{{ q }}"
                placeholder="Search {% if m.key == 'collection-units' and workspace_project %}{{ workspace_project.unit_label_plural|lower }}{% else %}{{ m.label|lower }}{% endif %}…">
         <button class="btn btn-request" type="submit">Search</button>
+        {% if q %}<a class="subtle" style="font-size:.82rem;" href="?{% if request.GET.project %}project={{ request.GET.project }}&{% endif %}{% if org_filter %}org={{ org_filter }}{% endif %}">Clear</a>{% endif %}
       </form>
     {% else %}<span style="flex:1"></span>{% endif %}
     {% if org_options %}
       <form method="get" style="margin-left:.4rem;">
         {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
-        <select class="search" name="org" onchange="this.form.submit()" style="max-width:220px;">
+        {% if request.GET.project %}<input type="hidden" name="project" value="{{ request.GET.project }}">{% endif %}
+        <select class="search" name="org" aria-label="Filter by institution" onchange="this.form.submit()" style="max-width:220px;">
           <option value="">All institutions</option>
           {% for o in org_options %}<option value="{{ o.code }}" {% if org_filter == o.code %}selected{% endif %}>{{ o.name }}</option>{% endfor %}
         </select>
@@ -110,10 +114,11 @@ elsewhere.{% endcomment %}
   </div>
 
   {% if page.has_other_pages %}
+    {% comment %}Preserve the active scope/filter across pages (was dropping project/org).{% endcomment %}
     <div class="pager">
-      {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}{% if q %}&q={{ q }}{% endif %}">← Prev</a>{% endif %}
+      {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if request.GET.project %}&project={{ request.GET.project }}{% endif %}{% if org_filter %}&org={{ org_filter }}{% endif %}">← Prev</a>{% endif %}
       <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
-      {% if page.has_next %}<a href="?page={{ page.next_page_number }}{% if q %}&q={{ q }}{% endif %}">Next →</a>{% endif %}
+      {% if page.has_next %}<a href="?page={{ page.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if request.GET.project %}&project={{ request.GET.project }}{% endif %}{% if org_filter %}&org={{ org_filter }}{% endif %}">Next →</a>{% endif %}
     </div>
   {% endif %}
 {% endblock %}

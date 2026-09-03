@@ -54,7 +54,7 @@
   </div>
 
   <div class="cards" style="margin-top:1.1rem;align-items:flex-start;">
-    <div class="card" style="flex:1;min-width:340px;">
+    <div class="card" style="flex:1;min-width:min(340px,100%);">
       <h3 style="margin-bottom:.8rem;">Top enumerators</h3>
       {% for e in top_enumerators %}
         <div class="krow">
@@ -64,7 +64,7 @@
         </div>
       {% empty %}<div class="empty" style="border:none;">No data.</div>{% endfor %}
     </div>
-    <div class="card" style="flex:1;min-width:340px;padding:0;overflow:hidden;">
+    <div class="card" style="flex:1;min-width:min(340px,100%);padding:0;overflow:hidden;">
       <div style="padding:1.15rem 1.25rem .4rem;"><h3>Forms</h3></div>
       <div class="table-wrap">
         <table>
@@ -81,8 +81,8 @@
 {% endblock %}
 {% block tour %}<script>
 window.PAGE_TOUR = {id:'me-dashboard', steps:[
-  {el:'.subnav', title:'M&amp;E views',
-   body:'Switch between the Summary, data Quality, and Team-quality (per-enumerator) views of this project.'},
+  {el:'.subnav', title:'Monitor views',
+   body:'Switch between the Overview, data Quality, and Team-quality (per-enumerator) views of this project.'},
   {el:'.page-head .tabs', title:'Time window',
    body:'Every number on the page is for this period — last 7 / 30 / 90 days, or all time.'},
   {el:'.cards', title:'Headline indicators',

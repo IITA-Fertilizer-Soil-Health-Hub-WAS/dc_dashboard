@@ -60,6 +60,28 @@ def _managed(key: str) -> Managed:
     return m
 
 
+def _cascade_counts(obj):
+    """What a delete will take with it: the count of each directly-related set that
+    cascades. One bounded COUNT per relation (never loads the objects), so it's
+    safe even for a project with thousands of submissions. Deeper cascades aren't
+    enumerated — the top-level counts are the signal a user needs before deleting."""
+    from django.db.models import CASCADE
+
+    out = []
+    for rel in obj._meta.related_objects:
+        if getattr(rel, "on_delete", None) is not CASCADE:
+            continue
+        try:
+            n = getattr(obj, rel.get_accessor_name()).count()
+        except Exception:  # noqa: BLE001 — best-effort; a bad relation just isn't shown
+            continue
+        if n:
+            label = rel.related_model._meta.verbose_name_plural
+            out.append({"label": str(label), "count": n})
+    out.sort(key=lambda r: -r["count"])
+    return out
+
+
 def _clean_post_date(raw):
     """Parse a posted date. Returns ``(date_or_None, bad_raw_or_None)`` — a blank
     value is a clean None; a non-blank value that won't parse comes back as the
@@ -1076,7 +1098,8 @@ class ConsoleDeleteView(UserPassesTestMixin, View):
         if m.readonly:
             raise PermissionDenied("This section is read-only.")
         obj = _scoped_get(request.user, m, key, pk)
-        return render(request, "console/delete.html", _base_ctx(m) | {"obj": obj})
+        return render(request, "console/delete.html",
+                      _base_ctx(m) | {"obj": obj, "cascade": _cascade_counts(obj)})
 
     def post(self, request, key, pk):
         m = _managed(key)
