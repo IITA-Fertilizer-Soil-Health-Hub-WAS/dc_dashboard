@@ -1,11 +1,10 @@
 {% include "_getting_started.html" %}
-<div class="cards" style="margin-top:1rem;">
+{% comment %}Project code + name are in the page header; identity coverage has its own
+card below — so the summary row carries just the headline count, with country as
+context rather than a stat.{% endcomment %}
+{% if country %}<p class="subtle" style="margin:.9rem 0 0;font-size:.85rem;">Country · <strong style="color:var(--ink);">{{ country }}</strong></p>{% endif %}
+<div class="cards" style="margin-top:.6rem;">
   <div class="card infobox"><div class="n">{{ total_submissions }}</div><div class="l">Submissions</div></div>
-  <div class="card infobox"><div class="n">{{ country }}</div><div class="l">Country</div></div>
-  <div class="card infobox"><div class="n">{{ uc.code }}</div><div class="l">Project</div></div>
-  <div class="card infobox" title="{{ attribution.attributed }} of {{ attribution.total }} submissions trace to a registered platform account">
-    <div class="n">{{ attribution.pct }}%</div><div class="l">Attributed to a user</div>
-  </div>
 </div>
 
 <div class="card" style="margin-top:1rem;">
@@ -21,17 +20,24 @@
 
 <div class="card" style="margin-top:1rem;">
   <h3 style="margin-bottom:.7rem;">Review &amp; write-back health</h3>
-  <div style="display:flex;gap:1.4rem;flex-wrap:wrap;">
+  {% comment %}Only Needs-review and Approved are always shown as anchors; the other
+  states appear only when non-zero, so a healthy project isn't padded with zeros. The
+  write-back cluster shows only when there's any write-back activity.{% endcomment %}
+  <div style="display:flex;gap:1.4rem;flex-wrap:wrap;align-items:flex-start;">
     <div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:var(--ink);">{{ health.needs_review }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Needs review</div></div>
-    <div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:var(--muted);">{{ health.in_progress }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">In progress</div></div>
-    <div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:var(--gold);">{{ health.waiting }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Waiting on enumerator</div></div>
-    <div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:var(--muted);">{{ health.awaiting_validation }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Awaiting validation</div></div>
+    {% if health.in_progress %}<div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:var(--muted);">{{ health.in_progress }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">In progress</div></div>{% endif %}
+    {% if health.waiting %}<div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:var(--gold);">{{ health.waiting }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Waiting on enumerator</div></div>{% endif %}
+    {% if health.awaiting_validation %}<div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:var(--muted);">{{ health.awaiting_validation }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Awaiting validation</div></div>{% endif %}
     <div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:#3f9142;">{{ health.approved }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Approved</div></div>
-    <div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:var(--red);">{{ health.declined }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Declined</div></div>
+    {% if health.declined %}<div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:var(--red);">{{ health.declined }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Declined</div></div>{% endif %}
     {% if health.superseded %}<div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:var(--muted);">{{ health.superseded }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Superseded</div></div>{% endif %}
-    <div style="border-left:1px solid var(--line);padding-left:1.4rem;"><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:#0e2e16;">{{ health.wb_sent }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Synced to source</div></div>
-    <div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:var(--gold);">{{ health.wb_pending }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Sync pending</div></div>
-    <div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:var(--red);">{{ health.wb_failed }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Sync failed</div></div>
+    {% if health.wb_sent or health.wb_pending or health.wb_failed %}
+    <div style="display:flex;gap:1.4rem;border-left:1px solid var(--line);padding-left:1.4rem;">
+      <div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:#0e2e16;">{{ health.wb_sent }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Synced to source</div></div>
+      {% if health.wb_pending %}<div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:var(--gold);">{{ health.wb_pending }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Sync pending</div></div>{% endif %}
+      {% if health.wb_failed %}<div><div class="n" style="font-family:var(--serif);font-size:1.5rem;color:var(--red);">{{ health.wb_failed }}</div><div class="l" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Sync failed</div></div>{% endif %}
+    </div>
+    {% endif %}
   </div>
 </div>
 

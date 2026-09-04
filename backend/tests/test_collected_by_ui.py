@@ -100,9 +100,9 @@ def test_summary_attribution_coverage(client, attributed):
     client.force_login(coord)
     resp = client.get(reverse("dashboards:tab_summary", args=[uc.code]))
     assert resp.status_code == 200
-    # The single submission is attributed -> 100%.
+    # The single submission is attributed -> 100%, shown on the Identity coverage card
+    # (the redundant duplicate stat card was removed).
     assert b"100%" in resp.content
-    assert b"Attributed to a user" in resp.content
     assert b"Identity coverage" in resp.content
 
 
