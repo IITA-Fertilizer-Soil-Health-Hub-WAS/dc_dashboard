@@ -52,15 +52,15 @@
   </div>
 
   <div class="cards" style="margin-top:1.1rem;align-items:flex-start;">
+    {% comment %}Per-enumerator volume + quality is owned by Team quality (and the
+    Collect → Enumerators ranking); the Overview points there instead of repeating a
+    third volume list.{% endcomment %}
     <div class="card" style="flex:1;min-width:min(340px,100%);">
-      <h3 style="margin-bottom:.8rem;">Top enumerators</h3>
-      {% for e in top_enumerators %}
-        <div class="krow">
-          <span class="nm">{{ e.enumerator__enid }}{% if e.enumerator__first_name %} · {{ e.enumerator__first_name }} {{ e.enumerator__surname }}{% endif %}</span>
-          <div class="track"><i style="width:{% widthratio e.n enum_max 100 %}%;"></i></div>
-          <span class="v">{{ e.n }}</span>
-        </div>
-      {% empty %}<div class="empty" style="border:none;">No data.</div>{% endfor %}
+      <div style="display:flex;align-items:center;gap:.6rem;">
+        <h3 style="margin:0;">Enumerators</h3>
+        <a class="btn btn-ghost" style="margin-left:auto;text-decoration:none;font-size:.82rem;" href="{% url 'kpi:enumerators' uc.code %}"><span class="msym" aria-hidden="true" style="font-size:15px;vertical-align:-2px;">workspace_premium</span> Team quality →</a>
+      </div>
+      <p class="subtle" style="margin:.6rem 0 0;font-size:.9rem;">Each enumerator's volume alongside their quality score — approval, on-time delivery, GPS accuracy and open issues — is on the <a href="{% url 'kpi:enumerators' uc.code %}">Team quality</a> page.</p>
     </div>
     <div class="card" style="flex:1;min-width:min(340px,100%);padding:0;overflow:hidden;">
       <div style="padding:1.15rem 1.25rem .4rem;"><h3>Forms</h3></div>
