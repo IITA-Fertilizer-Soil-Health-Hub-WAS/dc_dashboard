@@ -469,3 +469,23 @@ if SENTRY_DSN:  # pragma: no cover - exercised only in configured deployments
         )
     except Exception:
         pass
+
+
+# Logging — always surface unhandled 500 tracebacks to stdout (the container logs).
+# Django's default routes django.request ERROR to mail_admins only when DEBUG=False,
+# so without this a production 500 is invisible in the logs.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {"format": "[{asctime}] {levelname} {name}: {message}", "style": "{"},
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "verbose"},
+    },
+    "root": {"handlers": ["console"], "level": "INFO"},
+    "loggers": {
+        # 500s, with the full traceback, straight to stdout.
+        "django.request": {"handlers": ["console"], "level": "ERROR", "propagate": False},
+    },
+}
