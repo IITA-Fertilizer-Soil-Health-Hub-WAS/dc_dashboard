@@ -68,3 +68,24 @@ def sync_memberships_from_eia_apps(user) -> int:
         )
         created += int(was_created)
     return created
+
+
+def grant_demo_access(user) -> bool:
+    """Give a brand-new user read-only (VIEWER) access to a demo project, so first
+    sign-in lands on something to explore instead of an empty 'request access' page.
+
+    Picks the most recent active ``DEMO-*`` project (demo projects are created on
+    demand from the console). Idempotent, and a graceful no-op when no demo project
+    exists. VIEWER only, so users sharing one demo can't step on each other.
+    """
+    demo = (
+        Project.objects.filter(code__startswith="DEMO-", is_active=True)
+        .order_by("-created_at")
+        .first()
+    )
+    if demo is None:
+        return False
+    _, created = Membership.objects.get_or_create(
+        user=user, project=demo, role=Role.VIEWER
+    )
+    return created

@@ -14,7 +14,7 @@ from __future__ import annotations
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 
-from .services import sync_memberships_from_eia_apps
+from .services import grant_demo_access, sync_memberships_from_eia_apps
 
 # Require approval even for Auth0-authenticated users: a first-time Auth0 login
 # provisions the account but leaves it inactive (allauth shows the "account
@@ -77,4 +77,7 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
             user.is_active = True
         user.save()
         sync_memberships_from_eia_apps(user)
+        # First-time users get read-only access to a demo project (if one exists),
+        # so they land with something to explore rather than an empty request page.
+        grant_demo_access(user)
         return user
