@@ -36,15 +36,13 @@
     <div class="card infobox"><div class="n">{{ quality_score }}</div><div class="l">Quality score</div></div>
   </div>
 
-  {# Review pipeline — same buckets as the Review queue, so the numbers agree. #}
-  <div class="cards" style="margin-top:.9rem;">
-    <div class="card infobox"><div class="n">{{ needs_review }}</div><div class="l">Needs review</div></div>
-    <div class="card infobox"><div class="n">{{ in_progress }}</div><div class="l">In progress</div></div>
-    <div class="card infobox"><div class="n">{{ waiting }}</div><div class="l">Waiting on enumerator</div></div>
-    <div class="card infobox"><div class="n">{{ awaiting_validation }}</div><div class="l">Awaiting validation</div></div>
-    <div class="card infobox"><div class="n">{{ declined }}</div><div class="l">Declined</div></div>
-    {% if superseded %}<div class="card infobox"><div class="n">{{ superseded }}</div><div class="l">Superseded</div></div>{% endif %}
-  </div>
+  {# The operational review pipeline lives on the Review queue (its owner) — Monitor
+     stays analytical and points there rather than repeating the same buckets. #}
+  <p class="subtle" style="margin-top:.9rem;font-size:.88rem;">
+    <span class="msym" aria-hidden="true" style="font-size:15px;vertical-align:-2px;">rate_review</span>
+    See what's at each review stage — needs review, in progress, awaiting validation — in the
+    <a href="{% url 'dashboards:project' uc.code %}?tab=review">review queue</a>.
+  </p>
 
   <div class="card" style="margin-top:1.1rem;">
     <h3 style="margin-bottom:.8rem;">Daily submissions</h3>

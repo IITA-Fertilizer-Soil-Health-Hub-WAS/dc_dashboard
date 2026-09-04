@@ -69,8 +69,10 @@ def test_review_queue_splits_by_pipeline_stage(client, world):
 
 
 def test_summary_and_me_mirror_the_review_pipeline(client, world):
-    """The Summary health panel and M&E report the same pipeline buckets as the
-    Review queue (one submission, one stage), so the numbers always agree."""
+    """The Review queue owns the full pipeline breakdown; the Summary shows the
+    headline (needs review / awaiting validation) and links to the queue, and the
+    shared census (project_metrics) reports one submission per stage — so the
+    numbers always agree across surfaces."""
     from apps.kpi.metrics import project_metrics
 
     _sub(world["uc"], 1, ReviewState.INGESTED)        # needs_review
@@ -79,10 +81,12 @@ def test_summary_and_me_mirror_the_review_pipeline(client, world):
     _sub(world["uc"], 4, ReviewState.QC_PENDING)      # awaiting_validation
     client.force_login(world["tc"])
 
-    body = client.get(reverse("dashboards:tab_summary", args=[world["uc"].code])).content.decode()
-    for label in ("Needs review", "In progress", "Waiting on enumerator", "Awaiting validation"):
-        assert label in body
+    # Summary carries the headline review status and points at the queue for the rest.
+    summary = client.get(reverse("dashboards:tab_summary", args=[world["uc"].code])).content.decode()
+    assert "Needs review" in summary and "Awaiting validation" in summary
+    assert "tab=review" in summary  # links to the queue, which owns the full breakdown
 
+    # The census the three surfaces share still reports one submission per stage.
     m = project_metrics(world["uc"], "30")
     assert m["needs_review"] == 1 and m["in_progress"] == 1
     assert m["waiting"] == 1 and m["awaiting_validation"] == 1
